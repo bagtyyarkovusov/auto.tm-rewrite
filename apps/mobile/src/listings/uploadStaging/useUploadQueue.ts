@@ -90,10 +90,13 @@ export function useUploadQueue(
 ) {
   const { t } = useTranslation("common");
   const [queue, setQueue] = useState<UploadQueue>({ stagingKey, photos: [] });
+  // The staging key whose saved and staged photos are in the queue.
+  const [readyKey, setReadyKey] = useState<string | null>(null);
   const { increment: startCompression, decrement: endCompression, isActive: isCompressing } = useAsyncCounter();
   const { increment: startUpload, decrement: endUpload, isActive: isUploading } = useAsyncCounter();
 
   const initializedStagingKey = useRef<string | null>(null);
+  const initializingStagingKeys = useRef(new Set<string>());
   const activeStagingKey = useRef(stagingKey);
   const presignMutation = usePresignUpload();
   const queueRef = useRef(queue);
@@ -103,21 +106,62 @@ export function useUploadQueue(
   const MAX_CONCURRENT = 2;
   const runningUploads = useRef(0);
   const uploadQueue = useRef<string[]>([]);
+  // Photo ids waiting in `uploadQueue` or being uploaded right now.
+  const uploadsInFlight = useRef(new Set<string>());
   const networkAvailable = useRef(true);
   const uploadPhotoRef = useRef<(photoId: string) => Promise<void>>(
     async () => {},
+  );
+
+  const processUploadQueue = useCallback(() => {
+    while (
+      runningUploads.current < MAX_CONCURRENT &&
+      uploadQueue.current.length > 0
+    ) {
+      const nextId = uploadQueue.current.shift();
+      if (!nextId) continue;
+      runningUploads.current += 1;
+      uploadPhotoRef.current(nextId).finally(() => {
+        runningUploads.current -= 1;
+        uploadsInFlight.current.delete(nextId);
+        processUploadQueue();
+      });
+    }
+  }, []);
+
+  // Queue photos for upload, leaving out any already waiting or uploading. A
+  // photo stays `compressed` until its upload has read the staged file, so the
+  // resume after init and one from the app or network can both pick it.
+  const enqueueUploads = useCallback(
+    (photoIds: string[]) => {
+      for (const photoId of photoIds) {
+        if (uploadsInFlight.current.has(photoId)) continue;
+        uploadsInFlight.current.add(photoId);
+        uploadQueue.current.push(photoId);
+      }
+      processUploadQueue();
+    },
+    [processUploadQueue],
   );
 
   // Initialize queue from draft + local files
   useEffect(() => {
     if (initializedStagingKey.current === stagingKey) return;
     // The hook outlives each wizard session. Photos still in the queue belong to
-    // the draft that was open before, and must not be merged into this one.
+    // the draft that was open before, and must not be merged into this one. This
+    // runs before the guard below, so a draft reopened while its first init is
+    // still reading the device does not keep the photos of the one in between.
     if (queueRef.current.stagingKey !== stagingKey) {
+      for (const photoId of uploadQueue.current) uploadsInFlight.current.delete(photoId);
       uploadQueue.current = [];
       queueRef.current = { stagingKey, photos: [] };
       setQueue(queueRef.current);
     }
+    // One init per staging key. A second one, started when the payload changes
+    // while the first is still reading the device, would rebuild the queue from
+    // that later payload and replace the keyed photos the first one restored.
+    if (initializingStagingKeys.current.has(stagingKey)) return;
+    initializingStagingKeys.current.add(stagingKey);
     async function init() {
       let localPhotoIds: string[] = [];
       if (restoreLocalPhotos) {
@@ -147,24 +191,17 @@ export function useUploadQueue(
       queueRef.current = { stagingKey, photos: merged };
       setQueue(queueRef.current);
       initializedStagingKey.current = stagingKey;
-    }
-    void init();
-  }, [stagingKey, initialPayload, restoreLocalPhotos]);
+      setReadyKey(stagingKey);
 
-  const processUploadQueue = useCallback(() => {
-    while (
-      runningUploads.current < MAX_CONCURRENT &&
-      uploadQueue.current.length > 0
-    ) {
-      const nextId = uploadQueue.current.shift();
-      if (!nextId) continue;
-      runningUploads.current += 1;
-      uploadPhotoRef.current(nextId).finally(() => {
-        runningUploads.current -= 1;
-        processUploadQueue();
-      });
+      // Photos an earlier session staged but did not finish uploading resume
+      // now; nothing else would start them until the app or network returns.
+      const unfinished = collectPhotosToResume(reconstructed);
+      enqueueUploads(unfinished.map((p) => p.photoId));
     }
-  }, []);
+    void init().finally(() => {
+      initializingStagingKeys.current.delete(stagingKey);
+    });
+  }, [stagingKey, initialPayload, restoreLocalPhotos, enqueueUploads]);
 
   const transitionToFailed = useCallback((photoId: string, error: UploadError) => {
     queueRef.current = transitionPhotoToFailed(queueRef.current, photoId, error);
@@ -210,8 +247,8 @@ export function useUploadQueue(
         return;
       }
 
-      const fileExists = await verifyStagingFileExists(photo.localUri);
-      if (!fileExists) {
+      const fileInfo = await FileSystem.getInfoAsync(photo.localUri);
+      if (!fileInfo.exists) {
         transitionToFailed(photoId, {
           code: "LOCAL_FILE_MISSING",
           message: t("uploadErrorLocalFileMissing"),
@@ -227,7 +264,8 @@ export function useUploadQueue(
         const presignResult = await presignMutation.mutateAsync({
           kind: "image",
           contentType: "image/jpeg",
-          sizeBytes: photo.fileSize ?? 0,
+          // A photo restored from staging has no recorded size; its file does.
+          sizeBytes: photo.fileSize ?? fileInfo.size,
         });
 
         if (!networkAvailable.current) {
@@ -261,15 +299,16 @@ export function useUploadQueue(
     const cleanup = setupUploadResume({
       resumePendingUploads: () => {
         const photosToRetry = collectPhotosToResume(queueRef.current);
-        if (photosToRetry.length === 0) return;
-        uploadQueue.current.push(...photosToRetry.map((p) => p.photoId));
-        processUploadQueue();
+        enqueueUploads(photosToRetry.map((p) => p.photoId));
       },
       onNetworkAvailable: () => {
         networkAvailable.current = true;
       },
       onNetworkUnavailable: () => {
         networkAvailable.current = false;
+        // Photos that had not started are dropped from the wait; the running
+        // ones leave `uploadsInFlight` when their upload settles.
+        for (const photoId of uploadQueue.current) uploadsInFlight.current.delete(photoId);
         uploadQueue.current = [];
         queueRef.current = transitionUploadQueueToWaitingForNetwork(
           queueRef.current,
@@ -278,7 +317,7 @@ export function useUploadQueue(
       },
     });
     return cleanup;
-  }, [processUploadQueue]);
+  }, [enqueueUploads]);
 
   const addPhoto = useCallback(
     async (sourceUri: string) => {
@@ -313,8 +352,7 @@ export function useUploadQueue(
         });
         setQueue(queueRef.current);
 
-        uploadQueue.current.push(photoId);
-        processUploadQueue();
+        enqueueUploads([photoId]);
       } catch (err) {
         const uploadError = buildUploadError(err, t);
         queueRef.current = transitionPhotoToFailed(queueRef.current, photoId, uploadError);
@@ -323,7 +361,7 @@ export function useUploadQueue(
         endCompression();
       }
     },
-    [stagingKey, processUploadQueue, startCompression, endCompression],
+    [stagingKey, enqueueUploads, startCompression, endCompression],
   );
 
   const removePhoto = useCallback(
@@ -346,10 +384,9 @@ export function useUploadQueue(
 
   const retryPhoto = useCallback(
     (photoId: string) => {
-      uploadQueue.current.push(photoId);
-      processUploadQueue();
+      enqueueUploads([photoId]);
     },
-    [processUploadQueue],
+    [enqueueUploads],
   );
 
   const publishGate: PublishGateResult = computePublishGate(queue);
@@ -364,5 +401,7 @@ export function useUploadQueue(
     publishGate,
     isCompressing,
     isUploading,
+    /** True once this staging key's saved and staged photos are in `photos`. */
+    isReady: readyKey === stagingKey,
   };
 }

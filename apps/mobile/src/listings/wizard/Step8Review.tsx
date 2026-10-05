@@ -13,7 +13,7 @@ import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useRegions } from "../../api/catalog/useRegions";
-import { useCities } from "../../api/catalog/useCities";
+import { findCityInGroups, useCityGroups } from "../../api/catalog/useCityGroups";
 import type { StagedPhoto } from "../uploadStaging/types";
 import { getPhotoUri } from "../uploadStaging/photoUri";
 
@@ -55,7 +55,8 @@ export default function Step8Review({
   const { data: driveTypesData } = useDriveTypes();
   const { data: engineTypesData } = useEngineTypes();
   const { data: regionsData } = useRegions();
-  const { data: citiesData } = useCities(payload.regionId ?? "");
+  // The source the City picker uses: a region's whole list, not its first page.
+  const { groups: cityGroups } = useCityGroups();
 
   const brandName = brandsData?.items.find((b) => b.id === payload.brandId)?.name;
   const modelName = modelsData?.items.find((m) => m.id === payload.modelId)?.name;
@@ -66,7 +67,7 @@ export default function Step8Review({
   const driveTypeName = driveTypesData?.items.find((d) => d.id === payload.driveTypeId)?.name;
   const engineTypeName = engineTypesData?.items.find((e) => e.id === payload.engineTypeId)?.name;
   const regionName = regionsData?.items.find((r) => r.id === payload.regionId)?.name;
-  const cityName = citiesData?.items.find((c) => c.id === payload.cityId)?.name;
+  const cityName = findCityInGroups(cityGroups, payload.cityId)?.city.name;
 
   const uploadedPhotos = photos.filter((p) => p.key);
   const hasPhotos = uploadedPhotos.length > 0;

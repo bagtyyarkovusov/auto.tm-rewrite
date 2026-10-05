@@ -55,7 +55,8 @@ vi.mock("../../src/api/listings/usePublishDraft", () => ({
 }));
 vi.mock("../../src/listings/wizard/useWizardAutosave", () => ({ useWizardAutosave: () => fixture.autosave }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({
-  useUploadQueue: () => ({ photos: fixture.queuePhotos, publishGate: { canPublish: true, blockers: [] } }),
+  // The mocked queue already holds the open draft's photos.
+  useUploadQueue: () => ({ photos: fixture.queuePhotos, publishGate: { canPublish: true, blockers: [] }, isReady: true }),
 }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: fixture.deleteDraftDir }));
 vi.mock("../../components/auth/SignInDialog", () => ({ SignInDialog: () => null }));

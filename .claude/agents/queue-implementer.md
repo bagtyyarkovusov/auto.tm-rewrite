@@ -1,8 +1,8 @@
 ---
 name: queue-implementer
 description: Implements, fixes bugs, and fixes review findings for one queue issue in its own host-created worktree. Launched by the run-queue orchestrator.
-model: claude-sonnet-5-5
-effort: high
+model: claude-opus-5-5
+effort: medium
 isolation: worktree
 disallowedTools: Agent
 ---

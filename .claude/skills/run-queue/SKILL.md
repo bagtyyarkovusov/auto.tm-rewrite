@@ -23,7 +23,7 @@ One orchestrator session owns a queue from start to finish, so it keeps context 
 
 Use the [queue model profile](../../../docs/agents/queue-models.md) for the actual host. On Codex, dispatch separate writing and review tasks with that profile; the writing agent creates its own worktree. The Claude project agent types live in [.claude/agents](../../agents).
 
-On Claude Code, the first file in a new `.claude/agents/` directory needs a session restart before the host picks it up. Until then, the agent types are missing. Launch a reviewer as the built-in `Plan` type, which has no Edit or Write, with `model` set to Opus. Launch an implementer as `general-purpose` with `model` set to Sonnet and `isolation: "worktree"`. Effort follows the session.
+On Claude Code, the first file in a new `.claude/agents/` directory needs a session restart before the host picks it up. Until then, the agent types are missing. Launch a reviewer as the built-in `Plan` type, which has no Edit or Write, with `model` set to Opus. Launch an implementer as `general-purpose` with `model` set to Opus and `isolation: "worktree"`. Effort follows the session.
 
 ## Implementers and worktrees
 

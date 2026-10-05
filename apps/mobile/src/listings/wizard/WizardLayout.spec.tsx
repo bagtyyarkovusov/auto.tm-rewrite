@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { AccessibilityInfo } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,7 +14,7 @@ vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("reac
 
 const announcements = (AccessibilityInfo as unknown as { announcements: string[] }).announcements;
 
-type LayoutProps = Partial<React.ComponentProps<typeof WizardLayout>>;
+type LayoutProps = Partial<ComponentProps<typeof WizardLayout>>;
 
 function layout(stepTitle: string, stepNumber: number, overrides: LayoutProps = {}) {
   return (
@@ -199,5 +200,51 @@ describe("WizardLayout save status under the progress bar (#585)", () => {
       "Saved",
       "Not saved. Retry",
     ]);
+  });
+});
+
+describe("WizardLayout upload chip", () => {
+  const counts = { inflight: 2, failed: 1, total: 5 };
+
+  it("shows the uploading and failed counts and opens Photos when tapped", () => {
+    const onUploadStatusPress = vi.fn();
+    const screen = renderMobile(layout("Price", 4, { uploadStatus: counts, onUploadStatusPress }));
+
+    expect(screen.getByText("2 uploading")).toBeTruthy();
+    expect(screen.getByText("1 failed")).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "2 uploading, 1 failed" }));
+    expect(onUploadStatusPress).toHaveBeenCalledOnce();
+  });
+
+  it("sits in the header, with the step title and progress bar", () => {
+    const screen = renderMobile(layout("Price", 4, { uploadStatus: counts, onUploadStatusPress: () => {} }));
+    let node = screen.getByText("2 uploading").parent;
+    while (node && !node.props.className?.includes("border-b")) node = node.parent;
+
+    expect(node).toBeTruthy();
+  });
+
+  it("shows only the counts that are above zero", () => {
+    const screen = renderMobile(
+      layout("Price", 4, { uploadStatus: { inflight: 0, failed: 3, total: 3 }, onUploadStatusPress: () => {} }),
+    );
+
+    expect(screen.queryByText(/uploading/)).toBeNull();
+    expect(screen.getByText("3 failed")).toBeTruthy();
+  });
+
+  it("is hidden when nothing is uploading or failed", () => {
+    const screen = renderMobile(
+      layout("Price", 4, { uploadStatus: { inflight: 0, failed: 0, total: 4 }, onUploadStatusPress: () => {} }),
+    );
+
+    expect(screen.queryByText(/uploading|failed/)).toBeNull();
+  });
+
+  it("is plain status text when the screen gives no way to open Photos", () => {
+    const screen = renderMobile(layout("Price", 4, { uploadStatus: counts }));
+
+    expect(screen.getByText("2 uploading")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "2 uploading, 1 failed" })).toBeNull();
   });
 });

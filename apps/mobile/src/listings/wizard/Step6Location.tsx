@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { View } from "react-native";
 import { MapPin } from "lucide-react-native";
-import type { WizardSchemas } from "@auto-tm/contracts";
+import type { CatalogSchemas, WizardSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
-import { useRegions } from "../../api/catalog/useRegions";
-import { useCities } from "../../api/catalog/useCities";
+import {
+  findCityInGroups,
+  useCityGroups,
+  type CityGroup,
+} from "../../api/catalog/useCityGroups";
 
 import { DescriptionField } from "./DescriptionField";
 
@@ -24,58 +27,17 @@ interface Step6LocationProps {
   disabled?: boolean;
 }
 
-function useLocationPicker(payload: WizardSchemas.WizardDraftPayload) {
-  const [regionOpen, setRegionOpen] = useState(false);
-  const [cityOpen, setCityOpen] = useState(false);
-  const [regionSearch, setRegionSearch] = useState("");
-  const [citySearch, setCitySearch] = useState("");
-
-  const {
-    data: regionsData,
-    isPending: regionsLoading,
-    isError: regionsError,
-  } = useRegions();
-  const {
-    data: citiesData,
-    isPending: citiesLoading,
-    isError: citiesError,
-  } = useCities(payload.regionId ?? "");
-
-  const filteredRegions = filterBySearch(regionsData?.items ?? [], regionSearch);
-  const filteredCities = filterBySearch(citiesData?.items ?? [], citySearch);
-
-  const selectedRegion = findById(regionsData?.items ?? [], payload.regionId);
-  const selectedCity = findById(citiesData?.items ?? [], payload.cityId);
-
-  return {
-    regionOpen,
-    setRegionOpen,
-    cityOpen,
-    setCityOpen,
-    regionSearch,
-    setRegionSearch,
-    citySearch,
-    setCitySearch,
-    filteredRegions,
-    filteredCities,
-    selectedRegion,
-    selectedCity,
-    regionsLoading,
-    regionsError,
-    citiesLoading,
-    citiesError,
-  };
-}
-
-function filterBySearch<T extends { name: string }>(items: T[], search: string) {
-  if (!search) return items;
-  return items.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase()),
-  );
-}
-
-function findById<T extends { id: string }>(items: T[], id?: string) {
-  return items.find((i) => i.id === id);
+/** Cities whose name matches the search, keeping only the regions that still have one. */
+function filterGroups(groups: CityGroup[], search: string): CityGroup[] {
+  const query = search.trim().toLowerCase();
+  return groups
+    .map((group) => ({
+      ...group,
+      cities: query
+        ? group.cities.filter((city) => city.name.toLowerCase().includes(query))
+        : group.cities,
+    }))
+    .filter((group) => group.cities.length > 0);
 }
 
 function wrapDisabled(children: React.ReactNode, disabled: boolean) {
@@ -83,72 +45,75 @@ function wrapDisabled(children: React.ReactNode, disabled: boolean) {
   return <View className="opacity-50">{children}</View>;
 }
 
-function LocationSheets({
+function CityPicker({
   payload,
-  picker,
   onChange,
+  error,
+  disabled,
+  onOpen,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
-  picker: ReturnType<typeof useLocationPicker>;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
+  error?: string;
+  disabled: boolean;
+  onOpen: () => void;
 }) {
   const { t } = useTranslation();
-  function handleSelectRegion(regionId: string) {
-    onChange({ regionId, cityId: undefined });
-    picker.setRegionOpen(false);
-    picker.setRegionSearch("");
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const { groups, isPending, isError } = useCityGroups();
+
+  const selected = findCityInGroups(groups, payload.cityId);
+  const regionName =
+    selected && selected.region.name !== selected.city.name ? selected.region.name : undefined;
+
+  function close() {
+    setOpen(false);
+    setSearch("");
   }
 
-  function handleSelectCity(cityId: string) {
-    onChange({ cityId });
-    picker.setCityOpen(false);
-    picker.setCitySearch("");
+  function handleSelect(city: CatalogSchemas.CitySummary) {
+    onChange({ cityId: city.id, regionId: city.regionId });
+    close();
   }
 
   return (
     <>
-      <CatalogPickerSheet
-        open={picker.regionOpen}
-        onOpenChange={(open) => {
-          picker.setRegionOpen(open);
-          if (!open) picker.setRegionSearch("");
+      <PickerRow
+        label={t("city")}
+        required
+        value={selected?.city.name}
+        detail={regionName}
+        placeholder={t("selectCity")}
+        disabled={disabled}
+        locked={disabled}
+        error={error}
+        onPress={() => {
+          onOpen();
+          setOpen(true);
         }}
-        title={t("selectRegion")}
-        searchPlaceholder={t("searchPlaceholder")}
-        search={picker.regionSearch}
-        onSearchChange={picker.setRegionSearch}
-        items={picker.filteredRegions}
-        selectedId={payload.regionId}
-        emptyMessage={
-          picker.regionSearch
-            ? t("noRegionsMatch")
-            : t("noRegionsAvailable")
-        }
-        isLoading={picker.regionsLoading}
-        isError={picker.regionsError}
-        onSelect={handleSelectRegion}
       />
 
       <CatalogPickerSheet
-        open={picker.cityOpen}
-        onOpenChange={(open) => {
-          picker.setCityOpen(open);
-          if (!open) picker.setCitySearch("");
-        }}
+        open={open}
+        onOpenChange={(next) => (next ? setOpen(true) : close())}
         title={t("selectCity")}
         searchPlaceholder={t("searchPlaceholder")}
-        search={picker.citySearch}
-        onSearchChange={picker.setCitySearch}
-        items={picker.filteredCities}
+        search={search}
+        onSearchChange={setSearch}
+        sections={filterGroups(groups, search).map((group) => ({
+          id: group.region.id,
+          title: group.region.name,
+          items: group.cities,
+        }))}
         selectedId={payload.cityId}
-        emptyMessage={
-          picker.citySearch
-            ? t("noCitiesMatch")
-            : t("noCitiesAvailable")
-        }
-        isLoading={picker.citiesLoading}
-        isError={picker.citiesError}
-        onSelect={handleSelectCity}
+        emptyMessage={search ? t("noCitiesMatch") : t("noCitiesAvailable")}
+        isLoading={isPending}
+        isError={isError}
+        onSelect={(cityId) => {
+          const match = findCityInGroups(groups, cityId);
+          if (match) handleSelect(match.city);
+        }}
       />
     </>
   );
@@ -162,7 +127,6 @@ export default function Step6Location({
   disabled = false,
 }: Step6LocationProps) {
   const { t } = useTranslation();
-  const picker = useLocationPicker(payload);
   // Like Car: a field's error shows once the seller has touched it, and every
   // error shows after the first Continue tap.
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
@@ -170,6 +134,7 @@ export default function Step6Location({
     setTouchedFields((current) => (current[field] ? current : { ...current, [field]: true }));
   const visibleError = (field: string) =>
     showErrors || touchedFields[field] ? fieldErrors?.[field] : undefined;
+  const areaError = visibleError("locationText");
 
   return (
     <View className="gap-5 py-5">
@@ -184,32 +149,15 @@ export default function Step6Location({
         disabled={disabled}
       />
 
-      <PickerRow
-        label={t("region")}
-        required
-        value={picker.selectedRegion?.name}
-        placeholder={t("selectRegion")}
-        disabled={disabled}
-        locked={disabled}
-        error={visibleError("regionId")}
-        onPress={() => {
-          markTouched("regionId");
-          picker.setRegionOpen(true);
-        }}
-      />
+      <Text className="pt-2 text-sm text-muted-foreground">{t("placeSection")}</Text>
 
-      <PickerRow
-        label={t("city")}
-        required
-        value={picker.selectedCity?.name}
-        placeholder={t("selectCity")}
-        disabled={disabled || !payload.regionId}
-        locked={disabled}
+      {/* Picking a city also sets its region, so the Region error is never shown on its own. */}
+      <CityPicker
+        payload={payload}
+        onChange={onChange}
         error={visibleError("cityId")}
-        onPress={() => {
-          markTouched("cityId");
-          picker.setCityOpen(true);
-        }}
+        disabled={disabled}
+        onOpen={() => markTouched("cityId")}
       />
 
       <View className="gap-1.5">
@@ -228,24 +176,26 @@ export default function Step6Location({
                 onChange({ locationText: text || undefined });
               }}
               placeholder={t("areaPlaceholder")}
+              accessibilityLabel={t("area")}
+              maxLength={200}
               editable={!disabled}
               className="pl-10"
             />
           </View>,
           disabled,
         )}
-        {visibleError("locationText") && (
+        {areaError ? (
           <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-            {visibleError("locationText")}
+            {areaError}
           </Text>
+        ) : (
+          <Text className="text-sm text-muted-foreground">{t("areaHelper")}</Text>
         )}
       </View>
 
       <Text className="text-sm text-muted-foreground leading-relaxed">
         {t("thisIsHowBuyersSee")}
       </Text>
-
-      <LocationSheets payload={payload} picker={picker} onChange={onChange} />
     </View>
   );
 }

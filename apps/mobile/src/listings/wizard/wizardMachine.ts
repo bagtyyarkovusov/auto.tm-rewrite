@@ -58,7 +58,15 @@ export type WizardMachineAction =
     }
   | { type: "NEXT" }
   | { type: "BACK" }
-  | { type: "UPDATE_FIELDS"; updates: Partial<WizardSchemas.WizardDraftPayload> }
+  | {
+      type: "UPDATE_FIELDS";
+      updates: Partial<WizardSchemas.WizardDraftPayload>;
+      /**
+       * The update restores what the seller already had (photos back from
+       * staging), so completed steps stay completed while they are still valid.
+       */
+      keepValidSteps?: boolean;
+    }
   | { type: "GO_TO_STEP"; step: WizardMachineStep }
   | { type: "PUBLISH_START" }
   | { type: "PUBLISH_SUCCESS"; listingId: string }
@@ -321,7 +329,9 @@ export function wizardMachineReducer(
       const newValidatedSteps =
         state.mode === "edit"
           ? computeValidatedSteps(newPayload, DATA_STEPS)
-          : state.validatedSteps.filter((s) => !invalidated.includes(s));
+          : action.keepValidSteps
+            ? computeValidatedSteps(newPayload, state.validatedSteps)
+            : state.validatedSteps.filter((s) => !invalidated.includes(s));
 
       return {
         ...state,

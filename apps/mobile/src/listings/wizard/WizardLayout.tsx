@@ -74,6 +74,8 @@ interface WizardLayoutProps {
   isDiscarding?: boolean;
   discardError?: string | null;
   uploadStatus?: UploadStatusChip;
+  /** Tapping the header's upload chip: open Photos. Without it the chip is plain status. */
+  onUploadStatusPress?: () => void;
 }
 
 /** "Saved", "Saving..." or "Not saved. Retry", read politely by a screen reader. */
@@ -140,6 +142,8 @@ function WizardHeader({
   progressPercent,
   saveStatus,
   onRetrySave,
+  uploadStatus,
+  onUploadStatusPress,
 }: {
   onHeaderHeightChange?: (height: number) => void;
   routeTitle: string;
@@ -155,6 +159,8 @@ function WizardHeader({
   progressPercent: number;
   saveStatus: WizardLayoutProps["saveStatus"];
   onRetrySave: () => void;
+  uploadStatus?: UploadStatusChip;
+  onUploadStatusPress?: () => void;
 }) {
   const { t } = useTranslation();
   const stepPosition = t("stepOf", { step: stepNumber, total: stepCount });
@@ -236,7 +242,61 @@ function WizardHeader({
 
       {/* Row 4: where the draft stands; the line's height is kept so nothing jumps */}
       <SaveStatusLine saveStatus={saveStatus} onRetrySave={onRetrySave} />
+
+      <UploadStatusChipRow
+        uploadStatus={uploadStatus}
+        onPress={onUploadStatusPress}
+      />
     </View>
+  );
+}
+
+/** Photos still uploading and photos that failed, kept in view on every step. */
+function UploadStatusChipRow({
+  uploadStatus,
+  onPress,
+}: {
+  uploadStatus?: UploadStatusChip;
+  onPress?: () => void;
+}) {
+  const { t } = useTranslation();
+  if (!uploadStatus || (uploadStatus.inflight === 0 && uploadStatus.failed === 0)) {
+    return null;
+  }
+  const uploadingText = t("uploadChipUploading", { count: uploadStatus.inflight });
+  const failedText = t("uploadChipFailed", { count: uploadStatus.failed });
+  const chip = (
+    <View className="flex-row items-center gap-3 self-start rounded-full bg-muted px-3 py-1.5">
+      {uploadStatus.inflight > 0 && (
+        <View className="flex-row items-center gap-1.5">
+          <ActivityIndicator size="small" />
+          <Text className="text-xs text-muted-foreground">{uploadingText}</Text>
+        </View>
+      )}
+      {uploadStatus.failed > 0 && (
+        <View className="flex-row items-center gap-1.5">
+          <Icon as={AlertCircle} className="size-3.5 text-destructive" />
+          <Text className="text-xs text-destructive">{failedText}</Text>
+        </View>
+      )}
+    </View>
+  );
+  if (!onPress) return chip;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={[
+        uploadStatus.inflight > 0 ? uploadingText : null,
+        uploadStatus.failed > 0 ? failedText : null,
+      ]
+        .filter(Boolean)
+        .join(", ")}
+      className="min-h-11 justify-center self-start active:opacity-70"
+      onPress={onPress}
+    >
+      {chip}
+    </Pressable>
   );
 }
 
@@ -494,6 +554,7 @@ export function WizardLayout({
   isDiscarding = false,
   discardError = null,
   uploadStatus,
+  onUploadStatusPress,
 }: WizardLayoutProps) {
   const { t } = useTranslation();
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
@@ -515,6 +576,8 @@ export function WizardLayout({
         progressPercent={progressPercent}
         saveStatus={saveStatus}
         onRetrySave={onRetrySave}
+        uploadStatus={uploadStatus}
+        onUploadStatusPress={onUploadStatusPress}
       />
 
       <SaveErrorBanner
@@ -531,27 +594,6 @@ export function WizardLayout({
         </ScrollView>
 
         <View className="mt-auto">
-          {uploadStatus && (uploadStatus.inflight > 0 || uploadStatus.failed > 0) && (
-            <View className="mx-5 mb-2 flex-row items-center gap-2 rounded-lg bg-muted px-3 py-2">
-              {uploadStatus.inflight > 0 && (
-                <View className="flex-row items-center gap-1.5">
-                  <ActivityIndicator size="small" />
-                  <Text className="text-xs text-muted-foreground">
-                    {uploadStatus.inflight} {t("uploading")}
-                  </Text>
-                </View>
-              )}
-              {uploadStatus.failed > 0 && (
-                <View className="flex-row items-center gap-1.5">
-                  <Icon as={AlertCircle} className="size-3.5 text-destructive" />
-                  <Text className="text-xs text-destructive">
-                    {uploadStatus.failed} {t("failed")}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-
           <WizardFooter
             isLastStep={isLastStep}
             canContinue={canContinue}

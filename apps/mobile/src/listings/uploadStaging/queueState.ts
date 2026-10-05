@@ -2,6 +2,7 @@ import { WizardSchemas, type ListingsSchemas } from "@auto-tm/contracts";
 
 import { getStagingPath, listLocalPhotoIds } from "./stagingDir";
 import type { StagedPhoto, UploadQueue, PublishGateResult, UploadError } from "./types";
+import { NEEDS_ATTENTION_STATES, PENDING_STATES } from "./uploadCounts";
 
 /**
  * Blockers are translation keys, not display text — the wizard screens run them
@@ -17,18 +18,15 @@ export function computePublishGate(queue: UploadQueue): PublishGateResult {
     blockers.push(WIZARD_ERROR_KEYS.photosRequired);
   }
 
-  const hasPending = queue.photos.some(
-    (p) =>
-      p.state === "selected" ||
-      p.state === "compressed" ||
-      p.state === "presigned" ||
-      p.state === "uploading",
-  );
+  // A photo waiting for the network has no key yet and would be left out of the
+  // Listing, so it counts as an upload in progress like the others.
+  const hasPending = queue.photos.some((p) => PENDING_STATES.includes(p.state));
   if (hasPending) {
     blockers.push(WIZARD_ERROR_KEYS.uploadsInProgress);
   }
 
-  const hasFailed = queue.photos.some((p) => p.state === "failed");
+  // A lost photo can never upload; like a failed one, it waits for the seller to remove it.
+  const hasFailed = queue.photos.some((p) => NEEDS_ATTENTION_STATES.includes(p.state));
   if (hasFailed) {
     blockers.push(WIZARD_ERROR_KEYS.uploadsFailed);
   }
@@ -76,14 +74,16 @@ export function reconstructQueueFromDraft(
     });
   }
 
-  // Include local photos not yet in payload
+  // A staged file the draft never saved was compressed but not uploaded when the
+  // app closed. It comes back ready to upload, with its file, so it can resume.
   for (const localId of localPhotoIds) {
     if (!photos.some((p) => p.photoId === localId)) {
       photos.push({
         photoId: localId,
-        state: "selected",
+        state: "compressed",
         sortOrder: photos.length,
         retryCount: 0,
+        localUri: getStagingPath(stagingKey, localId),
       });
     }
   }

@@ -24,13 +24,16 @@ const fixture = vi.hoisted(() => {
       seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
     },
     listing: {} as Record<string, unknown>,
-    photos: [{ photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 }],
+    saved: { photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 } as Record<string, unknown>,
+    photos: [] as Record<string, unknown>[],
+    gate: { canPublish: true, blockers: [] as string[] },
   };
 });
+fixture.photos = [fixture.saved];
 fixture.listing = { ...fixture.baseline };
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
-  photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
+  photos: fixture.photos, publishGate: fixture.gate,
 }) }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: fixture.deleteDraftDir }));
 vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
@@ -74,6 +77,8 @@ beforeEach(() => {
   fixture.saveState = { status: "idle", error: null, opStates: {} };
   fixture.pending = false;
   fixture.listing = { ...fixture.baseline };
+  fixture.photos = [fixture.saved];
+  fixture.gate = { canPublish: true, blockers: [] };
 });
 
 describe("legacy Listing edit", () => {
@@ -172,6 +177,29 @@ describe("legacy Listing edit", () => {
     if (!confirm) throw new Error("No discard confirmation");
     fireEvent.press(confirm);
     expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
+  });
+
+  describe("with a photo that keeps Save changes disabled", () => {
+    function renderReview(photo: Record<string, unknown>, blocker: string) {
+      fixture.listing = { ...fixture.baseline, conditionDisclosure: { damaged: false } };
+      fixture.photos = [fixture.saved, { photoId: "new-photo", sortOrder: 1, retryCount: 0, ...photo }];
+      fixture.gate = { canPublish: false, blockers: [blocker] };
+      const screen = renderMobile(<EditListingScreen />);
+      expect(screen.getByRole("button", { name: "Save changes", disabled: true })).toBeTruthy();
+      return screen;
+    }
+
+    it("counts a photo waiting for the network as uploading, in the chip and the reason", () => {
+      const screen = renderReview({ state: "waiting_for_network" }, "wizardErrors.uploadsInProgress");
+      expect(screen.getByText("1 uploading")).toBeTruthy();
+      expect(screen.getByText("Wait for 1 photos to finish uploading")).toBeTruthy();
+    });
+
+    it("counts a lost photo as failed, in the chip and the reason", () => {
+      const screen = renderReview({ state: "lost" }, "wizardErrors.uploadsFailed");
+      expect(screen.getByText("1 failed")).toBeTruthy();
+      expect(screen.getByText("1 failed — retry or remove")).toBeTruthy();
+    });
   });
 
   describe("after a partial save failure", () => {

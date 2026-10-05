@@ -53,7 +53,6 @@ const WIZARD_ERROR_NAMES = [
   "unknownStep",
   "vinTooLong",
   "photosRequired",
-  "photosUploading",
   "brandRequired",
   "modelRequired",
   "yearRequired",
@@ -101,11 +100,14 @@ const KEY = WIZARD_ERROR_KEYS;
 // Each schema validates exactly the fields required for its step.
 // They are refinements of ListingDraftPayloadSchema — partial, step-scoped.
 
+// Continue needs one picked photo, not one uploaded photo (#584): uploads keep
+// running while the seller fills in the later steps. The mobile client lists every
+// picked photo here, key or not, but saves only photos that have a key into the
+// draft, and Publish still refuses a Listing with no keyed photo.
 export const StepPhotosSchema = z.object({
   photos: z
     .array(DraftPhotoSchema, { required_error: KEY.photosRequired })
-    .min(1, KEY.photosRequired)
-    .refine((photos) => photos.some((p) => p.key), KEY.photosUploading),
+    .min(1, KEY.photosRequired),
 });
 export type StepPhotosInput = z.infer<typeof StepPhotosSchema>;
 
