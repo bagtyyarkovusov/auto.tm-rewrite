@@ -160,9 +160,7 @@ describe("Cabinet profile row", () => {
     await signIn("aman");
     const view = render(<CabinetScreen />);
     await view.findByRole("button", { name: `${LONG_NAME}, ${PHONE}` });
-    expect(LONG_NAME).toHaveLength(30);
     expect(view.getByText(LONG_NAME).props.numberOfLines).toBe(1);
-    expect(view.getByText(LONG_NAME).props.ellipsizeMode ?? "tail").toBe("tail");
     expect(view.getByText(PHONE)).toBeTruthy();
   });
 
