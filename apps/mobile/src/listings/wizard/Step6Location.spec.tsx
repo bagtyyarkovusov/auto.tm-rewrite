@@ -112,6 +112,12 @@ describe("Description and place step", () => {
     expect(screen.getByText(helper)).toBeTruthy();
   });
 
+  it("ends with Area, with no preview caption that has no preview under it", () => {
+    const screen = renderMobile(<ValidatedPlace />);
+    // The caption belongs to the card on Check and publish, the only place with a preview.
+    expect(screen.queryByText("This is how buyers will see your listing")).toBeNull();
+  });
+
   it("keeps Area to 200 characters", () => {
     const screen = renderMobile(<ValidatedPlace />);
     expect(screen.getByLabelText("Area / landmark").props.maxLength).toBe(200);

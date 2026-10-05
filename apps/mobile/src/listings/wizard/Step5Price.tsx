@@ -226,8 +226,8 @@ export default function Step5Price({
 
   return (
     <View className="gap-5 py-5">
+      {/* The step is titled Price, so the field carries one label, Amount. */}
       <View className="gap-1.5">
-        <Text className="text-sm font-medium text-foreground">{t("price")} *</Text>
         <PriceInput
           payload={payload}
           onChange={onChange}

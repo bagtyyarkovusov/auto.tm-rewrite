@@ -154,6 +154,19 @@ describe("Price step currency", () => {
   });
 });
 
+describe("Price step amount label", () => {
+  it.each([
+    ["en", "Amount *", "Price *"],
+    ["ru", "Сумма *", "Цена *"],
+    ["tk", "Mukdary *", "Bahasy *"],
+  ])("labels the amount field once in %s", (locale, kept, dropped) => {
+    const screen = renderMobile(<PriceStep />, { locale });
+
+    expect(screen.getAllByText(kept)).toHaveLength(1);
+    expect(screen.queryByText(dropped)).toBeNull();
+  });
+});
+
 describe("Price step errors", () => {
   const required = { priceAmount: "Price is required" };
   function ErrorsStep({ showErrors }: { showErrors?: boolean }) {
