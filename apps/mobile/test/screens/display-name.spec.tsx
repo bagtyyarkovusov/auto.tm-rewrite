@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import CabinetScreen from "../../app/(tabs)/services";
 import DisplayNameScreen from "../../app/account/display-name";
 import ProfileScreen from "../../app/profile";
-import { storeAuthSession } from "../../src/auth/session";
+import { clearAuthSession, storeAuthSession } from "../../src/auth/session";
 import { profileNoticeStore } from "../../src/identity/profileNotice";
 import { server } from "../msw";
 import { act, fireEvent, renderMobile, routerMock } from "../render";
@@ -130,6 +130,18 @@ describe("Opening the name editor from Profile", () => {
     expect(view.getByDisplayValue("Aman")).toBeTruthy();
     expect(view.getByText("2 to 30 characters")).toBeTruthy();
     expect(view.getByText("4/30")).toBeTruthy();
+  });
+
+  it("shows no name in the field when opened signed out with the previous User's /me cached", async () => {
+    api.displayName = "Aman";
+    const view = render(<ProfileScreen />);
+    expect(await view.findByText("Aman")).toBeTruthy();
+    await act(async () => { await clearAuthSession(); });
+
+    view.rerender(<ToastProvider><DisplayNameScreen /></ToastProvider>);
+
+    expect(view.getByLabelText("Name").props.value).toBe("");
+    expect(view.queryByDisplayValue("Aman")).toBeNull();
   });
 
   it("has the title, the helper line and a labelled field in Turkmen", async () => {

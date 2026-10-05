@@ -20,14 +20,13 @@ export interface CatalogPagination {
 }
 
 /**
- * Parses cursor pagination for the catalog list endpoints. A malformed or
- * forged cursor and an invalid limit are client errors, never a 500: this
- * helper translates them into a 400 `VALIDATION_FAILED`.
+ * Parses a catalog query with a contracts schema. A value the schema refuses,
+ * such as an unknown `locale`, is a client error, never a 500: it becomes a
+ * 400 `VALIDATION_FAILED` with the flattened field errors.
  */
-export function parseCatalogPagination(query: unknown): CatalogPagination {
-  let request: { cursor?: string | undefined; limit: number };
+export function parseCatalogQuery<T>(schema: { parse(value: unknown): T }, value: unknown): T {
   try {
-    request = CursorPaginationRequestSchema.parse(query);
+    return schema.parse(value);
   } catch (err) {
     // Duck-typed: the schema's ZodError can come from another copy of zod,
     // which fails `instanceof` and would turn a bad request into a 500.
@@ -40,6 +39,15 @@ export function parseCatalogPagination(query: unknown): CatalogPagination {
     }
     throw err;
   }
+}
+
+/**
+ * Parses cursor pagination for the catalog list endpoints. A malformed or
+ * forged cursor and an invalid limit are client errors, never a 500: this
+ * helper translates them into a 400 `VALIDATION_FAILED`.
+ */
+export function parseCatalogPagination(query: unknown): CatalogPagination {
+  const request = parseCatalogQuery(CursorPaginationRequestSchema, query);
 
   if (request.cursor === undefined) {
     return { limit: request.limit };

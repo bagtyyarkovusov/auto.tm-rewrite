@@ -8,6 +8,7 @@ import { ApiError } from "../../src/api/client";
 import { useMe } from "../../src/api/identity/useMe";
 import { useRequestSignInMethodChange } from "../../src/api/identity/useRequestSignInMethodChange";
 import { normalizeEmail } from "../../src/auth/email";
+import { useAuth } from "../../src/auth/useAuth";
 import { getRequestOtpErrorCopy } from "../../src/auth/requestOtpError";
 
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,10 @@ import { Text } from "@/components/ui/text";
 export default function AddEmailScreen() {
   const { t } = useTranslation("account");
   const { t: tAuth } = useTranslation("auth");
-  const { data: me } = useMe();
+  const { isAuthenticated } = useAuth();
+  const { data } = useMe({ enabled: isAuthenticated === true });
+  // A `/me` still cached for the previous User is not read without a session.
+  const me = isAuthenticated === true ? data : undefined;
   const isChange = Boolean(me?.email);
   const [emailInput, setEmailInput] = useState("");
   // The field opens focused, so focus leaving it is not input. It only counts
@@ -67,6 +71,9 @@ export default function AddEmailScreen() {
       );
     }
   }
+
+  // Until the session is known the title cannot say Add or Change.
+  if (isAuthenticated === null) return null;
 
   return (
     <SignInMethodEntryScreen

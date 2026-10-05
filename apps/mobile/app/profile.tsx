@@ -210,11 +210,71 @@ function AccountActions() {
   );
 }
 
+/**
+ * The signed-in User's own `/me`. Mounted only while a session is stored, so
+ * a `/me` still cached for the previous User is never read without one.
+ */
+function SignedInProfile() {
+  const { t } = useTranslation("account");
+  const { data, isPending, isError, error, refetch } = useMe();
+  const displayNameOf = useDisplayName();
+
+  if (isPending) return <LoadingState />;
+
+  if (isError) {
+    return (
+      <>
+        <ErrorState error={error} onRetry={() => refetch()} />
+        <AccountActions />
+      </>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="pb-6"
+    >
+      {/* The avatar and the name, set or generated. The name, with its
+          pencil, opens the name editor; a screen reader hears "Edit
+          name" and the name as its value. The photo editor attaches here later. */}
+      <View className="items-center gap-1 px-4 pb-5 pt-2">
+        <UserAvatar
+          size={72}
+          avatarIndex={data.avatarIndex}
+          avatarKey={data.avatarKey}
+          avatarUrl={data.avatarUrl}
+        />
+        <Pressable
+          accessibilityLabel={t("editName")}
+          accessibilityValue={{ text: displayNameOf(data) }}
+          accessibilityRole="button"
+          className="min-h-11 max-w-full flex-row items-center gap-1.5 px-2 active:opacity-70"
+          onPress={() => router.push("/account/display-name")}
+        >
+          <Text
+            className="shrink text-xl font-semibold text-foreground"
+            numberOfLines={1}
+          >
+            {displayNameOf(data)}
+          </Text>
+          <Icon as={Pencil} className="size-[17px] text-muted-foreground" />
+        </Pressable>
+      </View>
+
+      <SignInMethods phone={data.phone} email={data.email} />
+
+      <AccountActions />
+    </ScrollView>
+  );
+}
+
 export default function ProfileScreen() {
   const { t } = useTranslation(["account", "common"]);
-  const { data, isPending, isError, error, refetch } = useMe();
+  const { isAuthenticated } = useAuth();
   const goBack = useSafeBack("/(tabs)/services");
-  const displayNameOf = useDisplayName();
 
   return (
     <SafeScreen>
@@ -228,49 +288,11 @@ export default function ProfileScreen() {
         </Text>
       </View>
 
-      {isPending ? (
+      {/* A signed-out visitor sees the header only. */}
+      {isAuthenticated === null ? (
         <LoadingState />
-      ) : isError ? (
-        <>
-          <ErrorState error={error} onRetry={() => refetch()} />
-          <AccountActions />
-        </>
-      ) : data ? (
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="pb-6"
-        >
-          {/* The avatar and the name, set or generated. The name, with its
-              pencil, opens the name editor; a screen reader hears "Edit
-              name" and the name as its value. The photo editor attaches here later. */}
-          <View className="items-center gap-1 px-4 pb-5 pt-2">
-            <UserAvatar
-              size={72}
-              avatarIndex={data.avatarIndex}
-              avatarKey={data.avatarKey}
-              avatarUrl={data.avatarUrl}
-            />
-            <Pressable
-              accessibilityLabel={t("account:editName")}
-              accessibilityValue={{ text: displayNameOf(data) }}
-              accessibilityRole="button"
-              className="min-h-11 max-w-full flex-row items-center gap-1.5 px-2 active:opacity-70"
-              onPress={() => router.push("/account/display-name")}
-            >
-              <Text
-                className="shrink text-xl font-semibold text-foreground"
-                numberOfLines={1}
-              >
-                {displayNameOf(data)}
-              </Text>
-              <Icon as={Pencil} className="size-[17px] text-muted-foreground" />
-            </Pressable>
-          </View>
-
-          <SignInMethods phone={data.phone} email={data.email} />
-
-          <AccountActions />
-        </ScrollView>
+      ) : isAuthenticated ? (
+        <SignedInProfile />
       ) : null}
     </SafeScreen>
   );

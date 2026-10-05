@@ -15,6 +15,7 @@ import { ApiError } from "../../src/api/client";
 import { getDisplayNameRefusal } from "../../src/api/getErrorCopy";
 import { useMe } from "../../src/api/identity/useMe";
 import { useUpdateDisplayName } from "../../src/api/identity/useUpdateDisplayName";
+import { useAuth } from "../../src/auth/useAuth";
 import { profileNoticeStore } from "../../src/identity/profileNotice";
 import {
   describeDisplayNameField,
@@ -53,7 +54,10 @@ export default function DisplayNameScreen() {
   const { t } = useTranslation(["account", "common"]);
   const { colorScheme } = useColorScheme();
   const goBack = useSafeBack("/profile");
-  const { data: me } = useMe();
+  const { isAuthenticated } = useAuth();
+  const { data } = useMe({ enabled: isAuthenticated === true });
+  // A `/me` still cached for the previous User is not read without a session.
+  const me = isAuthenticated === true ? data : undefined;
   const nameOf = useDisplayName();
   const currentName = me ? nameOf(me) : null;
   const { mutateAsync: updateDisplayName, isPending: isSaving } = useUpdateDisplayName();

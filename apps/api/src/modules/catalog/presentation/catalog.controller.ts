@@ -19,6 +19,7 @@ import { SearchCatalog } from "../application/SearchCatalog";
 import {
   encodeCatalogCursor,
   parseCatalogPagination,
+  parseCatalogQuery,
 } from "./parseCatalogPagination";
 
 @Controller("api/v1/catalog")
@@ -46,7 +47,7 @@ export class CatalogController {
     @Query() query: CatalogSchemas.CatalogSearchQuery,
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
-    const parsed = CatalogSchemas.CatalogSearchQuerySchema.parse({
+    const parsed = parseCatalogQuery(CatalogSchemas.CatalogSearchQuerySchema, {
       q: query.q,
       locale: query.locale,
     });
@@ -65,7 +66,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
     const pagination = parseCatalogPagination(query);
@@ -90,7 +91,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
     const pagination = parseCatalogPagination(query);
@@ -116,7 +117,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -135,7 +136,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -154,7 +155,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
     const pagination = parseCatalogPagination(query);
@@ -179,7 +180,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -197,7 +198,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -215,7 +216,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -233,7 +234,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -251,7 +252,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
