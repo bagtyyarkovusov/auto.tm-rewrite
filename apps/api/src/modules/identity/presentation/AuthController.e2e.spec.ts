@@ -8,6 +8,7 @@ import {
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
 import { PrismaService } from "@auto-tm/db";
+import { AuthSchemas } from "@auto-tm/contracts";
 import { Injectable } from "@nestjs/common";
 import { APP_GUARD, Reflector } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
@@ -890,6 +891,39 @@ describe("MeController e2e — GET /api/v1/me", () => {
     expect(res.body).toHaveProperty("locale");
     expect(res.body).toHaveProperty("createdAt");
     expect(res.body).toHaveProperty("deletionScheduledAt");
+  });
+
+  it("returns the assigned name number and avatar index, unchanged by a second sign-in (#638)", async () => {
+    const first = await login("+99361234567");
+    const firstMe = await request
+      .get("/api/v1/me")
+      .set("Authorization", `Bearer ${first.accessToken}`)
+      .expect(200);
+
+    expect(firstMe.body.displayName).toBeNull();
+    expect(firstMe.body.avatarKey).toBeNull();
+    expect(firstMe.body.nameNumber).toBeGreaterThanOrEqual(1000);
+    expect(firstMe.body.nameNumber).toBeLessThanOrEqual(9999);
+    expect(firstMe.body.avatarIndex).toBeGreaterThanOrEqual(0);
+    expect(firstMe.body.avatarIndex).toBeLessThanOrEqual(11);
+    expect(AuthSchemas.MeResponseSchema.safeParse(firstMe.body).success).toBe(true);
+
+    await prisma.otpRequest.updateMany({
+      where: { channel: "phone", destination: "+99361234567" },
+      data: { createdAt: new Date(Date.now() - 2 * 60_000) },
+    });
+    const second = await login("+99361234567");
+    const secondMe = await request
+      .get("/api/v1/me")
+      .set("Authorization", `Bearer ${second.accessToken}`)
+      .expect(200);
+
+    expect(second.userId).toBe(first.userId);
+    expect(secondMe.body).toMatchObject({
+      nameNumber: firstMe.body.nameNumber,
+      avatarIndex: firstMe.body.avatarIndex,
+      avatarKey: null,
+    });
   });
 
   it("returns the correct role for the authenticated user", async () => {

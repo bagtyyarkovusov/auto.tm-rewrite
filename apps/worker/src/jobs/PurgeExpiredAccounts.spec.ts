@@ -15,6 +15,9 @@ function makeFakePrisma() {
       emailVerifiedAt?: Date | null;
       displayName: string | null;
       avatarUrl: string | null;
+      nameNumber?: number;
+      avatarIndex?: number;
+      avatarKey?: string | null;
       deletionScheduledAt: Date | null;
     }>,
     sessions: [] as Array<{ id: string; userId: string }>,
@@ -227,6 +230,28 @@ describe("PurgeExpiredAccounts", () => {
     expect(kept).toBeDefined();
     expect(kept?.phone).toBe("+99361234568");
     expect(kept?.deletionScheduledAt).not.toBeNull();
+  });
+
+  it("clears the name and the photo key and keeps the name number and avatar index (#638)", async () => {
+    fake.users.push({
+      id: "user-expired",
+      phone: "+99361234567",
+      displayName: "Expired",
+      avatarUrl: null,
+      nameNumber: 4821,
+      avatarIndex: 7,
+      avatarKey: "avatars/user-expired/photo.jpg",
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+
+    await job.execute({ now: NOW });
+
+    expect(fake.users[0]).toMatchObject({
+      displayName: null,
+      avatarKey: null,
+      nameNumber: 4821,
+      avatarIndex: 7,
+    });
   });
 
   it("prunes private rows for purged users", async () => {
