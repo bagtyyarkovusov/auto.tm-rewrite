@@ -203,6 +203,20 @@ describe("Saving the name", () => {
     expect(await view.findByRole("button", { name: `Aman Durdy, ${PHONE}` })).toBeTruthy();
   });
 
+  it("clears Name saved from Profile by itself", async () => {
+    const view = render(<ProfileScreen />);
+    await view.findByRole("button", { name: "Edit name" });
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      act(() => signInMethodNoticeStore.getState().show({ kind: "nameSaved" }));
+      expect(view.getByText("Name saved")).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(4000); });
+      expect(view.queryByText("Name saved")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("shows Saving... with a spinner, and locks the field and the button while saving", async () => {
     api.next = ["hold"];
     const view = await openEditor();
