@@ -20,7 +20,6 @@ import { countUploads } from "../uploadStaging/uploadCounts";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { cn } from "@/lib/utils";
 
 type DataStep = Exclude<WizardSchemas.WizardStep, "review">;
 /** The steps that hold fields, in the wizard's order. */
@@ -189,7 +188,8 @@ function SectionRow({
   const { t } = useTranslation();
   const action = needsSeller ? t("checkFillIn") : t("checkChange");
 
-  // The Pressable's classes never change with its state: only the action text's do.
+  // No class is toggled on a mounted component here: the row's classes are fixed,
+  // and Change and Fill in are two separate texts.
   return (
     <Pressable
       testID="check-section"
@@ -204,9 +204,11 @@ function SectionRow({
           <Text className="text-sm text-muted-foreground" numberOfLines={2}>{summary}</Text>
         ) : null}
       </View>
-      <Text className={cn("text-sm font-medium", needsSeller ? "text-destructive" : "text-info-500")}>
-        {action}
-      </Text>
+      {needsSeller ? (
+        <Text key="fill-in" className="text-sm font-medium text-destructive">{action}</Text>
+      ) : (
+        <Text key="change" className="text-sm font-medium text-info-500">{action}</Text>
+      )}
     </Pressable>
   );
 }
