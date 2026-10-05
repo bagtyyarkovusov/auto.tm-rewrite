@@ -1,6 +1,7 @@
-export interface IdentityUserSummary {
+import type { PublicIdentity } from "./PublicIdentity";
+
+export interface IdentityUserSummary extends PublicIdentity {
   id: string;
-  displayName: string | null;
   role: string;
   locale?: string;
   suspendedAt: Date | null;

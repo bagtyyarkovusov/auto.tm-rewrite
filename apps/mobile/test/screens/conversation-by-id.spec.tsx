@@ -119,6 +119,14 @@ vi.mock("expo-linking", () => ({
   openSettings: vi.fn(),
 }));
 
+/** The other participant: Merdan, who has no photo, unless `updates` says otherwise. */
+function peer(
+  id: string,
+  updates: Partial<ConversationsSchemas.ConversationPeer> = {},
+): ConversationsSchemas.ConversationPeer {
+  return { id, displayName: "Merdan", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false, ...updates };
+}
+
 function conversation(
   updates: Partial<ConversationsSchemas.GetConversationResponse> = {},
 ): ConversationsSchemas.GetConversationResponse {
@@ -136,7 +144,7 @@ function conversation(
     buyerId: BUYER_ID,
     sellerId: SELLER_ID,
     myRole: "buyer",
-    peer: { id: SELLER_ID, displayName: "Merdan" },
+    peer: peer(SELLER_ID),
     blockedByMe: false,
     updatedAt: "2026-10-01T10:00:00.000Z",
     unreadCount: 0,
@@ -194,7 +202,7 @@ describe("Conversation opened with only its ID", () => {
     const screen = renderMobile(<ConversationDetailScreen />);
 
     expect(await screen.findByText("Merdan")).toBeTruthy();
-    expect(screen.getByText("M", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByText("M", { includeHiddenElements: true })).toBeNull();
     expect(screen.getByText("online")).toBeTruthy();
     expect(screen.getByText("2018 Toyota Camry")).toBeTruthy();
     expect(screen.getByText("285,000 TMT")).toBeTruthy();
@@ -258,7 +266,7 @@ describe("Conversation opened from cached data", () => {
         : new Promise(() => {}),
     );
     // A list row or an open response: the summary without the send restriction.
-    const { sendRestriction, ...summary } = conversation({ peer: { id: SELLER_ID, displayName: "Cached" } });
+    const { sendRestriction, ...summary } = conversation({ peer: peer(SELLER_ID, { displayName: "Cached" }) });
     expect(sendRestriction).toBeNull();
     function Seeded({ children }: PropsWithChildren) {
       const queryClient = useQueryClient();
@@ -273,7 +281,7 @@ describe("Conversation opened from cached data", () => {
     expect(state.get).toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
 
     await act(async () => {
-      resolveDetail(conversation({ peer: { id: SELLER_ID, displayName: "Fresh" } }));
+      resolveDetail(conversation({ peer: peer(SELLER_ID, { displayName: "Fresh" }) }));
     });
     expect(await screen.findByText("Fresh")).toBeTruthy();
   });
@@ -298,12 +306,12 @@ describe("Conversation header Call", () => {
     state.viewerId = SELLER_ID;
     routeGet({
       [`/conversations/${CONVERSATION_ID}`]: () =>
-        conversation({ myRole: "seller", peer: { id: BUYER_ID, displayName: null } }),
+        conversation({ myRole: "seller", peer: peer(BUYER_ID, { displayName: null }) }),
       [`/listings/${LISTING_ID}`]: () => listingDetail(),
     });
     const screen = renderMobile(<ConversationDetailScreen />);
 
-    expect(await screen.findByText("Buyer")).toBeTruthy();
+    expect(await screen.findByText("Driver 2057")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Call the seller" })).toBeNull();
     expect(state.get).not.toHaveBeenCalledWith(`/listings/${LISTING_ID}`, expect.anything());
   });
@@ -335,11 +343,11 @@ describe("Conversation header Call", () => {
   it("hides Call and shows the unavailable strip when the Listing is gone", async () => {
     routeGet({
       [`/conversations/${CONVERSATION_ID}`]: () =>
-        conversation({ listing: null, peer: { id: SELLER_ID, displayName: null } }),
+        conversation({ listing: null, peer: peer(SELLER_ID, { displayName: null }) }),
     });
     const screen = renderMobile(<ConversationDetailScreen />);
 
-    expect(await screen.findByText("Private seller")).toBeTruthy();
+    expect(await screen.findByText("Driver 2057")).toBeTruthy();
     expect(screen.getByText("Listing unavailable")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Open:/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Call the seller" })).toBeNull();
@@ -385,11 +393,11 @@ describe("Conversation quick replies", () => {
     state.viewerId = SELLER_ID;
     routeGet({
       [`/conversations/${CONVERSATION_ID}`]: () =>
-        conversation({ myRole: "seller", peer: { id: BUYER_ID, displayName: null } }),
+        conversation({ myRole: "seller", peer: peer(BUYER_ID, { displayName: null }) }),
     });
     const screen = renderMobile(<ConversationDetailScreen />);
 
-    expect(await screen.findByText("Buyer")).toBeTruthy();
+    expect(await screen.findByText("Driver 2057")).toBeTruthy();
     expect(screen.queryByText(QUICK_REPLY)).toBeNull();
   });
 

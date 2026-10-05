@@ -188,6 +188,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
             {
               id,
               displayName: this.displayNames.get(id) ?? null,
+              nameNumber: 2057,
+              avatarIndex: 7,
+              avatarKey: null,
+              deleted: false,
               role: "user",
               suspendedAt: null,
               suspendedById: null,
@@ -426,7 +430,14 @@ describe("OpenConversation", () => {
         listingId: "listing-1",
       });
 
-      expect(result.peer).toEqual({ id: "seller-1", displayName: "Seller One" });
+      expect(result.peer).toEqual({
+        id: "seller-1",
+        displayName: "Seller One",
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
+      });
       expect(result.blockedByMe).toBe(false);
     });
 
@@ -441,7 +452,14 @@ describe("OpenConversation", () => {
         listingId: "listing-1",
       });
 
-      expect(result.peer).toEqual({ id: "seller-1", displayName: null });
+      expect(result.peer).toEqual({
+        id: "seller-1",
+        displayName: null,
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
+      });
     });
 
     it("still returns the conversation when the seller no longer exists", async () => {
@@ -453,7 +471,14 @@ describe("OpenConversation", () => {
         listingId: "listing-1",
       });
 
-      expect(result.peer).toEqual({ id: "seller-1", displayName: null });
+      expect(result.peer).toEqual({
+        id: "seller-1",
+        displayName: null,
+        nameNumber: 1000,
+        avatarIndex: 0,
+        avatarKey: null,
+        deleted: true,
+      });
     });
 
     it("reports blockedByMe on an existing conversation the buyer later blocked", async () => {

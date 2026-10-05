@@ -28,7 +28,14 @@ function summary(overrides?: Record<string, unknown>) {
     buyerId: "550e8400-e29b-41d4-a716-4466554400b1",
     sellerId: "550e8400-e29b-41d4-a716-4466554400b2",
     myRole: "buyer" as const,
-    peer: { id: "550e8400-e29b-41d4-a716-4466554400b2", displayName: "Merdan" },
+    peer: {
+      id: "550e8400-e29b-41d4-a716-4466554400b2",
+      displayName: "Merdan",
+      nameNumber: 2057,
+      avatarIndex: 7,
+      avatarKey: null,
+      deleted: false,
+    },
     blockedByMe: false,
     updatedAt: "2026-07-01T10:00:00.000Z",
     unreadCount: 0,
@@ -65,7 +72,7 @@ describe("useConversation", () => {
     mockGet.mockReturnValue(new Promise(() => {}));
     const { client, wrapper } = setup();
     client.setQueryData(queryKeys.conversations.list(), {
-      pages: [{ items: [summary({ peer: { id: "p", displayName: "From list" } })], nextCursor: null }],
+      pages: [{ items: [summary({ peer: { id: "p", displayName: "From list", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false } })], nextCursor: null }],
       pageParams: [null],
     });
 

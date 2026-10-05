@@ -1013,6 +1013,22 @@
                 "type": "string",
                 "nullable": true
               },
+              "nameNumber": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 9999
+              },
+              "avatarIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "avatarKey": {
+                "type": "string",
+                "nullable": true
+              },
+              "deleted": {
+                "type": "boolean"
+              },
               "memberSince": {
                 "type": "string",
                 "format": "date-time"
@@ -1020,6 +1036,10 @@
             },
             "required": [
               "displayName",
+              "nameNumber",
+              "avatarIndex",
+              "avatarKey",
+              "deleted",
               "memberSince"
             ]
           },
@@ -3448,18 +3468,38 @@
           "peer": {
             "type": "object",
             "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
               "displayName": {
                 "type": "string",
                 "nullable": true
+              },
+              "nameNumber": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 9999
+              },
+              "avatarIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "avatarKey": {
+                "type": "string",
+                "nullable": true
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
               }
             },
             "required": [
-              "id",
-              "displayName"
+              "displayName",
+              "nameNumber",
+              "avatarIndex",
+              "avatarKey",
+              "deleted",
+              "id"
             ]
           },
           "blockedByMe": {
@@ -3729,18 +3769,38 @@
                 "peer": {
                   "type": "object",
                   "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
                     "displayName": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "nameNumber": {
+                      "type": "integer",
+                      "minimum": 1000,
+                      "maximum": 9999
+                    },
+                    "avatarIndex": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "avatarKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
                     }
                   },
                   "required": [
-                    "id",
-                    "displayName"
+                    "displayName",
+                    "nameNumber",
+                    "avatarIndex",
+                    "avatarKey",
+                    "deleted",
+                    "id"
                   ]
                 },
                 "blockedByMe": {
@@ -4625,18 +4685,38 @@
           "peer": {
             "type": "object",
             "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
               "displayName": {
                 "type": "string",
                 "nullable": true
+              },
+              "nameNumber": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 9999
+              },
+              "avatarIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "avatarKey": {
+                "type": "string",
+                "nullable": true
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
               }
             },
             "required": [
-              "id",
-              "displayName"
+              "displayName",
+              "nameNumber",
+              "avatarIndex",
+              "avatarKey",
+              "deleted",
+              "id"
             ]
           },
           "blockedByMe": {
@@ -5328,18 +5408,38 @@
           "peer": {
             "type": "object",
             "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
               "displayName": {
                 "type": "string",
                 "nullable": true
+              },
+              "nameNumber": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 9999
+              },
+              "avatarIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "avatarKey": {
+                "type": "string",
+                "nullable": true
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
               }
             },
             "required": [
-              "id",
-              "displayName"
+              "displayName",
+              "nameNumber",
+              "avatarIndex",
+              "avatarKey",
+              "deleted",
+              "id"
             ]
           },
           "blockedByMe": {
@@ -7772,18 +7872,38 @@
                     "peer": {
                       "type": "object",
                       "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
                         "displayName": {
                           "type": "string",
                           "nullable": true
+                        },
+                        "nameNumber": {
+                          "type": "integer",
+                          "minimum": 1000,
+                          "maximum": 9999
+                        },
+                        "avatarIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "avatarKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "deleted": {
+                          "type": "boolean"
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
                         }
                       },
                       "required": [
-                        "id",
-                        "displayName"
+                        "displayName",
+                        "nameNumber",
+                        "avatarIndex",
+                        "avatarKey",
+                        "deleted",
+                        "id"
                       ]
                     },
                     "blockedByMe": {
@@ -8199,18 +8319,38 @@
                           "peer": {
                             "type": "object",
                             "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
                               "displayName": {
                                 "type": "string",
                                 "nullable": true
+                              },
+                              "nameNumber": {
+                                "type": "integer",
+                                "minimum": 1000,
+                                "maximum": 9999
+                              },
+                              "avatarIndex": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "avatarKey": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "deleted": {
+                                "type": "boolean"
+                              },
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
                               }
                             },
                             "required": [
-                              "id",
-                              "displayName"
+                              "displayName",
+                              "nameNumber",
+                              "avatarIndex",
+                              "avatarKey",
+                              "deleted",
+                              "id"
                             ]
                           },
                           "blockedByMe": {
@@ -8514,18 +8654,38 @@
                     "peer": {
                       "type": "object",
                       "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
                         "displayName": {
                           "type": "string",
                           "nullable": true
+                        },
+                        "nameNumber": {
+                          "type": "integer",
+                          "minimum": 1000,
+                          "maximum": 9999
+                        },
+                        "avatarIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "avatarKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "deleted": {
+                          "type": "boolean"
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
                         }
                       },
                       "required": [
-                        "id",
-                        "displayName"
+                        "displayName",
+                        "nameNumber",
+                        "avatarIndex",
+                        "avatarKey",
+                        "deleted",
+                        "id"
                       ]
                     },
                     "blockedByMe": {

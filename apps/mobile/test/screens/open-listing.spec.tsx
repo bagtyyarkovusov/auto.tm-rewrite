@@ -70,7 +70,7 @@ describe("OpenListingConversationScreen behaviour", () => {
       buyerId: "00000000-0000-4000-8000-0000000000b1",
       sellerId: "00000000-0000-4000-8000-0000000000b2",
       myRole: "buyer",
-      peer: { id: "00000000-0000-4000-8000-0000000000b2", displayName: null },
+      peer: { id: "00000000-0000-4000-8000-0000000000b2", displayName: null, nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false },
       blockedByMe: false,
       updatedAt: "2026-10-01T10:00:00.000Z",
       unreadCount: 0,

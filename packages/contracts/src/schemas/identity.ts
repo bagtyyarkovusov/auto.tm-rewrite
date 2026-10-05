@@ -97,6 +97,23 @@ export const UpdateMeRequestSchema = z.object({
 });
 export type UpdateMeRequest = z.infer<typeof UpdateMeRequestSchema>;
 
+/**
+ * What one User may see of another (#644): the name they set or null, the
+ * number and car avatar index for their Generated Name and Assigned Avatar,
+ * and the profile photo key, null until photos ship. `deleted` is true for a
+ * User purged after account deletion: no name and no photo, and the app keeps
+ * its deleted-User wording and person icon. Never carries a Sign-in Method,
+ * the role or an upload id. Compose the name with `formatDisplayName`.
+ */
+export const PublicIdentitySchema = z.object({
+  displayName: z.string().nullable(),
+  nameNumber: z.number().int().min(1000).max(9999),
+  avatarIndex: z.number().int().nonnegative(),
+  avatarKey: z.string().nullable(),
+  deleted: z.boolean(),
+});
+export type PublicIdentity = z.infer<typeof PublicIdentitySchema>;
+
 export const UserSummarySchema = z.object({
   id: z.string().uuid(),
   phone: z.string(),

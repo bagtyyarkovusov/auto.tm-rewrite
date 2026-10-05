@@ -343,7 +343,11 @@ describe("Conversation message broadcast e2e", () => {
       const { buyerToken, sellerToken } = await seedConversation();
       await prisma.user.update({
         where: { id: suite.id("seller-1") },
-        data: { displayName: "Seller One" },
+        data: { displayName: "Seller One", nameNumber: 2057, avatarIndex: 7 },
+      });
+      await prisma.user.update({
+        where: { id: suite.id("buyer-1") },
+        data: { nameNumber: 1111, avatarIndex: 1 },
       });
 
       const unblocked = await request
@@ -353,6 +357,10 @@ describe("Conversation message broadcast e2e", () => {
       expect(unblocked.body.items[0].peer).toEqual({
         id: suite.id("seller-1"),
         displayName: "Seller One",
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
       });
       expect(unblocked.body.items[0].blockedByMe).toBe(false);
       expect(JSON.stringify(unblocked.body)).not.toContain(suite.phone("seller-1"));
@@ -374,12 +382,20 @@ describe("Conversation message broadcast e2e", () => {
       expect(sellerView.body.items[0].peer).toEqual({
         id: suite.id("buyer-1"),
         displayName: null,
+        nameNumber: 1111,
+        avatarIndex: 1,
+        avatarKey: null,
+        deleted: false,
       });
       expect(sellerView.body.items[0].blockedByMe).toBe(false);
     });
 
     it("returns the peer and block state when a Conversation is opened again", async () => {
       const { buyerToken, listingId } = await seedConversation();
+      await prisma.user.update({
+        where: { id: suite.id("seller-1") },
+        data: { nameNumber: 2057, avatarIndex: 7 },
+      });
       await prisma.blockedUser.create({
         data: { blockerId: suite.id("buyer-1"), blockedId: suite.id("seller-1") },
       });
@@ -393,6 +409,10 @@ describe("Conversation message broadcast e2e", () => {
       expect(res.body.peer).toEqual({
         id: suite.id("seller-1"),
         displayName: null,
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
       });
       expect(res.body.blockedByMe).toBe(true);
     });
