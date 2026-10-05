@@ -191,6 +191,21 @@ describe("Listing edit Contact step", () => {
     });
   });
 
+  it("Back with a new number that is not confirmed asks for Contact on the list and keeps Save disabled", async () => {
+    // The number came back from the code flow but is not in the confirmed list.
+    routeParams.confirmedContactPhone = CONFIRMED_PHONE;
+    const screen = renderMobile(<EditListingScreen />);
+    openContactStep(screen);
+
+    fireEvent.press(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.getByRole("button", { name: /^Contact, .*Fill in$/ })).toBeTruthy();
+    const save = screen.getByRole("button", { name: "Save changes" });
+    expect(save.props.accessibilityState).toMatchObject({ disabled: true });
+    await act(async () => { fireEvent.press(save); });
+    expect(fixture.save).not.toHaveBeenCalled();
+  });
+
   it("does not call a new number expired while the confirmed list is not known, and Done goes on", () => {
     fixture.confirmedPhones = undefined;
     routeParams.confirmedContactPhone = CONFIRMED_PHONE;

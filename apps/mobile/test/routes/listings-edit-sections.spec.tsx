@@ -255,6 +255,15 @@ describe("changing a section (#589)", () => {
 
     expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Price, 179,000 TMT, Change" })).toBeTruthy();
+
+    // Left invalid, the step is asked for again and nothing can be saved.
+    openStep(screen, /^Price, .*Change$/, "Price, Step 4 of 7");
+    fireEvent.changeText(screen.getByDisplayValue("179000"), "");
+    fireEvent.press(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Price, .*Fill in$/ })).toBeTruthy();
+    expect(isDisabled(saveButton(screen))).toBe(true);
   });
 });
 
