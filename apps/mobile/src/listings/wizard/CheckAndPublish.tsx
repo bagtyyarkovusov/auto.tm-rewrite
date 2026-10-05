@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import * as Linking from "expo-linking";
 import { Camera } from "lucide-react-native";
 import { Enums, WizardSchemas } from "@auto-tm/contracts";
 import { Pressable, View } from "react-native";
@@ -10,7 +11,8 @@ import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useGenerations } from "../../api/catalog/useGenerations";
 import { useModels } from "../../api/catalog/useModels";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
-import { localeTag } from "../../i18n/resources";
+import { legalPageUrl } from "../../config/publicWebUrl";
+import { localeTag, resolveLocale } from "../../i18n/resources";
 import { listingSpecLine } from "../feed/listingSpecLine";
 import { getPhotoUri } from "../uploadStaging/photoUri";
 import type { StagedPhoto } from "../uploadStaging/types";
@@ -217,7 +219,7 @@ export default function CheckAndPublish({
   photos: queuePhotos,
   photosReady = true,
 }: CheckAndPublishProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const photos = photosReady ? queuePhotos : NO_PHOTOS;
   const values = useCheckValues(payload);
   const summaries = useSectionSummaries(payload, values, photos.length);
@@ -240,6 +242,18 @@ export default function CheckAndPublish({
           />
         ))}
       </View>
+
+      <Text className="pt-1 text-xs leading-normal text-muted-foreground">
+        {t("publishRulesPrefix")}
+        <Text
+          accessibilityRole="link"
+          className="text-xs font-medium text-info-500 underline"
+          onPress={() => void Linking.openURL(legalPageUrl(resolveLocale(i18n.language), "posting-rules"))}
+        >
+          {t("publishRulesLink")}
+        </Text>
+        {t("publishRulesSuffix")}
+      </Text>
     </View>
   );
 }
