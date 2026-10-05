@@ -19,8 +19,8 @@ export const privacyPolicy: Record<Locale, LegalDocument> = {
     title: "Privacy Policy",
     effectiveDate: "September 23, 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "October 3, 2026",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "October 6, 2026",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. What we collect",
@@ -35,10 +35,11 @@ export const privacyPolicy: Record<Locale, LegalDocument> = {
 - **Messages** — text content of contact-thread conversations between buyers and sellers.
 - **Device information** — device model, operating system, and app version, collected for debugging purposes.
 - **IP address** — used for rate limiting and security.
+- **Push notification token** — if you allow notifications, the token your device's push service gives the app, used to tell you about new messages.
 - **Photo uploads** — images you attach to listings.
 - **VIN** — if you voluntarily enter it.
 
-Future collections (if features ship): push notification tokens, video uploads, garage vehicle data, blog content, inspection report data.`,
+Future collections (if features ship): video uploads, garage vehicle data, blog content, inspection report data.`,
       },
       {
         title: "2. What we do NOT collect",
@@ -59,7 +60,7 @@ Future collections (if features ship): push notification tokens, video uploads, 
       },
       {
         title: "5. Sharing with third parties",
-        body: "In the MLP beta, AutoTM uses its own authentication and hosting infrastructure. Sign-in codes sent by email are delivered by an email delivery provider located in the United States: it receives your email address and the message containing the code, and keeps them for 30 days. If native push notifications ship later, Firebase Cloud Messaging (Google) and Apple Push Notification Service will receive your device token and notification payload. We do not share data with advertisers, data brokers, or other third parties.",
+        body: "In the MLP beta, AutoTM uses its own authentication and hosting infrastructure. Sign-in codes sent by email are delivered by an email delivery provider located in the United States: it receives your email address and the message containing the code, and keeps them for 30 days. Push notifications are delivered through Firebase Cloud Messaging (Google) on Android and Apple Push Notification Service on iOS, which receive your device token and the notification content. We do not share data with advertisers, data brokers, or other third parties.",
       },
       {
         title: "6. Data retention & account deletion",
@@ -89,7 +90,7 @@ When you request account deletion:
       },
       {
         title: "10. Security",
-        body: "We use HTTPS for all data in transit. Refresh tokens are hashed with bcrypt. Data is stored on encrypted disks. Servers are hosted in Turkmenistan. Admin actions are audit-logged.",
+        body: "We use HTTPS for all data in transit. Refresh tokens are hashed with bcrypt. Data is stored on encrypted disks. During store review, servers are hosted by a cloud provider (Railway); before public launch they move to Turkmenistan. Admin actions are audit-logged.",
       },
       {
         title: "11. Changes to this policy",
@@ -105,8 +106,8 @@ When you request account deletion:
     title: "Политика конфиденциальности",
     effectiveDate: "23 сентября 2026 г.",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "3 октября 2026 г.",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "6 октября 2026 г.",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. Какие данные мы собираем",
@@ -119,6 +120,7 @@ When you request account deletion:
 - **Сообщения** — текст переписки между покупателями и продавцами.
 - **Информация об устройстве** — модель, ОС, версия приложения (для отладки).
 - **IP-адрес** — для ограничения частоты запросов и безопасности.
+- **Токен push-уведомлений** — если вы разрешите уведомления: токен, который push-сервис устройства выдаёт приложению, чтобы сообщать о новых сообщениях.
 - **Загруженные фото** — изображения к объявлениям.
 - **VIN** — если вы его введёте добровольно.`,
       },
@@ -141,7 +143,7 @@ When you request account deletion:
       },
       {
         title: "5. Передача третьим лицам",
-        body: "В MLP-бете используется собственная инфраструктура. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом, а также хранит их 30 дней. Если добавим push-уведомления, токены устройств будут передаваться FCM (Google) и APNS (Apple). Мы не передаём данные рекламным сетям или брокерам.",
+        body: "В MLP-бете используется собственная инфраструктура. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом, а также хранит их 30 дней. Push-уведомления доставляются через Firebase Cloud Messaging (Google) на Android и Apple Push Notification Service на iOS: они получают токен устройства и текст уведомления. Мы не передаём данные рекламным сетям или брокерам.",
       },
       {
         title: "6. Хранение данных и удаление аккаунта",
@@ -171,7 +173,7 @@ When you request account deletion:
       },
       {
         title: "10. Безопасность",
-        body: "HTTPS в transit. Токены обновления хешируются bcrypt. Диски зашифрованы. Серверы в Туркменистане. Действия администраторов логируются.",
+        body: "HTTPS в transit. Токены обновления хешируются bcrypt. Диски зашифрованы. На время проверки в магазинах приложений серверы размещены у облачного провайдера (Railway); до публичного запуска они переедут в Туркменистан. Действия администраторов логируются.",
       },
       {
         title: "11. Изменения политики",
@@ -187,8 +189,8 @@ When you request account deletion:
     title: "Gizlinlik syýasaty",
     effectiveDate: "23-nji sentýabr 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "3-nji oktýabr 2026",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "6-njy oktýabr 2026",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. Haýsy maglumatlary ýygnaýarys",
@@ -201,6 +203,7 @@ When you request account deletion:
 - **Habarlar** — satyn alyjy bilen satyjynyň arasyndaky çat.
 - **Enjama maglumat** — model, OS, programmanyň wersiýasy (ýalňyşlary düzetmek üçin).
 - **IP salgysy** — howpsuzlyk we çäklendirme.
+- **Push habarnamalarynyň tokeni** — habarnamalara rugsat berseňiz: täze habarlar barada habar bermek üçin enjamyň push hyzmatynyň programma berýän tokeni.
 - **Ýüklenen suratlar** — bildirişlere goşulan.
 - **VIN** — öziňiz girizen bolsaňyz.`,
       },
@@ -223,7 +226,7 @@ When you request account deletion:
       },
       {
         title: "5. Üçünji taraplara geçirmek",
-        body: "MLP betada öz infrastrukturamyz. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar we olary 30 gün saklaýar. Push habarlary goşulsa, enjam tokenlary FCM (Google) we APNS (Apple) gidýär. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
+        body: "MLP betada öz infrastrukturamyz. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar we olary 30 gün saklaýar. Push habarnamalary Android-de Firebase Cloud Messaging (Google), iOS-da Apple Push Notification Service arkaly eltilýär: olar enjamyň tokenini we habarnamanyň mazmunyny alýar. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
       },
       {
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
@@ -253,7 +256,7 @@ Akkaunty pozan wagtyňyz:
       },
       {
         title: "10. Howpsuzlyk",
-        body: "HTTPS transitde. Täzeleme tokenlary bcrypt bilen heşlenýär. Diskler şifrlenen. Serwerler Türkmenistanda. Admin hereketleri auditlenýär.",
+        body: "HTTPS transitde. Täzeleme tokenlary bcrypt bilen heşlenýär. Diskler şifrlenen. Dükanlarda barlag döwründe serwerler bulut üpjünçisinde (Railway) ýerleşýär; köpçülige açylmazdan öň Türkmenistana geçirilýär. Admin hereketleri auditlenýär.",
       },
       {
         title: "11. Syýasat üýtgemeleri",
