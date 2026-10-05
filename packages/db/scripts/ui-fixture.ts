@@ -478,6 +478,9 @@ const SELLER_IDS = {
 } as const;
 
 const BUYER_ID = "f1000000-0000-4000-8000-000000000010";
+/** Users that only exist for Cabinet and Profile screenshots: no set name, and a 30-character name. */
+const UNNAMED_ID = "f1000000-0000-4000-8000-000000000011";
+const LONG_NAME_ID = "f1000000-0000-4000-8000-000000000012";
 const NO_PHOTO_LISTING_ID = "f1000000-0000-4000-8000-0000000001ff";
 const CONVERSATION_IDS = {
   camryRed: "f1000000-0000-4000-8000-000000000201",
@@ -551,9 +554,11 @@ async function main(): Promise<void> {
   ];
   await prisma.listing.deleteMany({ where: { id: { in: allListingIds } } });
   await prisma.user.deleteMany({
-    where: { id: { in: [...Object.values(SELLER_IDS), BUYER_ID] } },
+    where: { id: { in: [...Object.values(SELLER_IDS), BUYER_ID, UNNAMED_ID, LONG_NAME_ID] } },
   });
 
+  // The name number and the avatar index are fixed here, not left to the
+  // column's random default, so screenshots of these Users are reproducible.
   await prisma.user.createMany({
     data: [
       {
@@ -561,6 +566,8 @@ async function main(): Promise<void> {
         phone: "+99361000001",
         phoneVerifiedAt: new Date(),
         displayName: "Aýgül Amanowa",
+        nameNumber: 6644,
+        avatarIndex: 5,
         locale: "tk",
         role: UserRole.seller,
       },
@@ -569,6 +576,8 @@ async function main(): Promise<void> {
         phone: "+99361000002",
         phoneVerifiedAt: new Date(),
         displayName: "Merdan Hojaýew",
+        nameNumber: 7310,
+        avatarIndex: 9,
         locale: "ru",
         role: UserRole.seller,
       },
@@ -577,6 +586,8 @@ async function main(): Promise<void> {
         phone: "+99361000003",
         phoneVerifiedAt: new Date(),
         displayName: "Salamat Motors",
+        nameNumber: 2057,
+        avatarIndex: 2,
         locale: "ru",
         role: UserRole.seller,
       },
@@ -585,6 +596,28 @@ async function main(): Promise<void> {
         phone: "+99361000009",
         phoneVerifiedAt: new Date(),
         displayName: "Öwez Berdiýew",
+        nameNumber: 4821,
+        avatarIndex: 7,
+        locale: "tk",
+        role: UserRole.buyer,
+      },
+      {
+        id: UNNAMED_ID,
+        phone: "+99361000010",
+        phoneVerifiedAt: new Date(),
+        displayName: null,
+        nameNumber: 4821,
+        avatarIndex: 7,
+        locale: "tk",
+        role: UserRole.buyer,
+      },
+      {
+        id: LONG_NAME_ID,
+        phone: "+99361000011",
+        phoneVerifiedAt: new Date(),
+        displayName: "Abdyrahman Gurbanguly Atamyrad",
+        nameNumber: 3906,
+        avatarIndex: 11,
         locale: "tk",
         role: UserRole.buyer,
       },
@@ -774,6 +807,7 @@ async function main(): Promise<void> {
       `  photos cached at ${PHOTO_CACHE}`,
       `${threadCount} conversations, 3 favourites for the buyer`,
       `Sellers +99361000001 / +99361000002 / +99361000003 · Buyer +99361000009`,
+      `No set name +99361000010 · 30-character name +99361000011`,
     ].join("\n"),
   );
 }

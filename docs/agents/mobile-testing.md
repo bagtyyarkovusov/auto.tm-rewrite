@@ -75,7 +75,7 @@ project adapter, not the upstream Jest React Native preset. Add an explicit
 adapter or spec-local mock when a component uses an unsupported native API.
 
 `test/native-setup.ts` also stubs, for every spec, `expo-linking`,
-`expo-secure-store`, Gesture Handler, Reanimated, Worklets, the Checkbox and
+`expo-secure-store`, Gesture Handler, Reanimated, Worklets, `react-native-svg`, the Checkbox and
 React Navigation's themes; a spec-local `vi.mock` of the same module wins. Do
 not copy these stubs into a spec.
 
@@ -102,6 +102,10 @@ not copy these stubs into a spec.
   (plus `Up` and `Down`) layout animations, whose `.duration()` returns the same
   object. No gesture, shared-value update or animation runs, so a component that
   uses another animation or `Animated.Text` needs the stub extended.
+- **SVG.** `react-native-svg` exports only `default`, `Svg`, `Path` and
+  `Circle`. Each renders a host node of that name with the props it was given,
+  so a spec can read geometry and colours; nothing is drawn. Any other export
+  fails in every spec until the stub in `test/native-setup.ts` gains it.
 - **Portal.** `@rn-primitives/portal` cannot load in Node, so `Portal` renders its
   children where it is declared and `PortalHost` renders nothing. A spec can wrap
   a screen in the real `ToastProvider` and query its toasts, as
