@@ -15,8 +15,8 @@ import { ApiError } from "../../src/api/client";
 import { getDisplayNameRefusal } from "../../src/api/getErrorCopy";
 import { useMe } from "../../src/api/identity/useMe";
 import { useUpdateDisplayName } from "../../src/api/identity/useUpdateDisplayName";
-import { signInMethodNoticeStore } from "../../src/auth/signInMethodNotice";
 import { useAuth } from "../../src/auth/useAuth";
+import { profileNoticeStore } from "../../src/identity/profileNotice";
 import {
   describeDisplayNameField,
   fieldErrorFor,
@@ -111,7 +111,7 @@ export default function DisplayNameScreen() {
       }
       return;
     }
-    signInMethodNoticeStore.getState().show({ kind: "nameSaved" });
+    profileNoticeStore.getState().show({ kind: "nameSaved" });
     if (mounted.current) router.dismissTo("/profile");
   }
 

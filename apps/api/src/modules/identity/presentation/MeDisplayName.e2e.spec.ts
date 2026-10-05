@@ -114,6 +114,14 @@ describe("PATCH /api/v1/me e2e", () => {
     expect(res.body.displayName).toBe("ýňş".repeat(10));
   });
 
+  it("stores a name sent with a NUL character without it, instead of failing", async () => {
+    const res = await patch(FIRST, { displayName: "Am\u0000an" }).expect(200);
+
+    expect(res.body.displayName).toBe("Aman");
+    const row = await prisma.user.findUnique({ where: { id: FIRST } });
+    expect(row?.displayName).toBe("Aman");
+  });
+
   it("lets two Users hold the same name", async () => {
     await patch(FIRST, { displayName: "Aman" }).expect(200);
     await patch(SECOND, { displayName: "Aman" }).expect(200);

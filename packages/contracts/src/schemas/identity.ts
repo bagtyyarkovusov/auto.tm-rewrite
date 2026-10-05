@@ -48,11 +48,16 @@ export const DISPLAY_NAME_MIN = 2;
 export const DISPLAY_NAME_MAX = 30;
 
 /**
- * The form a Display Name is stored in: spaces at the ends dropped and runs
- * of whitespace turned into one space. The app counts and saves this form.
+ * The form a Display Name is stored in: control characters other than
+ * whitespace dropped (PostgreSQL text cannot hold NUL), spaces at the ends
+ * dropped and runs of whitespace turned into one space. The app counts and
+ * saves this form.
  */
 export function normalizeDisplayName(raw: string): string {
-  return raw.trim().replace(/\s+/g, " ");
+  return raw
+    .replace(/(?!\s)\p{Cc}/gu, "")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 /** Why a Display Name is refused; sent as `details.reason` on INVALID_DISPLAY_NAME. */

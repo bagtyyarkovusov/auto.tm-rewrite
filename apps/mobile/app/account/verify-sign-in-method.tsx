@@ -9,7 +9,7 @@ import { useRequestSignInMethodChange } from "../../src/api/identity/useRequestS
 import { useVerifySignInMethodChange } from "../../src/api/identity/useVerifySignInMethodChange";
 import { maskEmail, normalizeEmail } from "../../src/auth/email";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
-import { signInMethodNoticeStore } from "../../src/auth/signInMethodNotice";
+import { profileNoticeStore } from "../../src/identity/profileNotice";
 import { isSignInMethodTaken } from "../../src/auth/verifyCodeError";
 import { HELP_HREF } from "../../src/navigation/helpHref";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
@@ -94,7 +94,7 @@ export default function VerifySignInMethodScreen() {
     // The change is applied even if the User already pressed Back. Profile
     // still shows the line when they reach it, but a User who has moved on is
     // not pulled back there.
-    signInMethodNoticeStore.getState().show({
+    profileNoticeStore.getState().show({
       kind,
       value: identifier.phone ? maskTmPhone(identifier.phone) : maskEmail(identifier.email ?? ""),
     });

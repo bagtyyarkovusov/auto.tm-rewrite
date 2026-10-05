@@ -1,10 +1,13 @@
 import "reflect-metadata";
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { inspect } from "node:util";
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BadRequestException,
   ForbiddenException,
   HttpException,
+  Logger,
   UnauthorizedException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
@@ -132,6 +135,39 @@ describe("MeController PATCH /api/v1/me", () => {
       details: { reason: "USER_SUSPENDED" },
     });
     expect((await controller.me(requestFor("user-1"))).displayName).toBeNull();
+  });
+
+  describe("logging", () => {
+    const NAME = "Zzqx Secretname";
+    const LEVELS = ["log", "warn", "error", "debug", "verbose", "fatal"] as const;
+    let calls: unknown[][];
+
+    beforeEach(() => {
+      calls = [];
+      const record = (...args: unknown[]) => { calls.push(args); };
+      for (const level of LEVELS) {
+        vi.spyOn(Logger.prototype, level).mockImplementation(record);
+        vi.spyOn(Logger, level).mockImplementation(record);
+      }
+      for (const level of ["log", "info", "warn", "error", "debug"] as const) {
+        vi.spyOn(console, level).mockImplementation(record);
+      }
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("never logs the name, saved or refused", async () => {
+      await controller.update(requestFor("user-1"), { displayName: NAME });
+      await controller.update(requestFor("user-1"), { displayName: `${NAME} ${"x".repeat(30)}` })
+        .catch(() => undefined);
+      identityCheck.suspend("user-1");
+      await controller.update(requestFor("user-1"), { displayName: NAME }).catch(() => undefined);
+
+      // `inspect` keeps an Error's message, which `JSON.stringify` drops.
+      expect(calls.flat().map((arg) => inspect(arg)).join("\n")).not.toContain("Secretname");
+    });
   });
 
   it("answers 401 without a signed-in User", async () => {

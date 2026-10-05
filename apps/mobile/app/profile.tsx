@@ -18,7 +18,7 @@ import { useAuth } from "../src/auth/useAuth";
 import { useLogout } from "../src/auth/useLogout";
 import { maskEmail } from "../src/auth/email";
 import { maskTmPhone } from "../src/auth/phone";
-import { signInMethodNoticeStore } from "../src/auth/signInMethodNotice";
+import { profileNoticeStore } from "../src/identity/profileNotice";
 
 import { ChangeSignInMethodSheet } from "@/components/account/ChangeSignInMethodSheet";
 import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
@@ -102,7 +102,7 @@ function SignInMethods({ phone, email }: { phone: string | null; email: string |
         chevron
         onPress={() => open("email", Boolean(email))}
       />
-      <SignInMethodNoticeLine />
+      <ProfileNoticeLine />
 
       <ChangeSignInMethodSheet
         method={sheetMethod}
@@ -126,13 +126,13 @@ const NOTICE_MS = 4000;
  * after the name editor does. It sits in the page
  * under the rows, so it never covers a button or the sheet, and clears itself.
  */
-function SignInMethodNoticeLine() {
+function ProfileNoticeLine() {
   const { t } = useTranslation("account");
-  const notice = signInMethodNoticeStore((state) => state.notice);
+  const notice = profileNoticeStore((state) => state.notice);
 
   useEffect(() => {
     if (!notice) return;
-    const timer = setTimeout(() => signInMethodNoticeStore.getState().clear(), NOTICE_MS);
+    const timer = setTimeout(() => profileNoticeStore.getState().clear(), NOTICE_MS);
     return () => clearTimeout(timer);
   }, [notice]);
 
@@ -239,7 +239,7 @@ function SignedInProfile() {
     >
       {/* The avatar and the name, set or generated. The name, with its
           pencil, opens the name editor; a screen reader hears "Edit
-          name" and the name. The photo editor attaches here later. */}
+          name" and the name as its value. The photo editor attaches here later. */}
       <View className="items-center gap-1 px-4 pb-5 pt-2">
         <UserAvatar
           size={72}
@@ -248,8 +248,8 @@ function SignedInProfile() {
           avatarUrl={data.avatarUrl}
         />
         <Pressable
-          accessibilityHint={displayNameOf(data)}
           accessibilityLabel={t("editName")}
+          accessibilityValue={{ text: displayNameOf(data) }}
           accessibilityRole="button"
           className="min-h-11 max-w-full flex-row items-center gap-1.5 px-2 active:opacity-70"
           onPress={() => router.push("/account/display-name")}

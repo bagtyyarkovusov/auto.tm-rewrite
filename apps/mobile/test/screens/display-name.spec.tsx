@@ -6,7 +6,7 @@ import CabinetScreen from "../../app/(tabs)/services";
 import DisplayNameScreen from "../../app/account/display-name";
 import ProfileScreen from "../../app/profile";
 import { clearAuthSession, storeAuthSession } from "../../src/auth/session";
-import { signInMethodNoticeStore } from "../../src/auth/signInMethodNotice";
+import { profileNoticeStore } from "../../src/identity/profileNotice";
 import { server } from "../msw";
 import { act, fireEvent, renderMobile, routerMock } from "../render";
 
@@ -57,7 +57,7 @@ beforeEach(async () => {
   api.patches = [];
   api.next = [];
   api.release = null;
-  signInMethodNoticeStore.setState({ notice: null });
+  profileNoticeStore.setState({ notice: null });
   server.use(
     http.get("*/me", () => HttpResponse.json(me())),
     http.patch("*/me", async ({ request }) => {
@@ -110,6 +110,9 @@ describe("Opening the name editor from Profile", () => {
     const view = render(<ProfileScreen />);
     const name = await view.findByRole("button", { name: "Edit name" });
     expect(view.getByText("Driver 4821")).toBeTruthy();
+    // A value, not a hint: screen readers can switch hints off.
+    expect(name.props.accessibilityValue).toEqual({ text: "Driver 4821" });
+    expect(name.props.accessibilityHint).toBeUndefined();
     expect(classOf(name)).toContain("min-h-11");
     fireEvent.press(name);
     expect(routerMock.push).toHaveBeenCalledWith("/account/display-name");
@@ -220,7 +223,7 @@ describe("Saving the name", () => {
     await view.findByRole("button", { name: "Edit name" });
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
-      act(() => signInMethodNoticeStore.getState().show({ kind: "nameSaved" }));
+      act(() => profileNoticeStore.getState().show({ kind: "nameSaved" }));
       expect(view.getByText("Name saved")).toBeTruthy();
       act(() => { vi.advanceTimersByTime(4000); });
       expect(view.queryByText("Name saved")).toBeNull();
