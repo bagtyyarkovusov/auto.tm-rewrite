@@ -119,3 +119,48 @@ describe("CatalogController cursor pagination", () => {
     });
   }
 });
+
+describe("CatalogController locale", () => {
+  function everyUseCase(execute: ReturnType<typeof vi.fn>) {
+    const useCase = { execute };
+    return new CatalogController(
+      ...(Array.from({ length: 11 }, () => useCase) as unknown as ConstructorParameters<
+        typeof CatalogController
+      >),
+    );
+  }
+
+  const localized: Array<[string, (c: CatalogController, query: Record<string, unknown>) => unknown]> = [
+    ["GET /catalog/search", (c, q) => c.search({ q: "bmw", ...q } as never, req)],
+    ["GET /catalog/brands", (c, q) => c.listBrands(q as never, req)],
+    ["GET /catalog/brands/:id/models", (c, q) => c.listModelsForBrand("brand-1", q as never, req)],
+    ["GET /catalog/models/:id/generations", (c, q) => c.listGenerationsForModel("model-1", q as never, req)],
+    ["GET /catalog/regions", (c, q) => c.listRegions(q as never, req)],
+    ["GET /catalog/regions/:id/cities", (c, q) => c.listCitiesForRegion("region-1", q as never, req)],
+    ["GET /catalog/body-types", (c, q) => c.listBodyTypes(q as never, req)],
+    ["GET /catalog/colors", (c, q) => c.listColors(q as never, req)],
+    ["GET /catalog/engine-types", (c, q) => c.listEngineTypes(q as never, req)],
+    ["GET /catalog/transmissions", (c, q) => c.listTransmissions(q as never, req)],
+    ["GET /catalog/drive-types", (c, q) => c.listDriveTypes(q as never, req)],
+  ];
+
+  it.each(localized)("%s answers 400 VALIDATION_FAILED for an unknown locale", async (_name, call) => {
+    const execute = vi.fn().mockResolvedValue({ items: [] });
+
+    const result = Promise.resolve().then(() => call(everyUseCase(execute), { locale: "de" }));
+
+    await expect(result).rejects.toBeInstanceOf(BadRequestException);
+    await expect(result).rejects.toMatchObject({
+      response: { code: "VALIDATION_FAILED", details: { fieldErrors: { locale: expect.any(Array) } } },
+    });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it.each(localized)("%s still falls back to Russian without a locale", async (_name, call) => {
+    const execute = vi.fn().mockResolvedValue({ items: [] });
+
+    await call(everyUseCase(execute), {});
+
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({ locale: "ru" }));
+  });
+});
