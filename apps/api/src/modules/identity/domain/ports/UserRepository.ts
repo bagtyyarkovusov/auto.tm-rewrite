@@ -11,6 +11,8 @@ export interface UserRepository {
    * and the Generated Name number and Assigned Avatar index drawn for it.
    */
   create(signInMethods: SignInMethods, identity: GeneratedIdentity): Promise<User>;
+  /** Stores the User's own name. Writes nothing else on the User. */
+  updateDisplayName(userId: string, displayName: string): Promise<void>;
   delete(id: string): Promise<void>;
   scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void>;
   findUsersWithExpiredDeletionGrace(now: Date): Promise<User[]>;

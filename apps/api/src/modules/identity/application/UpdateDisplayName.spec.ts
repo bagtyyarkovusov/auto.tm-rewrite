@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { InvalidDisplayNameError } from "../domain/DisplayName";
 import { InMemoryIdentityCheck } from "./testing/InMemoryIdentityCheck";
 import { InMemoryUsers } from "./testing/InMemoryUsers";
-import { UpdateDisplayName, UserSuspendedError } from "./UpdateDisplayName";
+import { UserSuspendedError } from "../domain/UserSuspendedError";
+import { UpdateDisplayName } from "./UpdateDisplayName";
 
 describe("UpdateDisplayName", () => {
   let users: InMemoryUsers;

@@ -16,6 +16,7 @@ import { RefreshSession } from "./application/RefreshSession";
 import { Logout } from "./application/Logout";
 import { LogoutAll } from "./application/LogoutAll";
 import { GetMe } from "./application/GetMe";
+import { UpdateDisplayName } from "./application/UpdateDisplayName";
 import { DeleteMe } from "./application/DeleteMe";
 import { RecoverAccount } from "./application/RecoverAccount";
 import { GetAdminTotpStatus } from "./application/GetAdminTotpStatus";
@@ -203,6 +204,7 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     Logout,
     LogoutAll,
     GetMe,
+    UpdateDisplayName,
     DeleteMe,
     RecoverAccount,
     GetAdminTotpStatus,
