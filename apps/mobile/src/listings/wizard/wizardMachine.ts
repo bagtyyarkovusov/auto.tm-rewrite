@@ -265,14 +265,27 @@ export function wizardMachineReducer(
     }
 
     case "GO_TO_STEP": {
-      if (state.status !== "step") return state;
+      // A publish rejection (ADR-0081: CONTACT_PHONE_*) sends the seller back
+      // to the Contact step from publishError; the draft payload stays as is.
+      if (state.status !== "step" && state.status !== "publishError") {
+        return state;
+      }
 
       const targetIdx = stepIndex(action.step);
-      const currentIdx = stepIndex(state.currentStep);
+      const currentIdx =
+        state.status === "publishError"
+          ? WIZARD_STEPS.length
+          : stepIndex(state.currentStep);
 
       // Always allow going backward
       if (targetIdx < currentIdx) {
-        return { ...state, currentStep: action.step, saveError: null };
+        return {
+          ...state,
+          status: "step",
+          currentStep: action.step,
+          saveError: null,
+          publishError: null,
+        };
       }
 
       // Going forward: target's dependencies must all be validated
@@ -280,7 +293,13 @@ export function wizardMachineReducer(
       const allDepsValid = deps.every((d) => state.validatedSteps.includes(d));
       if (!allDepsValid) return state;
 
-      return { ...state, currentStep: action.step, saveError: null };
+      return {
+        ...state,
+        status: "step",
+        currentStep: action.step,
+        saveError: null,
+        publishError: null,
+      };
     }
 
     case "PUBLISH_START": {
