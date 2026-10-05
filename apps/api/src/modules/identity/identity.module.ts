@@ -59,6 +59,8 @@ import { PrismaSellerProfileReadAdapter } from "./infrastructure/PrismaSellerPro
 import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
 import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeComparatorPort";
+import { RANDOM_SOURCE_PORT } from "./domain/ports/RandomSourcePort";
+import { MathRandomSource } from "./infrastructure/MathRandomSource";
 import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConfig";
 import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
 
@@ -131,6 +133,10 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     {
       provide: CONSTANT_TIME_COMPARATOR_PORT,
       useClass: NodeConstantTimeComparator,
+    },
+    {
+      provide: RANDOM_SOURCE_PORT,
+      useClass: MathRandomSource,
     },
     {
       provide: REVIEWER_OTP_BYPASS_CONFIG,

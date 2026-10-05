@@ -28,7 +28,8 @@ export class PurgeExpiredAccounts {
 
   private async purgeUser(userId: string): Promise<void> {
     await this.prisma.$transaction([
-      // Free both Sign-in Methods and clear profile PII (ADR-0054)
+      // Free both Sign-in Methods and clear profile PII (ADR-0054). The name
+      // number and avatar index stay; they identify nobody (#638).
       this.prisma.user.update({
         where: { id: userId },
         data: {
@@ -37,6 +38,7 @@ export class PurgeExpiredAccounts {
           email: null,
           emailVerifiedAt: null,
           displayName: null,
+          avatarKey: null,
           avatarUrl: null,
           deletionScheduledAt: null,
         },
