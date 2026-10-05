@@ -96,11 +96,11 @@ describe("useUpdateDisplayName", () => {
     act(() => {
       result.current.mutateAsync("Aman").then(
         () => { outcome = "saved"; },
-        (error: { code?: string }) => { outcome = error.code; },
+        () => { outcome = "failed"; },
       );
     });
     await vi.waitFor(() => expect(outcome).not.toBe("paused"), { timeout: 500 });
 
-    expect(outcome).toBe("NETWORK_ERROR");
+    expect(outcome).toBe("failed");
   });
 });

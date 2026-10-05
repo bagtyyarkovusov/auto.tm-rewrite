@@ -8,12 +8,14 @@ import { queryKeys } from "../queryKeys";
  * Sets the signed-in User's Display Name with `PATCH /me`. The answer is the
  * updated `/me`, written into the cache here rather than in the screen, so
  * Profile and Cabinet show the new name even when the User left the editor
- * before the save landed.
+ * before the save landed. Offline it fails at once instead of pausing, so the
+ * editor can say so rather than read "Saving..." until the network is back.
  */
 export function useUpdateDisplayName() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    networkMode: "always",
     mutationFn: (displayName: string) =>
       apiClient.patch(
         "/me",
