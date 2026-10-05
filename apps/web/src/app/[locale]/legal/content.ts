@@ -60,7 +60,7 @@ Future collections (if features ship): video uploads, garage vehicle data, blog 
       },
       {
         title: "5. Sharing with third parties",
-        body: "In the MLP beta, AutoTM uses its own authentication and hosting infrastructure. Sign-in codes sent by email are delivered by an email delivery provider located in the United States: it receives your email address and the message containing the code, and keeps them for 30 days. Push notifications are delivered through Firebase Cloud Messaging (Google) on Android and Apple Push Notification Service on iOS, which receive your device token and the notification content. We do not share data with advertisers, data brokers, or other third parties.",
+        body: "In the MLP beta, AutoTM runs its own sign-in service on servers rented from Railway, a cloud hosting provider, which stores the app's data for us. Sign-in codes sent by email are delivered by an email delivery provider located in the United States: it receives your email address and the message containing the code, and keeps them for 30 days. Push notifications are delivered through Firebase Cloud Messaging (Google), which receives your device token and the notification content. We do not share data with advertisers, data brokers, or other third parties.",
       },
       {
         title: "6. Data retention & account deletion",
@@ -90,7 +90,7 @@ When you request account deletion:
       },
       {
         title: "10. Security",
-        body: "We use HTTPS for all data in transit. Refresh tokens are hashed with bcrypt. Data is stored on encrypted disks. During store review, servers are hosted by a cloud provider (Railway); before public launch they move to Turkmenistan. Admin actions are audit-logged.",
+        body: "We use HTTPS for all data in transit. Refresh tokens are hashed with bcrypt. Data is stored on encrypted disks. Until the move to Turkmenistan, servers are hosted by a cloud provider (Railway); they move to Turkmenistan before the app opens to the public. Admin actions are audit-logged.",
       },
       {
         title: "11. Changes to this policy",
@@ -143,7 +143,7 @@ When you request account deletion:
       },
       {
         title: "5. Передача третьим лицам",
-        body: "В MLP-бете используется собственная инфраструктура. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом, а также хранит их 30 дней. Push-уведомления доставляются через Firebase Cloud Messaging (Google) на Android и Apple Push Notification Service на iOS: они получают токен устройства и текст уведомления. Мы не передаём данные рекламным сетям или брокерам.",
+        body: "В MLP-бете AutoTM использует собственную систему входа на серверах облачного провайдера Railway, который хранит данные приложения по нашему поручению. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом, а также хранит их 30 дней. Push-уведомления доставляются через Firebase Cloud Messaging (Google): сервис получает токен устройства и текст уведомления. Мы не передаём данные рекламным сетям или брокерам.",
       },
       {
         title: "6. Хранение данных и удаление аккаунта",
@@ -173,7 +173,7 @@ When you request account deletion:
       },
       {
         title: "10. Безопасность",
-        body: "HTTPS в transit. Токены обновления хешируются bcrypt. Диски зашифрованы. На время проверки в магазинах приложений серверы размещены у облачного провайдера (Railway); до публичного запуска они переедут в Туркменистан. Действия администраторов логируются.",
+        body: "HTTPS в transit. Токены обновления хешируются bcrypt. Диски зашифрованы. До переезда в Туркменистан серверы размещены у облачного провайдера (Railway); они переедут в Туркменистан до открытия приложения для всех. Действия администраторов логируются.",
       },
       {
         title: "11. Изменения политики",
@@ -226,7 +226,7 @@ When you request account deletion:
       },
       {
         title: "5. Üçünji taraplara geçirmek",
-        body: "MLP betada öz infrastrukturamyz. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar we olary 30 gün saklaýar. Push habarnamalary Android-de Firebase Cloud Messaging (Google), iOS-da Apple Push Notification Service arkaly eltilýär: olar enjamyň tokenini we habarnamanyň mazmunyny alýar. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
+        body: "MLP betada AutoTM öz giriş ulgamyny bulut üpjünçisi Railway-iň serwerlerinde işledýär; ol programmanyň maglumatlaryny biziň tabşyrygymyz bilen saklaýar. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar we olary 30 gün saklaýar. Push habarnamalary Firebase Cloud Messaging (Google) arkaly eltilýär: ol enjamyň tokenini we habarnamanyň mazmunyny alýar. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
       },
       {
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
@@ -256,7 +256,7 @@ Akkaunty pozan wagtyňyz:
       },
       {
         title: "10. Howpsuzlyk",
-        body: "HTTPS transitde. Täzeleme tokenlary bcrypt bilen heşlenýär. Diskler şifrlenen. Dükanlarda barlag döwründe serwerler bulut üpjünçisinde (Railway) ýerleşýär; köpçülige açylmazdan öň Türkmenistana geçirilýär. Admin hereketleri auditlenýär.",
+        body: "HTTPS transitde. Täzeleme tokenlary bcrypt bilen heşlenýär. Diskler şifrlenen. Türkmenistana geçirilýänçä serwerler bulut üpjünçisinde (Railway) ýerleşýär; programma köpçülige açylmazdan öň Türkmenistana geçirilýär. Admin hereketleri auditlenýär.",
       },
       {
         title: "11. Syýasat üýtgemeleri",
