@@ -101,8 +101,8 @@ Shared web/admin defaults: **Inter** for sans and **Menlo** for mono.
 
 Mobile semantic mappings are current implementation truth:
 
-- `font-sans` → **UberMoveText Regular**
-- `font-heading` → **UberMove Medium**
+- `font-sans` → **UberMoveText**: Light, Regular, Medium and Bold files
+- `font-heading` → **UberMove**: Medium and Bold files
 - `font-mono` → **UberMove Mono** on iOS, falling through to Menlo/system monospace on Android until Android mono assets are bundled
 
 See `apps/mobile/CONTEXT.md` and `apps/mobile/tailwind.config.js`; do not copy the shared Inter value into a mobile spec.
@@ -171,10 +171,9 @@ See `apps/mobile/CONTEXT.md` and `apps/mobile/tailwind.config.js`; do not copy t
 | `2xl` | 24 |
 | `full` | 9999 (pill / circle) |
 
-Default for cards: `lg` (12px).
-Default for buttons: `md` (8px).
-Default for input fields: `md` (8px).
-Avatars: `full`.
+Web and admin defaults: cards `lg` (12px), buttons `md` (8px), input fields `md` (8px), avatars `full`.
+
+Mobile uses its own rounder scale; see [Mobile radius](#mobile-radius).
 
 ## Shadows
 
@@ -201,9 +200,78 @@ Used sparingly. Most surfaces are flat with borders.
 | `decel` | `cubic-bezier(0.0, 0, 0.2, 1)` — element entering |
 | `accel` | `cubic-bezier(0.4, 0, 1, 1)` — element exiting |
 
+## Mobile surface system
+
+The mobile app layers its own values over the shared scales above. They live in `packages/ui/tokens/mobile.ts`; web and admin do not read them. `apps/mobile/tailwind.config.js` turns them into utilities, and `apps/mobile/global.css` and `apps/mobile/lib/theme.ts` hold the surface colours per theme. Screens and components use these utilities only: no literal colour, one-off radius or bracketed font size outside the token files.
+
+### Surface levels
+
+Sections are separated by surface tone and spacing, not by lines across the full width.
+
+| Level | Utility | Light | Dark | Use |
+|---|---|---|---|---|
+| Page | `bg-background` | `#F3F3F1` | `#0F0F10` | Behind everything |
+| Raised | `bg-card` | `#FFFFFF` | `#1B1B1D` | Cards, grouped lists |
+| Overlay | `bg-popover` | `#FFFFFF` | `#232325` | Sheets, dialogs, menus, toasts |
+| Tonal | `bg-secondary`, `bg-muted` | `#E7E7E4` | `#2A2A2D` | Secondary buttons, chips, icon buttons, filled inputs |
+| Tonal pressed | `bg-accent` | `#DBDBD7` | `#39393D` | Pressed and selected tone |
+| Glass | `bg-glass` | white | `#252528` | Floating navigation and controls above scrolling content, through `GlassSurface` only |
+| Divider | `border-border` | `#E2E2DF` | `#2F2F32` | Inset dividers inside a raised surface |
+| Scrim | `bg-scrim/50` | black | black | Behind sheets and dialogs |
+| On a photo | `bg-media-scrim/45`, `text-media-foreground` | black, white | black, white | Chips and controls on a photo or the photo viewer |
+
+Text: `text-foreground` (`#171717` / `#FAFAF9`) and `text-muted-foreground` (`#666666` / `#A5A5AC`). Secondary text is a clear step quieter, not only smaller.
+
+Brand red is `#E60000` in light. Dark keeps the slightly lighter `hsl(0 90% 52%)` it had, so red text stays readable on the dark page.
+
+### Glass
+
+`components/ui/glass-surface.tsx` is the only translucent material. It goes on floating navigation and on controls that sit above scrolling content: the tab bar, sticky action bars, floating chips, controls on a photo. Content stays on solid surfaces.
+
+| Platform | Rendering |
+|---|---|
+| iOS 26 and later | System Liquid Glass through `expo-glass-effect` |
+| Android, iOS below 26 | The glass tone at 94% opacity, a hairline light edge and the `floating` shadow. No blur pass |
+| Reduce Transparency | The opaque raised surface with a divider edge |
+
+### Mobile radius
+
+| Token | dp | Use |
+|---|---|---|
+| `rounded-sm`, `rounded` | 8 | Badges, small thumbnails |
+| `rounded-md` | 12 | Chips, small controls, list thumbnails |
+| `rounded-lg` | 16 | Inputs, menus |
+| `rounded-xl` | 20 | Buttons, listing photos |
+| `rounded-2xl` | 24 | Cards and grouped lists |
+| `rounded-3xl` | 28 | Sheets, the floating tab bar |
+| `rounded-full` | pill | Avatars, icon buttons, pills |
+
+### Mobile type roles
+
+See [73-typography.md](73-typography.md). Utilities: `text-display`, `text-title`, `text-headline`, `text-subhead`, `text-body`, `text-callout`, `text-footnote`, `text-caption`, `text-micro`.
+
+### Control heights
+
+`h-control-sm` 40, `h-control-md` 52, `h-control-lg` 56, `h-control-icon` 44, `h-control-tabBar` 64 (dp).
+
+### Mobile elevation
+
+Cards stay flat. Shadow marks only what floats.
+
+| Utility | Value | Use |
+|---|---|---|
+| `shadow-raised` | `0 1px 2px rgba(0,0,0,0.08)` | A raised control on a photo |
+| `shadow-floating` | `0 8px 24px rgba(0,0,0,0.14)` | Floating navigation, sticky bars, toasts |
+| `shadow-overlay` | `0 16px 40px rgba(0,0,0,0.22)` | Sheets, dialogs, menus |
+
+### Mobile motion
+
+See [76-motion.md](76-motion.md). Durations, springs and press scales are `mobileDuration`, `mobileSpring` and `mobilePressScale`, read through `apps/mobile/lib/motion.ts`.
+
 ## References
 
 - Token source code: `packages/ui/tokens/*.ts`
+- Mobile surface system: `packages/ui/tokens/mobile.ts`, `apps/mobile/global.css`, `apps/mobile/lib/theme.ts`
 - Tailwind preset: `packages/ui/theme/tailwind.preset.ts`
 - CSS variables: `packages/ui/theme/css-variables.css`
 - Mobile semantic font mapping: `apps/mobile/tailwind.config.js`

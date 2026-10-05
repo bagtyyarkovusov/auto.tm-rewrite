@@ -46,12 +46,56 @@
 | Chat new message appear | Slide up from bottom + fade in | `base` / `decel` |
 | OTP digit input fill | Subtle scale + color shift | `fast` / `standard` |
 
+## Mobile motion tokens
+
+Mobile reads its motion from `packages/ui/tokens/mobile.ts` through `apps/mobile/lib/motion.ts`. Everything runs on the UI thread with Reanimated and animates transform and opacity only.
+
+| Duration | ms | Use |
+|---|---|---|
+| `press` | 90 | Press-in |
+| `fast` | 150 | Press-out, colour and opacity changes |
+| `base` | 250 | Entrances, the tab indicator, toasts |
+| `slow` | 380 | Sheets and dialogs |
+| `pulse` | 1400 | One skeleton pulse, there and back |
+
+| Spring | Form | Use |
+|---|---|---|
+| `snappy` | 180 ms, damping ratio 1 | Press feedback, small state changes |
+| `settle` | 320 ms, damping ratio 0.9 | The tab indicator, sheets settling, sticky bars |
+| `pop` | 360 ms, damping ratio 0.55 | The favorite heart and other one-shot confirmations |
+
+| Easing | Curve | Use |
+|---|---|---|
+| `standard` | `cubic-bezier(0.2, 0, 0, 1)` | State changes |
+| `enter` | `cubic-bezier(0, 0, 0.2, 1)` | Arriving |
+| `exit` | `cubic-bezier(0.4, 0, 1, 1)` | Leaving |
+
+Press scale: 0.96 for buttons, chips and icon buttons; 0.985 for cards and rows.
+
+### Where mobile uses motion
+
+| Surface | Motion |
+|---|---|
+| Any tappable control | Scales to the press scale on press-in (`press`), springs back on release (`snappy`) |
+| Tab change | The selected capsule slides to the new tab (`settle`); the icon fills |
+| Favorite heart | Scales up and settles (`pop`) as it fills |
+| List and card entrance | A short fade and 8 dp rise on first mount of a screen's content, not per card on scroll |
+| Skeleton to content | The skeleton pulses in opacity (`pulse`); content fades in (`base`) |
+| Sheet and dialog | Slide or scale in with the scrim fading (`slow`, `enter`); leave faster (`base`, `exit`) |
+| Sticky header and bottom bar | Background and title fade with scroll position, driven by the scroll offset |
+| Toast | Fades and rises from the edge it sits on (`base`) |
+| Wizard step | Progress animates to the new value (`settle`) |
+
+Reduce Motion: every spring and timing carries `ReduceMotion.System`, so values jump to their end state. Loops (the skeleton pulse) and entrances do not start. Sheets and toasts fade instead of moving.
+
+Haptics are not used: no haptics module is installed, and adding one is a native dependency decision.
+
 ## What NOT to animate
 
 - Route changes on web (we want instant page loads)
 - Search results appearing (paint instantly)
 - Listing cards in the feed (no per-card stagger animation — too much)
-- Tab bar icons (no bounce on tap)
+- Tab bar icons (no bounce on tap; the selected capsule slides, the icons do not jump)
 - Form field focus (rely on native + a subtle border color)
 
 ## Reduced motion

@@ -6,8 +6,8 @@ Typography is platform-specific behind shared semantic names:
 
 | Semantic use | Web + admin | Mobile |
 |---|---|---|
-| Body / `font-sans` | Inter | UberMoveText Regular |
-| Heading / `font-heading` | Inter with heading weight | UberMove Medium |
+| Body / `font-sans` | Inter | UberMoveText (Light, Regular, Medium, Bold) |
+| Heading / `font-heading` | Inter with heading weight | UberMove (Medium, Bold) |
 | Mono / `font-mono` | Menlo, monospace | UberMove Mono on iOS; Menlo/system monospace fallback on Android |
 
 The shared defaults live in `packages/ui/tokens/type.ts`. Mobile deliberately overrides the family mappings in `apps/mobile/tailwind.config.js` and bundles fonts through `apps/mobile/app/_layout.tsx`. Current mobile usage is documented in `apps/mobile/CONTEXT.md`; a mobile design must not specify Inter from the shared default.
@@ -27,6 +27,41 @@ xl   20   Section headings
 ```
 
 The shared scale uses a 15px base. Platform implementations must preserve readable rendered size and dynamic-text behavior rather than assuming a CSS pixel maps identically on native.
+
+## Mobile type roles
+
+Mobile names its sizes by role (`packages/ui/tokens/mobile.ts`, `mobileType`). Screens use these utilities instead of bracketed sizes.
+
+| Utility | Size / line (dp) | Tracking | Use | Usual face |
+|---|---|---|---|---|
+| `text-display` | 34 / 40 | -0.4 | Large screen titles, the detail price | UberMove Bold |
+| `text-title` | 28 / 34 | -0.3 | Compact screen titles, hero numbers | UberMove Bold |
+| `text-headline` | 22 / 28 | -0.2 | Card prices, sheet titles, empty-state titles | UberMove Bold |
+| `text-subhead` | 18 / 24 | -0.1 | Section titles, large row titles | UberMoveText Bold |
+| `text-body` | 16 / 22 | 0 | Reading and control text | UberMoveText Regular or Medium |
+| `text-callout` | 15 / 20 | 0 | Dense rows, the line beside a title | UberMoveText Regular |
+| `text-footnote` | 13 / 18 | 0 | Helper text, metadata | UberMoveText Regular |
+| `text-caption` | 12 / 16 | 0 | Captions, timestamps, chips on photos | UberMoveText Medium |
+| `text-micro` | 11 / 14 | 0.1 | Tab labels, count badges | UberMoveText Medium |
+
+### Weight on mobile
+
+React Native draws a custom font from exactly one file; a weight class on top of the Regular file does not pick the Bold file. Each bundled file is therefore its own family utility:
+
+| Family class | Weight class | Face |
+|---|---|---|
+| `font-sans` | `font-light` | UberMoveText Light |
+| `font-sans` | none, `font-normal` | UberMoveText Regular |
+| `font-sans` | `font-medium` | UberMoveText Medium |
+| `font-sans` | `font-semibold`, `font-bold` | UberMoveText Bold |
+| `font-heading` | none, `font-medium` | UberMove Medium |
+| `font-heading` | `font-semibold`, `font-bold` | UberMove Bold |
+| `font-mono` | none | UberMove Mono Regular (iOS) |
+| `font-mono` | `font-medium` and heavier | UberMove Mono Medium (iOS) |
+
+The `Text` primitive does this mapping (`apps/mobile/lib/font.ts`), so a call site writes `font-heading font-semibold` and gets the Bold file on both platforms. There is no semibold file: `font-semibold` and `font-bold` draw the same face. Hierarchy on mobile comes from three steps: Regular, Medium, Bold.
+
+A raw React Native `Text` or `TextInput` does not go through the primitive; give it the face utility directly (`font-sans-medium`, `font-sans-bold`, `font-heading-bold`).
 
 ## Usage map
 
@@ -49,7 +84,8 @@ The shared scale uses a 15px base. Platform implementations must preserve readab
 
 ## Hierarchy rules
 
-- **Max 3 type sizes per screen.** If you need a 4th, you're over-designing.
+- **Few sizes per screen.** Web and admin: at most 3. Mobile: one title role, one emphasis role (a price or a section title), body, and one quiet role; a fifth needs a reason.
+- **On mobile the price is the loudest text on a card and on Listing detail**, and screen titles are large and heavy.
 - **Weight, not size, for emphasis** within body text (use `medium`, not jump to `lg`)
 - **Headings never use more than `bold`** — no extra-bold or black weights
 - **All-caps reserved for labels only** (badges, tabs) — never for headings or body
