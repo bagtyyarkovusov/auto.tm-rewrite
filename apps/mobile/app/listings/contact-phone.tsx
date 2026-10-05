@@ -1,13 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { formatResendWait } from "../../components/auth/CodeEntryForm";
@@ -148,7 +142,10 @@ export default function ContactPhoneScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="gap-2">
-            <Text className="text-2xl font-semibold leading-snug text-foreground">
+            <Text
+              accessibilityRole="header"
+              className="text-2xl font-semibold leading-snug text-foreground"
+            >
               {reconfirm
                 ? t("confirmNumberAgainTitle")
                 : t("anotherContactNumberTitle")}
@@ -183,15 +180,15 @@ export default function ContactPhoneScreen() {
               {phone.helperText}
             </Text>
             {dailyLimit ? (
-              <Pressable
+              <Button
+                variant="link"
+                role="link"
                 accessibilityRole="link"
-                className="self-start"
+                className="self-start px-0"
                 onPress={() => router.push(HELP_HREF)}
               >
-                <Text className="text-sm text-info-600 underline dark:text-info-400">
-                  {t("support:help")}
-                </Text>
-              </Pressable>
+                <Text className="underline">{t("support:help")}</Text>
+              </Button>
             ) : null}
           </View>
 
