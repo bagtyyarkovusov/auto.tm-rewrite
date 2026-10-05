@@ -132,6 +132,10 @@ cd apps/mobile/android
 6. Log in with a fixture phone. Read the mock OTP from this PR API service's logs with `railway logs --project "$PR_PROJECT_ID" --environment "$PR_ENVIRONMENT_ID" --service "$PR_API_SERVICE_ID" --lines 200`, looking for the request's phone and time. Do not put OTPs or access tokens in PR evidence. Capture the loaded feed and a fixture detail/gallery to prove media and API traffic. Record environment ID, successful deployment ID/backend SHA, screenshot paths and the process check showing Docker absent.
 7. Stop only this session's Metro process. Revoke an environment-scoped disposable token when finished. Keep reusable coordinator credentials outside the repo. Railway automatically deletes the environment on PR merge/close; verify that its exact environment ID disappears. Close disposable proof PRs promptly and record deletion evidence. Do not close an active implementation PR just to collect cleanup evidence.
 
+## Android package per build profile
+
+The EAS `production` profile builds Android package `com.auto_tm.ynamly`, the Play app that already exists ([#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697)); it sets `ANDROID_APPLICATION_ID` in `eas.json`, which `app.config.js` reads. `staging`, `production-smoke`, development clients and local builds stay `tm.auto.app`. Each package needs its own Android app in its Firebase project, so the production `GOOGLE_SERVICES_JSON` must be the file for `com.auto_tm.ynamly`. The iOS bundle identifier is `tm.auto.app` everywhere. `simctl` and `adb` commands in this guide use `tm.auto.app` because they drive development builds.
+
 ## Documentation duty
 
 Update this guide when the operating procedure changes. Update `apps/mobile/CONTEXT.md` only when its documented boundary, constraint, or important limitation changes. Keep individual diagnoses in task evidence. Supersede changed architecture decisions with a new ADR; preserve merged ADR text.

@@ -19,14 +19,15 @@ function appConfigForProfile(profile: string | null) {
   const profileEnv: Record<string, string> = profile
     ? { ...easJson.build.base.env, ...easJson.build[profile].env }
     : {};
-  const saved = process.env["ANDROID_APPLICATION_ID"];
-  Reflect.deleteProperty(process.env, "ANDROID_APPLICATION_ID");
-  Object.assign(process.env, profileEnv);
+  const env = process.env as Record<string, string | undefined>;
+  const saved = env["ANDROID_APPLICATION_ID"];
+  Reflect.deleteProperty(env, "ANDROID_APPLICATION_ID");
+  Object.assign(env, profileEnv);
   try {
     return requireFreshAppConfig().expo;
   } finally {
-    for (const key of Object.keys(profileEnv)) Reflect.deleteProperty(process.env, key);
-    if (saved !== undefined) process.env["ANDROID_APPLICATION_ID"] = saved;
+    for (const key of Object.keys(profileEnv)) Reflect.deleteProperty(env, key);
+    if (saved !== undefined) env["ANDROID_APPLICATION_ID"] = saved;
   }
 }
 
