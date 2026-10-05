@@ -166,6 +166,9 @@ export default function ContactPhoneScreen() {
               placeholder={t("auth:phonePlaceholder")}
               textContentType="telephoneNumber"
               value={phone.display}
+              // A relist confirms the Listing's own number only (ADR-0081);
+              // a different number goes through Edit.
+              editable={purpose !== "relist"}
             />
             <Text
               className={
