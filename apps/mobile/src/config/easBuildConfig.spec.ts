@@ -20,14 +20,17 @@ function appConfigForProfile(profile: string | null) {
     ? { ...easJson.build.base.env, ...easJson.build[profile].env }
     : {};
   const env = process.env as Record<string, string | undefined>;
-  const saved = env["ANDROID_APPLICATION_ID"];
+  const keys = ["ANDROID_APPLICATION_ID", ...Object.keys(profileEnv)];
+  const saved = keys.map((key) => [key, env[key]] as const);
   Reflect.deleteProperty(env, "ANDROID_APPLICATION_ID");
   Object.assign(env, profileEnv);
   try {
     return requireFreshAppConfig().expo;
   } finally {
-    for (const key of Object.keys(profileEnv)) Reflect.deleteProperty(env, key);
-    if (saved !== undefined) env["ANDROID_APPLICATION_ID"] = saved;
+    for (const [key, value] of saved) {
+      if (value === undefined) Reflect.deleteProperty(env, key);
+      else env[key] = value;
+    }
   }
 }
 
@@ -54,6 +57,13 @@ describe("EAS build configuration", () => {
 
   it("turns Android backup off, so no session data is restored onto another device", () => {
     expect(requireFreshAppConfig().expo.android.allowBackup).toBe(false);
+  });
+
+  it("gives every store build a new version code, since Play refuses a repeated one", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+
+    expect(easJson.cli.appVersionSource).toBe("remote");
+    expect(easJson.build.production.autoIncrement).toBe(true);
   });
 
   it("declares internal staging and production-smoke profiles plus store production", () => {

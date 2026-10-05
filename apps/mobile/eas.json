@@ -43,6 +43,7 @@
       "extends": "base",
       "distribution": "store",
       "environment": "production",
+      "autoIncrement": true,
       "env": {
         "ANDROID_APPLICATION_ID": "com.auto_tm.ynamly",
         "EXPO_PUBLIC_ENV": "production",

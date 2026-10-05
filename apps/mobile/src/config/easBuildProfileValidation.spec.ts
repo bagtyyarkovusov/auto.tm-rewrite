@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { validateCurrentEasBuildProfile, validateEasBuildProfile } from "./easBuildProfileValidation";
+import {
+  validateAndroidApplicationId,
+  validateCurrentEasBuildProfile,
+  validateEasBuildProfile,
+} from "./easBuildProfileValidation";
 
 describe("validateEasBuildProfile", () => {
   it("allows development without remote build URLs", () => {
@@ -132,5 +136,37 @@ describe("production-smoke environment isolation", () => {
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.join(" ")).not.toContain(url);
     expect(errors.join(" ")).not.toContain("user:password");
+  });
+});
+
+describe("validateAndroidApplicationId", () => {
+  it("accepts the existing Play app's package on the production profile", () => {
+    expect(validateAndroidApplicationId("production", "com.auto_tm.ynamly")).toEqual([]);
+  });
+
+  it.each([undefined, "", "tm.auto.app"])("rejects %s as the production package", (value) => {
+    expect(validateAndroidApplicationId("production", value)).toEqual([
+      "ANDROID_APPLICATION_ID must be com.auto_tm.ynamly for the production profile",
+    ]);
+  });
+
+  it.each(["staging", "production-smoke", "development"])(
+    "rejects a package override on the %s profile, which must stay tm.auto.app",
+    (profile) => {
+      expect(validateAndroidApplicationId(profile, "com.auto_tm.ynamly")).toEqual([
+        `ANDROID_APPLICATION_ID must not be set for the ${profile} profile`,
+      ]);
+      expect(validateAndroidApplicationId(profile, undefined)).toEqual([]);
+    },
+  );
+
+  it("fails a production build whose environment lost the package", () => {
+    const errors = validateCurrentEasBuildProfile({
+      EAS_BUILD_PROFILE: "production",
+      EXPO_PUBLIC_API_URL: "https://api.auto.tm/api/v1",
+      EXPO_PUBLIC_WS_URL: "wss://api.auto.tm/ws/chat",
+      EXPO_PUBLIC_MEDIA_URL: "https://media.auto.tm",
+    });
+    expect(errors).toEqual(["ANDROID_APPLICATION_ID must be com.auto_tm.ynamly for the production profile"]);
   });
 });
