@@ -1,0 +1,72 @@
+import type { ComponentProps } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+import { renderMobile } from "../../../test/render";
+
+import { WizardLayout } from "./WizardLayout";
+
+vi.mock("react-native-safe-area-context", async () => ({
+  SafeAreaView: (await import("react-native")).View,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("react-native")).View }));
+
+type LayoutProps = Partial<ComponentProps<typeof WizardLayout>>;
+
+/** The wizard on Check and publish. */
+function check(overrides: LayoutProps = {}) {
+  return (
+    <WizardLayout
+      routeTitle="Sell car"
+      stepTitle="Check and publish"
+      stepNumber={7}
+      stepCount={7}
+      onBack={() => {}}
+      onContinue={() => {}}
+      onPublish={() => {}}
+      onClose={() => {}}
+      mode="create"
+      editDetourActive={false}
+      canContinue={false}
+      canPublish
+      canGoBack
+      isLastStep
+      saveStatus="saved"
+      saveError={null}
+      onRetrySave={() => {}}
+      progressPercent={100}
+      {...overrides}
+    >
+      {null}
+    </WizardLayout>
+  );
+}
+
+const publish = (screen: ReturnType<typeof renderMobile>) => screen.getByRole("button", { name: "Publish" });
+/** Position of a text in the rendered tree, which is the order a screen reader follows. */
+const position = (screen: ReturnType<typeof renderMobile>, text: string) => {
+  const index = JSON.stringify(screen.toJSON()).indexOf(text);
+  expect(index).toBeGreaterThan(-1);
+  return index;
+};
+
+describe("WizardLayout publish blockers (#588)", () => {
+  const blockers = ["Fill in: Car, Price", "Photos still uploading: 2", "Photos failed: 1. Retry or remove them."];
+
+  it("lists the blockers above a disabled Publish, in the order given", () => {
+    const screen = renderMobile(check({ canPublish: false, publishBlockers: blockers }));
+
+    expect(publish(screen).props.accessibilityState).toMatchObject({ disabled: true });
+    const [missing, uploading, failed] = blockers.map((line) => position(screen, line));
+    expect(missing).toBeLessThan(uploading as number);
+    expect(uploading).toBeLessThan(failed as number);
+    expect(failed).toBeLessThan(position(screen, '"Publish"'));
+  });
+
+  it("shows no blocker and an enabled Publish when nothing blocks", () => {
+    const screen = renderMobile(check({ publishBlockers: [] }));
+
+    expect(publish(screen).props.accessibilityState).toMatchObject({ disabled: false });
+    expect(screen.queryByTestId("publish-blockers")).toBeNull();
+  });
+});

@@ -77,7 +77,19 @@ vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("reac
 vi.mock("../../src/listings/wizard/Step2Photos", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step3VehicleId", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step4Specs", () => ({ default: () => null }));
-vi.mock("../../src/listings/wizard/Step5Price", () => ({ default: () => null }));
+// Price, reduced to the one edit these tests make: clearing the amount.
+vi.mock("../../src/listings/wizard/Step5Price", async () => {
+  const { Pressable } = await import("react-native");
+  return {
+    default: ({ onChange }: { onChange: (updates: Record<string, unknown>) => void }) => (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Clear price"
+        onPress={() => onChange({ priceAmount: undefined })}
+      />
+    ),
+  };
+});
 vi.mock("../../src/listings/wizard/Step6Location", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step7DescContact", () => ({ default: () => null }));
 const named = (name: string) => ({ data: { items: [{ id: fixture.id, name }] } });
@@ -158,5 +170,90 @@ describe("Check and publish: changing a step (#588)", () => {
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Back" })); });
 
     header(screen, "Check and publish, Step 7 of 7");
+  });
+});
+
+describe("Check and publish: what blocks publishing (#588)", () => {
+  const publish = (screen: Screen) => screen.getByRole("button", { name: "Publish" });
+  const disabled = (screen: Screen) => publish(screen).props.accessibilityState?.disabled === true;
+  const position = (screen: Screen, text: string) => JSON.stringify(screen.toJSON()).indexOf(text);
+  const secondPhoto = "22222222-2222-4222-8222-222222222222";
+  const lostPhoto = "33333333-3333-4333-8333-333333333333";
+
+  /** Opens Price from Check, clears the amount and goes back with the header's Back. */
+  async function leavePriceEmpty(screen: Screen) {
+    fireEvent.press(screen.getByRole("button", { name: /^Price, / }));
+    fireEvent.press(screen.getByRole("button", { name: "Clear price" }));
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Back" })); });
+    header(screen, "Check and publish, Step 7 of 7");
+  }
+
+  it("is ready to publish with nothing listed when the draft is complete", async () => {
+    const screen = await openCheck();
+
+    expect(disabled(screen)).toBe(false);
+    expect(screen.queryByTestId("publish-blockers")).toBeNull();
+  });
+
+  it("names the step left incomplete and disables Publish", async () => {
+    const screen = await openCheck();
+
+    await leavePriceEmpty(screen);
+
+    expect(screen.getByText("Fill in: Price")).toBeTruthy();
+    expect(disabled(screen)).toBe(true);
+    expect(screen.getByRole("button", { name: "Price, Fill in" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Car, .*Change$/ })).toBeTruthy();
+  });
+
+  it("counts the photos still uploading, and lets Publish go when they finish", async () => {
+    // A second photo was compressed but not uploaded when the app closed.
+    fixture.staged[`draft-${id}`] = [`${photoId}.jpg`, `${secondPhoto}.jpg`];
+    let finishPresign = (_value: { uploadUrl: string; key: string }) => {};
+    fixture.presign.mockImplementation(() => new Promise((resolve) => { finishPresign = resolve; }));
+    const screen = await openCheck();
+
+    expect(await screen.findByText("Photos still uploading: 1")).toBeTruthy();
+    expect(disabled(screen)).toBe(true);
+
+    await act(async () => { finishPresign({ uploadUrl: "http://localhost/put", key: `${secondPhoto}.jpg` }); });
+    await pause(20);
+
+    expect(screen.queryByText(/Photos still uploading/)).toBeNull();
+    expect(disabled(screen)).toBe(false);
+  });
+
+  it("counts the photos that failed and sends the seller to Photos", async () => {
+    // The draft names a photo that has no key and no file on the device.
+    fixture.payload = {
+      ...fixture.complete,
+      photos: [fixture.savedPhoto, { photoId: lostPhoto, sortOrder: 1 }],
+    };
+    const screen = await openCheck();
+
+    expect(await screen.findByText("Photos failed: 1. Retry or remove them.")).toBeTruthy();
+    expect(disabled(screen)).toBe(true);
+    expect(screen.getByRole("button", { name: "Photos, Photos: 2, Fill in" })).toBeTruthy();
+  });
+
+  it("lists missing steps, then uploading photos, then failed photos", async () => {
+    fixture.payload = {
+      ...fixture.complete,
+      photos: [fixture.savedPhoto, { photoId: lostPhoto, sortOrder: 1 }],
+    };
+    fixture.staged[`draft-${id}`] = [`${photoId}.jpg`, `${secondPhoto}.jpg`];
+    fixture.presign.mockImplementation(() => new Promise(() => {}));
+    const screen = await openCheck();
+    await screen.findByText("Photos still uploading: 1");
+
+    await leavePriceEmpty(screen);
+
+    const lines = ["Fill in: Price", "Photos still uploading: 1", "Photos failed: 1. Retry or remove them."];
+    const [missing, uploading, failed] = lines.map((line) => position(screen, line)) as [number, number, number];
+    expect(missing).toBeGreaterThan(-1);
+    expect(missing).toBeLessThan(uploading);
+    expect(uploading).toBeLessThan(failed);
+    expect(failed).toBeLessThan(position(screen, '"Publish"'));
+    expect(disabled(screen)).toBe(true);
   });
 });
