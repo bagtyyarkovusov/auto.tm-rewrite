@@ -127,7 +127,7 @@ function openStep(screen: Screen, row: RegExp, header: string) {
 
 /** Types a new amount on the Price step and returns to the list with Done. */
 function changePrice(screen: Screen, from: string, to: string) {
-  openStep(screen, /^Price, .*Change$/, "Price, Step 4 of 7");
+  openStep(screen, /^Price, .*Change$/, "Price");
   fireEvent.changeText(screen.getByDisplayValue(from), to);
   fireEvent.press(screen.getByRole("button", { name: "Done" }));
   expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
@@ -158,6 +158,8 @@ describe("the section list of a published Listing (#589)", () => {
     const screen = await openEdit();
 
     expect(screen.getByText("Buyers see the changes only after you save.")).toBeTruthy();
+    // The car's title under the heading.
+    expect(screen.getByText("Toyota Camry, 2020")).toBeTruthy();
     // The wizard's step order, VIN under Car and the description under its place.
     expect(screen.getAllByTestId("check-section").map((row) => String(row.props.accessibilityLabel)))
       .toEqual([
@@ -222,7 +224,11 @@ describe("changing a section (#589)", () => {
     createListingApi();
     const screen = await openEdit();
 
-    openStep(screen, /^Price, .*Change$/, "Price, Step 4 of 7");
+    openStep(screen, /^Price, .*Change$/, "Price");
+    // Headed by the edit and the car, with no position in the wizard.
+    expect(screen.getByText("Edit listing")).toBeTruthy();
+    expect(screen.getByText("Toyota Camry, 2020")).toBeTruthy();
+    expect(screen.queryByText(/Step \d of 7/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
     fireEvent.changeText(screen.getByDisplayValue("100000"), "179000");
@@ -236,20 +242,20 @@ describe("changing a section (#589)", () => {
     createListingApi();
     const screen = await openEdit();
 
-    openStep(screen, /^Price, .*Change$/, "Price, Step 4 of 7");
+    openStep(screen, /^Price, .*Change$/, "Price");
     fireEvent.changeText(screen.getByDisplayValue("100000"), "");
     const done = screen.getByRole("button", { name: "Done" });
     expect(isDisabled(done)).toBe(true);
     fireEvent.press(done);
 
-    expect(screen.getByRole("header", { name: "Price, Step 4 of 7" })).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Price" })).toBeTruthy();
   });
 
   it("Back on a step returns to the list and keeps what was typed", async () => {
     createListingApi();
     const screen = await openEdit();
 
-    openStep(screen, /^Price, .*Change$/, "Price, Step 4 of 7");
+    openStep(screen, /^Price, .*Change$/, "Price");
     fireEvent.changeText(screen.getByDisplayValue("100000"), "179000");
     fireEvent.press(screen.getByRole("button", { name: "Back" }));
 
@@ -257,7 +263,7 @@ describe("changing a section (#589)", () => {
     expect(screen.getByRole("button", { name: "Price, 179,000 TMT, Change" })).toBeTruthy();
 
     // Left invalid, the step is asked for again and nothing can be saved.
-    openStep(screen, /^Price, .*Change$/, "Price, Step 4 of 7");
+    openStep(screen, /^Price, .*Change$/, "Price");
     fireEvent.changeText(screen.getByDisplayValue("179000"), "");
     fireEvent.press(screen.getByRole("button", { name: "Back" }));
 
@@ -294,7 +300,7 @@ describe("Save changes (#589)", () => {
     createListingApi();
     const screen = await openEdit();
 
-    openStep(screen, /^Photos, .*Change$/, "Photos, Step 3 of 7");
+    openStep(screen, /^Photos, .*Change$/, "Photos");
     fireEvent.press(screen.getByRole("button", { name: "Remove: Photo 2 of 2" }));
     fireEvent.press(screen.getByRole("button", { name: "Done" }));
 
@@ -385,7 +391,7 @@ describe("returning from the contact phone code flow (#589)", () => {
     );
     const screen = await openEdit();
     changePrice(screen, "100000", "179000");
-    openStep(screen, /^Contact, .*Change$/, "Contact, Step 6 of 7");
+    openStep(screen, /^Contact, .*Change$/, "Contact");
     fireEvent.press(screen.getByLabelText("Another number"));
     expect(routerMock.push).toHaveBeenCalledWith({
       pathname: "/listings/contact-phone",
@@ -398,7 +404,7 @@ describe("returning from the contact phone code flow (#589)", () => {
     screen.rerender(<ToastProvider><EditListingScreen /></ToastProvider>);
 
     expect(routerMock.setParams).toHaveBeenCalledWith({ confirmedContactPhone: undefined });
-    expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Contact" })).toBeTruthy();
     await waitFor(() =>
       expect(screen.getByLabelText(confirmed, { exact: false }).props.accessibilityState)
         .toMatchObject({ checked: true }),
@@ -482,7 +488,7 @@ describe("leaving the edit (#589)", () => {
   it("system back on a step returns to the list, not out of the edit", async () => {
     createListingApi();
     const screen = await openEdit();
-    openStep(screen, /^Price, .*Change$/, "Price, Step 4 of 7");
+    openStep(screen, /^Price, .*Change$/, "Price");
 
     await act(async () => { pressHardwareBack(); });
 

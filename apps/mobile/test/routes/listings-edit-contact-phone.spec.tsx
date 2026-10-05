@@ -93,7 +93,7 @@ function confirmedEntry(phone: string, daysLeft: number): ListingsSchemas.Verifi
 
 function openContactStep(screen: ReturnType<typeof renderMobile>) {
   fireEvent.press(screen.getByRole("button", { name: /^Contact, / }));
-  expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+  expect(screen.getByRole("header", { name: "Contact" })).toBeTruthy();
 }
 
 beforeEach(() => {
@@ -176,7 +176,7 @@ describe("Listing edit Contact step", () => {
     expect(screen.getByText("Confirmation expired. Tap to confirm again.")).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "Done" }));
 
-    expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Contact" })).toBeTruthy();
     expect(screen.getByText("Confirm this number again or choose another")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
 
@@ -245,7 +245,7 @@ describe("Listing edit Contact step", () => {
       fireEvent.press(screen.getByRole("button", { name: "Save changes" }));
     });
 
-    expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Contact" })).toBeTruthy();
     expect(screen.getByText("Confirm this number again or choose another")).toBeTruthy();
     expect(fixture.show).not.toHaveBeenCalled();
     expect(routerMock.replace).not.toHaveBeenCalled();
@@ -266,7 +266,7 @@ describe("Listing edit Contact step", () => {
     });
 
     expect(fixture.save).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("header", { name: "Contact, Step 6 of 7" })).toBeNull();
+    expect(screen.queryByRole("header", { name: "Contact" })).toBeNull();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
   });
 });
