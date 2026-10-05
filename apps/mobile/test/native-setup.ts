@@ -135,17 +135,51 @@ vi.mock("react-native-gesture-handler", async () => {
 });
 vi.mock("react-native-reanimated", async () => {
   const { View } = await import("react-native");
+  // An animated component is its plain host here: `createAnimatedComponent(Pressable)`
+  // stays a Pressable a spec can press, and nothing animates.
+  const createAnimatedComponent = <T,>(component: T) => component;
+  // Entering and exiting layout animations, chainable like `FadeInUp.duration(200).delay(40)`.
+  const layoutAnimation = (): unknown => {
+    const animation: unknown = new Proxy({}, { get: () => () => animation });
+    return animation;
+  };
   return {
-    default: { View },
+    default: { View, createAnimatedComponent },
+    createAnimatedComponent,
     useSharedValue: <T,>(value: T) => ({ value }),
+    useDerivedValue: <T,>(derive: () => T) => ({ value: derive() }),
     useAnimatedStyle: () => ({}),
+    useAnimatedProps: () => ({}),
+    useAnimatedScrollHandler: () => () => undefined,
+    useReducedMotion: () => false,
     withTiming: <T,>(value: T) => value,
     withSpring: <T,>(value: T) => value,
-    // Entering and exiting layout animations, chainable like `FadeInUp.duration(200)`.
-    ...Object.fromEntries(["FadeIn", "FadeOut", "FadeInUp", "FadeOutUp", "FadeInDown", "FadeOutDown"].map((name) => {
-      const animation: { duration: () => unknown } = { duration: () => animation };
-      return [name, animation];
-    })),
+    withDelay: <T,>(_delay: number, value: T) => value,
+    withSequence: <T,>(...values: T[]) => values[values.length - 1],
+    withRepeat: <T,>(value: T) => value,
+    cancelAnimation: () => undefined,
+    interpolate: (value: number) => value,
+    interpolateColor: (_value: number, _input: number[], output: string[]) => output[0],
+    Extrapolation: { CLAMP: "clamp", EXTEND: "extend", IDENTITY: "identity" },
+    ReduceMotion: { System: "system", Always: "always", Never: "never" },
+    Easing: new Proxy({}, { get: () => () => (value: number) => value }),
+    ...Object.fromEntries(
+      ["FadeIn", "FadeOut", "FadeInUp", "FadeOutUp", "FadeInDown", "FadeOutDown",
+        "SlideInDown", "SlideOutDown", "ZoomIn", "ZoomOut", "LinearTransition"]
+        .map((name) => [name, layoutAnimation()]),
+    ),
+  };
+});
+// expo-glass-effect ships JSX in its build output, which Node cannot load, and
+// draws through a native view. Off iOS 26 it is a plain View; that is what a
+// spec renders.
+vi.mock("expo-glass-effect", async () => {
+  const { View } = await import("react-native");
+  return {
+    GlassView: View,
+    GlassContainer: View,
+    isLiquidGlassAvailable: () => false,
+    isGlassEffectAPIAvailable: () => false,
   };
 });
 // The portal package ships JSX in its `.mjs`, which Node cannot load. Portal

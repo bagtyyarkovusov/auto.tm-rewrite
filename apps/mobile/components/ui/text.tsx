@@ -3,6 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 import { Platform, Text as RNText, type Role } from 'react-native';
 
+import { fontFaceClass } from '@/lib/font';
 import { cn } from '@/lib/utils';
 
 const textVariants = cva(
@@ -79,9 +80,12 @@ function Text({
   }) {
   const textClass = React.useContext(TextClassContext);
   const Component = asChild ? Slot : RNText;
+  const merged = cn(textVariants({ variant }), textClass, className);
+  // One font file per weight: map the family and weight classes to a face.
+  const face = fontFaceClass(merged);
   return (
     <Component
-      className={cn(textVariants({ variant }), textClass, className)}
+      className={face ? cn(merged, face) : merged}
       role={variant ? ROLE[variant] : undefined}
       aria-level={variant ? ARIA_LEVEL[variant] : undefined}
       {...props}
