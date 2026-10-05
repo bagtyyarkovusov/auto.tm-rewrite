@@ -14,7 +14,6 @@ export interface UserRepository {
   /** Stores the User's own name. Writes nothing else on the User. */
   updateDisplayName(userId: string, displayName: string): Promise<void>;
   delete(id: string): Promise<void>;
-  scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void>;
   findUsersWithExpiredDeletionGrace(now: Date): Promise<User[]>;
   /**
    * Day-30 purge of the User row: frees both Sign-in Methods and clears the

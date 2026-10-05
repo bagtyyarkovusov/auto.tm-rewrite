@@ -47,7 +47,7 @@ import { AesGcmTotpSecretCipher } from "./infrastructure/AesGcmTotpSecretCipher"
 import { OtplibTotpVerifier } from "./infrastructure/OtplibTotpVerifier";
 import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrottleAdapter";
 import { PinoSecurityLoggerAdapter } from "./infrastructure/PinoSecurityLoggerAdapter";
-import { PrismaAccountDeletionListingsAdapter } from "./infrastructure/PrismaAccountDeletionListingsAdapter";
+import { PrismaAccountDeletionUnitOfWork } from "./infrastructure/PrismaAccountDeletionUnitOfWork";
 import { PrismaAccountRestoreUnitOfWork } from "./infrastructure/PrismaAccountRestoreUnitOfWork";
 import { NodeConstantTimeComparator } from "./infrastructure/NodeConstantTimeComparator";
 import { parseReviewerOtpBypassConfig } from "./infrastructure/ReviewerOtpBypassConfigFactory";
@@ -58,7 +58,7 @@ import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
 import { SELLER_PROFILE_READ_PORT } from "./domain/ports/SellerProfileReadPort";
 import { PrismaSellerProfileReadAdapter } from "./infrastructure/PrismaSellerProfileReadAdapter";
-import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
+import { ACCOUNT_DELETION_UNIT_OF_WORK } from "./domain/ports/AccountDeletionUnitOfWork";
 import { ACCOUNT_RESTORE_UNIT_OF_WORK } from "./domain/ports/AccountRestoreUnitOfWork";
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
 import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeComparatorPort";
@@ -97,7 +97,6 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     OtplibTotpVerifier,
     InMemoryTotpThrottleAdapter,
     PinoSecurityLoggerAdapter,
-    PrismaAccountDeletionListingsAdapter,
     NodeConstantTimeComparator,
     EventEmitterIdentityEventBus,
     BullMqEmailCodeSenderAdapter,
@@ -106,8 +105,8 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
       useExisting: BullMqEmailCodeSenderAdapter,
     },
     {
-      provide: ACCOUNT_DELETION_LISTINGS_PORT,
-      useClass: PrismaAccountDeletionListingsAdapter,
+      provide: ACCOUNT_DELETION_UNIT_OF_WORK,
+      useClass: PrismaAccountDeletionUnitOfWork,
     },
     {
       provide: ACCOUNT_RESTORE_UNIT_OF_WORK,
