@@ -24,6 +24,9 @@ const config = {
     },
     android: {
       package: "tm.auto.app",
+      // No Android backup: the session lives in SecureStore, whose keys do not
+      // survive a restore onto another device.
+      allowBackup: false,
       adaptiveIcon: {
         foregroundImage: "./assets/images/android-icon-foreground.png",
         backgroundImage: "./assets/images/android-icon-background.png",
