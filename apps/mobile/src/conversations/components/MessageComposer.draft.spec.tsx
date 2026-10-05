@@ -60,3 +60,29 @@ describe("Message composer with a draft from Ask the seller", () => {
     expect(screen.getByRole("button", { name: "Send message", disabled: true })).toBeTruthy();
   });
 });
+
+describe("Send button appearance (#623)", () => {
+  // The Send icon is the only size-5 element inside the Send button.
+  function sendIconClass(screen: ReturnType<typeof renderMobile>) {
+    const button = screen.getByRole("button", { name: "Send message" });
+    const icon = button.findAll((node: { props: { className?: unknown } }) => typeof node.props.className === "string" && node.props.className.includes("size-5"))[0];
+    return String(icon?.props.className ?? "");
+  }
+
+  it("draws an empty composer's Send icon muted, and a sendable one bright, through typing", () => {
+    const screen = renderMobile(<MessageComposer onSend={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Send message", disabled: true })).toBeTruthy();
+    expect(sendIconClass(screen)).toContain("text-muted-foreground");
+    expect(sendIconClass(screen)).not.toContain("text-primary-foreground");
+
+    fireEvent.changeText(screen.getByPlaceholderText(/./), "Hello");
+
+    expect(screen.getByRole("button", { name: "Send message", disabled: false })).toBeTruthy();
+    expect(sendIconClass(screen)).toContain("text-primary-foreground");
+
+    fireEvent.changeText(screen.getByPlaceholderText(/./), "   ");
+
+    expect(sendIconClass(screen)).toContain("text-muted-foreground");
+  });
+});

@@ -43,7 +43,7 @@ Expanded tab bar (design archive style):
 2. **Favorites tab** — `Favorites` label; heart icon. Active = black; inactive = gray-400.
 3. **Sell tab** — Central action. Black pill (`rounded-full`, `bg-black`, `w-14 h-8`) with white plus icon. Label "Sell" sits below the pill (label text is black when active). The tab icon area is custom — not a raw `PlusCircle` outline.
 4. **Chat tab** — `Chat` label; message-square icon. Active = black; inactive = gray-400.
-5. **Services tab** — `Services` label; settings/grid icon. Active = black; inactive = gray-400.
+5. **Services tab** — `Services` label; grid icon. Active = black; inactive = gray-400.
 6. **Tab bar chrome** — `bg-background/92` with `backdrop-blur` (or solid fallback on Android), top border `border-gray-200`, height `64px + safe-area-inset-bottom`.
 
 ## Customization preview

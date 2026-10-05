@@ -2,7 +2,7 @@
 
 > Maps to: `apps/mobile/app/(tabs)/services.tsx` (Tab 5; the route keeps its `services` name)
 > Derived from wireframe: `docs/prd/ui/wireframes/mobile-tabs-services.md`
-> Governed by: [20 — Information architecture, Tab 5 — Cabinet menu](../../20-information-architecture.md#tab-5--cabinet-menu), the founder's [screen map amendment](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5947347989) and the [#353 decisions](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5946561929). This page describes what the app does on `main`; the information architecture's Tab 5 lists My listings first, and the app lists Notifications first.
+> Governed by: [20 — Information architecture, Tab 5 — Cabinet menu](../../20-information-architecture.md#tab-5--cabinet-menu), the founder's [screen map amendment](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344#issuecomment-5947347989) and the [#353 decisions](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5946561929). This page describes what the app does on `main`. Notifications comes before My listings, as in the information architecture since #665.
 > History: this page first specified a "Services" list with Profile, Settings, Bortzhurnal and Help & Support rows (#124, design archive `app-shell.html`). The 2026-10-02 amendment removed the Settings screen; that design is retired and not kept here.
 
 ==============================================
@@ -22,7 +22,7 @@ Cabinet is a plain menu in Auto.ru's manner. Rows never block on the network: th
 │ safe-top                                   │
 │ Cabinet                                    │
 ├────────────────────────────────────────────┤
-│ (A)  Display name                     >    │  large row, 76px; avatar 48pt
+│ (A)  Display Name                     >    │  large row, 76px; avatar 48pt
 │      +993 6X XX-XX-42                      │  masked Sign-in Method
 │░░░░░░░░░░░░░░░░ gap 8px ░░░░░░░░░░░░░░░░░░░│
 │ ▣  Notifications                      >    │  signed in only
@@ -50,9 +50,9 @@ Every row within a group is separated by a divider; groups are separated by a ga
 
 Signed out, the large row reads "Sign in" / "By phone or email" with a neutral person avatar (a `User` icon, never a car), and the Notifications and My listings group is absent.
 
-Signed in, the large row is the profile row: a 48 pt `UserAvatar` — the User's profile photo, or the car mark the server assigned (`avatarIndex`) on a tinted circle, so the circle is never empty — then the Display Name on one line (the name the User set, or their Generated Name, "Водитель 4821" / "Sürüji 4821" / "Driver 4821" in the reader's language; a 30-character name ends in "…"), then the masked Sign-in Method. The row opens Profile.
+Signed in, the large row is the profile row: a 48 pt `UserAvatar` — the User's profile photo, or their Assigned Avatar (`avatarIndex`) on a tinted circle, so the circle is never empty — then the Display Name on one line (the name the User set, or their Generated Name, "Водитель 4821" / "Sürüji 4821" / "Driver 4821" in the reader's language; a name wider than the row ends in "…", `numberOfLines={1}`), then the masked Sign-in Method. The row opens Profile.
 
-The My listings value is the total of the User's Listings and drafts. While the count loads or fails, and when it is zero, the row shows no number; it opens My listings either way and refreshes the count when Cabinet regains focus.
+The My listings value is the total of the User's Listings and drafts. Before the first count arrives, after a failed request, and when it is zero, the row shows no number; a refresh keeps the last number until the next one arrives (#665). The row opens My listings either way and refreshes the count when Cabinet regains focus.
 
 ## Token map
 
@@ -150,7 +150,7 @@ Reduced motion: the sheet follows the system setting.
 ## Implementation notes
 
 - Signed in, the large row opens Profile; signed out, it opens sign-in with Cabinet as the return route. Profile shows the same avatar at 72 pt with the Display Name under it, also on one line.
-- The My listings total counts Listings and drafts together; it is hidden while loading or failed and when it is zero, and it refreshes when Cabinet regains focus.
+- The My listings total counts Listings and drafts together; it is hidden before the first count arrives, after a failed request and when it is zero, and kept through a refresh, and it refreshes when Cabinet regains focus.
 - Legal rows open the localized web page for the current language; they do not deep-link into the app.
 - Help is the release's only support entry. The code screen links to it only at the daily Sign-in Code limit ([mobile OTP login flow](mobile-otp-login-flow.md)).
 - Log out and a finished account deletion land on Cabinet, signed out.

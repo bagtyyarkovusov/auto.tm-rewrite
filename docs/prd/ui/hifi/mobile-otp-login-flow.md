@@ -585,7 +585,7 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 - No confirm screen before SMS request.
 - No notification prompt during OTP.
 - No legal checkbox in S2.
-- No support link on OTP except Contact support at the daily Sign-in Code limit, which opens Help.
+- No support link on the code screen except Contact support at the daily Sign-in Code limit, which opens Help.
 - No fake urgency or promotional copy.
 - Error color uses `destructive` semantic token (rose), not the brand red `primary`.
 - Mobile touch targets follow the accessibility minimum.

@@ -253,7 +253,7 @@ describe("Cabinet My listings total", () => {
     expect(routerMock.push).toHaveBeenLastCalledWith("/listings/manage");
   });
 
-  it.each(["focus", "invalidation"])("hides the cached number during a pending %s refetch, keeps navigation and shows the next total", async (trigger) => {
+  it.each(["focus", "invalidation"])("keeps the cached number during a pending %s refetch, keeps navigation and shows the next total", async (trigger) => {
     signedIn();
     let resolveCounts: (value: ReturnType<typeof counts>) => void = () => {};
     state.get.mockResolvedValueOnce(counts(5)).mockReturnValueOnce(new Promise((resolve) => { resolveCounts = resolve; }));
@@ -266,9 +266,10 @@ describe("Cabinet My listings total", () => {
     });
     await waitFor(() => expect(view.queryClient.getQueryState(queryKeys.listings.myCounts(USER_ID))?.fetchStatus).toBe("fetching"));
     expect(state.get).toHaveBeenCalledTimes(2);
-    await waitFor(() => expect(view.getByRole("button", { name: /^My listings$/ }).props.accessibilityLabel).toBe("My listings"));
-    const row = view.getByRole("button", { name: /^My listings$/ });
-    expect(view.queryByText("5")).toBeNull();
+    // The number does not blink out on each refresh (#665).
+    await settle();
+    const row = view.getByRole("button", { name: "My listings, 5" });
+    expect(view.getByText("5")).toBeTruthy();
     fireEvent.press(row);
     expect(routerMock.push).toHaveBeenLastCalledWith("/listings/manage");
 
