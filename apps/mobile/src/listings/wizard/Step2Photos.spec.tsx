@@ -20,7 +20,7 @@ const defaults = () => ({ photos: [], onAddPhoto: vi.fn<(uri: string) => Promise
 
 describe("Step2Photos", () => {
   it("shows an empty state and photo validation error", () => {
-    const screen = renderMobile(<Step2Photos {...defaults()} fieldErrors={{ photos: "Add a photo" }} />);
+    const screen = renderMobile(<Step2Photos {...defaults()} fieldErrors={{ photos: "Add a photo" }} showErrors />);
     expect(screen.getByText("No photos")).toBeTruthy();
     expect(screen.getByText("Add a photo")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Camera" })).toBeTruthy();
@@ -284,5 +284,33 @@ describe("Step2Photos while photos upload", () => {
     expect(ru.getByText("Можно продолжать. Фото загружаются в фоне.")).toBeTruthy();
     const tk = renderMobile(<Step2Photos {...defaults()} photos={photos} />, { locale: "tk" });
     expect(tk.getByText("Dowam edip bilersiňiz. Suratlar ýüklenmegini dowam edýär.")).toBeTruthy();
+  });
+});
+
+describe("Step2Photos errors", () => {
+  const required = { photos: "At least one photo is required" };
+
+  it("says nothing about missing photos when the seller arrives on the step", () => {
+    const screen = renderMobile(<Step2Photos {...defaults()} fieldErrors={required} />);
+
+    expect(screen.getByText("No photos")).toBeTruthy();
+    expect(screen.queryByText("At least one photo is required")).toBeNull();
+  });
+
+  it("says a photo is required once the seller removes the last one", () => {
+    const props = { ...defaults(), photos: [photo("a", 0)] };
+    const screen = renderMobile(<Step2Photos {...props} />);
+
+    fireEvent.press(screen.getByLabelText("Remove: Photo 1 of 1"));
+    expect(props.onRemovePhoto).toHaveBeenCalledWith("a");
+    screen.rerender(<Step2Photos {...props} photos={[]} fieldErrors={required} />);
+
+    expect(screen.getByText("At least one photo is required")).toBeTruthy();
+  });
+
+  it("says a photo is required when the wizard asks the step to show its errors", () => {
+    const screen = renderMobile(<Step2Photos {...defaults()} fieldErrors={required} showErrors />);
+
+    expect(screen.getByText("At least one photo is required")).toBeTruthy();
   });
 });

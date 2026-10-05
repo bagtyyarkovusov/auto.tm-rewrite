@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 import type { TextInput } from "react-native";
 import { Enums } from "@auto-tm/contracts";
@@ -15,6 +15,8 @@ interface Step5PriceProps {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   fieldErrors?: Record<string, string>;
+  /** Show every error, as after the first Continue tap. */
+  showErrors?: boolean;
   disabled?: boolean;
 }
 
@@ -47,13 +49,16 @@ function wrapDisabled(children: React.ReactNode, disabled: boolean) {
 function PriceInput({
   payload,
   onChange,
-  fieldErrors,
+  error,
+  onTouched,
   disabled,
   inputRef,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
-  fieldErrors?: Record<string, string>;
+  /** The amount's error, once it is to be shown. */
+  error?: string;
+  onTouched: () => void;
   disabled: boolean;
   inputRef: React.RefObject<TextInput | null>;
 }) {
@@ -66,6 +71,7 @@ function PriceInput({
           ref={inputRef}
           value={payload.priceAmount?.toString() ?? ""}
           onChangeText={(text) => {
+            onTouched();
             const num = parseInt(text, 10);
             const updates: Partial<WizardSchemas.WizardDraftPayload> = {
               priceAmount: Number.isNaN(num) ? undefined : num,
@@ -75,15 +81,16 @@ function PriceInput({
             }
             onChange(updates);
           }}
+          onBlur={onTouched}
           placeholder={t("priceAmountPlaceholder")}
           keyboardType="number-pad"
           editable={!disabled}
         />,
         disabled,
       )}
-      {fieldErrors?.priceAmount && (
+      {error && (
         <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-          {fieldErrors.priceAmount}
+          {error}
         </Text>
       )}
     </View>
@@ -206,20 +213,25 @@ export default function Step5Price({
   payload,
   onChange,
   fieldErrors,
+  showErrors = false,
   disabled = false,
 }: Step5PriceProps) {
-  const { t } = useTranslation();
   const { tmtEquivalent } = usePriceStep(payload);
   const amountRef = useRef<TextInput>(null);
+  // Like the other steps: the amount's error shows once the seller has typed in
+  // or left the field, or after the first Continue tap, never on arrival.
+  const [amountTouched, setAmountTouched] = useState(false);
+  const amountError = showErrors || amountTouched ? fieldErrors?.priceAmount : undefined;
 
   return (
     <View className="gap-5 py-5">
+      {/* The step is titled Price, so the field carries one label, Amount. */}
       <View className="gap-1.5">
-        <Text className="text-sm font-medium text-foreground">{t("price")} *</Text>
         <PriceInput
           payload={payload}
           onChange={onChange}
-          fieldErrors={fieldErrors}
+          error={amountError}
+          onTouched={() => setAmountTouched(true)}
           disabled={disabled}
           inputRef={amountRef}
         />

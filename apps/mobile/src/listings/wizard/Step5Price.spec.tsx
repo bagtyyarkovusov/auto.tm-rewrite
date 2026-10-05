@@ -153,3 +153,70 @@ describe("Price step currency", () => {
     }
   });
 });
+
+describe("Price step amount label", () => {
+  it.each([
+    ["en", "Amount *", "Price *"],
+    ["ru", "Сумма *", "Цена *"],
+    ["tk", "Mukdary *", "Bahasy *"],
+  ])("labels the amount field once in %s", (locale, kept, dropped) => {
+    const screen = renderMobile(<PriceStep />, { locale });
+
+    expect(screen.getAllByText(kept)).toHaveLength(1);
+    expect(screen.queryByText(dropped)).toBeNull();
+  });
+});
+
+describe("Price step errors", () => {
+  const required = { priceAmount: "Price is required" };
+  function ErrorsStep({ showErrors }: { showErrors?: boolean }) {
+    const [payload, setPayload] = useState<WizardSchemas.WizardDraftPayload>({});
+    return (
+      <Step5Price
+        payload={payload}
+        onChange={(updates) => setPayload((previous) => ({ ...previous, ...updates }))}
+        fieldErrors={payload.priceAmount ? {} : required}
+        showErrors={showErrors}
+      />
+    );
+  }
+
+  it("says nothing about the empty amount when the seller arrives on the step", () => {
+    const screen = renderMobile(<ErrorsStep />);
+
+    expect(screen.getByPlaceholderText("Enter amount")).toBeTruthy();
+    expect(screen.queryByText("Price is required")).toBeNull();
+  });
+
+  it("says nothing when a currency switch clears the amount", () => {
+    const screen = renderMobile(<ErrorsStep />);
+
+    fireEvent.press(screen.getByRole("radio", { name: "USD" }));
+
+    expect(screen.queryByText("Price is required")).toBeNull();
+  });
+
+  it("says the amount is required once the seller clears it", () => {
+    const screen = renderMobile(<ErrorsStep />);
+    const amount = screen.getByPlaceholderText("Enter amount");
+
+    fireEvent.changeText(amount, "5");
+    fireEvent.changeText(amount, "");
+
+    expect(screen.getByText("Price is required")).toBeTruthy();
+  });
+
+  it("says the amount is required once the seller leaves it empty", () => {
+    const screen = renderMobile(<ErrorsStep />);
+
+    fireEvent(screen.getByPlaceholderText("Enter amount"), "blur");
+
+    expect(screen.getByText("Price is required")).toBeTruthy();
+  });
+
+  it("says the amount is required when the wizard asks the step to show its errors", () => {
+    const screen = renderMobile(<ErrorsStep showErrors />);
+
+    expect(screen.getByText("Price is required")).toBeTruthy();
+  });
+});

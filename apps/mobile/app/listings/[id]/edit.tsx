@@ -451,6 +451,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
             isCompressing={uploadQueue.isCompressing}
             isUploading={uploadQueue.isUploading}
             fieldErrors={fieldErrors}
+            showErrors={attemptedSteps.photos === true}
             continuesWhileUploading={false}
           />
         )}
@@ -467,6 +468,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
             payload={machineState.payload}
             onChange={handlePayloadChange}
             fieldErrors={fieldErrors}
+            showErrors={attemptedSteps.price === true}
           />
         )}
         {currentStep === "location" && (

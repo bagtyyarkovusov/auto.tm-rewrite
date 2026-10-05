@@ -192,10 +192,6 @@ export default function Step6Location({
           <Text className="text-sm text-muted-foreground">{t("areaHelper")}</Text>
         )}
       </View>
-
-      <Text className="text-sm text-muted-foreground leading-relaxed">
-        {t("thisIsHowBuyersSee")}
-      </Text>
     </View>
   );
 }

@@ -508,7 +508,9 @@ export default function SellScreen() {
           return;
         }
         closeWizard();
-        show({ title: t("savedToDrafts"), variant: "success" });
+        // The Sell tab has no header for a top toast to clear: at the top it would
+        // cover the Latest draft card, so it sits above the tab bar, as on Favorites.
+        show({ title: t("savedToDrafts"), variant: "success", placement: "aboveTabBar" });
       } finally {
         closingRef.current = false;
         setIsClosing(false);
@@ -663,6 +665,7 @@ export default function SellScreen() {
             isCompressing={uploadQueue.isCompressing}
             isUploading={uploadQueue.isUploading}
             fieldErrors={fieldErrors}
+            showErrors={attemptedSteps.photos === true}
           />
         )}
         {currentStep === "vehicle" && (
@@ -686,6 +689,7 @@ export default function SellScreen() {
             payload={machineState.payload}
             onChange={handlePayloadChange}
             fieldErrors={fieldErrors}
+            showErrors={attemptedSteps.price === true}
           />
         )}
         {currentStep === "location" && (
