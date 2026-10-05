@@ -90,13 +90,6 @@ export class PrismaUserRepository implements UserRepository, SignInMethodReposit
     await this.prisma.user.delete({ where: { id } });
   }
 
-  async scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { deletionScheduledAt },
-    });
-  }
-
   async findUsersWithExpiredDeletionGrace(now: Date): Promise<User[]> {
     const rows = await this.prisma.user.findMany({
       where: { deletionScheduledAt: { lte: now } },

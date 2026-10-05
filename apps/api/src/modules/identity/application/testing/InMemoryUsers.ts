@@ -56,11 +56,6 @@ export class InMemoryUsers implements UserRepository {
     this.users.delete(id);
   }
 
-  async scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void> {
-    const user = this.users.get(userId);
-    if (user) this.users.set(userId, { ...user, deletionScheduledAt });
-  }
-
   async findUsersWithExpiredDeletionGrace(now: Date): Promise<User[]> {
     return [...this.users.values()].filter(
       (u) => u.deletionScheduledAt !== null && u.deletionScheduledAt <= now,
