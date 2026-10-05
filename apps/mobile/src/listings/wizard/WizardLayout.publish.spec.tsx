@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { renderMobile } from "../../../test/render";
+import { fireEvent, renderMobile } from "../../../test/render";
 
 import { WizardLayout } from "./WizardLayout";
 
@@ -49,6 +49,31 @@ const position = (screen: ReturnType<typeof renderMobile>, text: string) => {
   expect(index).toBeGreaterThan(-1);
   return index;
 };
+
+describe("WizardLayout while publishing (#588)", () => {
+  it.each([
+    ["en", "Publishing..."],
+    ["ru", "Публикация..."],
+    ["tk", "Neşir edilýär..."],
+  ])("in %s the button reads %s and takes no further taps", (locale, label) => {
+    const onPublish = vi.fn();
+    const screen = renderMobile(check({ isPublishing: true, onPublish }), { locale });
+
+    const button = screen.getByRole("button", { name: label });
+    expect(button.props.accessibilityState).toMatchObject({ disabled: true, busy: true });
+    fireEvent.press(button);
+    expect(onPublish).not.toHaveBeenCalled();
+  });
+
+  it("reads Publish and is enabled otherwise", () => {
+    const onPublish = vi.fn();
+    const screen = renderMobile(check({ onPublish }));
+
+    fireEvent.press(publish(screen));
+    expect(onPublish).toHaveBeenCalledOnce();
+    expect(screen.queryByText("Publishing...")).toBeNull();
+  });
+});
 
 describe("WizardLayout publish blockers (#588)", () => {
   const blockers = ["Fill in: Car, Price", "Photos still uploading: 2", "Photos failed: 1. Retry or remove them."];

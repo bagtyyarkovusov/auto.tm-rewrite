@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SellScreen from "../../app/(tabs)/sell";
-import { act, fireEvent, renderMobile } from "../render";
+import { act, fireEvent, renderMobile, routerMock } from "../render";
 
 // The Sell route on Check and publish, with the real upload queue, wizard machine,
 // autosave and Check screen. Only the device and the network are faked: the file
@@ -170,6 +170,58 @@ describe("Check and publish: changing a step (#588)", () => {
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Back" })); });
 
     header(screen, "Check and publish, Step 7 of 7");
+  });
+});
+
+describe("Check and publish: publishing (#588)", () => {
+  const publishCalls = () => fixture.mutation.mutateAsync.mock.calls;
+
+  it("reads Publishing... while the Listing is published and ignores further taps", async () => {
+    let finish = (_listing: { id: string }) => {};
+    fixture.mutation.mutateAsync.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    const screen = await openCheck();
+
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
+
+    const busy = screen.getByRole("button", { name: "Publishing..." });
+    expect(busy.props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    await act(async () => { fireEvent.press(busy); });
+    expect(publishCalls()).toEqual([[id]]);
+    // Neither ✕ nor a section leaves a publish that is under way.
+    fireEvent.press(screen.getByRole("button", { name: /^Price, / }));
+    header(screen, "Check and publish, Step 7 of 7");
+
+    await act(async () => { finish({ id }); });
+    expect(publishCalls()).toHaveLength(1);
+  });
+
+  it("takes one publish from two quick taps", async () => {
+    const screen = await openCheck();
+    const button = screen.getByRole("button", { name: "Publish" });
+
+    await act(async () => {
+      fireEvent.press(button);
+      fireEvent.press(button);
+    });
+
+    expect(publishCalls()).toEqual([[id]]);
+  });
+
+  it("saves the draft, then opens the Listing with a toast and closes the wizard", async () => {
+    const screen = await openCheck();
+    fixture.patch.mockClear();
+
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
+
+    expect(savedPayloads().at(-1)).toMatchObject({ photos: [fixture.savedPhoto], priceAmount: 100000 });
+    expect(publishCalls()).toEqual([[id]]);
+    expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${id}`);
+    expect(fixture.show).toHaveBeenCalledWith({ title: "Listing published", variant: "success" });
+    // No success screen and no Share: the wizard is gone and the Sell tab is back.
+    expect(screen.queryByRole("header", { name: /Check and publish/ })).toBeNull();
+    expect(screen.queryByText(/Share/)).toBeNull();
+    expect(screen.getByText("Sell")).toBeTruthy();
   });
 });
 
