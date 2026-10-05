@@ -42,6 +42,14 @@ model User {
   email           String?   @unique
   emailVerifiedAt DateTime?
   displayName     String?
+  /// Generated Name number and Assigned Avatar index (#638), kept for the life
+  /// of the account. The API draws both (`GeneratedIdentity.ts`); the database
+  /// default and the `users_nameNumber_range_check` / `users_avatarIndex_range_check`
+  /// constraints from the migration hold the same ranges.
+  nameNumber      Int       @default(dbgenerated("(((1000)::double precision + floor((random() * (9000)::double precision))))::integer"))
+  avatarIndex     Int       @default(dbgenerated("(floor((random() * (12)::double precision)))::integer"))
+  /// Object key of the profile photo; always null until photos ship.
+  avatarKey       String?
   avatarUrl       String?
   locale          String    @default("ru")
   role            UserRole  @default(buyer)
