@@ -536,6 +536,11 @@ export default function SellScreen() {
     ) {
       disabledReason = translateWizardError(t, ctx.stepErrors[0]);
     }
+    // On Check, Publish waits for the queue to hold this draft's photos. That is
+    // not something to fix, so it reads as a neutral line, not a blocker.
+    if (ctx.isLastStep && !queueReady) {
+      disabledReason = t("loadingEllipsis");
+    }
 
     return (
       <>
@@ -556,7 +561,7 @@ export default function SellScreen() {
           (ctx.canContinue || currentStep === "specs") &&
           !discardDraft.isPending && !publishDraft.isPending
         }
-        canPublish={ctx.canPublish && uploadQueue.publishGate.canPublish}
+        canPublish={ctx.canPublish && queueReady && uploadQueue.publishGate.canPublish}
         canGoBack={ctx.canGoBack}
         isLastStep={ctx.isLastStep}
         saveStatus={saveStatus}

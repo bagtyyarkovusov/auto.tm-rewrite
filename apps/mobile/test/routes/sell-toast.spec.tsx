@@ -35,7 +35,7 @@ vi.mock("../../src/listings/wizard/useWizardAutosave", () => ({ useWizardAutosav
   save: fixture.save, forceSave: fixture.forceSave, flush: fixture.flush, retrySave: vi.fn(), saveStatus: "saved", saveError: null,
 }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
-  photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
+  photos: fixture.photos, isReady: true, publishGate: { canPublish: true, blockers: [] },
 }) }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: vi.fn() }));
 vi.mock("../../components/auth/SignInDialog", () => ({ SignInDialog: () => null }));
