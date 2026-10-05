@@ -5,7 +5,7 @@ import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useR
 import { BackHandler, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
+import { ListingsSchemas, type WizardSchemas } from "@auto-tm/contracts";
 
 import { ApiError } from "../../src/api/client";
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
@@ -39,7 +39,9 @@ import Step4Specs from "../../src/listings/wizard/Step4Specs";
 import Step5Price from "../../src/listings/wizard/Step5Price";
 import Step6Location from "../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
-import Step8Review from "../../src/listings/wizard/Step8Review";
+import CheckAndPublish from "../../src/listings/wizard/CheckAndPublish";
+import { publishBlockerLines } from "../../src/listings/wizard/publishBlockers";
+import { publishFailureMessage, publishFailureOf } from "../../src/listings/wizard/publishFailure";
 
 
 import { useToast } from "@/components/ui/toast";
@@ -91,15 +93,7 @@ export default function SellScreen() {
   // `phone` follows the live auth session, so signing in from this tab's own
   // sign-in sheet fills the Step 7 contact placeholder without a remount.
   const { isAuthenticated, phone: defaultPhone } = useAuth();
-  const { show, setTopClearance } = useToast();
-  const wizardHeaderHeight = useRef(0);
-  const publishErrorToastId = useRef<string | null>(null);
-  const handleHeaderHeightChange = useCallback((height: number) => {
-    wizardHeaderHeight.current = height;
-    if (publishErrorToastId.current) {
-      setTopClearance(publishErrorToastId.current, height);
-    }
-  }, [setTopClearance]);
+  const { show } = useToast();
   const navigation = useContext(NavigationContext);
   const isFocused = useIsFocused();
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
@@ -108,6 +102,7 @@ export default function SellScreen() {
   const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const closingRef = useRef(false);
+  const publishingRef = useRef(false);
   // The draft that tapping New listing created in this session. Only that draft is
   // removed when the seller closes it untouched; a draft reopened from the Sell tab
   // or My listings is never deleted by ✕.
@@ -346,19 +341,23 @@ export default function SellScreen() {
       return;
     }
 
-    dispatch({ type: "NEXT" });
+    // Done on a step opened from Check returns there; Continue moves on.
+    const advance = { type: ctx.editDetourActive ? "RETURN_TO_REVIEW" : "NEXT" } as const;
+    dispatch(advance);
     // Force save on navigation, with the step it moves to.
-    const moved = wizardMachineReducer(machineState, { type: "NEXT" });
+    const moved = wizardMachineReducer(machineState, advance);
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...moved.payload,
       photos: photosToSave,
       validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending]);
+  }, [ctx.canContinue, ctx.editDetourActive, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending]);
 
   const handlePublish = useCallback(async () => {
-    if (!machineState.draftId) return;
+    // One publish at a time: a second tap lands before the button re-renders disabled.
+    if (!machineState.draftId || publishingRef.current) return;
+    publishingRef.current = true;
 
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
@@ -369,24 +368,34 @@ export default function SellScreen() {
 
     dispatch({ type: "PUBLISH_START" });
 
+    // Publish sends what the server holds, so the draft must be saved first. One
+    // attempt: a retry left running could change the draft after it is published.
+    // A failed save sends nothing, and the save status says what went wrong.
+    if (!(await flush(fullPayload))) {
+      dispatch({ type: "PUBLISH_ABORTED" });
+      publishingRef.current = false;
+      return;
+    }
+
     try {
-      await forceSave(fullPayload);
       const result = await publishDraft.mutateAsync(machineState.draftId);
-      dispatch({ type: "PUBLISH_SUCCESS", listingId: result.id });
       show({
         title: t("listingPublished"),
         variant: "success",
       });
       router.replace(`/(public)/listings/${result.id}`);
+      // The draft is a Listing now, so the wizard closes and the Sell tab is back
+      // at its entry. No success screen (founder decision D8 on #354).
+      newDraftIdRef.current = null;
+      dispatch({ type: "DISCARD" });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t("failedToPublish");
-      dispatch({ type: "PUBLISH_ERROR", error: message });
-      publishErrorToastId.current = show({
-        title: message, variant: "destructive", topClearance: wizardHeaderHeight.current,
-      });
+      // The wizard stays on Check with the draft saved; the error is worded above
+      // Publish. Seam for #593: a contact phone rejection goes to Contact from here.
+      dispatch({ type: "PUBLISH_ERROR", error: publishFailureOf(err) });
+    } finally {
+      publishingRef.current = false;
     }
-  }, [machineState, photosToSave, forceSave, publishDraft, show]);
+  }, [machineState, photosToSave, flush, publishDraft, show]);
 
   const closeWizard = useCallback(() => {
     newDraftIdRef.current = null;
@@ -508,27 +517,18 @@ export default function SellScreen() {
     // Compute upload status counts for chip + publishGate reason
     const uploadStatus = countUploads(uploadQueue.photos);
 
-    // Compose a clear reason text when Publish/Continue is disabled.
+    // On Check, everything that blocks Publish is named above it. Until the queue
+    // holds this draft's photos its counts say nothing about the draft.
+    const publishBlockers = ctx.isLastStep
+      ? publishBlockerLines(t, {
+          validatedSteps: machineState.validatedSteps,
+          uploads: queueReady ? uploadStatus : null,
+        })
+      : [];
+
+    // Why Continue or Done is disabled on a step the seller tried to leave.
     let disabledReason: string | undefined;
-    if (ctx.isLastStep && !uploadQueue.publishGate.canPublish) {
-      if (uploadStatus.failed > 0) {
-        disabledReason = t("photosGateFailed", { count: uploadStatus.failed });
-      } else if (uploadStatus.inflight > 0) {
-        disabledReason = t("photosGateUploading", { count: uploadStatus.inflight });
-      } else {
-        disabledReason =
-          translateWizardError(t, uploadQueue.publishGate.blockers[0]) ??
-          t("cannotPublishYet");
-      }
-    } else if (ctx.isLastStep && !ctx.canPublish) {
-      const missing = WizardSchemas.WIZARD_STEPS.filter(
-        (s) =>
-          s !== "review" && !machineState.validatedSteps.includes(s),
-      );
-      if (missing.length > 0) {
-        disabledReason = t("completeStepsBeforePublish", { count: missing.length });
-      }
-    } else if (
+    if (
       !ctx.isLastStep &&
       !ctx.canContinue &&
       attemptedSteps[currentStep] &&
@@ -536,11 +536,15 @@ export default function SellScreen() {
     ) {
       disabledReason = translateWizardError(t, ctx.stepErrors[0]);
     }
+    // On Check, Publish waits for the queue to hold this draft's photos. That is
+    // not something to fix, so it reads as a neutral line, not a blocker.
+    if (ctx.isLastStep && !queueReady) {
+      disabledReason = t("loadingEllipsis");
+    }
 
     return (
       <>
       <WizardLayout
-        onHeaderHeightChange={handleHeaderHeightChange}
         routeTitle={t("sellCar")}
         stepTitle={t(`wizardSteps.${currentStep}`)}
         stepNumber={ctx.stepNumber}
@@ -548,6 +552,7 @@ export default function SellScreen() {
         onBack={handleBack}
         onContinue={handleContinue}
         onPublish={handlePublish}
+        onReturnToReview={handleContinue}
         onClose={() => void handleClose()}
         isClosing={isClosing}
         mode={machineState.mode}
@@ -556,7 +561,7 @@ export default function SellScreen() {
           (ctx.canContinue || currentStep === "specs") &&
           !discardDraft.isPending && !publishDraft.isPending
         }
-        canPublish={ctx.canPublish && uploadQueue.publishGate.canPublish}
+        canPublish={ctx.canPublish && queueReady && uploadQueue.publishGate.canPublish}
         canGoBack={ctx.canGoBack}
         isLastStep={ctx.isLastStep}
         saveStatus={saveStatus}
@@ -564,8 +569,18 @@ export default function SellScreen() {
         onRetrySave={retrySave}
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
+        publishBlockers={publishBlockers}
+        isPublishing={machineState.status === "publishing"}
+        publishError={
+          machineState.status === "publishError"
+            ? publishFailureMessage(t, machineState.publishError, machineState.payload.priceCurrency)
+            : null
+        }
         uploadStatus={uploadStatus}
-        onUploadStatusPress={() => dispatch({ type: "GO_TO_STEP", step: "photos" })}
+        onUploadStatusPress={() =>
+          // From Check the chip opens Photos as a change, so Done comes back.
+          dispatch({ type: ctx.isLastStep ? "CHANGE_FROM_REVIEW" : "GO_TO_STEP", step: "photos" })
+        }
       >
         {currentStep === "photos" && (
           <Step2Photos
@@ -618,11 +633,12 @@ export default function SellScreen() {
           />
         )}
         {currentStep === "review" && (
-          <Step8Review
+          <CheckAndPublish
             payload={machineState.payload}
             validatedSteps={machineState.validatedSteps}
-            onGoToStep={(step) => dispatch({ type: "GO_TO_STEP", step })}
+            onChangeStep={(step) => dispatch({ type: "CHANGE_FROM_REVIEW", step })}
             photos={uploadQueue.photos}
+            photosReady={queueReady}
           />
         )}
       </WizardLayout>

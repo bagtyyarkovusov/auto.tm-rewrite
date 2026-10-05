@@ -44,7 +44,7 @@ vi.mock("../../src/listings/wizard/Step2Photos", () => ({ default: () => null })
 vi.mock("../../src/listings/wizard/Step3VehicleId", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step6Location", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step7DescContact", () => ({ default: () => null }));
-vi.mock("../../src/listings/wizard/Step8Review", () => ({ default: () => null }));
+vi.mock("../../src/listings/wizard/CheckAndPublish", () => ({ default: () => null }));
 
 beforeEach(() => {
   routeParams.resumeDraftId = fixture.id;
