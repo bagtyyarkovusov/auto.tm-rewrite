@@ -109,12 +109,13 @@ beforeEach(() => {
 });
 
 describe("Sell wizard, Photos step", () => {
-  it("opens on Photos and will not continue, with the existing message, until a photo is picked", () => {
+  it("opens on Photos with no error yet and will not continue until a photo is picked", () => {
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
 
     expect(screen.getByRole("header", { name: "Photos, Step 3 of 7" })).toBeTruthy();
-    expect(screen.getByText("At least one photo is required")).toBeTruthy();
+    // The step's error waits for a removal or a Continue tap (#629).
+    expect(screen.queryByText("At least one photo is required")).toBeNull();
     expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: true });
   });
 

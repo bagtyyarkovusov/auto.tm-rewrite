@@ -41,6 +41,8 @@ interface Step2PhotosProps {
   isUploading: boolean;
   disabled?: boolean;
   fieldErrors?: Record<string, string>;
+  /** Show every error, as after the first Continue tap. */
+  showErrors?: boolean;
   /**
    * Whether the seller can move on while photos upload (default). Edit passes
    * false: Done there still waits for an uploaded photo, so it must not say so.
@@ -387,9 +389,17 @@ export default function Step2Photos({
   isUploading,
   disabled,
   fieldErrors,
+  showErrors = false,
   continuesWhileUploading = true,
 }: Step2PhotosProps) {
   const { t } = useTranslation();
+  // Like the other steps: the photo error shows once the seller has removed a
+  // photo, or after the first Continue tap, never on arrival.
+  const [removedOne, setRemovedOne] = useState(false);
+  const removePhoto = (photoId: string) => {
+    setRemovedOne(true);
+    onRemovePhoto(photoId);
+  };
   const { pickFromLibrary, takePhoto } = usePhotoPicker(onAddPhoto);
   const { handleMoveUp, handleMoveDown, handleSetAsCover } = usePhotoReorder(
     photos,
@@ -398,7 +408,7 @@ export default function Step2Photos({
   const [actionsPhotoId, setActionsPhotoId] = useState<string | null>(null);
 
   const maxReached = photos.length >= 20;
-  const photosError = fieldErrors?.photos;
+  const photosError = showErrors || removedOne ? fieldErrors?.photos : undefined;
   const hasPhotos = photos.length > 0;
   const stillUploading = countUploads(photos).inflight > 0;
   const actionsIndex = photos.findIndex((p) => p.photoId === actionsPhotoId);
@@ -432,7 +442,7 @@ export default function Step2Photos({
           <PhotoGrid
             photos={photos}
             disabled={disabled ?? false}
-            onRemove={onRemovePhoto}
+            onRemove={removePhoto}
             onReorderPhotos={onReorderPhotos}
             onOpenActions={(photoId) => {
               if (!disabled) setActionsPhotoId(photoId);
@@ -442,7 +452,7 @@ export default function Step2Photos({
           <FailedPhotoList
             photos={photos}
             onRetry={onRetryPhoto}
-            onRemove={onRemovePhoto}
+            onRemove={removePhoto}
           />
           {stillUploading && continuesWhileUploading && (
             <Text className="text-sm text-muted-foreground">
@@ -465,7 +475,7 @@ export default function Step2Photos({
         onSetAsCover={handleSetAsCover}
         onMoveEarlier={handleMoveUp}
         onMoveLater={handleMoveDown}
-        onRemove={onRemovePhoto}
+        onRemove={removePhoto}
         onRetry={onRetryPhoto}
       />
     </View>
