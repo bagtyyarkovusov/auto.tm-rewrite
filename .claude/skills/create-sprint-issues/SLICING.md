@@ -26,6 +26,10 @@ A good child issue:
 
 Do not slice below one outcome that can be verified on its own; pieces that cannot be reviewed or verified alone stay in one issue ([ADR-0065](../../../docs/adr/0065-small-changes-skip-the-issue-ceremony.md)). Split unrelated bounded-context behavior. Keep schema + contract + enforcement together when splitting would create an unusable intermediate state.
 
+## Slices inside one issue
+
+Under [ADR-0082](../../../docs/adr/0082-an-issue-may-carry-up-to-three-ordered-slices.md), put slices in one issue when they serve one user-visible outcome and each depends on the one before, such as an endpoint and the screen that is its only consumer. Cap it at three slices and about 800 changed lines excluding tests. Give each slice a numbered section with its own acceptance criteria and one focused check. Keep separate issues for slices that could run in parallel and for any slice that changes authentication or sessions, upload ownership, a destructive or data-moving migration, the worker, or external egress.
+
 ## AFK versus HITL
 
 Use `ready-for-agent` when acceptance criteria and implementation authority are settled and the available environment can verify the slice. Add `blocked` while any dependency is open.

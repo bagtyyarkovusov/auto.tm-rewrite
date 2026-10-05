@@ -23,6 +23,16 @@ Before production implementation, follow [Acceptance evidence](../../.claude/ski
 
 Final Standards and Spec reviews use fresh, independent, read-only contexts pinned to the same commit. They may run concurrently. Each verdict is a PR comment with axis, reviewer, provider, client, commit SHA, and pass or findings. The [finalization reference](../../.claude/skills/run-issue/FINALIZATION.md) owns findings, delta reviews, auto-merge safety, and closure. Both axes must pass for the latest commit, directly or as carried forward under ADR-0065, and the required `pr` check must be green before GitHub merges. No agent self-approves or bypasses protection. Production promotion, rollback, live-data migration, credentials, paid resources, store submission, and destructive recovery remain human-owned.
 
+## Sliced issues (ADR-0082)
+
+[ADR-0082](../adr/0082-an-issue-may-carry-up-to-three-ordered-slices.md) lets one issue carry up to three ordered slices. It still owns one branch, one draft PR, one Execution state and one writing worktree.
+
+- **Gate.** One user-visible outcome; at most three slices, each depending on the one before; a slice that changes authentication or sessions, upload ownership, a destructive or data-moving migration, the worker, or external egress is its own issue; about 800 changed lines excluding tests, generated files, snapshots and lockfiles. Slices that could run in parallel stay separate issues. A three-slice issue goes to a Claude Opus or Codex implementer.
+- **Issue body.** Each slice is a numbered section with its own acceptance criteria and one focused check.
+- **Execution.** Work the slices in order. After each one, run its check, push a checkpoint commit and tick the slice in Execution state with the commit SHA; resume at the first unticked slice. Past the diff budget, stop at the next slice boundary and report, and the remaining slices move to a follow-up issue.
+- **Real-path proof.** At least one test or native capture exercises the outcome with no mock on the seam between slices.
+- **Review.** One Standards and one Spec review at the final head; Spec checks every slice's criteria and the real-path proof. At least one of the two runs on a different model than the implementer, or the verdict records that none was available. One native capture session covers the issue.
+
 ## Small changes (ADR-0065)
 
 [ADR-0065](../adr/0065-small-changes-skip-the-issue-ceremony.md) governs these exceptions.
