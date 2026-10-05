@@ -216,7 +216,6 @@ export default function Step5Price({
   showErrors = false,
   disabled = false,
 }: Step5PriceProps) {
-  const { t } = useTranslation();
   const { tmtEquivalent } = usePriceStep(payload);
   const amountRef = useRef<TextInput>(null);
   // Like the other steps: the amount's error shows once the seller has typed in
