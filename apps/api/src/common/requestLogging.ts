@@ -17,6 +17,6 @@ const SECRET_HEADER_PATHS = [
 export function requestLoggingOptions(level: string): Options {
   return {
     level,
-      redact: { paths: SECRET_HEADER_PATHS, censor: "[Redacted]" },
+    redact: { paths: SECRET_HEADER_PATHS, censor: "[Redacted]" },
   };
 }
