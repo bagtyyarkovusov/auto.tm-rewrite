@@ -315,6 +315,24 @@ describe("Save changes (#589)", () => {
     expect(api.patches).toEqual([expect.objectContaining({ priceAmount: 179000 })]);
   });
 
+  it("a failed save still counts as unsaved after the fields match the Listing again", async () => {
+    const api = createListingApi();
+    api.failEdits = 1;
+    const screen = await openEdit();
+    changePrice(screen, "100000", "179000");
+    await act(async () => { fireEvent.press(saveButton(screen)); });
+    await screen.findByText("Couldn't save all changes. Try again.");
+
+    // Part of the edit may have reached the server (ADR-0025), so the seller can
+    // still save, and leaving still asks.
+    changePrice(screen, "179000", "100000");
+
+    expect(isDisabled(saveButton(screen))).toBe(false);
+    fireEvent.press(screen.getByRole("button", { name: "Close" }));
+    expect(screen.getByText("Leave edit mode?")).toBeTruthy();
+    expect(routerMock.back).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["ru", "Редактировать объявление", "Сохранить изменения", "Не удалось сохранить все изменения. Попробуйте ещё раз."],
     ["tk", "Bildirişi redaktirle", "Üýtgeşmeleri sakla", "Ähli üýtgeşmeleri saklap bolmady. Täzeden synanyşyň."],
