@@ -95,6 +95,8 @@ Every rule must map to something the product or its moderators enforce. Do not a
 
 ## App Store / Play Store submission checklist
 
+The Google Play answers, store copy, reviewer access template and Console steps are in [88 — Google Play Console submission pack](88-play-console-submission.md).
+
 - [ ] Privacy Policy URL: `https://autotm.bagtyyar.dev/en/legal/privacy`
 - [ ] Google Play account-deletion URL: `https://autotm.bagtyyar.dev/en/account/delete`
 - [ ] Privacy nutrition label (Apple) filled in to match what the Privacy Policy says
