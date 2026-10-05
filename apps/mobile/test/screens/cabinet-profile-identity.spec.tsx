@@ -266,7 +266,7 @@ describe("Profile header", () => {
     expect(name.props.numberOfLines).toBe(1);
   });
 
-  it("reads the name as text; the avatar is not read on its own and nothing here is a button", async () => {
+  it("reads the name as the Edit name button; the avatar is not read on its own", async () => {
     serve("aman", meOf());
     await signIn("aman");
     const view = render(<ProfileScreen />);
@@ -275,7 +275,7 @@ describe("Profile header", () => {
     expect(avatarCircle(view)).toMatchObject({
       accessible: false, accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants",
     });
-    expect(view.queryByRole("button", { name: /Driver 4821/ })).toBeNull();
+    expect(view.getByRole("button", { name: "Edit name" })).toBeTruthy();
   });
 
   it("keeps the error state when /me fails: Retry and Log out, no name and no avatar", async () => {
