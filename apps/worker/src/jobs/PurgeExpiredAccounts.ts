@@ -9,6 +9,9 @@ export interface PurgeExpiredAccountsResult {
   purgedCount: number;
 }
 
+/** Sign-in code records are kept this long, then deleted (privacy policy). */
+const CODE_REQUEST_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class PurgeExpiredAccounts {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -16,17 +19,35 @@ export class PurgeExpiredAccounts {
   async execute(input: PurgeExpiredAccountsInput): Promise<PurgeExpiredAccountsResult> {
     const expiredUsers = await this.prisma.user.findMany({
       where: { deletionScheduledAt: { lte: input.now } },
-      select: { id: true },
+      select: { id: true, phone: true, email: true },
     });
 
     for (const user of expiredUsers) {
-      await this.purgeUser(user.id);
+      await this.purgeUser(user);
     }
+
+    // Every run also drops sign-in code records past their retention, so the
+    // phone, email and IP they hold are gone after 30 days for everyone.
+    await this.prisma.otpRequest.deleteMany({
+      where: { createdAt: { lt: new Date(input.now.getTime() - CODE_REQUEST_RETENTION_MS) } },
+    });
 
     return { purgedCount: expiredUsers.length };
   }
 
-  private async purgeUser(userId: string): Promise<void> {
+  private async purgeUser(user: {
+    id: string;
+    phone: string | null;
+    email: string | null;
+  }): Promise<void> {
+    const userId = user.id;
+    // Code requests are matched by User and by the purged phone and email,
+    // since a request made before sign-in carries no User id.
+    const codeRequestMatches = [
+      { userId },
+      ...(user.phone ? [{ destination: user.phone }, { phone: user.phone }] : []),
+      ...(user.email ? [{ destination: user.email }] : []),
+    ];
     await this.prisma.$transaction([
       // Free both Sign-in Methods and clear profile PII (ADR-0054). The name
       // number and avatar index stay; they identify nobody (#638).
@@ -81,6 +102,13 @@ export class PurgeExpiredAccounts {
 
       // Prune confirmed Listing contact phones (ADR-0081)
       this.prisma.verifiedContactPhone.deleteMany({ where: { sellerId: userId } }),
+
+      // Prune sign-in and contact phone code requests for this User
+      this.prisma.otpRequest.deleteMany({ where: { OR: codeRequestMatches } }),
+
+      // Kept Listings stay archived; nobody can reach a purged User, so their
+      // contact phone goes too
+      this.prisma.listing.updateMany({ where: { sellerId: userId }, data: { contactPhone: null } }),
     ]);
   }
 }
