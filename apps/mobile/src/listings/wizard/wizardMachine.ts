@@ -326,7 +326,8 @@ export function wizardMachineReducer(
     }
 
     case "BACK": {
-      if (state.status !== "step") return state;
+      // A failed publish leaves the seller on Check, and Back still works there.
+      if (state.status !== "step" && state.status !== "publishError") return state;
       // Back from a step opened on Check returns to Check, valid or not: Check
       // then names the step as one to fill in.
       if (state.changingFromReview) return backToReview(state);
@@ -335,7 +336,9 @@ export function wizardMachineReducer(
       return {
         ...state,
         ...moveTo(state, getStepAtIndex(currentIdx - 1)),
+        status: "step",
         saveError: null,
+        publishError: null,
       };
     }
 
@@ -412,7 +415,8 @@ export function wizardMachineReducer(
     }
 
     case "PUBLISH_START": {
-      if (state.status !== "step") return state;
+      // A failed publish leaves the seller on Check, where it can be tried again.
+      if (state.status !== "step" && state.status !== "publishError") return state;
       return { ...state, status: "publishing", publishError: null };
     }
 
@@ -464,7 +468,8 @@ export function buildMachineContext(
     state.mode === "edit"
       ? false
       : // The first step has a Back too when it was opened from Check.
-        (currentIdx > 0 || state.changingFromReview) && state.status === "step";
+        (currentIdx > 0 || state.changingFromReview) &&
+        (state.status === "step" || state.status === "publishError");
 
   // Position-based progress: where in the wizard am I right now.
   const stepNumber = currentIdx + 1;

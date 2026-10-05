@@ -41,6 +41,7 @@ import Step6Location from "../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
 import CheckAndPublish from "../../src/listings/wizard/CheckAndPublish";
 import { publishBlockerLines } from "../../src/listings/wizard/publishBlockers";
+import { publishFailureMessage, publishFailureOf } from "../../src/listings/wizard/publishFailure";
 
 
 import { useToast } from "@/components/ui/toast";
@@ -92,15 +93,7 @@ export default function SellScreen() {
   // `phone` follows the live auth session, so signing in from this tab's own
   // sign-in sheet fills the Step 7 contact placeholder without a remount.
   const { isAuthenticated, phone: defaultPhone } = useAuth();
-  const { show, setTopClearance } = useToast();
-  const wizardHeaderHeight = useRef(0);
-  const publishErrorToastId = useRef<string | null>(null);
-  const handleHeaderHeightChange = useCallback((height: number) => {
-    wizardHeaderHeight.current = height;
-    if (publishErrorToastId.current) {
-      setTopClearance(publishErrorToastId.current, height);
-    }
-  }, [setTopClearance]);
+  const { show } = useToast();
   const navigation = useContext(NavigationContext);
   const isFocused = useIsFocused();
   const params = useLocalSearchParams<{ resumeDraftId?: string }>();
@@ -388,12 +381,9 @@ export default function SellScreen() {
       newDraftIdRef.current = null;
       dispatch({ type: "DISCARD" });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t("failedToPublish");
-      dispatch({ type: "PUBLISH_ERROR", error: message });
-      publishErrorToastId.current = show({
-        title: message, variant: "destructive", topClearance: wizardHeaderHeight.current,
-      });
+      // The wizard stays on Check with the draft saved; the error is worded above
+      // Publish. Seam for #593: a contact phone rejection goes to Contact from here.
+      dispatch({ type: "PUBLISH_ERROR", error: publishFailureOf(err) });
     } finally {
       publishingRef.current = false;
     }
@@ -542,7 +532,6 @@ export default function SellScreen() {
     return (
       <>
       <WizardLayout
-        onHeaderHeightChange={handleHeaderHeightChange}
         routeTitle={t("sellCar")}
         stepTitle={t(`wizardSteps.${currentStep}`)}
         stepNumber={ctx.stepNumber}
@@ -569,6 +558,11 @@ export default function SellScreen() {
         disabledReason={disabledReason}
         publishBlockers={publishBlockers}
         isPublishing={machineState.status === "publishing"}
+        publishError={
+          machineState.status === "publishError"
+            ? publishFailureMessage(t, machineState.publishError, machineState.payload.priceCurrency)
+            : null
+        }
         uploadStatus={uploadStatus}
         onUploadStatusPress={() =>
           // From Check the chip opens Photos as a change, so Done comes back.

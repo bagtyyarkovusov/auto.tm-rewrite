@@ -1,8 +1,8 @@
 import { StyleSheet } from "react-native";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SellScreen from "../../app/(tabs)/sell";
-import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
+import { act, fireEvent, renderMobile, routeParams, routerMock, within } from "../render";
 
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -55,62 +55,34 @@ beforeEach(() => {
   fixture.publish.mockReset().mockRejectedValue(new Error("Publish failed"));
   fixture.forceSave.mockReset().mockResolvedValue(undefined);
 });
-afterEach(() => vi.useRealTimers());
 
 function renderWizard() {
   const screen = renderMobile(<ToastProvider><SellScreen /></ToastProvider>);
-  let header = screen.getByText("Check and publish").parent;
-  while (header && !header.props.className?.includes("border-b")) header = header.parent;
-  if (!header) throw new Error("Wizard header missing");
-  const measuredHeader = header;
-  const measure = (height: number) => fireEvent(measuredHeader, "layout", {
-    nativeEvent: { layout: { height, width: 390, x: 0, y: 0 } },
-  });
   const top = () => StyleSheet.flatten(screen.getByTestId("toast-viewport-top").props.style).top;
-  return { screen, measure, top };
+  return { screen, top };
 }
 
-describe("Sell publish toast header boundary", () => {
-  it("places a publish failure below the measured multirow header and keeps the wizard open", async () => {
-    const { screen, measure, top } = renderWizard();
-    measure(146);
+describe("Sell publish toasts", () => {
+  // #588: a failure is worded above Publish, where it stays; it is no longer a toast
+  // that had to be kept clear of the wizard header.
+  it("shows a publish failure above Publish, not as a toast, and keeps the wizard open", async () => {
+    const { screen } = renderWizard();
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
-    expect(screen.getByText("Publish failed")).toBeTruthy();
+
+    const message = "Could not publish. Your draft is saved. Try again.";
+    expect(within(screen.getByRole("alert")).getByText(message)).toBeTruthy();
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    expect(screen.queryByText("Publish failed")).toBeNull();
     expect(screen.getByText("Check and publish")).toBeTruthy();
     expect(routerMock.replace).not.toHaveBeenCalled();
-    expect(top()).toBe(59 + 146 + 8);
-  });
-
-  it("follows header reflow while the failure is visible without restarting its timer", async () => {
-    vi.useFakeTimers();
-    const { screen, measure, top } = renderWizard();
-    measure(146);
-    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
-    act(() => vi.advanceTimersByTime(2000));
-    // A new native layout event covers wrapped text / larger font metrics, not a guessed height.
-    measure(236);
-    expect(top()).toBe(59 + 236 + 8);
-    act(() => vi.advanceTimersByTime(1001));
-    expect(screen.queryByText("Publish failed")).toBeNull();
-  });
-
-  it("uses the latest measurement when the header changes during a pending publish", async () => {
-    let rejectPublish!: (error: Error) => void;
-    fixture.publish.mockImplementation(() => new Promise((_, reject) => { rejectPublish = reject; }));
-    const { screen, measure, top } = renderWizard();
-    measure(146);
-    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
-    measure(236);
-    await act(async () => rejectPublish(new Error("Publish failed")));
-    expect(top()).toBe(59 + 236 + 8);
   });
 
   it("uses ordinary clearance for the success toast on the destination screen", async () => {
     fixture.publish.mockResolvedValue({ id: fixture.id });
-    const { screen, measure, top } = renderWizard();
-    measure(236);
+    const { screen, top } = renderWizard();
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
     expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
+    expect(screen.getByText("Listing published")).toBeTruthy();
     expect(top()).toBe(59 + 64 + 8);
   });
 });

@@ -40,7 +40,6 @@ interface UploadStatusChip {
 }
 
 interface WizardLayoutProps {
-  onHeaderHeightChange?: (height: number) => void;
   routeTitle: string;
   stepTitle: string;
   stepNumber: number;
@@ -71,6 +70,8 @@ interface WizardLayoutProps {
   publishBlockers?: string[];
   /** Create flow: Publish reads "Publishing..." and takes no taps. */
   isPublishing?: boolean;
+  /** Create flow: why the last publish failed, shown above Publish and announced. */
+  publishError?: string | null;
   secondaryAction?: FooterAction;
   publishLabel?: string;
   discardTitle?: string;
@@ -132,7 +133,6 @@ function SaveStatusLine({
 }
 
 function WizardHeader({
-  onHeaderHeightChange,
   routeTitle,
   stepTitle,
   stepNumber,
@@ -149,7 +149,6 @@ function WizardHeader({
   uploadStatus,
   onUploadStatusPress,
 }: {
-  onHeaderHeightChange?: (height: number) => void;
   routeTitle: string;
   stepTitle: string;
   stepNumber: number;
@@ -175,9 +174,7 @@ function WizardHeader({
   }, [stepAnnouncement]);
 
   return (
-    <View
-      onLayout={(event) => onHeaderHeightChange?.(event.nativeEvent.layout.height)}
-      className="border-b border-border px-5 py-3 gap-2">
+    <View className="border-b border-border px-5 py-3 gap-2">
       {/* Row 1: nav + position marker + close */}
       <View className="flex-row items-center justify-between">
         {canGoBack ? (
@@ -326,6 +323,28 @@ function SaveErrorBanner({
   );
 }
 
+/** Why the last publish failed, above Publish. It interrupts a screen reader, since the seller just asked to publish. */
+function PublishErrorAlert({ message }: { message: string }) {
+  // `accessibilityLiveRegion` covers Android; iOS has no live regions, so it is
+  // announced. The alert unmounts while a publish runs, so each failure announces.
+  useEffect(() => {
+    if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message);
+  }, [message]);
+
+  return (
+    <View
+      accessible
+      accessibilityRole="alert"
+      accessibilityLabel={message}
+      accessibilityLiveRegion="assertive"
+      className="flex-row items-start gap-2 rounded-lg border border-destructive px-3 py-2"
+    >
+      <Icon as={AlertCircle} className="mt-0.5 size-4 text-destructive" />
+      <Text className="flex-1 text-sm text-destructive">{message}</Text>
+    </View>
+  );
+}
+
 function WizardFooter({
   isLastStep,
   canContinue,
@@ -340,11 +359,13 @@ function WizardFooter({
   disabledReason,
   publishBlockers,
   isPublishing = false,
+  publishError,
   secondaryAction,
   publishLabel,
 }: {
   publishBlockers?: string[];
   isPublishing?: boolean;
+  publishError?: string | null;
   isLastStep: boolean;
   canContinue: boolean;
   canPublish: boolean;
@@ -423,6 +444,7 @@ function WizardFooter({
           ))}
         </View>
       ) : null}
+      {isLastStep && publishError && !isPublishing ? <PublishErrorAlert message={publishError} /> : null}
       <View className="flex-row gap-3">
         {canGoBack ? (
           <Button
@@ -543,7 +565,6 @@ function DiscardConfirmationDialog({
 }
 
 export function WizardLayout({
-  onHeaderHeightChange,
   routeTitle,
   stepTitle,
   stepNumber,
@@ -569,6 +590,7 @@ export function WizardLayout({
   disabledReason,
   publishBlockers,
   isPublishing,
+  publishError,
   secondaryAction,
   publishLabel,
   discardTitle,
@@ -583,7 +605,6 @@ export function WizardLayout({
   return (
     <SafeAreaView className="flex-1 bg-background">
       <WizardHeader
-        onHeaderHeightChange={onHeaderHeightChange}
         routeTitle={routeTitle}
         stepTitle={stepTitle}
         stepNumber={stepNumber}
@@ -629,6 +650,7 @@ export function WizardLayout({
             disabledReason={disabledReason}
             publishBlockers={publishBlockers}
             isPublishing={isPublishing}
+            publishError={publishError}
             secondaryAction={secondaryAction}
             publishLabel={publishLabel}
           />
