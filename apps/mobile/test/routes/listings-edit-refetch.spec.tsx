@@ -42,7 +42,7 @@ vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQue
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("lucide-react-native", async () => {
   const Icon = (await import("react-native")).View;
-  return { Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon, ChevronLeft: Icon, RefreshCw: Icon, Pencil: Icon };
+  return { Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon, ChevronLeft: Icon, RefreshCw: Icon, Pencil: Icon, Lock: Icon };
 });
 vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ show: fixture.show }) }));
 vi.mock("react-native-safe-area-context", async () => ({
@@ -158,10 +158,10 @@ describe("Listing edit save across a background refetch", () => {
     fixture.listing = { ...api.detail(), favoriteCount: 1 };
     screen.rerender(<EditListingScreen />);
     expect(screen.getByText("✗ Update photo order")).toBeTruthy();
-    expect(screen.getByText("Damaged / needs repair: Yes")).toBeTruthy();
+    expect(screen.getByText("10,000 km · Damaged / needs repair: Yes")).toBeTruthy();
 
     // The seller changes their answer after the failure, then another refetch lands.
-    fireEvent.press(screen.getByRole("button", { name: "Edit Details and condition" }));
+    fireEvent.press(screen.getByRole("button", { name: /^Details and condition, .*Change$/ }));
     fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: No" }));
     fixture.listing = { ...api.detail(), favoriteCount: 2 };
     screen.rerender(<EditListingScreen />);

@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import * as Linking from "expo-linking";
-import { Camera } from "lucide-react-native";
+import { Camera, Lock } from "lucide-react-native";
 import { Enums, WizardSchemas } from "@auto-tm/contracts";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -210,6 +210,93 @@ function SectionRow({
         <Text key="change" className="text-sm font-medium text-info-500">{action}</Text>
       )}
     </Pressable>
+  );
+}
+
+/** A step the seller cannot open: its title, what it holds, and why it is locked. */
+function LockedSectionRow({ title, summary, note }: { title: string; summary: string; note: string }) {
+  return (
+    <View
+      testID="check-section"
+      accessible
+      accessibilityLabel={join([title, summary, note], ", ")}
+      // Not a button and disabled, so a screen reader says it cannot be changed.
+      accessibilityState={{ disabled: true }}
+      className="min-h-14 flex-row items-center gap-3 border-b border-border py-3"
+    >
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text className="text-base text-foreground">{title}</Text>
+        {summary ? (
+          <Text className="text-sm text-muted-foreground" numberOfLines={2}>{summary}</Text>
+        ) : null}
+        <Text className="text-xs text-muted-foreground">{note}</Text>
+      </View>
+      <Icon as={Lock} className="size-4 text-muted-foreground" />
+    </View>
+  );
+}
+
+export interface EditSectionListProps {
+  payload: WizardSchemas.WizardDraftPayload;
+  validatedSteps: WizardSchemas.WizardStep[];
+  /** Opens a step from the list; Done on that step returns here. Never called for Car. */
+  onChangeStep: (step: WizardSchemas.WizardStep) => void;
+  /** Every photo of the edit in order, the cover first. */
+  photos: StagedPhoto[];
+  /** False until the upload queue holds this Listing's photos; see `CheckAndPublishProps`. */
+  photosReady?: boolean;
+  /** Steps that pass their format check but still need the seller, such as an unconfirmed contact phone. */
+  stepsNeedingSeller?: readonly WizardSchemas.WizardStep[];
+}
+
+/**
+ * The section list a published Listing's edit opens on: Check and publish's rows
+ * without the buyer preview, the Posting rules line or Publish. Car is locked
+ * after publishing (ADR-0024), so its row has no Change.
+ */
+export function EditSectionList({
+  payload,
+  validatedSteps,
+  onChangeStep,
+  photos: queuePhotos,
+  photosReady = true,
+  stepsNeedingSeller = [],
+}: EditSectionListProps) {
+  const { t } = useTranslation();
+  const photos = photosReady ? queuePhotos : NO_PHOTOS;
+  const values = useCheckValues(payload);
+  const summaries = useSectionSummaries(payload, values, photos.length);
+  const photosNeedSeller = countUploads(photos).failed > 0;
+
+  return (
+    <View className="gap-3 py-5">
+      <Text className="text-xs text-muted-foreground">{t("editChangesNote")}</Text>
+
+      <View className="border-t border-border">
+        {DATA_STEPS.map((step) =>
+          step === "vehicle" ? (
+            <LockedSectionRow
+              key={step}
+              title={t(`wizardSteps.${step}`)}
+              summary={summaries[step]}
+              note={t("editCarLockedNote")}
+            />
+          ) : (
+            <SectionRow
+              key={step}
+              title={t(`wizardSteps.${step}`)}
+              summary={summaries[step]}
+              needsSeller={
+                !validatedSteps.includes(step) ||
+                stepsNeedingSeller.includes(step) ||
+                (step === "photos" && photosNeedSeller)
+              }
+              onPress={() => onChangeStep(step)}
+            />
+          ),
+        )}
+      </View>
+    </View>
   );
 }
 

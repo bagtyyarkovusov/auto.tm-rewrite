@@ -92,7 +92,7 @@ function confirmedEntry(phone: string, daysLeft: number): ListingsSchemas.Verifi
 }
 
 function openContactStep(screen: ReturnType<typeof renderMobile>) {
-  fireEvent.press(screen.getByRole("button", { name: "Edit Contact" }));
+  fireEvent.press(screen.getByRole("button", { name: /^Contact, / }));
   expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
 }
 
@@ -221,6 +221,10 @@ describe("Listing edit Contact step", () => {
       ),
     );
     const screen = renderMobile(<EditListingScreen />);
+    // The seller changes the number: Save changes sends nothing for an unchanged Listing (#589).
+    openContactStep(screen);
+    fireEvent.press(screen.getByLabelText("+99365000000", { exact: false }));
+    fireEvent.press(screen.getByRole("button", { name: "Done" }));
 
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Save changes" }));
@@ -232,11 +236,15 @@ describe("Listing edit Contact step", () => {
     expect(routerMock.replace).not.toHaveBeenCalled();
   });
 
-  it("any other failed save stays on Check and publish", async () => {
+  it("any other failed save stays on the section list", async () => {
     fixture.save.mockRejectedValue(
       new EditSessionError({ fields: "failed" }, "fields", new ApiError("INTERNAL", 500)),
     );
     const screen = renderMobile(<EditListingScreen />);
+    // The seller changes the number: Save changes sends nothing for an unchanged Listing (#589).
+    openContactStep(screen);
+    fireEvent.press(screen.getByLabelText("+99365000000", { exact: false }));
+    fireEvent.press(screen.getByRole("button", { name: "Done" }));
 
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Save changes" }));

@@ -117,21 +117,29 @@ describe("WizardLayout close button (#585)", () => {
     expect(screen.getByRole("button", { name: label })).toBeTruthy();
   });
 
-  it("keeps Cancel and the Leave edit mode dialog when editing a published Listing", () => {
-    const onDiscard = vi.fn();
+  it("heads an edit's section list with ✕ and the title alone (#589)", () => {
+    const onClose = vi.fn();
     const screen = renderMobile(
-      layout("Price", 4, {
-        mode: "edit",
-        onClose: undefined,
-        onDiscard,
-        discardTitle: "Leave edit mode?",
-        discardDescription: "Any unsaved changes will be lost.",
-      }),
+      layout("Edit listing", 7, { mode: "edit", sectionList: true, isLastStep: true, onClose }),
     );
 
+    expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
+    expect(screen.queryByText(/Step 7 of 7/)).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("gives a step opened from an edit's section list Back and no ✕ (#589)", () => {
+    const onBack = vi.fn();
+    const screen = renderMobile(
+      layout("Price", 4, { mode: "edit", canGoBack: true, editDetourActive: true, onBack }),
+    );
+
+    expect(screen.getByRole("header", { name: "Price, Step 4 of 7" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
-    fireEvent.press(screen.getByText("Cancel"));
-    expect(screen.getByText("Leave edit mode?")).toBeTruthy();
+    expect(screen.queryByText("Cancel")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalledOnce();
   });
 });
 

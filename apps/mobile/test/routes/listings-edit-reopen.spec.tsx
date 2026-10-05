@@ -59,7 +59,7 @@ vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
 }));
 vi.mock("lucide-react-native", async () => {
   const Icon = (await import("react-native")).View;
-  return { Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon, ChevronLeft: Icon, RefreshCw: Icon };
+  return { Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon, ChevronLeft: Icon, RefreshCw: Icon, Lock: Icon };
 });
 vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ show: vi.fn() }) }));
 vi.mock("react-native-safe-area-context", async () => ({
@@ -98,6 +98,8 @@ describe("reopening the Listing editor", () => {
     await waitFor(() => expect([...fixture.files]).toEqual([]));
 
     expect(screen.queryByText(/uploading/i)).toBeNull();
-    expect(screen.getByRole("button", { name: "Save changes", disabled: false })).toBeTruthy();
+    // Only the Listing's own photo, and nothing for Save changes to send (#589).
+    expect(screen.getByText("Photos: 1")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save changes", disabled: true })).toBeTruthy();
   });
 });

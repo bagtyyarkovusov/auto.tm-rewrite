@@ -80,12 +80,12 @@ function createListingApi(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
   const api = { listing, patches: [] as Record<string, unknown>[], removed: [] as string[], failEdits: 0 };
-  const named = (name: string) => HttpResponse.json({ items: [{ id, name, slug: name.toLowerCase() }] });
+  const page = (items: unknown[]) => HttpResponse.json({ items, nextCursor: null, hasMore: false });
 
   server.use(
-    http.get("*/catalog/brands", () => named("Toyota")),
-    http.get("*/catalog/brands/:brandId/models", () => named("Camry")),
-    http.get("*/catalog/*", () => HttpResponse.json({ items: [] })),
+    http.get("*/catalog/brands", () => page([{ id, name: "Toyota", slug: "toyota" }])),
+    http.get("*/catalog/brands/:brandId/models", () => page([{ id, name: "Camry", slug: "camry", brandId: id }])),
+    http.get("*/catalog/*", () => page([])),
     http.get("*/exchange-rates*", () => HttpResponse.json({ rates: [] })),
     http.get("*/me/contact-phones", () => HttpResponse.json({ items: [] })),
     http.get("*/listings/:id", () => HttpResponse.json(api.listing)),
@@ -173,7 +173,7 @@ describe("the locked Car row (#589)", () => {
 
     const note = "Brand, model, generation, year and VIN cannot be changed after publishing.";
     expect(screen.getByText(note)).toBeTruthy();
-    const row = screen.getByLabelText(`Car, Toyota Camry, 2020 · VIN WBA1234567890ABCD, ${note}`);
+    const row = await screen.findByLabelText(`Car, Toyota Camry, 2020 · VIN WBA1234567890ABCD, ${note}`);
     expect(row.props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.queryByRole("button", { name: /^Car, / })).toBeNull();
 
