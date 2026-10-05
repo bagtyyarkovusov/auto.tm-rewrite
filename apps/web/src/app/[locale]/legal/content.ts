@@ -19,8 +19,8 @@ export const privacyPolicy: Record<Locale, LegalDocument> = {
     title: "Privacy Policy",
     effectiveDate: "September 23, 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "October 3, 2026",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "October 6, 2026",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. What we collect",
@@ -97,7 +97,7 @@ When you request account deletion:
       },
       {
         title: "12. Contact & jurisdiction",
-        body: "For privacy inquiries, contact us at: privacy@auto.tm\n\nThis Privacy Policy is governed by the laws of Turkmenistan.",
+        body: "For privacy inquiries, contact us at: bagtyyarkowusow.dev@gmail.com\n\nThis Privacy Policy is governed by the laws of Turkmenistan.",
       },
     ],
   },
@@ -105,8 +105,8 @@ When you request account deletion:
     title: "Политика конфиденциальности",
     effectiveDate: "23 сентября 2026 г.",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "3 октября 2026 г.",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "6 октября 2026 г.",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. Какие данные мы собираем",
@@ -179,7 +179,7 @@ When you request account deletion:
       },
       {
         title: "12. Контакты и юрисдикция",
-        body: "privacy@auto.tm. Законодательство Туркменистана.",
+        body: "bagtyyarkowusow.dev@gmail.com. Законодательство Туркменистана.",
       },
     ],
   },
@@ -187,8 +187,8 @@ When you request account deletion:
     title: "Gizlinlik syýasaty",
     effectiveDate: "23-nji sentýabr 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "3-nji oktýabr 2026",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "6-njy oktýabr 2026",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. Haýsy maglumatlary ýygnaýarys",
@@ -261,7 +261,7 @@ Akkaunty pozan wagtyňyz:
       },
       {
         title: "12. Habarlaşmak we yurisdiksiýa",
-        body: "privacy@auto.tm. Türkmenistanyň kanunlary.",
+        body: "bagtyyarkowusow.dev@gmail.com. Türkmenistanyň kanunlary.",
       },
     ],
   },
@@ -272,8 +272,8 @@ export const termsOfService: Record<Locale, LegalDocument> = {
     title: "Terms of Service",
     effectiveDate: "September 23, 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "October 3, 2026",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "October 6, 2026",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. Eligibility",
@@ -331,7 +331,7 @@ AutoTM may suspend accounts that violate these terms.`,
       },
       {
         title: "13. Governing law & contact",
-        body: "These Terms are governed by the laws of Turkmenistan.\n\nFor inquiries: legal@auto.tm",
+        body: "These Terms are governed by the laws of Turkmenistan.\n\nFor inquiries: bagtyyarkowusow.dev@gmail.com",
       },
     ],
   },
@@ -339,8 +339,8 @@ AutoTM may suspend accounts that violate these terms.`,
     title: "Условия использования",
     effectiveDate: "23 сентября 2026 г.",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "3 октября 2026 г.",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "6 октября 2026 г.",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. Допустимый возраст",
@@ -398,7 +398,7 @@ AutoTM может приостановить аккаунт за нарушен�
       },
       {
         title: "13. Право и контакты",
-        body: "Законодательство Туркменистана. legal@auto.tm",
+        body: "Законодательство Туркменистана. bagtyyarkowusow.dev@gmail.com",
       },
     ],
   },
@@ -406,8 +406,8 @@ AutoTM может приостановить аккаунт за нарушен�
     title: "Ulanyş şertleri",
     effectiveDate: "23-nji sentýabr 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "3-nji oktýabr 2026",
-    lastRevisedISO: "2026-10-03",
+    lastRevised: "6-njy oktýabr 2026",
+    lastRevisedISO: "2026-10-06",
     sections: [
       {
         title: "1. Ýaş çägi",
@@ -465,7 +465,7 @@ AutoTM düzgünleri bozýan akkaunty bloklap biler.`,
       },
       {
         title: "13. Kanun we habarlaşmak",
-        body: "Türkmenistanyň kanunlary. legal@auto.tm",
+        body: "Türkmenistanyň kanunlary. bagtyyarkowusow.dev@gmail.com",
       },
     ],
   },
