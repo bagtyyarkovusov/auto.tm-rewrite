@@ -189,11 +189,60 @@ describe("contact-phone-code screen", () => {
     });
 
     expect(
-      screen.getByText("Too many requests. Please wait a moment."),
+      screen.getByText("Too many requests. Try again in 2:00."),
     ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Resend code in 2:00" }),
     ).toBeTruthy();
+  });
+
+  it.each([
+    ["locked", "OTP_LOCKED"],
+    ["expired", "OTP_EXPIRED"],
+  ])(
+    "shows the wait when Send a new code hits the backoff from the %s state",
+    async (_state, code) => {
+      mocks.confirm.mockRejectedValue(new ApiError(code, 400));
+      mocks.request.mockRejectedValue(
+        new ApiError("RATE_LIMITED", 400, undefined, {
+          reason: "backoff",
+          retryInSeconds: 120,
+        }),
+      );
+      const screen = renderMobile(<ContactPhoneCodeScreen />);
+      await typeCode(screen, "123456");
+
+      await act(async () => {
+        fireEvent.press(screen.getByRole("button", { name: "Send a new code" }));
+      });
+
+      expect(
+        screen.getByText("Too many requests. Try again in 2:00."),
+      ).toBeTruthy();
+      // The seller is not left with an enabled button and no time.
+      expect(screen.queryByRole("button", { name: "Send a new code" })).toBeNull();
+      const waiting = screen.getByRole("button", { name: "Resend code in 2:00" });
+      expect(waiting.props.accessibilityState).toMatchObject({ disabled: true });
+      expect(screen.getByLabelText("Code").props.editable).toBe(false);
+
+      // Once the wait is over the new code can be asked for again.
+      await act(async () => {
+        vi.advanceTimersByTime(120_000);
+      });
+      const again = screen.getByRole("button", { name: "Send a new code" });
+      expect(again.props.accessibilityState).not.toMatchObject({ disabled: true });
+    },
+  );
+
+  it("offers Send a new code at once after a lock, whatever was left of the resend wait", async () => {
+    routeParams.resendInSeconds = "45";
+    mocks.confirm.mockRejectedValue(new ApiError("OTP_LOCKED", 400));
+    const screen = renderMobile(<ContactPhoneCodeScreen />);
+
+    await typeCode(screen, "123456");
+
+    const sendNew = screen.getByRole("button", { name: "Send a new code" });
+    expect(sendNew.props.accessibilityState).not.toMatchObject({ disabled: true });
   });
 
   it("shows the daily limit with the one Help link when a resend hits it", async () => {
