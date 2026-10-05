@@ -171,7 +171,7 @@ describe("issue 373 approved detail content", () => {
     ).toBeUndefined();
   });
 
-  it("uses the real seller name and join month, with Private seller fallback and no phone badge", () => {
+  it("uses the real seller name and join month, the generated name for a seller without one, and no phone badge", () => {
     const screen = renderMobile(
       <ListingDetailView listing={fixture()} maps={maps} />,
     );
@@ -181,11 +181,12 @@ describe("issue 373 approved detail content", () => {
     screen.rerender(
       <ListingDetailView
         listing={fixture({
-          seller: { displayName: null, memberSince: "2024-01-01T00:00:00Z" },
+          seller: { ...fixture().seller, displayName: null },
         })}
         maps={maps}
       />,
     );
+    expect(screen.getByText("Driver 2057")).toBeTruthy();
     expect(screen.getByText("Private seller")).toBeTruthy();
   });
 

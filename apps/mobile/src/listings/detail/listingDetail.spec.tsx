@@ -38,7 +38,7 @@ const maps: CatalogMaps = {
 const fixture = (updates: Partial<ListingsSchemas.ListingDetail> = {}): ListingsSchemas.ListingDetail => ({
   id: "00000000-0000-4000-8000-000000000001", publicNumber: 1,
   sellerId: "00000000-0000-4000-8000-000000000002",
-  seller: { displayName: null, memberSince: "2026-01-01T00:00:00Z" },
+  seller: { displayName: null, nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false, memberSince: "2026-01-01T00:00:00Z" },
   status: "active", brandId: "brand-uuid", modelId: "model-uuid", generationId: "generation-uuid", year: 2020,
   regionId: "region-uuid", cityId: "city-uuid", priceAmount: 10000, priceCurrency: "USD", displayPriceTmt: 35000,
   allowCalls: true, allowChat: true, contactPhone: "+99361000000", acceptsExchange: false,
