@@ -44,7 +44,7 @@ Signed in:
 ┌────────────────────────────────────────────┐
 │ Cabinet                                    │
 ├────────────────────────────────────────────┤
-│ (A)  Display name                     >    │
+│ (A)  Display Name                     >    │
 │      +993 6X XX-XX-42                      │
 ├────────────── gap ─────────────────────────┤
 │ ◐ Notifications                       >    │
@@ -71,9 +71,9 @@ Signed in:
 
 1. **Screen title** — "Cabinet".
 2. **Sign in row** (signed out) — large row with a neutral person avatar (never a car), "Sign in" and "By phone or email". Opens the sign-in flow and returns to Cabinet.
-3. **Profile row** (signed in) — large row with the User's avatar, their Display Name on one line, and the masked Sign-in Method under it. The avatar is a 48 pt circle: the User's profile photo when they set one, otherwise the car mark the server assigned (`avatarIndex`) on a tinted circle, so it is never empty. The name is the name the User set, or their Generated Name — "Водитель 4821" / "Sürüji 4821" / "Driver 4821" in the reader's language; a long name (30 characters) ends in "…" instead of wrapping. Opens Profile. Sign-in Methods, Log out and Delete account live on Profile, not on Cabinet ([30 — Identity](../../features/30-identity.md#profile-screens)).
+3. **Profile row** (signed in) — large row with the User's avatar, their Display Name on one line, and the masked Sign-in Method under it. The avatar is a 48 pt circle: the User's profile photo when they set one, otherwise their Assigned Avatar (`avatarIndex`) on a tinted circle, so it is never empty. The name is the name the User set, or their Generated Name — "Водитель 4821" / "Sürüji 4821" / "Driver 4821" in the reader's language; a name wider than the row ends in "…" instead of wrapping (`numberOfLines={1}`). Opens Profile. Sign-in Methods, Log out and Delete account live on Profile, not on Cabinet ([30 — Identity](../../features/30-identity.md#profile-screens)).
 4. **Notifications** (signed in) — opens the release notification screen ([36 — Notifications](../../features/36-notifications.md#preferences-screen)).
-5. **My listings** (signed in) — one row whose value is the total of the User's Listings and drafts (the "5" above). While the count loads or fails, and when it is zero, the row shows no number; it opens My listings (Active, Drafts, Archive) either way, and the count refreshes when Cabinet regains focus.
+5. **My listings** (signed in) — one row whose value is the total of the User's Listings and drafts (the "5" above). Before the first count arrives, after a failed request, and when it is zero, the row shows no number; a refresh keeps the last number until the next one arrives. It opens My listings (Active, Drafts, Archive) either way, and the count refreshes when Cabinet regains focus.
 6. **Language** — shows the current language; opens a bottom-sheet picker (English, Русский, Türkmençe).
 7. **Theme** — shows the current theme; opens a bottom-sheet picker (Light, Dark, System).
 8. **Help** — opens Help: an email address and a phone number, signed in or out. No support chat.
