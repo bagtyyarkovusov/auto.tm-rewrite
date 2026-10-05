@@ -1,21 +1,44 @@
-import { createServer, request as httpRequest, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import "reflect-metadata";
+
 import { Writable } from "node:stream";
 
-import pinoHttp from "pino-http";
+import { Controller, Get } from "@nestjs/common";
+import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
+import { Test } from "@nestjs/testing";
+import { LoggerModule } from "nestjs-pino";
+import supertest from "supertest";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { requestLoggingOptions } from "./requestLogging";
 
 const TOKEN = "eyJhbGciOiJIUzI1NiJ9.secret-access-token";
 
+@Controller("api/v1")
+class ProbeController {
+  @Get("listings")
+  listings() {
+    return { items: [] };
+  }
+
+  @Get("me")
+  me() {
+    return { ok: true };
+  }
+}
+
 describe("API request logging", () => {
-  let server: Server | undefined;
+  let app: NestFastifyApplication | undefined;
 
   afterEach(async () => {
-    await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
+    await app?.close();
+    app = undefined;
   });
 
+  /**
+   * Logs one request through the stack the API runs: `LoggerModule` on Nest's
+   * Fastify adapter, whose middleware layer hands pino the parsed query as
+   * well as the URL.
+   */
   async function logOneRequest(headers: Record<string, string>, path = "/api/v1/me"): Promise<string> {
     const lines: string[] = [];
     const out = new Writable({
@@ -24,31 +47,29 @@ describe("API request logging", () => {
         done();
       },
     });
-    const logger = pinoHttp(requestLoggingOptions("info"), out);
-    server = createServer((req, res) => {
-      logger(req, res);
-      res.setHeader("set-cookie", "refresh=secret-refresh-cookie");
-      res.end("ok");
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [LoggerModule.forRoot({ pinoHttp: [requestLoggingOptions("info"), out] })],
+      controllers: [ProbeController],
+    }).compile();
+    app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    app.getHttpAdapter().getInstance().addHook("onSend", async (_req, reply) => {
+      reply.header("set-cookie", "refresh=secret-refresh-cookie");
     });
-    await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
-    const { port } = server.address() as AddressInfo;
-    await new Promise<void>((resolve, reject) => {
-      const req = httpRequest({ host: "127.0.0.1", port, path, headers }, (res) => {
-        res.resume();
-        res.on("end", resolve);
-      });
-      req.on("error", reject);
-      req.end();
-    });
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+
+    await supertest(app.getHttpServer()).get(path).set(headers).expect(200);
     return lines.join("");
   }
 
-  it("logs the path of a search without its query string", async () => {
+  it("logs the path of a search without its query string or its parsed query", async () => {
     const log = await logOneRequest({}, "/api/v1/listings?q=toyota+camry+secret-search&limit=20");
 
-    expect(log).toContain("/api/v1/listings");
+    expect(log).toContain('"url":"/api/v1/listings"');
     expect(log).not.toContain("secret-search");
-    expect(log).not.toContain("limit=20");
+    expect(log).not.toContain("limit");
+    expect(log).not.toContain('"query"');
   });
 
   it("never writes a bearer token, a cookie or a set-cookie to the log", async () => {

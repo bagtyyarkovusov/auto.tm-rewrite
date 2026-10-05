@@ -22,15 +22,18 @@ export class PurgeExpiredAccounts {
       select: { id: true, phone: true, email: true },
     });
 
-    for (const user of expiredUsers) {
-      await this.purgeUser(user);
+    try {
+      for (const user of expiredUsers) {
+        await this.purgeUser(user);
+      }
+    } finally {
+      // Every run also drops sign-in code records past their retention, so
+      // the phone, email and IP they hold are gone after 30 days for
+      // everyone. A purge that fails must not hold this back.
+      await this.prisma.otpRequest.deleteMany({
+        where: { createdAt: { lt: new Date(input.now.getTime() - CODE_REQUEST_RETENTION_MS) } },
+      });
     }
-
-    // Every run also drops sign-in code records past their retention, so the
-    // phone, email and IP they hold are gone after 30 days for everyone.
-    await this.prisma.otpRequest.deleteMany({
-      where: { createdAt: { lt: new Date(input.now.getTime() - CODE_REQUEST_RETENTION_MS) } },
-    });
 
     return { purgedCount: expiredUsers.length };
   }
@@ -41,12 +44,18 @@ export class PurgeExpiredAccounts {
     email: string | null;
   }): Promise<void> {
     const userId = user.id;
-    // Code requests are matched by User and by the purged phone and email,
-    // since a request made before sign-in carries no User id.
+    // Code requests are matched by User, and by the purged phone and email
+    // for a request made before sign-in, which carries no User id. A request
+    // another User made to the same number (two sellers may confirm one
+    // contact phone) is theirs and stays until it is 30 days old.
+    const signedOutRequestsTo = [user.phone, user.email].filter(
+      (value): value is string => value !== null,
+    );
     const codeRequestMatches = [
       { userId },
-      ...(user.phone ? [{ destination: user.phone }, { phone: user.phone }] : []),
-      ...(user.email ? [{ destination: user.email }] : []),
+      ...(signedOutRequestsTo.length > 0
+        ? [{ userId: null, destination: { in: signedOutRequestsTo } }]
+        : []),
     ];
     await this.prisma.$transaction([
       // Free both Sign-in Methods and clear profile PII (ADR-0054). The name

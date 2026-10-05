@@ -168,7 +168,7 @@ function makeFakePrisma() {
     otpRequest: {
       deleteMany: (args: {
         where: {
-          OR?: Array<{ userId?: string; destination?: string; phone?: string }>;
+          OR?: Array<{ userId?: string | null; destination?: { in: string[] } }>;
           createdAt?: { lt: Date };
         };
       }) =>
@@ -178,9 +178,8 @@ function makeFakePrisma() {
             if (args.where.createdAt) return r.createdAt < args.where.createdAt.lt;
             return (args.where.OR ?? []).some(
               (c) =>
-                (c.userId !== undefined && r.userId === c.userId) ||
-                (c.destination !== undefined && r.destination === c.destination) ||
-                (c.phone !== undefined && r.phone === c.phone),
+                (c.userId === undefined || r.userId === c.userId) &&
+                (c.destination === undefined || c.destination.in.includes(r.destination)),
             );
           };
           const kept = state.otpRequests.filter((r) => !matches(r));
@@ -382,6 +381,53 @@ describe("PurgeExpiredAccounts", () => {
     expect(fake.transactions[0]).toEqual(
       expect.arrayContaining(["otpRequest.deleteMany", "listing.updateMany", "verifiedContactPhone.deleteMany"]),
     );
+  });
+
+  it("keeps a code record another User requested to the purged User's number", async () => {
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      email: null,
+      displayName: null,
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+    const recent = new Date(NOW.getTime() - 60_000);
+    fake.otpRequests.push(
+      { id: "mine", userId: "user-1", destination: "+99361234567", phone: "+99361234567", createdAt: recent },
+      { id: "signed-out", userId: null, destination: "+99361234567", phone: "+99361234567", createdAt: recent },
+      { id: "other-seller", userId: "seller-b", destination: "+99361234567", phone: "+99361234567", createdAt: recent },
+    );
+
+    await job.execute({ now: NOW });
+
+    expect(fake.otpRequests.map((r) => r.id)).toEqual(["other-seller"]);
+  });
+
+  it("still deletes code records older than 30 days when a User's purge fails", async () => {
+    const day = 24 * 60 * 60 * 1000;
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      email: null,
+      displayName: null,
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+    fake.otpRequests.push({
+      id: "old",
+      userId: null,
+      destination: "+99365000000",
+      phone: "+99365000000",
+      createdAt: new Date(NOW.getTime() - 31 * day),
+    });
+    (fake.prisma as unknown as { $transaction: () => Promise<never> }).$transaction = async () => {
+      throw new Error("purge failed");
+    };
+
+    await expect(job.execute({ now: NOW })).rejects.toThrow("purge failed");
+
+    expect(fake.otpRequests).toEqual([]);
   });
 
   it("deletes every sign-in code record older than 30 days on each run, even with no User to purge", async () => {
