@@ -11,7 +11,13 @@ vi.mock("../../api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof ClientModule>()),
   apiClient: api,
 }));
+const toastShow = vi.hoisted(() => vi.fn());
+vi.mock("@/components/ui/toast", () => ({
+  useToast: () => ({ show: toastShow, setTopClearance: vi.fn() }),
+}));
 beforeEach(() => {
+  vi.stubGlobal("__DEV__", false);
+  toastShow.mockClear();
   api.get.mockReset();
   api.post.mockReset();
   api.delete.mockReset();
@@ -99,7 +105,15 @@ it("requires confirmation before Mark sold, supports cancel and exposes failure"
 });
 
 it("opens the confirm sheet when a relist answer says the number needs a new code", async () => {
-  api.post.mockRejectedValue(new ApiError("CONTACT_PHONE_NOT_CONFIRMED", 409));
+  api.post.mockImplementation((url: string) =>
+    url === "/me/contact-phones/request"
+      ? Promise.resolve({
+          status: "code_sent",
+          requestId: "550e8400-e29b-41d4-a716-446655440000",
+          resendInSeconds: 60,
+        })
+      : Promise.reject(new ApiError("CONTACT_PHONE_NOT_CONFIRMED", 409)),
+  );
   api.get.mockResolvedValue({ contactPhone: "+99362000002" });
   const screen = renderMobile(
     <OwnerActions listingId="listing-373" status="archived" mode="menu" />,
@@ -115,17 +129,26 @@ it("opens the confirm sheet when a relist answer says the number needs a new cod
       "+99362000002 was confirmed more than 7 days ago. Confirm it again to relist.",
     ),
   ).toBeTruthy();
-  fireEvent.press(screen.getByRole("button", { name: "Send code" }));
+  // Send code asks for the code and goes straight to the code screen.
+  await act(async () => {
+    fireEvent.press(screen.getByRole("button", { name: "Send code" }));
+  });
+  expect(api.post).toHaveBeenCalledWith(
+    "/me/contact-phones/request",
+    { phone: "+99362000002" },
+    expect.anything(),
+  );
   expect(routerMock.push).toHaveBeenCalledWith({
-    pathname: "/listings/contact-phone",
+    pathname: "/listings/contact-phone-code",
     params: {
       phone: "+99362000002",
-      reconfirm: "1",
+      resendInSeconds: "60",
       purpose: "relist",
       listingId: "listing-373",
       returnPathname: "/(public)/listings/listing-373",
     },
   });
+  expect(screen.queryByText("Confirm the contact phone")).toBeNull();
 });
 it("tells the seller to add a phone through Edit when a relist answer says one is required", async () => {
   api.post.mockRejectedValue(new ApiError("CONTACT_PHONE_REQUIRED", 409));

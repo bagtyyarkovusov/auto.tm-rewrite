@@ -338,10 +338,17 @@ describe("My listings action sheet", () => {
   });
 
   it("opens the contact phone sheet when a relist answer says the number needs a new code", async () => {
+    vi.stubGlobal("__DEV__", false);
     api.post.mockImplementation((url: string) =>
       url.endsWith("/republish")
         ? Promise.reject(new ApiError("CONTACT_PHONE_NOT_CONFIRMED", 409))
-        : postAction(url),
+        : url === "/me/contact-phones/request"
+          ? Promise.resolve({
+              status: "code_sent",
+              requestId: "550e8400-e29b-41d4-a716-446655440000",
+              resendInSeconds: 60,
+            })
+          : postAction(url),
     );
     api.get.mockImplementation((url: string) =>
       url === "/listings/rav4-1"
@@ -363,16 +370,24 @@ describe("My listings action sheet", () => {
     ).toBeTruthy();
     fireEvent.press(view.getByRole("button", { name: "Send code" }));
     await settle();
+    // Send code asks for the code and goes straight to the code screen.
+    expect(api.post).toHaveBeenCalledWith(
+      "/me/contact-phones/request",
+      { phone: "+99362000002" },
+      expect.anything(),
+    );
     expect(routerMock.push).toHaveBeenCalledWith({
-      pathname: "/listings/contact-phone",
+      pathname: "/listings/contact-phone-code",
       params: {
         phone: "+99362000002",
-        reconfirm: "1",
+        resendInSeconds: "60",
         purpose: "relist",
         listingId: "rav4-1",
         returnPathname: "/listings/manage",
       },
     });
+    expect(view.queryByText("Confirm the contact phone")).toBeNull();
+    vi.unstubAllGlobals();
   });
 
   it("tells the seller to add a phone through Edit when a relist answer says one is required", async () => {

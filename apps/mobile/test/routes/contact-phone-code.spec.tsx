@@ -289,6 +289,16 @@ describe("contact-phone-code screen", () => {
     expect(routerMock.back).toHaveBeenCalled();
   });
 
+  it("offers no Change number on a relist, which confirms the Listing's own number only", () => {
+    routeParams.purpose = "relist";
+    routeParams.listingId = "listing-1";
+    routeParams.returnPathname = "/listings/manage";
+    const screen = renderMobile(<ContactPhoneCodeScreen />);
+
+    expect(screen.getByRole("header", { name: "Enter the code" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Change number" })).toBeNull();
+  });
+
   it("relists the Listing once the relist code is confirmed", async () => {
     routeParams.purpose = "relist";
     routeParams.listingId = "listing-1";
