@@ -3,6 +3,10 @@ import * as SecureStore from "expo-secure-store";
 
 const AUTH_SESSION_KEY = "auto_tm_auth_session";
 const sessionListeners = new Set<() => void>();
+const userChangeListeners = new Set<() => void>();
+// The last User signed in on this device since the app started. Their data may
+// still be in memory after their session ends, so it outlives the session.
+let lastUserId: string | null = null;
 
 export type StoredAuthSession = AuthSchemas.OtpVerifyResponse & {
   storedAt: string;
@@ -17,6 +21,13 @@ export async function storeAuthSession(
   };
 
   await SecureStore.setItemAsync(AUTH_SESSION_KEY, JSON.stringify(value));
+  const previousUserId = lastUserId;
+  lastUserId = session.user.id;
+  // Before the session listeners, so no screen renders the new User as signed
+  // in while the previous User's data is still held.
+  if (previousUserId !== null && previousUserId !== session.user.id) {
+    userChangeListeners.forEach((listener) => listener());
+  }
   notifySessionChanged();
 }
 
@@ -42,6 +53,7 @@ export async function loadAuthSession(): Promise<StoredAuthSession | null> {
     return null;
   }
 
+  lastUserId = session.data.user.id;
   return {
     ...session.data,
     storedAt: String((parsed as { storedAt: unknown }).storedAt),
@@ -76,6 +88,20 @@ export function subscribeAuthSession(listener: () => void): () => void {
   sessionListeners.add(listener);
   return () => {
     sessionListeners.delete(listener);
+  };
+}
+
+/**
+ * Calls the listener when a session is stored for a User other than the last
+ * one signed in on this device since the app started, however that User's
+ * session ended. It runs before the `subscribeAuthSession` listeners. The
+ * first sign-in after the app starts signed out, the same User signing in
+ * again, and a token refresh do not call it.
+ */
+export function subscribeAuthUserChange(listener: () => void): () => void {
+  userChangeListeners.add(listener);
+  return () => {
+    userChangeListeners.delete(listener);
   };
 }
 
