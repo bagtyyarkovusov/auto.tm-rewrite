@@ -9,11 +9,17 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
-import { ListingsSchemas } from "@auto-tm/contracts";
+import { AuthSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
+import {
+  IDENTITY_CLOCK_PORT,
+  type ClockPort,
+} from "../../identity/identity.public";
+import { ContactPhonePolicy } from "../domain/ContactPhonePolicy";
 import { Listing } from "../domain/Listing";
 import { toPriceTmt } from "../domain/Price";
+import { resolveDamagedAnswer } from "../domain/damagedAnswer";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import {
   LISTING_DRAFT_REPOSITORY,
@@ -32,6 +38,7 @@ import {
   type ImageVariantGenerator,
 } from "../domain/ports/ImageVariantGenerator";
 
+import { contactPhoneRejection } from "./contactPhoneRejection";
 import { UploadAdoptionGuard } from "./UploadAdoptionGuard";
 
 const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.required({
@@ -46,6 +53,10 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   description: true,
   allowCalls: true,
   allowChat: true,
+}).extend({
+  // Required even when calls are off (D7); whether it is confirmed is the
+  // policy check after parsing (ADR-0081).
+  contactPhone: AuthSchemas.PhoneTm,
 }).refine(
   (data) => data.allowCalls || data.allowChat,
   { message: "CONTACT_METHOD_REQUIRED" },
@@ -63,10 +74,17 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
     return true;
   },
   { message: "MILEAGE_REQUIRED_FOR_USED" },
-).refine(
-  (data) => data.conditionDisclosure?.damaged !== undefined,
-  { message: "DAMAGED_REQUIRED", path: ["conditionDisclosure", "damaged"] },
-);
+).superRefine((data, ctx) => {
+  const answer = resolveDamagedAnswer(data.condition, data.conditionDisclosure?.damaged);
+  if (!answer.ok) {
+    ctx.addIssue({
+      code: "custom",
+      message: answer.code,
+      path: ["conditionDisclosure", "damaged"],
+      params: { message: answer.message },
+    });
+  }
+});
 
 /** PrismaPg 7 reports constraint fields under its driver-adapter cause. */
 function isUploadUniqueViolation(err: unknown): boolean {
@@ -108,6 +126,10 @@ export class PublishListing {
     private readonly variantGenerator: ImageVariantGenerator,
     @Inject(UploadAdoptionGuard)
     private readonly uploadGuard: UploadAdoptionGuard,
+    @Inject(ContactPhonePolicy)
+    private readonly contactPhones: ContactPhonePolicy,
+    @Inject(IDENTITY_CLOCK_PORT)
+    private readonly clock: ClockPort,
   ) {}
 
   async execute(input: PublishListingInput): Promise<PublishListingResult> {
@@ -118,6 +140,7 @@ export class PublishListing {
     if (draft.userId !== input.userId) {
       throw new ForbiddenException("Not the owner of this draft");
     }
+    const now = this.clock.now();
 
     let payload: z.infer<typeof PublishablePayloadSchema>;
     try {
@@ -134,6 +157,30 @@ export class PublishListing {
             message: "At least one contact method must be enabled",
           });
         }
+        // ADR-0080: a damaged New car gets its own code so the seller can be
+        // told to choose Used. A missing answer stays a payload field error.
+        const damagedIssue = zodError.issues.find(
+          (i) => i.message === LISTING_ERROR_CODES.DAMAGED_NOT_ALLOWED_FOR_NEW,
+        );
+        if (damagedIssue?.code === "custom") {
+          throw new BadRequestException({
+            code: LISTING_ERROR_CODES.DAMAGED_NOT_ALLOWED_FOR_NEW,
+            message: damagedIssue.params?.["message"],
+            details: { field: "conditionDisclosure.damaged" },
+          });
+        }
+        if (zodError.issues.every((i) => i.path[0] === "contactPhone")) {
+          // When the phone is the only gap: missing or blank answers
+          // CONTACT_PHONE_REQUIRED; free text left in an older draft is a
+          // number nobody confirmed. Otherwise every missing field is listed.
+          const raw = (draft.payload as { contactPhone?: unknown }).contactPhone;
+          const standing = await this.contactPhones.standing(
+            input.userId,
+            typeof raw === "string" ? raw : null,
+            now,
+          );
+          throw contactPhoneRejection(standing) ?? contactPhoneRejection({ kind: "not_confirmed" });
+        }
         throw new BadRequestException({
           code: "INVALID_DRAFT_PAYLOAD",
           message: "Draft is missing required fields",
@@ -142,6 +189,14 @@ export class PublishListing {
       }
       throw err;
     }
+
+    // The schema above refused every Damaged answer this rule rejects.
+    const damagedAnswer = resolveDamagedAnswer(payload.condition, payload.conditionDisclosure?.damaged);
+    const damaged = damagedAnswer.ok ? damagedAnswer.damaged : null;
+    const rejection = contactPhoneRejection(
+      await this.contactPhones.standing(input.userId, payload.contactPhone, now),
+    );
+    if (rejection) throw rejection;
 
     const rateToTmt =
       payload.priceCurrency === "TMT"
@@ -155,7 +210,6 @@ export class PublishListing {
     }
     const priceTmt = toPriceTmt(payload.priceAmount, payload.priceCurrency, rateToTmt);
 
-    const now = new Date();
     const listingId = randomUUID();
 
     const photos = payload.photos;
@@ -207,7 +261,7 @@ export class PublishListing {
             priceAmount: payload.priceAmount,
             priceCurrency: payload.priceCurrency,
             priceTmt,
-            contactPhone: payload.contactPhone ?? null,
+            contactPhone: payload.contactPhone,
             allowCalls: payload.allowCalls,
             allowChat: payload.allowChat,
             publishedAt: now,
@@ -223,7 +277,7 @@ export class PublishListing {
             description: payload.description,
             acceptsExchange: payload.acceptsExchange ?? false,
             installmentAvailable: payload.installmentAvailable ?? false,
-            damaged: payload.conditionDisclosure?.damaged ?? null,
+            damaged,
             knownIssuesText: payload.conditionDisclosure?.knownIssuesText ?? null,
           },
         }),
@@ -269,7 +323,7 @@ export class PublishListing {
         priceCurrency: listingRow.priceCurrency as "TMT" | "USD" | "AED",
         allowCalls: listingRow.allowCalls,
         allowChat: listingRow.allowChat,
-        publishedAt: listingRow.publishedAt ?? new Date(),
+        publishedAt: listingRow.publishedAt ?? now,
         createdAt: listingRow.createdAt,
         updatedAt: listingRow.updatedAt,
         ...(listingRow.generationId ? { generationId: listingRow.generationId } : {}),

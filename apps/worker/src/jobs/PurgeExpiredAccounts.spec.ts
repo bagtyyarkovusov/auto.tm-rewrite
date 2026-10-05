@@ -15,6 +15,9 @@ function makeFakePrisma() {
       emailVerifiedAt?: Date | null;
       displayName: string | null;
       avatarUrl: string | null;
+      nameNumber?: number;
+      avatarIndex?: number;
+      avatarKey?: string | null;
       deletionScheduledAt: Date | null;
     }>,
     sessions: [] as Array<{ id: string; userId: string }>,
@@ -28,7 +31,15 @@ function makeFakePrisma() {
     blockedUsers: [] as Array<{ id: string; blockerId: string; blockedId: string }>,
     dealershipMembers: [] as Array<{ id: string; userId: string }>,
     listingDrafts: [] as Array<{ id: string; userId: string }>,
+    verifiedContactPhones: [] as Array<{ id: string; sellerId: string }>,
+    /** Operations passed to each `$transaction`, by the label their delegate gave them. */
+    transactions: [] as string[][],
   };
+
+  /** Labels a pending operation so a test can see which transaction carried it. */
+  function labelled<T>(label: string, op: Promise<T>): Promise<T> {
+    return Object.assign(op, { label });
+  }
 
   const prismaLike = {
     user: {
@@ -152,7 +163,18 @@ function makeFakePrisma() {
       },
     },
 
+    verifiedContactPhone: {
+      deleteMany: (args: { where: { sellerId: string } }) =>
+        labelled("verifiedContactPhone.deleteMany", (async () => {
+          const before = state.verifiedContactPhones.length;
+          const kept = state.verifiedContactPhones.filter((v) => v.sellerId !== args.where.sellerId);
+          state.verifiedContactPhones.splice(0, state.verifiedContactPhones.length, ...kept);
+          return { count: before - state.verifiedContactPhones.length };
+        })()),
+    },
+
     $transaction: async (ops: Array<Promise<unknown>>) => {
+      state.transactions.push(ops.map((op) => (op as { label?: string }).label ?? "other"));
       await Promise.all(ops);
     },
   };
@@ -210,6 +232,28 @@ describe("PurgeExpiredAccounts", () => {
     expect(kept?.deletionScheduledAt).not.toBeNull();
   });
 
+  it("clears the name and the photo key and keeps the name number and avatar index (#638)", async () => {
+    fake.users.push({
+      id: "user-expired",
+      phone: "+99361234567",
+      displayName: "Expired",
+      avatarUrl: null,
+      nameNumber: 4821,
+      avatarIndex: 7,
+      avatarKey: "avatars/user-expired/photo.jpg",
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+
+    await job.execute({ now: NOW });
+
+    expect(fake.users[0]).toMatchObject({
+      displayName: null,
+      avatarKey: null,
+      nameNumber: 4821,
+      avatarIndex: 7,
+    });
+  });
+
   it("prunes private rows for purged users", async () => {
     fake.users.push({
       id: "user-1",
@@ -243,6 +287,43 @@ describe("PurgeExpiredAccounts", () => {
     expect(fake.blockedUsers).toHaveLength(0);
     expect(fake.dealershipMembers).toHaveLength(0);
     expect(fake.listingDrafts).toHaveLength(0);
+  });
+
+  it("deletes the purged User's verified contact phones in the same transaction as the other rows", async () => {
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      displayName: "Name",
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+    fake.verifiedContactPhones.push(
+      { id: "v1", sellerId: "user-1" },
+      { id: "v2", sellerId: "user-1" },
+      { id: "v3", sellerId: "someone-else" },
+    );
+
+    await job.execute({ now: NOW });
+
+    expect(fake.verifiedContactPhones).toEqual([{ id: "v3", sellerId: "someone-else" }]);
+    expect(fake.transactions).toHaveLength(1);
+    expect(fake.transactions[0]).toContain("verifiedContactPhone.deleteMany");
+    expect(fake.transactions[0]?.length).toBeGreaterThan(1);
+  });
+
+  it("keeps verified contact phones during the grace period", async () => {
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      displayName: "Name",
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() + 1000),
+    });
+    fake.verifiedContactPhones.push({ id: "v1", sellerId: "user-1" });
+
+    await job.execute({ now: NOW });
+
+    expect(fake.verifiedContactPhones).toHaveLength(1);
   });
 
   it("returns zero when no users have expired grace", async () => {

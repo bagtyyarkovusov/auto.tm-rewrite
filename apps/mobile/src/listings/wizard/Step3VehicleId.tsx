@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { View } from "react-native";
-import type { WizardSchemas } from "@auto-tm/contracts";
+import { useEffect, useState } from "react";
+import { Pressable, View } from "react-native";
+import { WizardSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
@@ -12,10 +12,10 @@ import {
   shouldShowVehicleFieldError,
   type VehicleField,
 } from "./vehicleFieldErrorVisibility";
+import { VinField } from "./VinField";
 
 import { CatalogPickerSheet } from "@/components/listings/wizard/CatalogPickerSheet";
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
-import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
 
@@ -27,56 +27,58 @@ interface Step3VehicleIdProps {
   showErrors?: boolean;
 }
 
-function useVehiclePicker(
+type CarPicker = "brand" | "model" | "year" | "generation";
+
+// Newest first, from next year down to 1900: the range the contract accepts.
+const YEAR_ITEMS = Array.from(
+  { length: WizardSchemas.WIZARD_LIMITS.yearMax - WizardSchemas.WIZARD_LIMITS.yearMin + 1 },
+  (_, i) => {
+    const year = String(WizardSchemas.WIZARD_LIMITS.yearMax - i);
+    return { id: year, name: year };
+  },
+);
+
+/**
+ * One sheet serves the four pickers, so a pick hands over to the next picker by
+ * changing what the open sheet shows instead of closing one sheet and opening
+ * another (founder decision D3 on #354). Closing the sheet ends the chain.
+ */
+function useCarPickers(
   payload: WizardSchemas.WizardDraftPayload,
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void,
   setTouchedFields: React.Dispatch<
     React.SetStateAction<Partial<Record<VehicleField, boolean>>>
   >,
 ) {
-  const [brandOpen, setBrandOpen] = useState(false);
-  const [modelOpen, setModelOpen] = useState(false);
-  const [generationOpen, setGenerationOpen] = useState(false);
-  const [brandSearch, setBrandSearch] = useState("");
-  const [modelSearch, setModelSearch] = useState("");
-  const [generationSearch, setGenerationSearch] = useState("");
+  const [openPicker, setOpenPicker] = useState<CarPicker | null>(null);
+  const [search, setSearch] = useState("");
+  // Set when the chain, not the seller, opened Generation: the sheet closes
+  // again if the model turns out to have no generations.
+  const [chainedToGeneration, setChainedToGeneration] = useState(false);
 
-  const {
-    data: brandsData,
-    isPending: brandsLoading,
-    isError: brandsError,
-  } = useBrands();
-  const {
-    data: modelsData,
-    isPending: modelsLoading,
-    isError: modelsError,
-  } = useModels(payload.brandId ?? "");
-  const {
-    data: generationsData,
-    isPending: generationsLoading,
-    isError: generationsError,
-  } = useGenerations(payload.modelId ?? "");
+  const brands = useBrands();
+  const models = useModels(payload.brandId ?? "");
+  const generations = useGenerations(payload.modelId ?? "");
 
-  const filteredBrands = filterBySearch(brandsData?.items ?? [], brandSearch);
-  const filteredModels = filterBySearch(modelsData?.items ?? [], modelSearch);
-  const filteredGenerations = filterBySearch(
-    generationsData?.items ?? [],
-    generationSearch,
-  );
+  const brandItems = brands.data?.items ?? [];
+  const modelItems = models.data?.items ?? [];
+  const generationItems = generations.data?.items ?? [];
+  const generationsLoaded =
+    !!payload.modelId && !generations.isPending && !generations.isError;
+  const modelHasNoGenerations = generationsLoaded && generationItems.length === 0;
 
-  const selectedBrand = findById(brandsData?.items ?? [], payload.brandId);
-  const selectedModel = findById(modelsData?.items ?? [], payload.modelId);
-  const selectedGeneration = findById(
-    generationsData?.items ?? [],
-    payload.generationId,
-  );
+  useEffect(() => {
+    if (openPicker === "generation" && chainedToGeneration && modelHasNoGenerations) {
+      setOpenPicker(null);
+      setChainedToGeneration(false);
+    }
+  }, [openPicker, chainedToGeneration, modelHasNoGenerations]);
 
-  const generationHelper = computeGenerationHelper(
-    payload.modelId,
-    generationsLoading,
-    generationsError,
-    generationsData?.items.length ?? 0,
-  );
+  function open(picker: CarPicker | null, chained = false) {
+    setOpenPicker(picker);
+    setChainedToGeneration(picker === "generation" && chained);
+    setSearch("");
+  }
 
   function markTouched(field: VehicleField) {
     setTouchedFields((current) =>
@@ -84,56 +86,60 @@ function useVehiclePicker(
     );
   }
 
-  function handleSelectBrand(brandId: string) {
+  function selectBrand(brandId: string) {
     markTouched("brandId");
-    onChange({ brandId, modelId: undefined, generationId: undefined });
-    setBrandOpen(false);
-    setBrandSearch("");
+    if (brandId !== payload.brandId) {
+      onChange({ brandId, modelId: undefined, generationId: undefined });
+    }
+    open("model");
   }
 
-  function handleSelectModel(modelId: string) {
+  function selectModel(modelId: string) {
     markTouched("modelId");
-    onChange({ modelId, generationId: undefined });
-    setModelOpen(false);
-    setModelSearch("");
+    const changed = modelId !== payload.modelId;
+    if (changed) onChange({ modelId, generationId: undefined });
+    if (payload.year === undefined) open("year");
+    // A changed model's generations are not loaded yet; the effect above
+    // closes the sheet if there turn out to be none.
+    else if (changed || (!payload.generationId && !modelHasNoGenerations)) {
+      open("generation", true);
+    } else open(null);
   }
 
-  function handleSelectGeneration(generationId: string) {
-    onChange({ generationId });
-    setGenerationOpen(false);
-    setGenerationSearch("");
+  function selectYear(id: string) {
+    markTouched("year");
+    onChange({ year: Number(id) });
+    if (payload.modelId && !payload.generationId && !modelHasNoGenerations) {
+      open("generation", true);
+    } else open(null);
+  }
+
+  function selectGeneration(generationId: string | undefined) {
+    if (generationId !== payload.generationId) onChange({ generationId });
+    open(null);
   }
 
   return {
-    brandOpen,
-    setBrandOpen,
-    modelOpen,
-    setModelOpen,
-    generationOpen,
-    setGenerationOpen,
-    brandSearch,
-    setBrandSearch,
-    modelSearch,
-    setModelSearch,
-    generationSearch,
-    setGenerationSearch,
-    filteredBrands,
-    filteredModels,
-    filteredGenerations,
-    selectedBrand,
-    selectedModel,
-    selectedGeneration,
-    brandsLoading,
-    brandsError,
-    modelsLoading,
-    modelsError,
-    generationsLoading,
-    generationsError,
-    generationHelper,
+    openPicker,
+    open,
+    search,
+    setSearch,
     markTouched,
-    handleSelectBrand,
-    handleSelectModel,
-    handleSelectGeneration,
+    brands,
+    models,
+    generations,
+    selectedBrand: findById(brandItems, payload.brandId),
+    selectedModel: findById(modelItems, payload.modelId),
+    selectedGeneration: findById(generationItems, payload.generationId),
+    brandItems: filterBySearch(brandItems, search),
+    modelItems: filterBySearch(modelItems, search),
+    generationItems,
+    showGenerationRow:
+      !!payload.generationId || (generationsLoaded && generationItems.length > 0),
+    selectBrand,
+    selectModel,
+    selectYear,
+    selectGeneration,
   };
 }
 
@@ -148,165 +154,94 @@ function findById<T extends { id: string }>(items: T[], id?: string) {
   return items.find((i) => i.id === id);
 }
 
-function computeGenerationHelper(
-  modelId: string | undefined,
-  generationsLoading: boolean,
-  generationsError: boolean,
-  generationCount: number,
-) {
+function SkipGenerationRow({ onPress }: { onPress: () => void }) {
   const { t } = useTranslation();
-  if (!modelId) return t("selectBrandFirst");
-  if (!generationsLoading && !generationsError && generationCount === 0) {
-    return t("noGenerationsAvailable");
-  }
-  return undefined;
-}
-
-function YearInput({
-  payload,
-  onChange,
-  disabled,
-  markTouched,
-  fieldErrors,
-  showErrors,
-  touchedFields,
-}: {
-  payload: WizardSchemas.WizardDraftPayload;
-  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
-  disabled: boolean;
-  markTouched: (field: VehicleField) => void;
-  fieldErrors?: Record<string, string>;
-  showErrors: boolean;
-  touchedFields: Partial<Record<VehicleField, boolean>>;
-}) {
-  const { t } = useTranslation();
-  const [yearText, setYearText] = useState(payload.year?.toString() ?? "");
-
-  function handleYearChange(text: string) {
-    markTouched("year");
-    const digits = text.replace(/\D/g, "").slice(0, 4);
-    setYearText(digits);
-    if (digits.length === 0) {
-      onChange({ year: undefined });
-      return;
-    }
-    if (digits.length === 4) {
-      const num = parseInt(digits, 10);
-      if (num >= 1900 && num <= 2100) {
-        onChange({ year: num });
-      }
-    }
-  }
-
-  const yearError = fieldErrors?.year;
-  const showYearError = shouldShowVehicleFieldError({
-    field: "year",
-    showAllErrors: showErrors,
-    touchedFields,
-  });
-
   return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("year")} *</Text>
-      <View className={disabled ? "opacity-50" : undefined}>
-        <Input
-          value={yearText}
-          onChangeText={handleYearChange}
-          placeholder={t("yearPlaceholder")}
-          keyboardType="number-pad"
-          editable={!disabled}
-          maxLength={4}
-          accessibilityState={{ disabled }}
-        />
-      </View>
-      {yearError && showYearError && (
-        <Text className="text-sm text-destructive">{yearError}</Text>
-      )}
-      {disabled && (
-        <Text className="text-sm text-muted-foreground">
-          {t("thisFieldCannotBeChanged")}
-        </Text>
-      )}
-    </View>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      className="min-h-12 flex-row items-center rounded-md px-2 py-3"
+    >
+      <Text className="text-base text-muted-foreground">{t("skipGeneration")}</Text>
+    </Pressable>
   );
 }
 
-function VehicleIdSheets({
+function CarPickerSheet({
   payload,
-  picker,
+  pickers,
 }: {
   payload: WizardSchemas.WizardDraftPayload;
-  picker: ReturnType<typeof useVehiclePicker>;
+  pickers: ReturnType<typeof useCarPickers>;
 }) {
   const { t } = useTranslation();
-  return (
-    <>
-      <CatalogPickerSheet
-        open={picker.brandOpen}
-        onOpenChange={(open) => {
-          picker.setBrandOpen(open);
-          if (!open) picker.setBrandSearch("");
-        }}
-        title={t("selectBrand")}
-        searchPlaceholder={t("searchPlaceholder")}
-        search={picker.brandSearch}
-        onSearchChange={picker.setBrandSearch}
-        items={picker.filteredBrands}
-        selectedId={payload.brandId}
-        emptyMessage={
-          picker.brandSearch
-            ? t("noBrandsMatch")
-            : t("noBrandsAvailable")
-        }
-        isLoading={picker.brandsLoading}
-        isError={picker.brandsError}
-        onSelect={picker.handleSelectBrand}
-      />
+  const picker = pickers.openPicker;
+  const common = {
+    open: picker !== null,
+    onOpenChange: (isOpen: boolean) => {
+      if (!isOpen) pickers.open(null);
+    },
+    searchPlaceholder: t("searchPlaceholder"),
+    search: pickers.search,
+    onSearchChange: pickers.setSearch,
+  };
 
+  if (picker === "model") {
+    return (
       <CatalogPickerSheet
-        open={picker.modelOpen}
-        onOpenChange={(open) => {
-          picker.setModelOpen(open);
-          if (!open) picker.setModelSearch("");
-        }}
+        {...common}
         title={t("selectModel")}
-        searchPlaceholder={t("searchPlaceholder")}
-        search={picker.modelSearch}
-        onSearchChange={picker.setModelSearch}
-        items={picker.filteredModels}
+        items={pickers.modelItems}
         selectedId={payload.modelId}
-        emptyMessage={
-          picker.modelSearch
-            ? t("noModelsMatch")
-            : t("noModelsAvailable")
-        }
-        isLoading={picker.modelsLoading}
-        isError={picker.modelsError}
-        onSelect={picker.handleSelectModel}
+        emptyMessage={pickers.search ? t("noModelsMatch") : t("noModelsAvailable")}
+        isLoading={pickers.models.isPending}
+        isError={pickers.models.isError}
+        onSelect={pickers.selectModel}
       />
-
+    );
+  }
+  if (picker === "year") {
+    return (
       <CatalogPickerSheet
-        open={picker.generationOpen}
-        onOpenChange={(open) => {
-          picker.setGenerationOpen(open);
-          if (!open) picker.setGenerationSearch("");
-        }}
-        title={t("selectGeneration")}
-        searchPlaceholder={t("searchPlaceholder")}
-        search={picker.generationSearch}
-        onSearchChange={picker.setGenerationSearch}
-        items={picker.filteredGenerations}
-        selectedId={payload.generationId}
-        emptyMessage={
-          picker.generationSearch
-            ? t("noGenerationsMatch")
-            : t("noGenerationsAvailable")
-        }
-        isLoading={picker.generationsLoading}
-        isError={picker.generationsError}
-        onSelect={picker.handleSelectGeneration}
+        {...common}
+        searchable={false}
+        title={t("selectYear")}
+        items={YEAR_ITEMS}
+        selectedId={payload.year === undefined ? undefined : String(payload.year)}
+        emptyMessage=""
+        isLoading={false}
+        isError={false}
+        onSelect={pickers.selectYear}
       />
-    </>
+    );
+  }
+  if (picker === "generation") {
+    return (
+      <CatalogPickerSheet
+        {...common}
+        searchable={false}
+        title={t("selectGeneration")}
+        items={pickers.generationItems}
+        selectedId={payload.generationId}
+        emptyMessage={t("noGenerationsAvailable")}
+        isLoading={pickers.generations.isPending}
+        isError={pickers.generations.isError}
+        onSelect={pickers.selectGeneration}
+        footer={<SkipGenerationRow onPress={() => pickers.selectGeneration(undefined)} />}
+      />
+    );
+  }
+  return (
+    <CatalogPickerSheet
+      {...common}
+      title={t("selectBrand")}
+      items={pickers.brandItems}
+      selectedId={payload.brandId}
+      emptyMessage={pickers.search ? t("noBrandsMatch") : t("noBrandsAvailable")}
+      isLoading={pickers.brands.isPending}
+      isError={pickers.brands.isError}
+      onSelect={pickers.selectBrand}
+    />
   );
 }
 
@@ -322,7 +257,7 @@ export default function Step3VehicleId({
     Partial<Record<VehicleField, boolean>>
   >({});
 
-  const picker = useVehiclePicker(payload, onChange, setTouchedFields);
+  const pickers = useCarPickers(payload, onChange, setTouchedFields);
 
   const visibleError = (field: VehicleField) =>
     shouldShowVehicleFieldError({
@@ -338,52 +273,64 @@ export default function Step3VehicleId({
       <PickerRow
         label={t("brand")}
         required
-        value={picker.selectedBrand?.name}
+        value={pickers.selectedBrand?.name}
         placeholder={t("selectBrand")}
         disabled={disabled}
         locked={disabled}
         error={visibleError("brandId")}
         onPress={() => {
-          picker.markTouched("brandId");
-          picker.setBrandOpen(true);
+          pickers.markTouched("brandId");
+          pickers.open("brand");
         }}
       />
 
       <PickerRow
         label={t("model")}
         required
-        value={picker.selectedModel?.name}
+        value={pickers.selectedModel?.name}
         placeholder={t("selectModel")}
         disabled={disabled || !payload.brandId}
         locked={disabled}
         error={visibleError("modelId")}
         onPress={() => {
-          picker.markTouched("modelId");
-          picker.setModelOpen(true);
+          pickers.markTouched("modelId");
+          pickers.open("model");
         }}
       />
 
       <PickerRow
-        label={t("generation")}
-        value={picker.selectedGeneration?.name}
-        placeholder={t("selectGeneration")}
-        disabled={disabled || !payload.modelId || picker.generationsLoading}
+        label={t("year")}
+        required
+        value={payload.year === undefined ? undefined : String(payload.year)}
+        placeholder={t("selectYear")}
+        disabled={disabled}
         locked={disabled}
-        helper={picker.generationHelper}
-        onPress={() => picker.setGenerationOpen(true)}
+        error={visibleError("year")}
+        onPress={() => {
+          pickers.markTouched("year");
+          pickers.open("year");
+        }}
       />
 
-      <YearInput
+      {pickers.showGenerationRow && (
+        <PickerRow
+          label={t("generation")}
+          value={pickers.selectedGeneration?.name}
+          placeholder={t("selectGeneration")}
+          disabled={disabled}
+          locked={disabled}
+          onPress={() => pickers.open("generation")}
+        />
+      )}
+
+      <VinField
         payload={payload}
         onChange={onChange}
         disabled={disabled}
-        markTouched={picker.markTouched}
-        fieldErrors={fieldErrors}
-        showErrors={showErrors}
-        touchedFields={touchedFields}
+        error={showErrors ? fieldErrors?.vin : undefined}
       />
 
-      <VehicleIdSheets payload={payload} picker={picker} />
+      <CarPickerSheet payload={payload} pickers={pickers} />
     </View>
   );
 }

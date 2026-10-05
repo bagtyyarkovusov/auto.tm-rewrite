@@ -6,7 +6,7 @@ import type { ClockPort } from "../domain/ports/ClockPort";
 import type { EmailCodeSenderPort } from "../domain/ports/EmailCodeSenderPort";
 import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
-import type { OtpSenderPort } from "../domain/ports/OtpSenderPort";
+import type { OtpSenderPort, OtpSms } from "../domain/ports/OtpSenderPort";
 import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
 import { SignInCodeRateLimitedError } from "../domain/SignInCodeRateLimitedError";
 import { RequestSignInMethodChange } from "./RequestSignInMethodChange";
@@ -17,6 +17,9 @@ function user(methods: Pick<User, "phone" | "phoneVerifiedAt" | "email" | "email
   return {
     id: "user-1",
     displayName: null,
+    nameNumber: 4821,
+    avatarIndex: 7,
+    avatarKey: null,
     avatarUrl: null,
     locale: "ru",
     role: "buyer",
@@ -100,10 +103,10 @@ class FakeUsers implements SignInMethodRepository {
 
 function harness(current: User | null) {
   const otpRepo = new FakeOtpRepo();
-  const sms: Array<{ phone: string; code: string }> = [];
+  const sms: OtpSms[] = [];
   const email: Array<Parameters<EmailCodeSenderPort["enqueue"]>[0]> = [];
   const smsSender: OtpSenderPort = {
-    send: async (phone, code) => { sms.push({ phone, code }); },
+    send: async (message) => { sms.push(message); },
   };
   const emailSender: EmailCodeSenderPort = {
     enqueue: async (input) => { email.push(input); },
@@ -142,7 +145,13 @@ describe("RequestSignInMethodChange", () => {
       destination: "+99361234567",
       userId: "user-1",
     });
-    expect(sms).toEqual([{ phone: "+99361234567", code: result.testCode }]);
+    expect(sms).toEqual([{
+      phone: "+99361234567",
+      code: result.testCode,
+      purpose: "sign-in-method",
+      locale: "ru",
+      requestId: result.requestId,
+    }]);
     expect(email).toEqual([]);
   });
 

@@ -7,11 +7,15 @@ export function useDiscardDraft() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // Offline, fail now instead of pausing: the Sell wizard's ✕ awaits this delete
+    // and must still close.
+    networkMode: "always",
     mutationFn: (draftId: string) =>
       apiClient.delete(`/listings/drafts/${draftId}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDrafts() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myDraftsInfinite() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.listings.myCountsAll() });
     },
   });
 }

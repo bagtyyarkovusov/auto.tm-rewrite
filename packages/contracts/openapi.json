@@ -81,6 +81,19 @@
           "retryInSeconds"
         ]
       },
+      "InvalidOtpDetails": {
+        "type": "object",
+        "properties": {
+          "attemptsLeft": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          }
+        },
+        "required": [
+          "attemptsLeft"
+        ]
+      },
       "BrandSummary": {
         "type": "object",
         "properties": {
@@ -2099,7 +2112,8 @@
             "type": "string"
           },
           "contactPhone": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^\\+993[67]\\d{7}$"
           },
           "allowCalls": {
             "type": "boolean"
@@ -5974,6 +5988,19 @@
             "type": "string",
             "nullable": true
           },
+          "nameNumber": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 9999
+          },
+          "avatarIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "avatarKey": {
+            "type": "string",
+            "nullable": true
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -6007,6 +6034,9 @@
           "email",
           "phoneVerified",
           "displayName",
+          "nameNumber",
+          "avatarIndex",
+          "avatarKey",
           "role",
           "avatarUrl",
           "locale",
@@ -7577,6 +7607,53 @@
         },
         "required": [
           "optOuts"
+        ]
+      },
+      "VerifiedContactPhone": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+993[67]\\d{7}$"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "account",
+              "confirmed"
+            ]
+          },
+          "confirmedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "reusableUntil": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "phone",
+          "source",
+          "confirmedAt",
+          "reusableUntil"
+        ]
+      },
+      "ContactPhoneNotConfirmedDetails": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "not_confirmed",
+              "expired"
+            ]
+          }
+        },
+        "required": [
+          "reason"
         ]
       }
     },
@@ -10163,6 +10240,19 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "nameNumber": {
+                      "type": "integer",
+                      "minimum": 1000,
+                      "maximum": 9999
+                    },
+                    "avatarIndex": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "avatarKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "role": {
                       "type": "string",
                       "enum": [
@@ -10196,6 +10286,9 @@
                     "email",
                     "phoneVerified",
                     "displayName",
+                    "nameNumber",
+                    "avatarIndex",
+                    "avatarKey",
                     "role",
                     "avatarUrl",
                     "locale",
@@ -10373,6 +10466,700 @@
           },
           "409": {
             "description": "Sign-in Method belongs to another User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/contact-phones/request": {
+      "post": {
+        "summary": "Request a code to confirm a Listing contact phone",
+        "description": "Answers confirmed, and sends nothing, for the seller's sign-in phone or a number the seller confirmed in the last 7 days. Otherwise sends one SMS code. Counts against the same per-number and per-IP budgets as sign-in.",
+        "tags": [
+          "Listings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+993[67]\\d{7}$"
+                  }
+                },
+                "required": [
+                  "phone"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Number already usable, or code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "confirmed"
+                          ]
+                        },
+                        "contactPhone": {
+                          "type": "object",
+                          "properties": {
+                            "phone": {
+                              "type": "string",
+                              "pattern": "^\\+993[67]\\d{7}$"
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "account",
+                                "confirmed"
+                              ]
+                            },
+                            "confirmedAt": {
+                              "type": "string",
+                              "nullable": true,
+                              "format": "date-time"
+                            },
+                            "reusableUntil": {
+                              "type": "string",
+                              "nullable": true,
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "phone",
+                            "source",
+                            "confirmedAt",
+                            "reusableUntil"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "contactPhone"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "code_sent"
+                          ]
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "resendInSeconds": {
+                          "type": "integer"
+                        },
+                        "testCode": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "requestId",
+                        "resendInSeconds"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_FAILED, or RATE_LIMITED with details (RateLimitedDetails): reason destination_limit, ip_limit or backoff, and retryInSeconds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN: details.reason USER_SUSPENDED, or the account deletion is scheduled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/contact-phones/verify": {
+      "post": {
+        "summary": "Confirm a Listing contact phone with its code",
+        "description": "Checks the newest contact-phone code this seller requested for the number. A confirmation restarts the 7 days.",
+        "tags": [
+          "Listings"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+993[67]\\d{7}$"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "phone",
+                  "code"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Number confirmed for 7 days",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "contactPhone": {
+                      "type": "object",
+                      "properties": {
+                        "phone": {
+                          "type": "string",
+                          "pattern": "^\\+993[67]\\d{7}$"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "confirmed"
+                          ]
+                        },
+                        "confirmedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "reusableUntil": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "phone",
+                        "source",
+                        "confirmedAt",
+                        "reusableUntil"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "contactPhone"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_FAILED, INVALID_OTP with details (InvalidOtpDetails), OTP_LOCKED, OTP_EXPIRED, OTP_ALREADY_USED or OTP_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN: details.reason USER_SUSPENDED, or the account deletion is scheduled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/contact-phones": {
+      "get": {
+        "summary": "List the seller's reusable confirmed contact phones",
+        "description": "Newest confirmation first. Leaves out the sign-in phone, which the app reads from GET /api/v1/me.",
+        "tags": [
+          "Listings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Reusable confirmed numbers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "phone": {
+                            "type": "string",
+                            "pattern": "^\\+993[67]\\d{7}$"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "account",
+                              "confirmed"
+                            ]
+                          },
+                          "confirmedAt": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "date-time"
+                          },
+                          "reusableUntil": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "phone",
+                          "source",
+                          "confirmedAt",
+                          "reusableUntil"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN: details.reason USER_SUSPENDED, or the account deletion is scheduled",
             "content": {
               "application/json": {
                 "schema": {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,6 +32,7 @@ import { useUnblockUser } from "../../src/api/identity/useUnblockUser";
 import { ConversationListingCard } from "../../src/conversations/components/ConversationListingCard";
 import { ConversationHeader } from "../../src/conversations/components/ConversationHeader";
 import { ConversationFooter } from "../../src/conversations/components/ConversationFooter";
+import { ListingClosedBanner } from "../../src/conversations/components/ListingClosedBanner";
 import {
   ConversationNotFoundState,
   ConversationSignedOutState,
@@ -151,7 +153,13 @@ export default function ConversationDetailScreen() {
   const blockUser = useBlockUser();
   const unblockUser = useUnblockUser();
   const muteConversation = useMuteConversation();
-  const { show: showToast } = useToast();
+  const { show } = useToast();
+  // A toast at the top clears the header at the size it is drawn, not a fixed 64 pt.
+  const headerHeight = useRef(0);
+  const showToast = useCallback(
+    (toast: Parameters<typeof show>[0]) => show({ ...toast, topClearance: headerHeight.current }),
+    [show],
+  );
 
   const conversationQuery = useConversation(readId);
   const notFound =
@@ -213,6 +221,19 @@ export default function ConversationDetailScreen() {
   const isBlocked =
     conversation?.blockedByMe === true ||
     conversation?.sendRestriction === "blocked_by_me";
+
+  // Closed to new Messages for a reason other than the viewer's own block:
+  // the composer is replaced by one line, so nothing can be sent (#352 Q3).
+  const sendRestriction = conversation?.sendRestriction ?? null;
+  const cannotSend = isBlocked || sendRestriction !== null;
+
+  // A send the server still refuses means the state changed since loading:
+  // read the Conversation again so the footer follows it.
+  const reloadAfterRefusal = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.conversations.detail(conversationId),
+    });
+  }, [conversationId, queryClient]);
 
   // Block and Unblock patch the by-ID entry so the footer switches at once,
   // then refresh it and the list from the API.
@@ -451,13 +472,16 @@ export default function ConversationDetailScreen() {
           onSuccess: (data) => {
             markConfirmed(clientMessageId, data.id);
           },
-          onError: () => {
+          onError: (error) => {
             markFailed(clientMessageId);
+            if (error instanceof ApiError && error.status === 403) {
+              reloadAfterRefusal();
+            }
           },
         },
       );
     },
-    [conversationId, markConfirmed, markFailed, sendHttpMessage],
+    [conversationId, markConfirmed, markFailed, reloadAfterRefusal, sendHttpMessage],
   );
 
   const sendImageViaHttp = useCallback(
@@ -475,18 +499,21 @@ export default function ConversationDetailScreen() {
               () => {},
             );
           },
-          onError: () => {
+          onError: (error) => {
             markFailed(clientMessageId);
+            if (error instanceof ApiError && error.status === 403) {
+              reloadAfterRefusal();
+            }
           },
         },
       );
     },
-    [conversationId, markConfirmed, markFailed, sendHttpImageMessage],
+    [conversationId, markConfirmed, markFailed, reloadAfterRefusal, sendHttpImageMessage],
   );
 
   const handleSend = useCallback(
     async (text: string) => {
-      if (!viewer?.userId || !conversationId || isBlocked) return;
+      if (!viewer?.userId || !conversationId || cannotSend) return;
 
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
@@ -515,13 +542,15 @@ export default function ConversationDetailScreen() {
         sendViaHttp(clientMessageId, text);
       } else {
         markFailed(clientMessageId);
+        if (result.code === "FORBIDDEN") reloadAfterRefusal();
       }
     },
     [
       conversationId,
-      isBlocked,
+      cannotSend,
       markConfirmed,
       markFailed,
+      reloadAfterRefusal,
       sendViaHttp,
       sendTextMessage,
       viewer?.userId,
@@ -530,7 +559,7 @@ export default function ConversationDetailScreen() {
 
   const handleSendImage = useCallback(
     async (attachment: ComposerAttachment) => {
-      if (!viewer?.userId || !conversationId || isBlocked) return;
+      if (!viewer?.userId || !conversationId || cannotSend) return;
 
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
@@ -586,6 +615,7 @@ export default function ConversationDetailScreen() {
           sendImageViaHttp(clientMessageId, metadata, attachment.uri);
         } else {
           markFailed(clientMessageId);
+          if (result.code === "FORBIDDEN") reloadAfterRefusal();
         }
       } catch (err) {
         const uploadError =
@@ -597,15 +627,19 @@ export default function ConversationDetailScreen() {
                 true,
               );
         markFailed(clientMessageId);
+        if (err instanceof ApiError && err.status === 403) {
+          reloadAfterRefusal();
+        }
         console.warn("Image message send failed", uploadError);
       }
     },
     [
       conversationId,
-      isBlocked,
+      cannotSend,
       markConfirmed,
       markFailed,
       presignChatAttachment,
+      reloadAfterRefusal,
       sendImageViaHttp,
       sendImageMessage,
       viewer?.userId,
@@ -614,7 +648,7 @@ export default function ConversationDetailScreen() {
 
   const handleRetry = useCallback(
     async (tempId: string) => {
-      if (!conversationId || isBlocked) return;
+      if (!conversationId || cannotSend) return;
       const msg = localMessages.find((m) => m.id === tempId);
       if (!msg || msg.status !== "failed") return;
 
@@ -668,9 +702,13 @@ export default function ConversationDetailScreen() {
             sendImageViaHttp(msg.clientMessageId, metadata, msg.localImageUri);
           } else {
             markFailed(msg.clientMessageId);
+            if (result.code === "FORBIDDEN") reloadAfterRefusal();
           }
-        } catch {
+        } catch (err) {
           markFailed(msg.clientMessageId);
+          if (err instanceof ApiError && err.status === 403) {
+            reloadAfterRefusal();
+          }
         }
         return;
       }
@@ -687,14 +725,16 @@ export default function ConversationDetailScreen() {
         sendViaHttp(msg.clientMessageId, msg.text);
       } else {
         markFailed(msg.clientMessageId);
+        if (result.code === "FORBIDDEN") reloadAfterRefusal();
       }
     }, [
       conversationId,
-      isBlocked,
+      cannotSend,
       localMessages,
       markConfirmed,
       markFailed,
       presignChatAttachment,
+      reloadAfterRefusal,
       sendImageMessage,
       sendImageViaHttp,
       sendTextMessage,
@@ -733,6 +773,14 @@ export default function ConversationDetailScreen() {
   const cancelDelete = useCallback(() => {
     setMessageToDelete(null);
   }, []);
+
+  const copyMessage = useCallback(
+    async (text: string) => {
+      await Clipboard.setStringAsync(text);
+      showToast({ title: t("conversations:messageCopied") });
+    },
+    [showToast, t],
+  );
 
   const confirmReportMessage = useCallback((messageId: string) => {
     setMessageToReport(messageId);
@@ -797,6 +845,7 @@ export default function ConversationDetailScreen() {
         isMuted={isMuted}
         isBlocked={isBlocked}
         muteDisabled={muteConversation.isPending}
+        onHeightChange={(height) => { headerHeight.current = height; }}
         onBack={goBack}
         onToggleMute={handleToggleMute}
         onReport={
@@ -813,6 +862,7 @@ export default function ConversationDetailScreen() {
           listing={listingCard}
           brandName={brandName}
           modelName={modelName}
+          unavailable={sendRestriction === "listing_unavailable"}
         />
       ) : conversationQuery.isPending && !signedOut && !notFound ? (
         <ConversationListingCard loading />
@@ -852,9 +902,21 @@ export default function ConversationDetailScreen() {
             onRetry={handleRetry}
             onDelete={confirmDeleteMessage}
             onReport={confirmReportMessage}
+            onCopy={copyMessage}
+            reportEnabled={config?.reportEntryEnabled !== false}
             onImagePress={(uri) => setPreviewUri(uri)}
             onPostRefPress={(listingId) =>
               router.push(`/(public)/listings/${listingId}`)
+            }
+            // "You can keep talking" only holds while the viewer can send.
+            afterLast={
+              listingCard && !cannotSend && (
+                <ListingClosedBanner
+                  listing={listingCard}
+                  brandName={brandName}
+                  modelName={modelName}
+                />
+              )
             }
             onLoadOlder={loadOlderMessages}
             loadingOlder={isFetchingNextPage}
@@ -866,6 +928,7 @@ export default function ConversationDetailScreen() {
 
       <ConversationFooter
         isBlocked={isBlocked}
+        sendRestriction={sendRestriction}
         unblockPending={unblockUser.isPending}
         onUnblock={() => setConfirmAction("unblock")}
         peerTyping={peerTyping && !notFound}
@@ -917,9 +980,9 @@ export default function ConversationDetailScreen() {
       <AlertDialog open={!!messageToDelete} onOpenChange={cancelDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteMessageTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("conversations:deleteMessageTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("deleteMessageDescription")}
+              {t("conversations:deleteMessageDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, ScrollView, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { Check, AlertCircle, Eye, ListChecks } from "lucide-react-native";
-import type { WizardSchemas, ListingsSchemas } from "@auto-tm/contracts";
+import { WizardSchemas, type ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
@@ -13,7 +13,7 @@ import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { useDriveTypes } from "../../api/catalog/useDriveTypes";
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useRegions } from "../../api/catalog/useRegions";
-import { useCities } from "../../api/catalog/useCities";
+import { findCityInGroups, useCityGroups } from "../../api/catalog/useCityGroups";
 import type { StagedPhoto } from "../uploadStaging/types";
 import { getPhotoUri } from "../uploadStaging/photoUri";
 
@@ -30,16 +30,9 @@ interface Step8ReviewProps {
 
 function useStepLabels() {
   const { t } = useTranslation();
-  return {
-    vin: t("vin"),
-    photos: t("photos"),
-    vehicle: t("vehicle"),
-    specs: t("specs"),
-    price: t("price"),
-    location: t("location"),
-    contact: t("contact"),
-    review: t("review"),
-  } as Record<WizardSchemas.WizardStep, string>;
+  return Object.fromEntries(
+    WizardSchemas.WIZARD_STEPS.map((step) => [step, t(`wizardSteps.${step}`)]),
+  ) as Record<WizardSchemas.WizardStep, string>;
 }
 
 type ViewMode = "checklist" | "preview";
@@ -62,7 +55,8 @@ export default function Step8Review({
   const { data: driveTypesData } = useDriveTypes();
   const { data: engineTypesData } = useEngineTypes();
   const { data: regionsData } = useRegions();
-  const { data: citiesData } = useCities(payload.regionId ?? "");
+  // The source the City picker uses: a region's whole list, not its first page.
+  const { groups: cityGroups } = useCityGroups();
 
   const brandName = brandsData?.items.find((b) => b.id === payload.brandId)?.name;
   const modelName = modelsData?.items.find((m) => m.id === payload.modelId)?.name;
@@ -73,7 +67,7 @@ export default function Step8Review({
   const driveTypeName = driveTypesData?.items.find((d) => d.id === payload.driveTypeId)?.name;
   const engineTypeName = engineTypesData?.items.find((e) => e.id === payload.engineTypeId)?.name;
   const regionName = regionsData?.items.find((r) => r.id === payload.regionId)?.name;
-  const cityName = citiesData?.items.find((c) => c.id === payload.cityId)?.name;
+  const cityName = findCityInGroups(cityGroups, payload.cityId)?.city.name;
 
   const uploadedPhotos = photos.filter((p) => p.key);
   const hasPhotos = uploadedPhotos.length > 0;
@@ -201,17 +195,9 @@ function ChecklistView({
         {payload.generationId && (
           <Text className="text-sm text-muted-foreground">{t("generation")}: {payload.generationId}</Text>
         )}
-      </ReviewSection>
-
-      {/* Photos */}
-      <ReviewSection
-        title={stepLabels.photos}
-        isValid={validatedSteps.includes("photos")}
-        onEdit={() => onGoToStep("photos")}
-      >
-        <Text className="text-sm text-foreground">
-          {t("photosUploadedCount", { count: uploadedPhotos.length })}
-        </Text>
+        {payload.vin && (
+          <Text className="text-sm text-muted-foreground">{t("vin")}: {payload.vin}</Text>
+        )}
       </ReviewSection>
 
       {/* Specs */}
@@ -246,6 +232,17 @@ function ChecklistView({
         )}
       </ReviewSection>
 
+      {/* Photos */}
+      <ReviewSection
+        title={stepLabels.photos}
+        isValid={validatedSteps.includes("photos")}
+        onEdit={() => onGoToStep("photos")}
+      >
+        <Text className="text-sm text-foreground">
+          {t("photosUploadedCount", { count: uploadedPhotos.length })}
+        </Text>
+      </ReviewSection>
+
       {/* Price */}
       <ReviewSection
         title={stepLabels.price}
@@ -269,6 +266,9 @@ function ChecklistView({
         isValid={validatedSteps.includes("location")}
         onEdit={() => onGoToStep("location")}
       >
+        <Text className="text-sm text-foreground" numberOfLines={2}>
+          {payload.description || t("noDescription")}
+        </Text>
         <Text className="text-sm text-foreground">
           {regionName && cityName ? `${regionName}, ${cityName}` : t("notSet")}
         </Text>
@@ -283,9 +283,6 @@ function ChecklistView({
         isValid={validatedSteps.includes("contact")}
         onEdit={() => onGoToStep("contact")}
       >
-        <Text className="text-sm text-foreground" numberOfLines={2}>
-          {payload.description || t("noDescription")}
-        </Text>
         <Text className="text-sm text-muted-foreground">
           {payload.allowCalls ? t("callsAllowed") : t("noCalls")} ·{" "}
           {payload.allowChat ? t("chatAllowed") : t("noChat")}

@@ -162,6 +162,8 @@ describe("MLP AFK e2e smoke", () => {
       condition: "used",
       mileageKm: 48000,
       description: input.description ?? "Clean AFK smoke listing",
+      // The seller's own sign-in phone needs no code (ADR-0081).
+      contactPhone: "+99361234001",
       allowCalls: true,
       allowChat: true,
       conditionDisclosure: { damaged: false },

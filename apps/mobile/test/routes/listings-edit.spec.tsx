@@ -9,7 +9,7 @@ const fixture = vi.hoisted(() => {
     thumbnail: "t.jpg", list: "l.jpg", detail: "d.jpg", fullscreen: "f.jpg",
   }, sortOrder: 0 }];
   return {
-    id, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
+    id, pending: false, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
     retry: vi.fn().mockResolvedValue(true),
     deleteDraftDir: vi.fn().mockResolvedValue(undefined),
     saveState: { status: "idle", error: null, opStates: {} } as {
@@ -18,24 +18,27 @@ const fixture = vi.hoisted(() => {
     baseline: { id, sellerId: id, publicNumber: 458, status: "active", brandId: id, modelId: id,
       year: 2020, condition: "used", mileageKm: 10000, priceAmount: 100000, priceCurrency: "TMT",
       displayPriceTmt: 100000, description: "Legacy listing", regionId: id, cityId: id,
-      allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
+      contactPhone: "+99361234567", allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
       media, viewCount: 0, favoriteCount: 0, publishedAt: "2026-09-30T00:00:00.000Z",
       createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
       seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
     },
     listing: {} as Record<string, unknown>,
-    photos: [{ photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 }],
+    saved: { photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 } as Record<string, unknown>,
+    photos: [] as Record<string, unknown>[],
+    gate: { canPublish: true, blockers: [] as string[] },
   };
 });
+fixture.photos = [fixture.saved];
 fixture.listing = { ...fixture.baseline };
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
-  photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
+  photos: fixture.photos, publishGate: fixture.gate,
 }) }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: fixture.deleteDraftDir }));
 vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
   useSaveListingEdit: () => ({
-    save: fixture.save, retry: fixture.retry, isPending: false, ...fixture.saveState,
+    save: fixture.save, retry: fixture.retry, isPending: fixture.pending, ...fixture.saveState,
   }),
   opLabel: (id: string) => id,
 }));
@@ -49,7 +52,6 @@ vi.mock("react-native-safe-area-context", async () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("react-native")).View }));
-vi.mock("../../src/listings/wizard/Step1Vin", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step2Photos", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step3VehicleId", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step5Price", () => ({ default: () => null }));
@@ -73,19 +75,23 @@ beforeEach(() => {
   fixture.deleteDraftDir.mockClear();
   routerMock.replace.mockClear();
   fixture.saveState = { status: "idle", error: null, opStates: {} };
+  fixture.pending = false;
   fixture.listing = { ...fixture.baseline };
+  fixture.photos = [fixture.saved];
+  fixture.gate = { canPublish: true, blockers: [] };
 });
 
 describe("legacy Listing edit", () => {
   it.each(["Yes", "No"])("asks for Damaged before saving and accepts %s", async (answer) => {
     const screen = renderMobile(<EditListingScreen />);
-    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: Yes", checked: false })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
-    const done = screen.getByRole("button", { name: "Done", disabled: true });
+    const done = screen.getByRole("button", { name: "Done", disabled: false });
     expect.soft(done.props.className.split(" ")).toContain("w-full");
     expect.soft(done.props.className.split(" ")).not.toContain("flex-1");
     fireEvent.press(done);
+    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
     expect(fixture.save).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
     fireEvent.press(screen.getByRole("radio", { name: `Damaged / needs repair: ${answer}` }));
@@ -102,6 +108,65 @@ describe("legacy Listing edit", () => {
     expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
   });
 
+  it("keeps missing Mileage and Damaged quiet until Done, and stays on Details while invalid", () => {
+    fixture.listing = { ...fixture.baseline, mileageKm: undefined };
+    const screen = renderMobile(<EditListingScreen />);
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(screen.getByRole("button", { name: "Done", disabled: false })).toBeTruthy();
+    fireEvent(screen.getByPlaceholderText("e.g. 50000"), "blur");
+    expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "New" }));
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.getByRole("button", { name: "Done", disabled: false })).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Used" }));
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Done" }));
+    expect(screen.getByText("Answer whether the car is damaged or needs repair")).toBeTruthy();
+    expect(screen.getByText("Mileage is required for used cars")).toBeTruthy();
+    expect(screen.getByText("Details and condition")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
+    expect(screen.getByRole("radio", { name: "Damaged / needs repair: No", checked: false })).toBeTruthy();
+  });
+
+  it("keeps Done disabled during a pending save even on invalid Details", () => {
+    fixture.pending = true;
+    const screen = renderMobile(<EditListingScreen />);
+    fireEvent.press(screen.getByRole("button", { name: "Done", disabled: true }));
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
+  });
+
+  it("Done explains untouched invalid Engine power and stays on Details", () => {
+    fixture.listing = { ...fixture.baseline, enginePower: 0 };
+    const screen = renderMobile(<EditListingScreen />);
+    fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: No" }));
+    expect(screen.getByText("Power")).toBeTruthy();
+    expect(screen.queryByText("Engine power must be greater than zero")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
+    expect(screen.getByText("Engine power must be greater than zero")).toBeTruthy();
+    expect(screen.getByText("Details and condition")).toBeTruthy();
+    expect(screen.getByDisplayValue("0")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
+    expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
+    expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
+  });
+
+  it("opens a New Listing without disclosure directly at Check with Save changes", () => {
+    fixture.listing = { ...fixture.baseline, condition: "new", conditionDisclosure: undefined };
+    const screen = renderMobile(<EditListingScreen />);
+    expect(screen.getByText("Check and publish")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    expect(screen.queryByPlaceholderText("e.g. 150")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(fixture.save).not.toHaveBeenCalled();
+  });
+
   it("clears this Listing's staged photos when the seller discards the edit", () => {
     const screen = renderMobile(<EditListingScreen />);
     fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: Yes" }));
@@ -112,6 +177,29 @@ describe("legacy Listing edit", () => {
     if (!confirm) throw new Error("No discard confirmation");
     fireEvent.press(confirm);
     expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
+  });
+
+  describe("with a photo that keeps Save changes disabled", () => {
+    function renderReview(photo: Record<string, unknown>, blocker: string) {
+      fixture.listing = { ...fixture.baseline, conditionDisclosure: { damaged: false } };
+      fixture.photos = [fixture.saved, { photoId: "new-photo", sortOrder: 1, retryCount: 0, ...photo }];
+      fixture.gate = { canPublish: false, blockers: [blocker] };
+      const screen = renderMobile(<EditListingScreen />);
+      expect(screen.getByRole("button", { name: "Save changes", disabled: true })).toBeTruthy();
+      return screen;
+    }
+
+    it("counts a photo waiting for the network as uploading, in the chip and the reason", () => {
+      const screen = renderReview({ state: "waiting_for_network" }, "wizardErrors.uploadsInProgress");
+      expect(screen.getByText("1 uploading")).toBeTruthy();
+      expect(screen.getByText("Wait for 1 photos to finish uploading")).toBeTruthy();
+    });
+
+    it("counts a lost photo as failed, in the chip and the reason", () => {
+      const screen = renderReview({ state: "lost" }, "wizardErrors.uploadsFailed");
+      expect(screen.getByText("1 failed")).toBeTruthy();
+      expect(screen.getByText("1 failed — retry or remove")).toBeTruthy();
+    });
   });
 
   describe("after a partial save failure", () => {
@@ -127,10 +215,9 @@ describe("legacy Listing edit", () => {
       return screen;
     }
 
+    // Retry 0 is the status line under the progress bar, Retry 1 the failure banner on Review.
     function retryButton(screen: ReturnType<typeof renderMobile>, index: number) {
-      const button = screen.getAllByRole("button", { name: "Retry" }).at(index);
-      if (!button) throw new Error(`No Retry button at ${index}`);
-      return button;
+      return screen.getByRole("button", { name: index === 0 ? "Not saved. Retry" : "Retry" });
     }
 
     it("shows which operations succeeded and failed", () => {

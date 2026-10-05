@@ -151,9 +151,6 @@ export function MessageReportSheet({
             <View className="h-12 w-12 items-center justify-center rounded-full bg-success-500/10">
               <Icon as={Check} className="size-6 text-success-500" />
             </View>
-            <Text className="text-center text-base text-foreground">
-              {t("thanksWeReceived")}
-            </Text>
             <Button variant="default" className="w-full" onPress={handleClose}>
               <Text>{t("done")}</Text>
             </Button>

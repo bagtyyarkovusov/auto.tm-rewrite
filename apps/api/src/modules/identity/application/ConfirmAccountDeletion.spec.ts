@@ -29,6 +29,9 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: null,
     emailVerifiedAt: null,
     displayName: null,
+    nameNumber: 4821,
+    avatarIndex: 7,
+    avatarKey: null,
     avatarUrl: null,
     locale: "ru",
     role: "seller",
@@ -144,7 +147,6 @@ class FakeUsers implements UserRepository, SignInMethodRepository {
 
   async create(_methods: SignInMethods): Promise<User> { throw new Error("unused"); }
   async delete(): Promise<void> { throw new Error("unused"); }
-  async clearDeletionSchedule(): Promise<void> { throw new Error("unused"); }
   async findUsersWithExpiredDeletionGrace(): Promise<User[]> { return []; }
   async purgePersonalData(): Promise<void> { throw new Error("unused"); }
   async replaceSignInMethod(): Promise<User> { throw new Error("unused"); }
@@ -169,10 +171,6 @@ class FakeListings implements AccountDeletionListingsPort {
 
   async archiveActiveListingsBySeller(sellerId: string): Promise<void> {
     this.archivedFor.push(sellerId);
-  }
-
-  async republishArchivedByDeletionListingsBySeller(): Promise<void> {
-    throw new Error("unused");
   }
 }
 

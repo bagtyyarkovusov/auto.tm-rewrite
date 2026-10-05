@@ -121,7 +121,13 @@ export class RequestOtp {
     });
 
     if (destination.channel === SIGN_IN_CODE_CHANNELS.PHONE) {
-      await this.otpSender.send(destination.value, code.value);
+      await this.otpSender.send({
+        phone: destination.value,
+        code: code.value,
+        purpose: Enums.SignInCodePurpose.SignIn,
+        locale: input.locale ?? "ru",
+        requestId: record.id,
+      });
     } else if (reservedAccount === null) {
       await this.emailCodeSender.enqueue({
         requestId: record.id,

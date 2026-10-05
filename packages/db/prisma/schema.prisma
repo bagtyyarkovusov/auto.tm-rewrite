@@ -34,19 +34,27 @@ enum CodePurpose {
 }
 
 model User {
-  id          String   @id @default(uuid())
+  id              String    @id @default(uuid())
   /// Sign-in Methods (ADR-0054). Each value is stored only with its verified-at
   /// time; the migration adds `users_phone_verified_check` / `users_email_verified_check`.
   phone           String?   @unique
   phoneVerifiedAt DateTime?
   email           String?   @unique
   emailVerifiedAt DateTime?
-  displayName String?
-  avatarUrl   String?
-  locale      String   @default("ru")
-  role        UserRole @default(buyer)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  displayName     String?
+  /// Generated Name number and Assigned Avatar index (#638), kept for the life
+  /// of the account. The API draws both (`GeneratedIdentity.ts`); the database
+  /// default and the `users_nameNumber_range_check` / `users_avatarIndex_range_check`
+  /// constraints from the migration hold the same ranges.
+  nameNumber      Int       @default(dbgenerated("(((1000)::double precision + floor((random() * (9000)::double precision))))::integer"))
+  avatarIndex     Int       @default(dbgenerated("(floor((random() * (12)::double precision)))::integer"))
+  /// Object key of the profile photo; always null until photos ship.
+  avatarKey       String?
+  avatarUrl       String?
+  locale          String    @default("ru")
+  role            UserRole  @default(buyer)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   suspendedAt         DateTime?
   suspendedById       String?
@@ -72,6 +80,7 @@ model User {
   conversationsAsBuyer         Conversation[]            @relation("Buyer")
   conversationsAsSeller        Conversation[]            @relation("Seller")
   listingDrafts                ListingDraft[]
+  verifiedContactPhones        VerifiedContactPhone[]
   mediaUploads                 MediaUpload[]
   totpEnrollment               TotpEnrollment?
   reportsSubmitted             ContentReport[]           @relation("Reporter")
@@ -84,22 +93,22 @@ model User {
 }
 
 model OtpRequest {
-  id         String    @id @default(uuid())
+  id          String            @id @default(uuid())
   /// Why the code was issued; each verify accepts only its own purpose (ADR-0081).
-  purpose    CodePurpose
-  channel    SignInCodeChannel
+  purpose     CodePurpose
+  channel     SignInCodeChannel
   destination String
   /// Temporary deployment compatibility alias. New code reads channel + destination.
-  phone      String?
-  codeHash   String
-  expiresAt  DateTime
-  verifiedAt DateTime?
-  attempts   Int       @default(0)
-  userId     String?
-  user       User?     @relation(fields: [userId], references: [id])
-  ip         String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  phone       String?
+  codeHash    String
+  expiresAt   DateTime
+  verifiedAt  DateTime?
+  attempts    Int               @default(0)
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+  ip          String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@index([channel, destination, createdAt])
   @@index([phone, createdAt])
@@ -497,6 +506,22 @@ model MediaUpload {
   @@map("media_uploads")
 }
 
+/// A number a seller confirmed by SMS code for their Listings (ADR-0081). Owned
+/// by Listings; never a Sign-in Method and never touches `User.phone`. Reusable
+/// while now < confirmedAt + 7 days. Several sellers may confirm one number.
+model VerifiedContactPhone {
+  id          String   @id @default(uuid())
+  sellerId    String
+  seller      User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  phone       String
+  confirmedAt DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sellerId, phone])
+  @@map("verified_contact_phones")
+}
+
 model Favorite {
   id        String   @id @default(uuid())
   userId    String
@@ -613,8 +638,8 @@ model Message {
   deletedAt       DateTime?
   clientMessageId String?
 
-  @@index([conversationId, createdAt])
   @@unique([conversationId, senderId, clientMessageId])
+  @@index([conversationId, createdAt])
   @@map("messages")
 }
 

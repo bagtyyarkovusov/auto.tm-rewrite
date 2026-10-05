@@ -22,6 +22,7 @@ Use the [glossary](docs/domain/GLOSSARY.md) when interpreting or changing domain
 | Mobile API calls or caching | [Mobile data fetching](docs/agents/mobile-data-fetching.md) |
 | Mobile screen, navigation, or discovery | [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md), then the affected approved UI specification |
 | TypeScript imports, package exports, or shared runtime packages | [Runtime boundaries](docs/agents/typescript-runtime.md) |
+| New modules, new tests, or a Standards review | [Coding standards](docs/agents/coding-standards.md); advisory and new lines only until the first store release |
 | Document roles, new PRDs, or decision/sprint changes | [Domain documentation policy](docs/agents/domain.md#document-authority) |
 
 ## Guardrails
@@ -34,6 +35,6 @@ Use the [glossary](docs/domain/GLOSSARY.md) when interpreting or changing domain
 
 ## Finish with evidence
 
-Run focused checks during implementation. Before final review, run the repository test and typecheck gates, affected lint, and applicable build, runtime, integration, and UI checks. A checkpoint commit preserves recoverable work; it does not claim final verification. Recheck evidence affected by later changes, and report unavailable gates as missing evidence. Hosted CI evidences container-backed tests ([ADR-0075](docs/adr/0075-railway-pr-backends-for-agent-native-sessions.md)); run non-container gates locally. Issue work requires a pushed reservation branch, early draft PR, durable Execution state, fixed-commit independent reviews, and green required CI before merge. See the coding workflow for the exact contract.
+Run focused checks during implementation. Before final review, run the repository test and typecheck gates, affected lint, and applicable build, runtime, integration, and UI checks. A checkpoint commit preserves recoverable work; it does not claim final verification. Recheck evidence affected by later changes, and report unavailable gates as missing evidence. The hosted required `pr` check evidences container-backed tests ([ADR-0075](docs/adr/0075-railway-pr-backends-for-agent-native-sessions.md)); run non-container gates locally. Issue work requires a pushed reservation branch, early draft PR, durable Execution state, fixed-commit independent reviews, and a green required `pr` check before merge. See the coding workflow for the exact contract.
 
 Repository skills live only in [.claude/skills](.claude/skills). If the host does not discover them, open the workflow's linked `SKILL.md` and follow it manually with available tools. For Kimi implementation and review, follow [ADR-0059](docs/adr/0059-kimi-code-as-a-third-interactive-coding-agent.md) through the coding workflow. Never query provider quota before starting work.

@@ -33,6 +33,7 @@ vi.mock("../../src/auth/session", () => ({
   })),
   storeAuthSession: vi.fn(() => Promise.resolve()),
   clearAuthSession: vi.fn(() => Promise.resolve()),
+  subscribeAuthSession: vi.fn(() => () => {}),
 }));
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
@@ -49,7 +50,6 @@ vi.mock("react-native-safe-area-context", async () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("react-native")).View }));
-vi.mock("../../src/listings/wizard/Step1Vin", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step2Photos", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step3VehicleId", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step5Price", () => ({ default: () => null }));
@@ -73,7 +73,7 @@ function createListingApi() {
     sellerId: fixture.id, publicNumber: 458, status: "active", brandId: fixture.id, modelId: fixture.id,
     year: 2020, condition: "used", mileageKm: 10000, priceAmount: 100000, priceCurrency: "TMT",
     displayPriceTmt: 100000, description: "Legacy listing", regionId: fixture.id, cityId: fixture.id,
-    allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
+    contactPhone: "+99361234567", allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
     viewCount: 0, favoriteCount: 0, publishedAt: "2026-09-30T00:00:00.000Z",
     createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
     seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
@@ -87,6 +87,8 @@ function createListingApi() {
   const detail = () => ({ id: fixture.id, ...fields, media: media() });
 
   server.use(
+    // The Contact step picker reads the confirmed numbers; this seller has none.
+    http.get("*/me/contact-phones", () => HttpResponse.json({ items: [] })),
     http.patch("*/listings/:id", async ({ request }) => {
       const patch = (await request.json()) as Record<string, unknown>;
       requests.edit.push(patch);
@@ -159,7 +161,7 @@ describe("Listing edit save across a background refetch", () => {
     expect(screen.getByText("Damaged / needs repair: Yes")).toBeTruthy();
 
     // The seller changes their answer after the failure, then another refetch lands.
-    fireEvent.press(screen.getByRole("button", { name: /^Edit Spec/ }));
+    fireEvent.press(screen.getByRole("button", { name: "Edit Details and condition" }));
     fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: No" }));
     fixture.listing = { ...api.detail(), favoriteCount: 2 };
     screen.rerender(<EditListingScreen />);
