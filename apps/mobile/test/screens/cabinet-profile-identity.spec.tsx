@@ -82,10 +82,17 @@ function render(screen: ReactElement, options?: { locale?: string }) {
 }
 
 type View = ReturnType<typeof renderMobile>;
-type Host = { props: Record<string, unknown>; parent: Host | null };
+type Host = { type: unknown; props: Record<string, unknown>; parent: Host | null };
 
 /** Rendered host nodes of one native type, such as the avatar's `Svg`. */
 const hosts = (view: View, type: string) => view.UNSAFE_queryAllByType(type as never) as unknown as Host[];
+/** The native view that holds the avatar's drawing: its circle. */
+function avatarCircle(view: View): Record<string, unknown> {
+  let node = first(hosts(view, "Svg")).parent;
+  while (node && typeof node.type !== "string") node = node.parent;
+  const { style, accessible, accessibilityElementsHidden, importantForAccessibility } = node?.props ?? {};
+  return { style, accessible, accessibilityElementsHidden, importantForAccessibility };
+}
 const marks = (view: View) => hosts(view, "Path").map((path) => path.props.d);
 const personIcons = (view: View) => hosts(view, "Icon").filter((icon) => icon.props.name === "User");
 
@@ -135,7 +142,7 @@ describe("Cabinet profile row", () => {
     const view = render(<CabinetScreen />);
     await view.findByRole("button", { name: `Aman, ${PHONE}` });
     expect(marks(view)).toEqual([KEY_MARK]);
-    expect(first(hosts(view, "Svg")).parent?.props.style).toMatchObject({ width: 48, height: 48 });
+    expect(avatarCircle(view).style).toMatchObject({ width: 48, height: 48 });
     expect(view.queryByText("A")).toBeNull();
     expect(personIcons(view)).toHaveLength(0);
   });
@@ -165,7 +172,7 @@ describe("Cabinet profile row", () => {
     const view = render(<CabinetScreen />);
     const row = await view.findByRole("button", { name: `Driver 4821, ${PHONE}` });
     expect(view.queryByRole("image")).toBeNull();
-    expect(first(hosts(view, "Svg")).parent?.props).toMatchObject({
+    expect(avatarCircle(view)).toMatchObject({
       accessible: false, accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants",
     });
     fireEvent.press(row);
@@ -240,7 +247,7 @@ describe("Profile header", () => {
     const view = render(<ProfileScreen />);
     await view.findByText("Aman");
     expect(marks(view)).toEqual([KEY_MARK]);
-    expect(first(hosts(view, "Svg")).parent?.props.style).toMatchObject({ width: 72, height: 72 });
+    expect(avatarCircle(view).style).toMatchObject({ width: 72, height: 72 });
     expect(view.queryByText("A")).toBeNull();
     expect(personIcons(view)).toHaveLength(0);
   });
@@ -267,7 +274,7 @@ describe("Profile header", () => {
     const view = render(<ProfileScreen />);
     await view.findByText("Driver 4821");
     expect(view.queryByRole("image")).toBeNull();
-    expect(first(hosts(view, "Svg")).parent?.props).toMatchObject({
+    expect(avatarCircle(view)).toMatchObject({
       accessible: false, accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants",
     });
     expect(view.queryByRole("button", { name: /Driver 4821/ })).toBeNull();

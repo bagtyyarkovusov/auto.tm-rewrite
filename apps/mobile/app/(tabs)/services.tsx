@@ -18,30 +18,26 @@ import { maskTmPhone } from "../../src/auth/phone";
 import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { useMe } from "../../src/api/identity/useMe";
+import { useDisplayName } from "../../src/identity/useDisplayName";
 import { legalPageUrl } from "../../src/config/publicWebUrl";
 
 import { LanguageRow } from "@/components/account/LanguageRow";
 import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
 import { MyListingsRow } from "@/components/account/MyListingsRow";
 import { ThemeRow } from "@/components/account/ThemeRow";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/identity/UserAvatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 
-function RowAvatar({ name, url }: { name?: string | null; url?: string | null }) {
+/** The neutral person icon: nobody is signed in, or `/me` failed. Never a car. */
+function PersonAvatar() {
   return (
-    <Avatar className="size-12" alt={name ?? ""}>
-      {url ? <AvatarImage source={{ uri: url }} /> : null}
+    <Avatar className="size-12" alt="">
       <AvatarFallback>
-        {name ? (
-          <Text className="text-xl font-heading text-foreground">
-            {name.charAt(0).toUpperCase()}
-          </Text>
-        ) : (
-          <Icon as={User} className="size-6 text-muted-foreground" />
-        )}
+        <Icon as={User} className="size-6 text-muted-foreground" />
       </AvatarFallback>
     </Avatar>
   );
@@ -53,7 +49,7 @@ function SignInRow() {
   return (
     <MenuRow
       size="large"
-      lead={<RowAvatar />}
+      lead={<PersonAvatar />}
       label={t("common:signIn")}
       sub={t("account:signInSub")}
       chevron
@@ -84,9 +80,13 @@ function ProfileRowSkeleton() {
   );
 }
 
-/** The large profile row. The only row that waits for `/me`. */
+/**
+ * The large profile row. The only row that waits for `/me`. Every signed-in
+ * User has a name, set or generated, and the masked Sign-in Method under it.
+ */
 function ProfileRow() {
   const { t } = useTranslation("common");
+  const displayNameOf = useDisplayName();
   const { data, isPending, isError, refetch } = useMe({ enabled: true });
 
   if (isPending) return <ProfileRowSkeleton />;
@@ -97,7 +97,7 @@ function ProfileRow() {
         accessibilityRole="alert"
         className="min-h-[76px] flex-row items-center gap-3.5 px-4 py-2"
       >
-        <RowAvatar />
+        <PersonAvatar />
         <Text className="flex-1 text-base text-muted-foreground">
           {t("somethingWentWrong")}
         </Text>
@@ -124,9 +124,17 @@ function ProfileRow() {
   return (
     <MenuRow
       size="large"
-      lead={<RowAvatar name={data.displayName} url={data.avatarUrl} />}
-      label={data.displayName ?? method}
-      sub={data.displayName ? method : undefined}
+      // The row's label names the User, so the avatar carries no label of its own.
+      lead={
+        <UserAvatar
+          size={48}
+          avatarIndex={data.avatarIndex}
+          avatarKey={data.avatarKey}
+          avatarUrl={data.avatarUrl}
+        />
+      }
+      label={displayNameOf(data)}
+      sub={method}
       chevron
       onPress={() => router.push("/profile")}
     />

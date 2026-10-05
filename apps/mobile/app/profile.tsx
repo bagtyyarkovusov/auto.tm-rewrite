@@ -7,12 +7,12 @@ import {
   Mail,
   Phone,
   Trash2,
-  User,
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useMe } from "../src/api/identity/useMe";
+import { useDisplayName } from "../src/identity/useDisplayName";
 import { useAuth } from "../src/auth/useAuth";
 import { useLogout } from "../src/auth/useLogout";
 import { maskEmail } from "../src/auth/email";
@@ -21,6 +21,7 @@ import { signInMethodNoticeStore } from "../src/auth/signInMethodNotice";
 
 import { ChangeSignInMethodSheet } from "@/components/account/ChangeSignInMethodSheet";
 import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
+import { UserAvatar } from "@/components/identity/UserAvatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +32,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -210,9 +210,7 @@ export default function ProfileScreen() {
   const { t } = useTranslation(["account", "common"]);
   const { data, isPending, isError, error, refetch } = useMe();
   const goBack = useSafeBack("/(tabs)/services");
-
-  // Without a name the avatar shows the person icon, never a method's first character.
-  const avatarInitial = data?.displayName?.charAt(0).toUpperCase();
+  const displayNameOf = useDisplayName();
 
   return (
     <SafeScreen>
@@ -238,32 +236,22 @@ export default function ProfileScreen() {
           className="flex-1"
           contentContainerClassName="pb-6"
         >
-          {/* Avatar, and the name only when the User has one. The name and
-              photo editors attach here later. */}
+          {/* The avatar and the name, set or generated. The name beside the
+              avatar is what a screen reader hears. The name and photo
+              editors attach here later. */}
           <View className="items-center gap-2.5 px-4 pb-5 pt-2">
-            <Avatar
-              className="size-[72px]"
-              alt={data.displayName ?? t("account:profile")}
+            <UserAvatar
+              size={72}
+              avatarIndex={data.avatarIndex}
+              avatarKey={data.avatarKey}
+              avatarUrl={data.avatarUrl}
+            />
+            <Text
+              className="max-w-full text-xl font-semibold text-foreground"
+              numberOfLines={1}
             >
-              {data.avatarUrl ? (
-                <AvatarImage source={{ uri: data.avatarUrl }} />
-              ) : null}
-              <AvatarFallback>
-                {avatarInitial ? (
-                  <Text className="text-2xl font-heading text-foreground">
-                    {avatarInitial}
-                  </Text>
-                ) : (
-                  <Icon as={User} className="size-8 text-muted-foreground" />
-                )}
-              </AvatarFallback>
-            </Avatar>
-
-            {data.displayName ? (
-              <Text className="text-xl font-semibold text-foreground">
-                {data.displayName}
-              </Text>
-            ) : null}
+              {displayNameOf(data)}
+            </Text>
           </View>
 
           <SignInMethods phone={data.phone} email={data.email} />
