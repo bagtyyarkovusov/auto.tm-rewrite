@@ -11,7 +11,7 @@ import { themeStore } from "../../src/theme/themeStore";
 import { queryKeys } from "../../src/api/queryKeys";
 import { act, fireEvent, renderMobile, routerMock } from "../render";
 
-type Me = { displayName: string | null; phone: string | null; email: string | null; avatarUrl: string | null };
+type Me = { displayName: string | null; nameNumber: number; avatarIndex: number; avatarKey: string | null; phone: string | null; email: string | null; avatarUrl: string | null };
 const state = vi.hoisted(() => ({
   isAuthenticated: false as boolean | null,
   me: { isPending: false, isError: false, data: undefined as Me | undefined },
@@ -45,7 +45,7 @@ function signedIn(me: Partial<Me> | "pending" | "error" = {}) {
   state.userId = USER_ID;
   if (me === "pending") state.me = { isPending: true, isError: false, data: undefined };
   else if (me === "error") state.me = { isPending: false, isError: true, data: undefined };
-  else state.me = { isPending: false, isError: false, data: { displayName: null, phone: PHONE, email: null, avatarUrl: null, ...me } };
+  else state.me = { isPending: false, isError: false, data: { displayName: null, nameNumber: 4821, avatarIndex: 7, avatarKey: null, phone: PHONE, email: null, avatarUrl: null, ...me } };
 }
 
 beforeEach(() => {
@@ -152,10 +152,10 @@ describe("Cabinet signed in", () => {
     expect(view.getByRole("button", { name: label })).toBeTruthy();
   });
 
-  it("shows the masked method alone when there is no display name", () => {
+  it("shows the generated name over the masked method when there is no display name", () => {
     signedIn({ phone: null, email: EMAIL });
     const view = renderMobile(<CabinetScreen />);
-    expect(view.getByRole("button", { name: maskEmail(EMAIL) })).toBeTruthy();
+    expect(view.getByRole("button", { name: `Driver 4821, ${maskEmail(EMAIL)}` })).toBeTruthy();
   });
 
   it("opens Profile and My listings", () => {

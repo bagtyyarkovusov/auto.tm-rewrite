@@ -16,8 +16,8 @@ vi.mock("../../src/api/identity/useMe", () => ({
   useMe: () => ({ ...state.me, error: new Error("Network request failed"), refetch: vi.fn() }),
 }));
 
-const me: { id: string; displayName: string | null; phone: string | null; email: string | null; avatarUrl: string | null; role: string; createdAt: string } = {
-  id: "user-1", displayName: "Aman", phone: "+99365123456", email: null, avatarUrl: null,
+const me: { id: string; displayName: string | null; nameNumber: number; avatarIndex: number; avatarKey: string | null; phone: string | null; email: string | null; avatarUrl: string | null; role: string; createdAt: string } = {
+  id: "user-1", displayName: "Aman", nameNumber: 4821, avatarIndex: 7, avatarKey: null, phone: "+99365123456", email: null, avatarUrl: null,
   role: "seller", createdAt: "2026-01-15T00:00:00.000Z",
 };
 
@@ -44,7 +44,7 @@ describe("Profile Sign-in Methods", () => {
     expect(view.getByRole("button", { name: "Email, Add" })).toBeTruthy();
   });
 
-  it("shows an email-only User without a name only the avatar and the rows", () => {
+  it("shows an email-only User without a name the generated name, the avatar and the rows", () => {
     withMe({ displayName: null, phone: null, email: "aman@example.com" });
     const view = renderMobile(<ProfileScreen />);
     expect(view.getByRole("button", { name: "Phone, Add" })).toBeTruthy();
@@ -52,6 +52,7 @@ describe("Profile Sign-in Methods", () => {
     // No masked method stands in for the missing name.
     expect(view.getAllByText("a•••@example.com")).toHaveLength(1);
     expect(view.queryByText("Aman")).toBeNull();
+    expect(view.getByText("Driver 4821")).toBeTruthy();
   });
 
   it("shows both masked methods when the User has both", () => {
