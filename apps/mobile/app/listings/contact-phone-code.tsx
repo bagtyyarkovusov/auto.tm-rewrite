@@ -148,7 +148,11 @@ export default function ContactPhoneCodeScreen() {
       const copy = getContactPhoneVerifyErrorCopy(verifyError, t);
       setError(copy.message);
       setNeedsNewCode(copy.needsNewCode);
-      if (!copy.needsNewCode) {
+      if (copy.needsNewCode) {
+        // The code is dead, so what was left of its resend wait no longer
+        // applies: "Send a new code" is offered at once.
+        setSecondsRemaining(0);
+      } else {
         otpRef.current?.focus();
       }
     } finally {
@@ -175,8 +179,7 @@ export default function ContactPhoneCodeScreen() {
   }
 
   async function resendCode() {
-    if (!phone || dailyLimit || isResending) return;
-    if (!needsNewCode && secondsRemaining > 0) return;
+    if (!phone || dailyLimit || isResending || secondsRemaining > 0) return;
 
     setError(null);
     setCode("");
@@ -194,10 +197,19 @@ export default function ContactPhoneCodeScreen() {
       otpRef.current?.focus();
     } catch (resendError) {
       const copy = getContactPhoneRequestErrorCopy(resendError, t);
-      setError(copy.message);
       setDailyLimit(copy.dailyLimit);
-      // A backoff refusal carries the wait; the countdown shows it.
-      if (copy.retryInSeconds != null) setSecondsRemaining(copy.retryInSeconds);
+      // A backoff refusal carries the wait: the message says it and the
+      // countdown holds the button, also for "Send a new code".
+      if (copy.retryInSeconds != null) {
+        setError(
+          t("contactPhoneRateWait", {
+            time: formatResendWait(copy.retryInSeconds),
+          }),
+        );
+        setSecondsRemaining(copy.retryInSeconds);
+      } else {
+        setError(copy.message);
+      }
     } finally {
       setIsResending(false);
     }
@@ -205,15 +217,17 @@ export default function ContactPhoneCodeScreen() {
 
   if (!phone) return null;
 
-  const resendLabel = needsNewCode
-    ? t("sendNewCode")
-    : secondsRemaining > 60
+  const resendBlocked = isResending || secondsRemaining > 0;
+  const resendLabel =
+    secondsRemaining > 60
       ? t("resendCodeInMinutes", { time: formatResendWait(secondsRemaining) })
       : secondsRemaining > 0
         ? t("resendCodeIn", { seconds: secondsRemaining })
-        : isResending
-          ? t("loading")
-          : t("resendContactCode");
+        : needsNewCode
+          ? t("sendNewCode")
+          : isResending
+            ? t("loading")
+            : t("resendContactCode");
 
   return (
     <SafeScreen>
@@ -295,14 +309,12 @@ export default function ContactPhoneCodeScreen() {
             <Button
               variant="link"
               className="self-start px-0"
-              disabled={
-                isResending || (!needsNewCode && secondsRemaining > 0)
-              }
+              disabled={resendBlocked}
               onPress={resendCode}
             >
               <Text
                 className={
-                  isResending || (!needsNewCode && secondsRemaining > 0)
+                  resendBlocked
                     ? "text-muted-foreground"
                     : "text-foreground underline"
                 }
