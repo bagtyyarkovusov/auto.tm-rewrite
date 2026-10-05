@@ -1,5 +1,6 @@
 import type { WizardSchemas } from "@auto-tm/contracts";
-import { describe, expect, it, vi } from "vitest";
+import * as Linking from "expo-linking";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fireEvent, renderMobile, within } from "../../../test/render";
 import type { StagedPhoto } from "../uploadStaging/types";
@@ -98,6 +99,34 @@ describe("Check and publish, the card preview", () => {
     ["tk", "Alyjylar bildirişiňizi şu görnüşde görer"],
   ])("has the buyers' note in %s", (locale, note) => {
     expect(check({}, locale).getByText(note)).toBeTruthy();
+  });
+});
+
+describe("Check and publish, the Posting rules line", () => {
+  beforeEach(() => {
+    vi.stubEnv("EXPO_PUBLIC_WEB_URL", "https://autotm.example");
+    vi.mocked(Linking.openURL).mockClear();
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each([
+    ["en", "By publishing you accept the Posting rules.", "Posting rules"],
+    ["ru", "Публикуя, вы принимаете Правила размещения.", "Правила размещения"],
+    ["tk", "Neşir etmek bilen siz Ýerleşdirme düzgünlerini kabul edýärsiňiz.", "Ýerleşdirme düzgünlerini"],
+  ])("in %s reads as one sentence and opens the Posting rules page for that language", (locale, sentence, link) => {
+    const screen = check({}, locale);
+
+    expect(screen.getByText(sentence)).toBeTruthy();
+    fireEvent.press(screen.getByRole("link", { name: link }));
+
+    expect(Linking.openURL).toHaveBeenCalledTimes(1);
+    expect(Linking.openURL).toHaveBeenCalledWith(`https://autotm.example/${locale}/legal/posting-rules`);
+  });
+
+  it("sits under the sections", () => {
+    const json = JSON.stringify(check().toJSON());
+
+    expect(json.indexOf("By publishing you accept the ")).toBeGreaterThan(json.indexOf('"Contact"'));
   });
 });
 
