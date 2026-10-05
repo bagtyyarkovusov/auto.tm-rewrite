@@ -62,7 +62,10 @@ describe("DraftsController listMyDrafts", () => {
 
       await expect(call).rejects.toBeInstanceOf(BadRequestException);
       await expect(call).rejects.toMatchObject({
-        response: { code: "VALIDATION_ERROR" },
+        response: {
+          code: "VALIDATION_FAILED",
+          details: { reason: "INVALID_CURSOR" },
+        },
       });
       expect(listMyDrafts).not.toHaveBeenCalled();
     }

@@ -125,7 +125,10 @@ describe("ListMyListings", () => {
         BadRequestException,
       );
       await expect(uc.execute({ userId: "user-1", cursor })).rejects.toMatchObject({
-        response: { code: "VALIDATION_ERROR" },
+        response: {
+          code: "VALIDATION_FAILED",
+          details: { reason: "INVALID_CURSOR" },
+        },
       });
     }
     expect(readSpy).not.toHaveBeenCalled();
