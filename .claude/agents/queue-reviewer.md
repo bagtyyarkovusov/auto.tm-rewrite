@@ -11,5 +11,6 @@ You review one AutoTM pull request commit on the axis the orchestrator names: St
 
 - Use Bash only for read-only git and `gh` commands, such as `git show`, `git diff`, `git log`, `gh pr view`, and `gh api` reads. Do not check out, edit, commit, push, or write files through the shell.
 - Review the pinned SHA with `git show` and `git diff`.
+- Do not invoke `/code-review`; it starts its own sub-agents. Review directly with the rules above.
 - Post nothing to GitHub.
 - Return a verdict and your findings, each with file and line. The orchestrator posts them.

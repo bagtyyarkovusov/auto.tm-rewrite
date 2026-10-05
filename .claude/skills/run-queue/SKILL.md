@@ -1,6 +1,6 @@
 ---
 name: run-queue
-description: Works a founder-given ordered list of AutoTM issues from one orchestrator session. The orchestrator dispatches each implementer into its own worktree using the host-specific lifecycle; each issue still gets its own run-issue branch, draft pull request, execution state, and fixed-commit reviews. The orchestrator sets auto-merge when both axes pass and starts the next ready issue without waiting for CI. Use when the user invokes /run-queue with issue numbers or asks one agent to work a queue of issues.
+description: Works a founder-given ordered list of AutoTM issues from one orchestrator session. The orchestrator dispatches each implementer into its own worktree using the host-specific lifecycle; each issue still gets its own run-issue branch, draft pull request, execution state, and fixed-commit reviews, unless the founder groups issues on an integration branch. The orchestrator sets auto-merge when both axes pass and starts the next ready issue without waiting for CI. Use when the user invokes /run-queue with issue numbers or asks one agent to work a queue of issues.
 argument-hint: "[issue numbers in order, with dependencies]"
 arguments:
   - queue
@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 # Run a queue of issues
 
-One orchestrator session owns a queue from start to finish, so it keeps context between related issues and does not wait idle for CI. It does not implement. Under this skill the orchestrator is the issue's integration owner, as run-issue, FINALIZATION, and ADR-0064 and ADR-0067 mean the term. Each issue's implementer is a separate agent in its own worktree, under the [host-specific lifecycle](../../../docs/agents/worktree-lifecycle.md#queue-implementer-worktrees). Every issue still follows [run-issue](../run-issue/SKILL.md) and the [coding workflow](../../../docs/agents/coding-workflow.md) in full; this skill adds ordering, implementer handoff, auto-merge, and stacking.
+One orchestrator session owns a queue from start to finish, so it keeps context between related issues and does not wait idle for CI. It does not implement. Under this skill the orchestrator is the issue's integration owner, as run-issue, FINALIZATION, and ADR-0064 and ADR-0067 mean the term. Each issue's implementer is a separate agent in its own worktree, under the [host-specific lifecycle](../../../docs/agents/worktree-lifecycle.md#queue-implementer-worktrees). Every issue still follows [run-issue](../run-issue/SKILL.md) and the [coding workflow](../../../docs/agents/coding-workflow.md) in full; this skill adds ordering, implementer handoff, auto-merge, stacking, and integration branches.
 
 ## Accept the queue
 
@@ -63,9 +63,10 @@ For the next issue whose dependencies are all closed, or whose only open depende
 
 1. Launch the issue's `queue-implementer` as above. It runs `run-issue`: reservation branch `agent/issue-<N>`, draft PR, `Execution state`, and verification.
 2. Read its report and the PR. Launch independent Standards and Spec reviewers as separate fresh `queue-reviewer` agents, read-only and pinned to the reported head SHA. Post their verdicts with their attribution, as [FINALIZATION.md](../run-issue/FINALIZATION.md#independent-review) describes. For findings, launch a fresh implementer for the fix round, then a `Delta` review when the fix qualifies under [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065).
+   During the [ADR-0083](../../../docs/adr/0083-a-standards-reviewer-may-commit-small-fixes.md) trial (the next five queue PRs, on Claude Code hosts only), launch the Standards reviewer as `queue-review-fixer` instead, once the implementer has stopped and auto-merge is off (step 5). Then launch a fresh `Delta` reviewer on its commits, and a fresh implementer for the findings it left and any Spec findings. The [trial exception](../run-issue/FINALIZATION.md#independent-review) owns what that `Delta` review carries forward, what follows a rejected reviewer commit, and the measures to record in `Execution state`. On Codex, or where the `queue-review-fixer` type is not loaded, the Standards reviewer stays read-only.
 3. When both axes pass on the current commit, directly or carried forward by a `Delta` review, set auto-merge as [FINALIZATION.md](../run-issue/FINALIZATION.md#checks-and-merge) describes. GitHub merges the PR once the required `pr` check passes.
 4. Do not wait for CI. Start the next ready issue. Between issues, read each open queue PR with `gh pr view <PR> --json state,mergedAt,autoMergeRequest,statusCheckRollup,comments`, and come back to it when its check fails, a reviewer or the founder comments, or it merges.
-5. Before launching an implementer for a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`. A push does not cancel auto-merge, so without this GitHub would merge the unreviewed commit. Set auto-merge again after the affected reviews pass.
+5. Before launching an implementer or `queue-review-fixer` for a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`. A push does not cancel auto-merge, so without this GitHub would merge the unreviewed commit. Set auto-merge again after the affected reviews pass.
 6. After each merge, verify the issue closed through `Closes #N`, run `git fetch origin`, and remove `blocked` from queued issues whose dependencies are now all closed, following [sprint-transitions.md](../../../docs/agents/sprint-transitions.md). Then run `pnpm worktree:gc`, read its report, and run `pnpm worktree:gc:apply` to retire the worktrees that pass the gate ([cleanup script](../../../docs/agents/worktree-lifecycle.md#run-the-cleanup-gate)). Apply only from the orchestrator's own checkout, with no implementer mid-run in a worktree it is about to retire; the script already keeps locked, dirty and running worktrees. When the script or a worktree could not be retired, record the cleanup tuple instead.
 
 A failed check on an auto-merge PR leaves it open. A fresh implementer repairs it within `run-issue`'s three-attempt cap; a content change re-runs the affected review before auto-merge is set again.
@@ -82,6 +83,23 @@ When the next issue depends on a PR of this queue that is reviewed but not merge
 6. Remove the child's `blocked` label. A clean rebase leaves the child's own diff unchanged: record a `Delta` review of the rebased commit that confirms this and carries the earlier verdicts forward. If a conflict changed the child's content, re-run the affected axes. Then set auto-merge.
 
 Wait instead of stacking when a rebase would need a semantic conflict resolution.
+
+## Integration branches
+
+When the founder groups issues under one parent spec ([ADR-0084](../../../docs/adr/0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md)), they share one branch and one PR instead of stacking. Unrelated issues keep one PR each.
+
+1. Create the integration branch from `origin/main` without a worktree: `git fetch origin`, then `git push origin origin/main:refs/heads/agent/spec-<parent>-<slug>`.
+2. Give each issue's implementer the integration branch as its base. It works on `agent/issue-<N>`, pushes checkpoints, opens no PR, and merges the integration tip into its branch before it reports. Until the integration PR exists, it keeps its `Execution state` in one comment on its issue, with the fields [BAIL-AND-RECOVERY.md](../run-issue/BAIL-AND-RECOVERY.md#pushed-checkpoint-without-a-draft-pr) lists, and updates that comment at each checkpoint. A resumed grouped issue starts from that comment and its branch head, and never opens its own PR.
+3. After every grouped issue has reported, launch one merger implementer. It runs once. Only one agent writes the integration branch at a time: the merger, a fix-round implementer and `queue-review-fixer` never overlap. The merger:
+   - runs `git fetch origin` and `git switch --detach origin/agent/spec-<parent>-<slug>`;
+   - merges the issue branches in issue-number order, each with `git merge --no-ff origin/agent/issue-<N>`;
+   - when `main` has moved since step 1, runs `git merge --no-ff origin/main`;
+   - resolves mechanical conflicts itself, and stops and reports on a conflict with more than one valid resolution;
+   - pushes with `git push origin HEAD:agent/spec-<parent>-<slug>`; and
+   - opens one draft PR with `gh pr create --draft --base main --head agent/spec-<parent>-<slug>`. Its body has a `Closes #<N>` line for every issue and one `Execution state` per issue, copied from that issue's comment.
+4. Review the integration PR once at its head, and start only after the last grouped issue is merged. Tell the Spec reviewer to check every issue's and slice's criteria. An integration PR counts as one of the ADR-0083 trial's five PRs.
+5. When one issue of the group fails review, launch the fix-round implementer on the integration branch, as in steps 2 and 5 of the per-issue loop: `git fetch origin`, `git switch --detach origin/agent/spec-<parent>-<slug>`, then `git push origin HEAD:agent/spec-<parent>-<slug>`. An issue branch is finished once the merger has folded it, so no re-merge is needed.
+6. Continue at step 3 of the per-issue loop. After the integration PR merges, delete each grouped issue's remote branch with `git push origin --delete agent/issue-<N>`, because GitHub removes only the PR's head branch.
 
 ## Stop and report
 
