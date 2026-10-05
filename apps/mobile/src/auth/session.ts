@@ -25,14 +25,17 @@ export async function storeAuthSession(
   lastUserId = session.user.id;
   // Before the session listeners, so no screen renders the new User as signed
   // in while the previous User's data is still held. The session is already
-  // stored, so the session listeners hear of it even when one of these throws.
-  try {
-    if (previousUserId !== null && previousUserId !== session.user.id) {
-      userChangeListeners.forEach((listener) => listener());
-    }
-  } finally {
-    notifySessionChanged();
+  // stored, so a listener that throws is logged and the sign-in still resolves.
+  if (previousUserId !== null && previousUserId !== session.user.id) {
+    userChangeListeners.forEach((listener) => {
+      try {
+        listener();
+      } catch (error) {
+        console.error("[authSession] user-change listener failed", error);
+      }
+    });
   }
+  notifySessionChanged();
 }
 
 export async function loadAuthSession(): Promise<StoredAuthSession | null> {

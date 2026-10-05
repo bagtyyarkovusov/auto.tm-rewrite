@@ -133,6 +133,7 @@ describe("Signing in as someone else after the API ended the session", () => {
     );
     await view.findByRole("button", { name: "Edit name" });
     expect(view.getByText("Sign-in methods")).toBeTruthy();
+    expect(view.getAllByText(PHONE).length).toBeGreaterThan(0);
 
     // A request other than /me is refused, and so is the refresh. Aman's /me
     // is still cached, and nobody is signed in.
