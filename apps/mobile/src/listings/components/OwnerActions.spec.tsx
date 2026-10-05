@@ -144,6 +144,32 @@ it("tells the seller to add a phone through Edit when a relist answer says one i
   ).toBeTruthy();
   expect(screen.queryByText("Confirm the contact phone")).toBeNull();
 });
+it("clears the add-a-phone hint when the next action starts", async () => {
+  api.post.mockRejectedValueOnce(new ApiError("CONTACT_PHONE_REQUIRED", 409));
+  const screen = renderMobile(
+    <OwnerActions listingId="listing-373" status="archived" mode="menu" />,
+  );
+  fireEvent.press(screen.getByRole("button", { name: "More options" }));
+  fireEvent.press(screen.getByRole("button", { name: "Relist" }));
+  await act(async () => {
+    fireEvent.press(screen.getByText("Confirm"));
+  });
+  const hint = "This Listing has no contact phone. Add one through Edit, then relist.";
+  expect(await screen.findByText(hint)).toBeTruthy();
+
+  // The seller added a phone through Edit and relists again; this time it works.
+  api.post.mockResolvedValueOnce({
+    id: "550e8400-e29b-41d4-a716-446655440000",
+    status: "active",
+    publishedAt: "2026-10-05T12:00:00.000Z",
+  });
+  fireEvent.press(screen.getByRole("button", { name: "Relist" }));
+  await act(async () => {
+    fireEvent.press(screen.getByText("Confirm"));
+  });
+
+  expect(screen.queryByText(hint)).toBeNull();
+});
 
 vi.mock("expo-secure-store", () => ({
   getItemAsync: vi.fn(async () => null),

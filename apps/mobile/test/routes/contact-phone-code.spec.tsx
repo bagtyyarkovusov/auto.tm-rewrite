@@ -83,7 +83,7 @@ describe("contact-phone-code screen", () => {
   it("says where the code went, that it expires in 5 minutes, and what it allows", () => {
     const screen = renderMobile(<ContactPhoneCodeScreen />);
 
-    expect(screen.getByText("Enter the code")).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Enter the code" })).toBeTruthy();
     expect(screen.getByText("Code sent to +993 61 XX-XX-01")).toBeTruthy();
     expect(screen.getByText("The code expires in 5 minutes.")).toBeTruthy();
     expect(

@@ -298,6 +298,36 @@ describe("Sell wizard Contact step", () => {
     },
   );
 
+  it("holds Done on a number the server refused while the confirmed list is not known", async () => {
+    fixture.confirmedPhones = undefined;
+    fixture.publish.mutateAsync.mockRejectedValue(
+      new ApiError(ListingsSchemas.ListingsErrorCode.ContactPhoneNotConfirmed, 409),
+    );
+    resume("stale");
+    const screen = renderMobile(<SellScreen />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Publish" }));
+    });
+
+    // The refusal settles what the app could not judge: the row is expired.
+    expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: `${STALE_PHONE}, Confirmation expired. Tap to confirm again.`,
+      }),
+    ).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Done" }));
+    });
+
+    expect(
+      screen.getByText("Confirm this number again or choose another"),
+    ).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+  });
+
   it("still requires a contact phone when calls are off, and shows no calls-off line (D7)", () => {
     fixture.auth = { isAuthenticated: true, phone: null };
     resume("callsOff");

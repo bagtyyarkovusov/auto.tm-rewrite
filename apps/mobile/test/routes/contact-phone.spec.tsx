@@ -57,7 +57,9 @@ describe("contact-phone screen", () => {
     routeParams.returnPathname = "/(tabs)/sell";
     const screen = renderMobile(<ContactPhoneScreen />);
 
-    expect(screen.getByText("Another contact number")).toBeTruthy();
+    expect(
+      screen.getByRole("header", { name: "Another contact number" }),
+    ).toBeTruthy();
     expect(
       screen.getByText(/We'll text a code to this number/),
     ).toBeTruthy();
@@ -69,7 +71,9 @@ describe("contact-phone screen", () => {
     routeParams.reconfirm = "1";
     const screen = renderMobile(<ContactPhoneScreen />);
 
-    expect(screen.getByText("Confirm the number again")).toBeTruthy();
+    expect(
+      screen.getByRole("header", { name: "Confirm the number again" }),
+    ).toBeTruthy();
     expect(screen.getByDisplayValue("62 99-99-99")).toBeTruthy();
   });
 
