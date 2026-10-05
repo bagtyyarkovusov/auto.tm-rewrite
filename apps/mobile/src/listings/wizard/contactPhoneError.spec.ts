@@ -1,6 +1,8 @@
+import { createInstance } from "i18next";
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "../../api/client";
+import { resources } from "../../i18n/resources";
 
 import {
   getContactPhoneRequestErrorCopy,
@@ -151,5 +153,29 @@ describe("publish and relist rejections", () => {
     expect(isContactPhonePublishError(new ApiError("RATE_LIMITED", 429))).toBe(false);
     expect(isContactPhonePublishError(new Error("boom"))).toBe(false);
     expect(isContactPhoneRequiredError(new ApiError("CONTACT_PHONE_NOT_CONFIRMED", 400))).toBe(false);
+  });
+});
+
+describe("the daily limit wording (ADR-0081)", () => {
+  function translator(locale: string) {
+    const i18n = createInstance();
+    void i18n.init({ lng: locale, resources, defaultNS: "common", initImmediate: false });
+    return i18n.t.bind(i18n) as (key: string, options?: Record<string, unknown>) => string;
+  }
+
+  it.each([
+    ["en", "No more codes to this number today. Try again tomorrow or use another number."],
+    ["ru", "Сегодня коды на этот номер больше не отправляются. Попробуйте завтра или укажите другой номер."],
+    ["tk", "Şu gün bu belgä başga kod iberilmeýär. Ertir synanyşyň ýa-da başga belgi giriziň."],
+  ])("%s names no time", (locale, message) => {
+    const copy = getContactPhoneRequestErrorCopy(
+      new ApiError("RATE_LIMITED", 400, undefined, {
+        reason: "destination_limit",
+        retryInSeconds: 0,
+      }),
+      translator(locale),
+    );
+    expect(copy.message).toBe(message);
+    expect(copy.dailyLimit).toBe(true);
   });
 });

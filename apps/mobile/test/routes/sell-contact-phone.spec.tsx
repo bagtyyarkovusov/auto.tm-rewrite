@@ -25,6 +25,10 @@ const fixture = vi.hoisted(() => {
     id,
     payloads: {
       atContact: { ...car, ...details, ...photos, ...price, ...place },
+      callsOff: {
+        ...car, ...details, ...photos, ...price, ...place,
+        allowCalls: false, allowChat: true,
+      },
       stale: {
         ...car, ...details, ...photos, ...price, ...place, ...contact,
         contactPhone: "+99369999999",
@@ -261,6 +265,20 @@ describe("Sell wizard Contact step", () => {
       ).toBeNull();
     },
   );
+
+  it("still requires a contact phone when calls are off, and shows no calls-off line (D7)", () => {
+    fixture.auth = { isAuthenticated: true, phone: null };
+    resume("callsOff");
+    const screen = renderMobile(<SellScreen />);
+
+    expect(screen.getByText("Contact phone")).toBeTruthy();
+    expect(screen.queryByText(/calls are off/i)).toBeNull();
+
+    fireEvent.press(screen.getByRole("button", { name: "Continue" }));
+
+    expect(screen.getByText("Choose or confirm a contact phone")).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+  });
 
   it("Continue is enabled with the preselected sign-in phone and moves to Check and publish", async () => {
     resume("atContact");
