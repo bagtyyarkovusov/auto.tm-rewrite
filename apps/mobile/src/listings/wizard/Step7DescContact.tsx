@@ -18,7 +18,7 @@ interface Step7DescContactProps {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
   disabled?: boolean;
-  /** The seller's sign-in phone from `useMe`; null for an email-only User. */
+  /** The seller's sign-in phone from `useAuth`; null for an email-only User. */
   accountPhone?: string | null;
   confirmedPhones?: ListingsSchemas.VerifiedContactPhone[];
   /** Edit mode: the Listing's stored number, selectable without a code. */

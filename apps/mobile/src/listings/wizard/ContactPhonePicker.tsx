@@ -14,9 +14,12 @@ interface ContactPhonePickerProps {
   /** The draft or edit payload's chosen number (canonical `+993…`). */
   selectedPhone: string | undefined;
   onSelect: (phone: string) => void;
-  /** The seller's sign-in phone from `useMe`; null for an email-only User. */
+  /** The seller's sign-in phone from `useAuth`; null for an email-only User. */
   accountPhone?: string | null;
-  /** Reusable confirmed numbers from `GET /me/contact-phones`. */
+  /**
+   * Reusable confirmed numbers from `GET /me/contact-phones`; `undefined`
+   * while the list is not known (loading, or the request failed).
+   */
   confirmedPhones?: ListingsSchemas.VerifiedContactPhone[];
   /** Edit mode: the Listing's stored number, selectable without a code. */
   currentListingPhone?: string | null;
@@ -43,44 +46,55 @@ function RadioMark({ selected }: { selected: boolean }) {
   );
 }
 
+/**
+ * One number. A selectable row is a radio that says whether it is chosen; the
+ * expired row is a button, because it starts a confirmation instead of
+ * choosing. Either way the label carries the sub line, so a screen reader
+ * hears whose number it is and how long it lasts.
+ */
 function PhoneRow({
   phone,
   sub,
   selected,
-  destructive,
-  chevron,
+  expired,
   disabled,
   onPress,
 }: {
   phone: string;
-  sub: string;
+  /** Left out for a number the app cannot judge yet. */
+  sub?: string;
   selected: boolean;
-  destructive?: boolean;
-  chevron?: boolean;
+  expired?: boolean;
   disabled?: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={phone}
-      accessibilityState={{ selected, disabled: disabled ?? false }}
+      accessibilityRole={expired ? "button" : "radio"}
+      accessibilityLabel={sub ? `${phone}, ${sub}` : phone}
+      accessibilityState={
+        expired
+          ? { disabled: disabled ?? false }
+          : { checked: selected, disabled: disabled ?? false }
+      }
       disabled={disabled}
       onPress={onPress}
       className="min-h-12 flex-row items-center gap-3 py-3 active:opacity-70"
     >
       <View className="flex-1 gap-0.5">
         <Text className="text-base text-foreground">{phone}</Text>
-        <Text
-          className={cn(
-            "text-xs",
-            destructive ? "text-destructive" : "text-muted-foreground",
-          )}
-        >
-          {sub}
-        </Text>
+        {sub ? (
+          <Text
+            className={cn(
+              "text-xs",
+              expired ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {sub}
+          </Text>
+        ) : null}
       </View>
-      {chevron ? (
+      {expired ? (
         <Icon as={ChevronRight} className="size-4 text-muted-foreground" />
       ) : (
         <RadioMark selected={selected} />
@@ -93,14 +107,16 @@ function PhoneRow({
  * The Contact step's phone picker (ADR-0056, ADR-0081): the sign-in phone
  * first, then the numbers still inside their 7-day reuse window with the days
  * left, then "Another number". A saved number whose window has ended is shown
- * but not selectable — tapping it starts a new confirmation. An email-only
- * User gets an explanation instead of a preselected number.
+ * once, as a row that is not selectable: tapping it starts a new confirmation.
+ * While the confirmed list is not known, a saved number stays a plain chosen
+ * row, unless a publish has already refused it. An email-only User gets an
+ * explanation instead of a preselected number.
  */
 export function ContactPhonePicker({
   selectedPhone,
   onSelect,
   accountPhone,
-  confirmedPhones = [],
+  confirmedPhones,
   currentListingPhone,
   onAnotherNumber,
   onConfirmExpired,
@@ -117,11 +133,23 @@ export function ContactPhonePicker({
     confirmedPhones,
   });
 
-  const listedPhones = new Set(confirmedPhones.map((p) => p.phone));
+  // An entry with no days left is not a quick pick; if it is the chosen
+  // number it shows below, once, as the expired row.
+  const reusablePhones = (confirmedPhones ?? []).flatMap((entry) => {
+    const daysLeft = entry.reusableUntil
+      ? contactPhoneDaysLeft(entry.reusableUntil)
+      : 0;
+    return daysLeft > 0 ? [{ phone: entry.phone, daysLeft }] : [];
+  });
+  const listedPhones = new Set(reusablePhones.map((p) => p.phone));
   const showCurrentRow =
     currentListingPhone != null &&
     currentListingPhone !== accountPhone &&
     !listedPhones.has(currentListingPhone);
+  // The server's refusal settles what the app could not judge.
+  const expired =
+    selection.kind === "stale" ||
+    (selection.kind === "pending" && publishPhoneError);
 
   return (
     <View className="gap-1.5">
@@ -170,30 +198,34 @@ export function ContactPhonePicker({
           />
         ) : null}
 
-        {confirmedPhones.map((entry) => (
+        {reusablePhones.map((entry) => (
           <PhoneRow
             key={entry.phone}
             phone={entry.phone}
-            sub={t("confirmedDaysLeft", {
-              count: entry.reusableUntil
-                ? contactPhoneDaysLeft(entry.reusableUntil)
-                : 0,
-            })}
+            sub={t("confirmedDaysLeft", { count: entry.daysLeft })}
             selected={selection.kind === "confirmed" && selectedPhone === entry.phone}
             disabled={disabled}
             onPress={() => onSelect(entry.phone)}
           />
         ))}
 
-        {selection.kind === "stale" && selectedPhone ? (
+        {expired && selectedPhone ? (
           <PhoneRow
             phone={selectedPhone}
             sub={t("confirmationExpiredTap")}
             selected={false}
-            destructive
-            chevron
+            expired
             disabled={disabled}
             onPress={() => onConfirmExpired(selectedPhone)}
+          />
+        ) : null}
+
+        {selection.kind === "pending" && !expired && selectedPhone ? (
+          <PhoneRow
+            phone={selectedPhone}
+            selected
+            disabled={disabled}
+            onPress={() => onSelect(selectedPhone)}
           />
         ) : null}
 
