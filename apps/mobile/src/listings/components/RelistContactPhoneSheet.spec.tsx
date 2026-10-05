@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { fireEvent, renderMobile, routerMock } from "../../../test/render";
+
 import { RelistContactPhoneSheet } from "./RelistContactPhoneSheet";
 
-import { fireEvent, renderMobile, routerMock } from "../../../test/render";
 
 const detail = vi.hoisted(
   () => ({ data: undefined as { contactPhone?: string } | undefined }),

@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { ListingsSchemas } from "@auto-tm/contracts";
 
 import { ApiError } from "../../src/api/client";
 import SellScreen from "../../app/(tabs)/sell";
-
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

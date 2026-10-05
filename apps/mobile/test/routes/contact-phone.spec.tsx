@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../src/api/client";
-
 import ContactPhoneScreen from "../../app/listings/contact-phone";
-
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 
 const mocks = vi.hoisted(() => ({

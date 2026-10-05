@@ -20,6 +20,7 @@ import {
   getContactPhoneRequestErrorCopy,
   getContactPhoneVerifyErrorCopy,
 } from "../../src/listings/wizard/contactPhoneError";
+import { contactPhoneReturnHref } from "../../src/listings/wizard/contactPhoneReturn";
 import { HELP_HREF } from "../../src/navigation/helpHref";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
@@ -112,7 +113,7 @@ export default function ContactPhoneCodeScreen() {
         // the Listing. Say so and return there either way.
         show({ title: t("actionFailed"), variant: "destructive" });
       }
-      router.dismissTo(returnPathname);
+      router.dismissTo(contactPhoneReturnHref(returnPathname, purpose));
       return;
     }
     show({
@@ -123,10 +124,13 @@ export default function ContactPhoneCodeScreen() {
       ),
       variant: "success",
     });
-    router.dismissTo({
-      pathname: returnPathname,
-      params: { confirmedContactPhone: phone },
-    });
+    router.dismissTo(
+      contactPhoneReturnHref(
+        returnPathname,
+        purpose,
+        phone ? { confirmedContactPhone: phone } : {},
+      ),
+    );
   }
 
   async function submitCode(nextCode: string) {
@@ -161,7 +165,7 @@ export default function ContactPhoneCodeScreen() {
       lastSubmittedCode.current = code;
       void submitCode(code);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Runs when the code or the verifying flag changes; submitCode reads the rest live.
   }, [code, isVerifying]);
 
   function handleCodeChange(value: string) {

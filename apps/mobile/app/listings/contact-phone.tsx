@@ -16,6 +16,7 @@ import { useRepublishListing } from "../../src/api/listings/useRepublishListing"
 import { useRequestContactPhoneCode } from "../../src/api/listings/useRequestContactPhoneCode";
 import { usePhoneField } from "../../src/auth/usePhoneField";
 import { getContactPhoneRequestErrorCopy } from "../../src/listings/wizard/contactPhoneError";
+import { contactPhoneReturnHref } from "../../src/listings/wizard/contactPhoneReturn";
 import { HELP_HREF } from "../../src/navigation/helpHref";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
@@ -72,14 +73,15 @@ export default function ContactPhoneScreen() {
         // the Listing. Say so and return there either way.
         show({ title: t("actionFailed"), variant: "destructive" });
       }
-      router.dismissTo(returnPathname);
+      router.dismissTo(contactPhoneReturnHref(returnPathname, purpose));
       return;
     }
     show({ title: t("contactPhoneAlreadyConfirmed"), variant: "success" });
-    router.dismissTo({
-      pathname: returnPathname,
-      params: { confirmedContactPhone: canonicalPhone },
-    });
+    router.dismissTo(
+      contactPhoneReturnHref(returnPathname, purpose, {
+        confirmedContactPhone: canonicalPhone,
+      }),
+    );
   }
 
   async function handleSendCode() {
