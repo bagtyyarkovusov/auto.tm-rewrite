@@ -17,6 +17,9 @@ function user(methods: Pick<User, "phone" | "phoneVerifiedAt" | "email" | "email
   return {
     id: "user-1",
     displayName: null,
+    nameNumber: 4821,
+    avatarIndex: 7,
+    avatarKey: null,
     avatarUrl: null,
     locale: "ru",
     role: "buyer",

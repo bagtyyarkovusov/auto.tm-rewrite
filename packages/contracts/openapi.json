@@ -5988,6 +5988,19 @@
             "type": "string",
             "nullable": true
           },
+          "nameNumber": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 9999
+          },
+          "avatarIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "avatarKey": {
+            "type": "string",
+            "nullable": true
+          },
           "role": {
             "type": "string",
             "enum": [
@@ -6021,6 +6034,9 @@
           "email",
           "phoneVerified",
           "displayName",
+          "nameNumber",
+          "avatarIndex",
+          "avatarKey",
           "role",
           "avatarUrl",
           "locale",
@@ -10224,6 +10240,19 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "nameNumber": {
+                      "type": "integer",
+                      "minimum": 1000,
+                      "maximum": 9999
+                    },
+                    "avatarIndex": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "avatarKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "role": {
                       "type": "string",
                       "enum": [
@@ -10257,6 +10286,9 @@
                     "email",
                     "phoneVerified",
                     "displayName",
+                    "nameNumber",
+                    "avatarIndex",
+                    "avatarKey",
                     "role",
                     "avatarUrl",
                     "locale",

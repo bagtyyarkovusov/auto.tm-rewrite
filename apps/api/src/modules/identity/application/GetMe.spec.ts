@@ -13,6 +13,9 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: null,
     emailVerifiedAt: null,
     displayName: "Bagtyyar",
+    nameNumber: 4821,
+    avatarIndex: 7,
+    avatarKey: null,
     avatarUrl: "https://example.com/avatar.jpg",
     locale: "ru",
     role: "buyer",
@@ -80,6 +83,20 @@ describe("GetMe", () => {
 
     expect(result.displayName).toBeNull();
     expect(result.avatarUrl).toBeNull();
+  });
+
+  it("returns the name number, the avatar index and a null avatar key, with no name set", async () => {
+    const user = makeUser({ displayName: null, nameNumber: 1000, avatarIndex: 11 });
+    userRepo.users.set(user.id, user);
+
+    const result = await makeUseCase(userRepo).execute({ userId: "user-1" });
+
+    expect(result).toMatchObject({
+      displayName: null,
+      nameNumber: 1000,
+      avatarIndex: 11,
+      avatarKey: null,
+    });
   });
 
   it("returns an email-only User with a null phone and phoneVerified false", async () => {

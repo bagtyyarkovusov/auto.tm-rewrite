@@ -109,7 +109,14 @@ export const MeResponseSchema = z.object({
   phone: PhoneTm.nullable(),
   email: z.string().email().nullable(),
   phoneVerified: z.boolean(),
+  // Null until the User sets a name; show `formatDisplayName` instead.
   displayName: z.string().nullable(),
+  // Server-assigned for the life of the account (#353 identity design).
+  nameNumber: z.number().int().min(1000).max(9999),
+  // Index into the app's car avatars; take it modulo the app's own set size.
+  avatarIndex: z.number().int().nonnegative(),
+  // Object key of the profile photo; null until photos ship.
+  avatarKey: z.string().nullable(),
   role: z.nativeEnum(UserRole),
   avatarUrl: z.string().nullable(),
   locale: z.string().nullable(),

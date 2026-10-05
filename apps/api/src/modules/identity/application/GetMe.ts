@@ -13,6 +13,9 @@ export interface GetMeResult {
   email: string | null;
   phoneVerified: boolean;
   displayName: string | null;
+  nameNumber: number;
+  avatarIndex: number;
+  avatarKey: string | null;
   role: string;
   avatarUrl: string | null;
   locale: string | null;
@@ -39,6 +42,9 @@ export class GetMe {
       email: user.email,
       phoneVerified: isPhoneVerified(user),
       displayName: user.displayName,
+      nameNumber: user.nameNumber,
+      avatarIndex: user.avatarIndex,
+      avatarKey: user.avatarKey,
       role: user.role,
       avatarUrl: user.avatarUrl,
       locale: user.locale,
