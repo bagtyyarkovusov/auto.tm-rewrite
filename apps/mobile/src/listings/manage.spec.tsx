@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderMobile, act, fireEvent, routeParams, routerMock, within } from "../../test/render";
 import ManageListingsScreen from "../../app/listings/manage";
+import { ApiError } from "../api/client";
 
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -334,6 +335,65 @@ describe("My listings action sheet", () => {
     expect(view.getByText("Back on sale")).toBeTruthy();
     expect(view.queryByText("2018 Toyota RAV4")).toBeNull();
     expect(tab(view, /^Active/).props.accessibilityLabel).toBe("Active, 3");
+  });
+
+  it("opens the contact phone sheet when a relist answer says the number needs a new code", async () => {
+    api.post.mockImplementation((url: string) =>
+      url.endsWith("/republish")
+        ? Promise.reject(new ApiError("CONTACT_PHONE_NOT_CONFIRMED", 409))
+        : postAction(url),
+    );
+    api.get.mockImplementation((url: string) =>
+      url === "/listings/rav4-1"
+        ? Promise.resolve({ contactPhone: "+99362000002" })
+        : serve(url),
+    );
+    const view = await renderScreen();
+    await openTab(view, /^Archive/);
+    await openActions(view, "2018 Toyota RAV4");
+    fireEvent.press(view.getByRole("button", { name: "Relist" }));
+    await settle();
+    fireEvent.press(view.getByRole("button", { name: "Confirm" }));
+    await settle();
+    expect(view.getByText("Confirm the contact phone")).toBeTruthy();
+    expect(
+      view.getByText(
+        "+99362000002 was confirmed more than 7 days ago. Confirm it again to relist.",
+      ),
+    ).toBeTruthy();
+    fireEvent.press(view.getByRole("button", { name: "Send code" }));
+    await settle();
+    expect(routerMock.push).toHaveBeenCalledWith({
+      pathname: "/listings/contact-phone",
+      params: {
+        phone: "+99362000002",
+        reconfirm: "1",
+        purpose: "relist",
+        listingId: "rav4-1",
+        returnPathname: "/listings/manage",
+      },
+    });
+  });
+
+  it("tells the seller to add a phone through Edit when a relist answer says one is required", async () => {
+    api.post.mockImplementation((url: string) =>
+      url.endsWith("/republish")
+        ? Promise.reject(new ApiError("CONTACT_PHONE_REQUIRED", 409))
+        : postAction(url),
+    );
+    const view = await renderScreen();
+    await openTab(view, /^Archive/);
+    await openActions(view, "2018 Toyota RAV4");
+    fireEvent.press(view.getByRole("button", { name: "Relist" }));
+    await settle();
+    fireEvent.press(view.getByRole("button", { name: "Confirm" }));
+    await settle();
+    expect(
+      view.getByText(
+        "This Listing has no contact phone. Add one through Edit, then relist.",
+      ),
+    ).toBeTruthy();
+    expect(view.queryByText("Confirm the contact phone")).toBeNull();
   });
 
   it("asks before Delete draft, deletes it and updates the count", async () => {

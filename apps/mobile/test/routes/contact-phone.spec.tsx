@@ -228,4 +228,14 @@ describe("contact-phone screen", () => {
     });
     expect(routerMock.dismissTo).toHaveBeenCalledWith("/listings/manage");
   });
+
+  it("keeps the Listing's own number read-only on a relist", () => {
+    routeParams.purpose = "relist";
+    routeParams.listingId = "listing-1";
+    routeParams.phone = "+99362000002";
+    routeParams.returnPathname = "/listings/manage";
+    const screen = renderMobile(<ContactPhoneScreen />);
+
+    expect(screen.getByDisplayValue("62 00-00-02").props.editable).toBe(false);
+  });
 });
