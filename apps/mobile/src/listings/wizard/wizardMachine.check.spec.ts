@@ -104,6 +104,16 @@ describe("Changing a step from Check and publish (#588)", () => {
     expect(state).toMatchObject({ status: "publishing", publishError: null });
   });
 
+  it("goes back to Check with no publish error when the save before publishing fails", () => {
+    let state = wizardMachineReducer(atCheck(), { type: "PUBLISH_START" });
+    state = wizardMachineReducer(state, { type: "PUBLISH_ABORTED" });
+
+    expect(state).toMatchObject({ status: "step", currentStep: "review", publishError: null });
+    expect(buildMachineContext(state).canPublish).toBe(true);
+    // Only a publish under way can be aborted.
+    expect(wizardMachineReducer(state, { type: "PUBLISH_ABORTED" })).toBe(state);
+  });
+
   it("keeps Back after a failed publish, and Back clears the failure", () => {
     let state = wizardMachineReducer(atCheck(), { type: "PUBLISH_START" });
     expect(buildMachineContext(state).canGoBack).toBe(false);

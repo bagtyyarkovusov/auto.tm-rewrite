@@ -368,8 +368,16 @@ export default function SellScreen() {
 
     dispatch({ type: "PUBLISH_START" });
 
+    // Publish sends what the server holds, so the draft must be saved first. One
+    // attempt: a retry left running could change the draft after it is published.
+    // A failed save sends nothing, and the save status says what went wrong.
+    if (!(await flush(fullPayload))) {
+      dispatch({ type: "PUBLISH_ABORTED" });
+      publishingRef.current = false;
+      return;
+    }
+
     try {
-      await forceSave(fullPayload);
       const result = await publishDraft.mutateAsync(machineState.draftId);
       show({
         title: t("listingPublished"),
@@ -387,7 +395,7 @@ export default function SellScreen() {
     } finally {
       publishingRef.current = false;
     }
-  }, [machineState, photosToSave, forceSave, publishDraft, show]);
+  }, [machineState, photosToSave, flush, publishDraft, show]);
 
   const closeWizard = useCallback(() => {
     newDraftIdRef.current = null;

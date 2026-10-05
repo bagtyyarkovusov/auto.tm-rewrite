@@ -10,7 +10,7 @@ const fixture = vi.hoisted(() => {
   const id = "550e8400-e29b-41d4-a716-446655440000";
   const photos = [{ photoId: id, key: "photo.jpg", sortOrder: 0, state: "uploaded" }];
   return {
-    id, photos, publish: vi.fn(), forceSave: vi.fn(), save: vi.fn(),
+    id, photos, publish: vi.fn(), forceSave: vi.fn(), flush: vi.fn(), save: vi.fn(),
     drafts: { items: [{ id, payload: {
       currentStep: 8, validatedSteps: ["vin", "photos", "vehicle", "specs", "price", "location", "contact"],
       photos, brandId: id, modelId: id, year: 2020, condition: "used", mileageKm: 10000,
@@ -32,7 +32,7 @@ vi.mock("../../src/api/listings/useCreateDraft", () => ({ useCreateDraft: () => 
 vi.mock("../../src/api/listings/useDiscardDraft", () => ({ useDiscardDraft: () => ({ mutate: vi.fn() }) }));
 vi.mock("../../src/api/listings/usePublishDraft", () => ({ usePublishDraft: () => ({ mutateAsync: fixture.publish }) }));
 vi.mock("../../src/listings/wizard/useWizardAutosave", () => ({ useWizardAutosave: () => ({
-  save: fixture.save, forceSave: fixture.forceSave, retrySave: vi.fn(), saveStatus: "saved", saveError: null,
+  save: fixture.save, forceSave: fixture.forceSave, flush: fixture.flush, retrySave: vi.fn(), saveStatus: "saved", saveError: null,
 }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
   photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
@@ -54,6 +54,8 @@ beforeEach(() => {
   routeParams.resumeDraftId = fixture.id;
   fixture.publish.mockReset().mockRejectedValue(new Error("Publish failed"));
   fixture.forceSave.mockReset().mockResolvedValue(undefined);
+  // The save before publishing goes through.
+  fixture.flush.mockReset().mockResolvedValue(true);
 });
 
 function renderWizard() {

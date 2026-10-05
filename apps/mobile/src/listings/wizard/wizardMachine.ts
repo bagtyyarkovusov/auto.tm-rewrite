@@ -78,6 +78,8 @@ export type WizardMachineAction =
   /** Create flow: Done on a step opened from Check and publish. */
   | { type: "RETURN_TO_REVIEW" }
   | { type: "PUBLISH_START" }
+  /** The save before publishing failed, so nothing was published: back to Check. */
+  | { type: "PUBLISH_ABORTED" }
   | { type: "PUBLISH_SUCCESS"; listingId: string }
   | { type: "PUBLISH_ERROR"; error: string }
   | { type: "DISCARD" };
@@ -418,6 +420,12 @@ export function wizardMachineReducer(
       // A failed publish leaves the seller on Check, where it can be tried again.
       if (state.status !== "step" && state.status !== "publishError") return state;
       return { ...state, status: "publishing", publishError: null };
+    }
+
+    case "PUBLISH_ABORTED": {
+      // The save's own failure says what went wrong; there is no publish error.
+      if (state.status !== "publishing") return state;
+      return { ...state, status: "step", publishError: null };
     }
 
     case "PUBLISH_SUCCESS": {
