@@ -9,7 +9,6 @@ export interface UserRepository {
   create(signInMethods: SignInMethods): Promise<User>;
   delete(id: string): Promise<void>;
   scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void>;
-  clearDeletionSchedule(userId: string): Promise<void>;
   findUsersWithExpiredDeletionGrace(now: Date): Promise<User[]>;
   /** Day-30 purge of the User row: frees both Sign-in Methods and clears profile PII. */
   purgePersonalData(userId: string): Promise<void>;
