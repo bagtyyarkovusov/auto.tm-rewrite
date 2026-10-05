@@ -325,10 +325,11 @@ function SaveErrorBanner({
 
 /** Why the last publish failed, above Publish. It interrupts a screen reader, since the seller just asked to publish. */
 function PublishErrorAlert({ message }: { message: string }) {
-  // `accessibilityLiveRegion` covers Android; iOS has no live regions, so it is
-  // announced. The alert unmounts while a publish runs, so each failure announces.
+  // Announced on both platforms: iOS has no live regions, and TalkBack does not
+  // reliably read a live region that appears already filled. The alert unmounts
+  // while a publish runs, so each failure announces.
   useEffect(() => {
-    if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message);
+    AccessibilityInfo.announceForAccessibility(message);
   }, [message]);
 
   return (
