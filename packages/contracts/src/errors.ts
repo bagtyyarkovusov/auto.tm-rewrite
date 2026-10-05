@@ -14,6 +14,7 @@ export const ErrorCode = {
   OtpLocked: "OTP_LOCKED",
   OtpNotFound: "OTP_NOT_FOUND",
   SignInMethodTaken: "SIGN_IN_METHOD_TAKEN",
+  InvalidDisplayName: "INVALID_DISPLAY_NAME",
   Internal: "INTERNAL",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
