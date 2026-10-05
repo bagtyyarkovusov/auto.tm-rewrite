@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Platform } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fireEvent, renderMobile, within } from "../../../test/render";
@@ -93,6 +93,18 @@ describe("WizardLayout publish error (#588)", () => {
     expect(announcements.filter((message) => message === error)).toHaveLength(1);
 
     screen.rerender(check({ publishError: error }));
+    expect(announcements.filter((message) => message === error)).toHaveLength(1);
+  });
+
+  it("announces the error on Android too, where a new live region may not be read", () => {
+    const os = Platform.OS;
+    Platform.OS = "android";
+    try {
+      renderMobile(check({ publishError: error }));
+    } finally {
+      Platform.OS = os;
+    }
+
     expect(announcements.filter((message) => message === error)).toHaveLength(1);
   });
 
