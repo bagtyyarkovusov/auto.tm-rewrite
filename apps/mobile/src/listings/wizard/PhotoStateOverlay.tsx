@@ -29,10 +29,12 @@ export function PhotoStateOverlay({ photo }: PhotoStateOverlayProps) {
     );
   }
 
+  // Queued for upload: centred like an upload, so the corner ✕ never hides it.
   if (photo.state === "compressed") {
     return (
-      <View className="absolute right-1 top-1 rounded-full bg-black/40 p-1">
-        <ActivityIndicator size="small" color="white" />
+      <View className="absolute inset-0 items-center justify-center bg-black/40">
+        <ActivityIndicator color="white" />
+        <Text className="mt-1 text-xs text-white">{t("photoStateQueued")}</Text>
       </View>
     );
   }
