@@ -73,7 +73,7 @@ Apple App Store policy requires every app with account creation to offer in-app 
 
 - Cabinet → Profile → Delete account. The screen states the 30-day grace period instead of "This can't be undone": what happens to the User, Listings and Conversations, then an "I understand" tick, a confirmation dialog, and a scheduled screen. Deleting from the app uses the signed-in session and asks for no code and no re-entered phone or email.
 - Finishing deletion signs the User out everywhere and lands on Cabinet, signed out.
-- Soft-delete: `User.deletionScheduledAt` set; all listings → `archived`; conversations → closed system message; refresh tokens revoked
+- Soft-delete: `User.deletionScheduledAt` set; the User's active Listings → `archived`, tagged `archivedByDeletion` ([ADR-0032](../../adr/0032-account-deletion-grace-period.md)); Conversations → closed system message; refresh tokens revoked
 - 30-day grace period: signing back in with either Sign-in Method asks whether to restore the User. Only confirming the restore prompt clears `deletionScheduledAt` and republishes the Listings that the deletion archived, to their pre-deletion active state; Listings the User had archived earlier stay archived ([ADR-0032](../../adr/0032-account-deletion-grace-period.md)). Cancelling leaves the deletion pending and the User signed out. An unrelated sign-in gets no prompt and does not touch the deleted User.
 - After 30 days: hard-delete personally identifiable data, including nulling `phone`, `email` and both verified-at times; preserve listings, messages, moderation reports, and audit rows as "Deleted user" / historical attribution for audit trail
 - API endpoint: `DELETE /api/v1/me`

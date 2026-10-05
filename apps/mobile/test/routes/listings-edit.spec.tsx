@@ -44,7 +44,7 @@ vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
 }));
 vi.mock("lucide-react-native", async () => {
   const Icon = (await import("react-native")).View;
-  return { Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon, ChevronLeft: Icon, RefreshCw: Icon };
+  return { Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon, ChevronLeft: Icon, RefreshCw: Icon, Lock: Icon };
 });
 vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ show: fixture.show }) }));
 vi.mock("react-native-safe-area-context", async () => ({
@@ -97,7 +97,7 @@ describe("legacy Listing edit", () => {
     fireEvent.press(screen.getByRole("radio", { name: `Damaged / needs repair: ${answer}` }));
     expect(screen.queryByText("Answer whether the car is damaged or needs repair")).toBeNull();
     fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
-    expect(screen.getByText(`Damaged / needs repair: ${answer}`)).toBeTruthy();
+    expect(screen.getByText(`10,000 km · Damaged / needs repair: ${answer}`)).toBeTruthy();
     const save = screen.getByRole("button", { name: "Save changes", disabled: false });
     expect.soft(save.props.className.split(" ")).toContain("w-full");
     expect.soft(save.props.className.split(" ")).not.toContain("flex-1");
@@ -156,10 +156,10 @@ describe("legacy Listing edit", () => {
     expect(screen.queryByText("Mileage is required for used cars")).toBeNull();
   });
 
-  it("opens a New Listing without disclosure directly at Check with Save changes", () => {
+  it("opens a New Listing without disclosure directly at the section list with Save changes", () => {
     fixture.listing = { ...fixture.baseline, condition: "new", conditionDisclosure: undefined };
     const screen = renderMobile(<EditListingScreen />);
-    expect(screen.getByText("Check and publish")).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
     expect(screen.queryByPlaceholderText("e.g. 150")).toBeNull();
@@ -167,15 +167,13 @@ describe("legacy Listing edit", () => {
     expect(fixture.save).not.toHaveBeenCalled();
   });
 
-  it("clears this Listing's staged photos when the seller discards the edit", () => {
+  it("clears this Listing's staged photos when the seller leaves the edit with changes", () => {
     const screen = renderMobile(<EditListingScreen />);
     fireEvent.press(screen.getByRole("radio", { name: "Damaged / needs repair: Yes" }));
-    fireEvent.press(screen.getByRole("button", { name: "Discard" }));
+    fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
+    fireEvent.press(screen.getByRole("button", { name: "Close" }));
     expect(fixture.deleteDraftDir).not.toHaveBeenCalled();
-    // The confirmation dialog's action, rendered after the header button's label.
-    const [confirm] = screen.getAllByText("Discard").slice(-1);
-    if (!confirm) throw new Error("No discard confirmation");
-    fireEvent.press(confirm);
+    fireEvent.press(screen.getByRole("button", { name: "Leave" }));
     expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
   });
 
@@ -294,7 +292,7 @@ describe("legacy Listing edit", () => {
       refetch({ favoriteCount: 2, updatedAt: "2026-10-02T12:00:00.000Z" });
       screen.rerender(<EditListingScreen />);
       expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
-      expect(screen.getByText("Damaged / needs repair: Yes")).toBeTruthy();
+      expect(screen.getByText("10,000 km · Damaged / needs repair: Yes")).toBeTruthy();
     });
 
     it("starts a different Listing from its own server baseline", () => {
@@ -308,7 +306,7 @@ describe("legacy Listing edit", () => {
         conditionDisclosure: { damaged: false },
       };
       screen.rerender(<EditListingScreen />);
-      expect(screen.getByText("Damaged / needs repair: No")).toBeTruthy();
+      expect(screen.getByText("10,000 km · Damaged / needs repair: No")).toBeTruthy();
       expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
     });
   });
