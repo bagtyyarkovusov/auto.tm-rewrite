@@ -147,3 +147,13 @@ vi.mock("@rn-primitives/portal", () => ({
 vi.mock("react-native-worklets", () => ({
   scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
 }));
+// react-native-svg draws through native views. The stub keeps each element and
+// its props as a host node (`Svg`, `Path`, `Circle`), so a spec can read the
+// geometry and colours a component supplied. Nothing is drawn.
+vi.mock("react-native-svg", async () => {
+  const React = await import("react");
+  const host = (name: string) =>
+    ({ children, ...props }: { children?: unknown; [key: string]: unknown }) =>
+      React.createElement(name, props, children as never);
+  return { default: host("Svg"), Svg: host("Svg"), Path: host("Path"), Circle: host("Circle") };
+});
