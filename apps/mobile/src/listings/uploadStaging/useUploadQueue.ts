@@ -146,17 +146,20 @@ export function useUploadQueue(
 
   // Initialize queue from draft + local files
   useEffect(() => {
-    if (initializedStagingKey.current === stagingKey) return;
     // The hook outlives each wizard session. Photos still in the queue belong to
-    // the draft that was open before, and must not be merged into this one. This
-    // runs before the guard below, so a draft reopened while its first init is
-    // still reading the device does not keep the photos of the one in between.
+    // the draft that was open before, and must not be merged into this one. The
+    // emptied queue is no longer any draft's restored queue, so a draft reopened
+    // before the key in between has settled is read from the device again. This
+    // runs before both guards below for that reason.
     if (queueRef.current.stagingKey !== stagingKey) {
       for (const photoId of uploadQueue.current) uploadsInFlight.current.delete(photoId);
       uploadQueue.current = [];
       queueRef.current = { stagingKey, photos: [] };
       setQueue(queueRef.current);
+      initializedStagingKey.current = null;
+      setReadyKey(null);
     }
+    if (initializedStagingKey.current === stagingKey) return;
     // One init per staging key. A second one, started when the payload changes
     // while the first is still reading the device, would rebuild the queue from
     // that later payload and replace the keyed photos the first one restored.

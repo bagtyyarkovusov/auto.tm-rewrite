@@ -73,6 +73,19 @@ function buildPickedPhotos(
   }));
 }
 
+// How long ✕ waits for its save or delete. One request can take 30 seconds to time
+// out, and a token refresh before it more, which is too long to hold ✕ disabled.
+const CLOSE_WAIT_MS = 10_000;
+
+/** `work`, or `onTimeout` if it has not settled within the close wait. */
+function withinCloseWait<T>(work: Promise<T>, onTimeout: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(onTimeout), CLOSE_WAIT_MS);
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
+
 export default function SellScreen() {
   const { t } = useTranslation();
   // `phone` follows the live auth session, so signing in from this tab's own
@@ -186,15 +199,26 @@ export default function SellScreen() {
     }
   }, [uploadQueue.photos, queueReady]);
 
+  // The photos a save sends: the queue's keyed ones. Until the queue holds the open
+  // draft's photos, the keyed ones the draft was opened with, so Back, Continue or
+  // ✕ in that moment does not write the draft without its photos.
+  const photosToSave = useMemo(
+    () =>
+      queueReady
+        ? buildPayloadPhotos(uploadQueue.photos)
+        : (machineState.payload.photos ?? []).filter((p) => !!p.key),
+    [queueReady, uploadQueue.photos, machineState.payload.photos],
+  );
+
   // Stable key for autosave trigger — avoids 25+ individual deps and reference churn
   const payloadKey = useMemo(
     () =>
       JSON.stringify({
         ...machineState.payload,
-        photos: buildPayloadPhotos(uploadQueue.photos),
+        photos: photosToSave,
         validatedSteps: machineState.validatedSteps,
       }),
-    [machineState.payload, machineState.validatedSteps, uploadQueue.photos],
+    [machineState.payload, machineState.validatedSteps, photosToSave],
   );
 
   // Autosave when payload changes. Not before the queue holds this draft's photos:
@@ -203,7 +227,7 @@ export default function SellScreen() {
     if (!queueReady || machineState.status !== "step") return;
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
-      photos: buildPayloadPhotos(uploadQueue.photos),
+      photos: photosToSave,
       validatedSteps: machineState.validatedSteps,
     };
     save(fullPayload);
@@ -305,11 +329,11 @@ export default function SellScreen() {
     const moved = wizardMachineReducer(machineState, { type: "BACK" });
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...moved.payload,
-      photos: buildPayloadPhotos(uploadQueue.photos),
+      photos: photosToSave,
       validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [machineState, uploadQueue.photos, forceSave]);
+  }, [machineState, photosToSave, forceSave]);
 
   const handleContinue = useCallback(() => {
     if (discardDraft.isPending || publishDraft.isPending) return;
@@ -327,11 +351,11 @@ export default function SellScreen() {
     const moved = wizardMachineReducer(machineState, { type: "NEXT" });
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...moved.payload,
-      photos: buildPayloadPhotos(uploadQueue.photos),
+      photos: photosToSave,
       validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave, discardDraft.isPending, publishDraft.isPending]);
+  }, [ctx.canContinue, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending]);
 
   const handlePublish = useCallback(async () => {
     if (!machineState.draftId) return;
@@ -339,7 +363,7 @@ export default function SellScreen() {
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
       description: machineState.payload.description?.trim(),
-      photos: buildPayloadPhotos(uploadQueue.photos),
+      photos: photosToSave,
       validatedSteps: machineState.validatedSteps,
     };
 
@@ -362,7 +386,7 @@ export default function SellScreen() {
         title: message, variant: "destructive", topClearance: wizardHeaderHeight.current,
       });
     }
-  }, [machineState, uploadQueue.photos, forceSave, publishDraft, show]);
+  }, [machineState, photosToSave, forceSave, publishDraft, show]);
 
   const closeWizard = useCallback(() => {
     newDraftIdRef.current = null;
@@ -383,7 +407,7 @@ export default function SellScreen() {
 
       const payload: WizardSchemas.WizardDraftPayload = {
         ...machineState.payload,
-        photos: buildPayloadPhotos(uploadQueue.photos),
+        photos: photosToSave,
         validatedSteps: machineState.validatedSteps,
       };
 
@@ -399,7 +423,8 @@ export default function SellScreen() {
           discardPending();
           try {
             // Wait, so a New listing tapped right after counts the drafts without this one.
-            await discardDraft.mutateAsync(id);
+            // A delete that has not answered in time is left to finish on its own.
+            await withinCloseWait(discardDraft.mutateAsync(id).then(() => undefined), undefined);
           } catch {
             // Nothing was typed, so nothing is lost; the empty draft stays and can be
             // deleted from My listings.
@@ -413,7 +438,9 @@ export default function SellScreen() {
           setUnsavedDialogOpen(true);
           return;
         }
-        if (!(await flush(payload))) {
+        // A save that has not answered in time counts as failed: the seller is asked
+        // instead of waiting out a dead connection with ✕ disabled.
+        if (!(await withinCloseWait(flush(payload), false))) {
           setUnsavedDialogOpen(true);
           return;
         }
@@ -430,6 +457,7 @@ export default function SellScreen() {
       machineState.payload,
       machineState.validatedSteps,
       uploadQueue.photos,
+      photosToSave,
       saveStatus,
       flush,
       discardPending,

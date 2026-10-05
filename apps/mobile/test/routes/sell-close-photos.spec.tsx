@@ -216,6 +216,7 @@ describe("Sell wizard, closing a draft with ✕ and opening one again in the sam
     await act(async () => { release(); });
     await letAutosaveRun();
 
+    expect(savedPayloads(a.id).length).toBeGreaterThan(0);
     for (const payload of savedPayloads(a.id)) {
       expect(payload.photos).toEqual([a.savedPhoto]);
       expect(payload.validatedSteps).toEqual(expect.arrayContaining(LATER_STEPS));
