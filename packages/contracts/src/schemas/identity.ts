@@ -1,6 +1,17 @@
 import { z } from "zod";
 
-import { UserRole } from "../enums";
+import { type Locale, UserRole } from "../enums";
+
+export const GENERATED_NAME_PREFIX: Record<Locale, string> = { en: "", ru: "", tk: "" };
+
+export const AVATAR_COUNT = 0;
+
+export function formatDisplayName(
+  _user: { displayName: string | null; nameNumber: number },
+  _locale: string,
+): string {
+  throw new Error("Not implemented");
+}
 
 export const UserSummarySchema = z.object({
   id: z.string().uuid(),
