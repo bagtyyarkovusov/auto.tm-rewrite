@@ -45,6 +45,7 @@ function build() {
     unused as never,
     unused as never,
     recoverAccount as never,
+    unused as never,
   );
   return { calls, controller, getMe, recoverAccount };
 }

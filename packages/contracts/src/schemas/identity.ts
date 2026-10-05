@@ -42,6 +42,61 @@ export function formatDisplayName(
   return `${prefix} ${user.nameNumber}`;
 }
 
+/** Fewest characters a Display Name may have, after normalizing. */
+export const DISPLAY_NAME_MIN = 2;
+/** Most characters a Display Name may have, after normalizing. */
+export const DISPLAY_NAME_MAX = 30;
+
+/**
+ * The form a Display Name is stored in: spaces at the ends dropped and runs
+ * of whitespace turned into one space. The app counts and saves this form.
+ */
+export function normalizeDisplayName(raw: string): string {
+  return raw.trim().replace(/\s+/g, " ");
+}
+
+/** Why a Display Name is refused; sent as `details.reason` on INVALID_DISPLAY_NAME. */
+export const DisplayNameProblem = {
+  Empty: "empty",
+  TooShort: "too_short",
+  TooLong: "too_long",
+} as const;
+export type DisplayNameProblem =
+  (typeof DisplayNameProblem)[keyof typeof DisplayNameProblem];
+
+export const InvalidDisplayNameDetailsSchema = z.object({
+  reason: z.nativeEnum(DisplayNameProblem),
+});
+export type InvalidDisplayNameDetails = z.infer<typeof InvalidDisplayNameDetailsSchema>;
+
+/** Number of characters as a reader counts them: Unicode code points. */
+export function displayNameLength(raw: string): number {
+  return Array.from(normalizeDisplayName(raw)).length;
+}
+
+/**
+ * The one Display Name rule, shared by the API and the app: 2 to 30 code
+ * points after normalizing. Any script, digit or emoji passes; names are not
+ * unique and are not moderated. Answers nothing for an acceptable name.
+ */
+export function displayNameProblem(raw: string): DisplayNameProblem | undefined {
+  const length = displayNameLength(raw);
+  if (length === 0) return DisplayNameProblem.Empty;
+  if (length < DISPLAY_NAME_MIN) return DisplayNameProblem.TooShort;
+  if (length > DISPLAY_NAME_MAX) return DisplayNameProblem.TooLong;
+  return undefined;
+}
+
+/**
+ * Body of `PATCH /api/v1/me`. Only the name can change; other fields are
+ * dropped. The rule itself is checked by the server, which answers
+ * INVALID_DISPLAY_NAME with the reason.
+ */
+export const UpdateMeRequestSchema = z.object({
+  displayName: z.string(),
+});
+export type UpdateMeRequest = z.infer<typeof UpdateMeRequestSchema>;
+
 export const UserSummarySchema = z.object({
   id: z.string().uuid(),
   phone: z.string(),

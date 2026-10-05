@@ -141,6 +141,7 @@ class FakeUsers implements UserRepository, SignInMethodRepository {
     return this.users.find((user) => user.id === id) ?? null;
   }
 
+  async updateDisplayName(): Promise<void> {}
   async scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void> {
     this.scheduled.set(userId, deletionScheduledAt);
   }

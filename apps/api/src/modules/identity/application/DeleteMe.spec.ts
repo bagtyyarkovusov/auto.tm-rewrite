@@ -50,6 +50,7 @@ class FakeUserRepository implements UserRepository {
     this.users.delete(id);
   }
 
+  async updateDisplayName(): Promise<void> {}
   async scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void> {
     this.scheduledDeletions.set(userId, deletionScheduledAt);
   }
