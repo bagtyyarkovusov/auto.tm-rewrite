@@ -1119,7 +1119,7 @@ export const resources: Resource = {
       defaultPhone: "Bellenen: {{phone}}",
       enterPhoneNumber: "Telefon belgiňizi giriziň",
       descriptionPlaceholder: "Awtomobiliňizi düşündiriň...",
-      thisIsHowBuyersSee: "Satyn alyjylar bildirişiňizi şu görnüşde görerler",
+      thisIsHowBuyersSee: "Alyjylar bildirişiňizi şu görnüşde görer",
       notAvailable: "Bildiriş indi elýeterli däl",
       removedSoldOrArchived: "Belki öçürildi, satyldy ýa-da arhiw edildi.",
       goBack: "Yza",
