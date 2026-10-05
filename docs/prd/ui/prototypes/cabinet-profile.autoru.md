@@ -2,7 +2,8 @@
 
 Throwaway evidence for #353 on `prototype/cabinet-profile`. It is not application code and nothing in it is approved except the list under "Locked". Recommendations are recommendations. Do not merge or delete this branch.
 
-- Prototype: `cabinet-profile.prototype.html`, SHA256 `814fdb5fd74037b7ca49b20d218df6ac402fdd130865c9d9d5f43070f7418f05`.
+- Prototype: `cabinet-profile.prototype.html`. The version this note first described is at `8402d60` (SHA256 `814fdb5fd74037b7ca49b20d218df6ac402fdd130865c9d9d5f43070f7418f05`); the founder chose every recommended option there on 2026-10-02.
+- The file has since gained the identity states (generated name, name editor, assigned car avatar, profile photo). They are described under [Identity update, 2026-10-05](#identity-update-2026-10-05) at the end. Everything above that section describes `8402d60` and is unchanged, except that "no name editor was added" no longer holds.
 - Previous version: `a051fafb`, described in `cabinet-profile.reconciliation.md`. The founder rejected it on 2026-10-02 (second round).
 - Source read for the inventory: `origin/main` at `8ed5dcb`.
 
@@ -130,3 +131,111 @@ Shortcuts in the flow harness, so they are not mistaken for UI evidence: the tab
 - The seller-function table is from reading source. No API was called and no test was run to confirm a transition. Two cells are inference from reading code rather than from running it: that a banned Listing appears in no My listings tab, and that drafts have no cap.
 - Favorites and Conversations count endpoints were not looked up.
 - Independent verification and founder review are outstanding.
+
+## Identity update, 2026-10-05
+
+Added to the same file, on top of `8402d60`. Nothing that the founder approved there was changed: the eight decisions keep their defaults, and every earlier jump state still renders.
+
+It follows two founder comments on #353, both of 2026-10-02: answer 5 of "Founder decisions on the #353 slicing questions" (name and photo are in the release) and "Founder decisions: identity design", items (a) to (d). The founder delegated visual approval of this update to the orchestrator, so the choices below were made without stopping to ask. They are choices, not founder decisions.
+
+### What the founder decided
+
+| | Decision | In the prototype |
+|---|---|---|
+| (a) | A generated name: a neutral, localized prefix and a number. No car-word combinations | "Driver 4821", "Водитель 4821", "Sürüji 4821" on the Cabinet row and the Profile header |
+| (b) | 2 to 30 characters, not unique, no moderation, editable in Profile | The name editor and its error states |
+| (c) | About 12 car-themed avatars bundled in the app; the server assigns an index stored on the User; shown until a photo is set | 12 marks, the index shown in the side panel, drawn at every size used |
+| (d) | The profile photo reuses the Listing upload pipeline (after #536, now merged) | The photo sheet and the upload states, with the Listing pipeline's limits |
+
+### What was added
+
+- **Cabinet row and Profile header.** Every signed-in User now has a name: the one they set, or the generated one. The masked Sign-in Method is always the second line of the Cabinet row. The initial-letter avatar is gone.
+- **Name editor.** A screen opened from the name on Profile (the name has a pencil). The field holds the current name. Under it sit the rule and a counter. Save is disabled until the name is valid and different. States: too short, too long, empty, only spaces, saving, a failed save with Retry, offline, and saved.
+- **Assigned avatar.** Twelve original line marks on a tinted circle: sedan, hatchback, SUV, pickup, van, steering wheel, wheel, key, speedometer, gear shift, road, headlight. No brand logos and nothing copied from Auto.ru. The side panel shows the set in light and dark and lets the index be changed.
+- **Profile photo.** The avatar on Profile carries a camera badge and opens a sheet: Take photo, Choose from library, and Remove photo when one is set. States: camera permission denied, uploading with progress, a failed upload with Retry, offline, a file that is too large, a file that is not a usable picture, success, removal back to the assigned avatar, and a failed removal.
+- **Seen by another User.** Three stubs: the seller block on Listing detail, the Conversation header, and the Messages rows. Each can show a User with a generated name and assigned avatar, with a set name and photo, with a set name and no photo, and a deleted User. Listing detail belongs to #351 and Messages to #352; only the name and avatar are designed here.
+- **Side panel.** An "Identity" block (name, photo, the assigned number and index, how another User is shown), the avatar library, one-shot results for the next name save and the next photo, and a camera permission switch.
+- **Deep links.** `#j=<jump name>&lang=ru&theme=dark` opens a state directly, so a ticket can point at one.
+
+### Jump states added (36)
+
+- **Identity: name and assigned avatar:** Cabinet: generated name · Profile: generated name · Cabinet: set name + photo · Profile: set name + photo · Profile: set name, assigned avatar · Cabinet: 30-character name · Profile: 30-character name
+- **Identity: name editor:** Name: editor opens · Name: editor, set name · Name: valid, changed · Name: too short · Name: too long · Name: empty · Name: only spaces · Name: saving · Name: save failed · Name: offline · Name: saved
+- **Identity: profile photo:** Photo: entry point on avatar · Photo: sheet (no photo) · Photo: sheet (photo set) · Photo: camera permission denied · Photo: uploading · Photo: upload failed · Photo: offline · Photo: too large · Photo: unsupported file · Photo: success · Photo: removed, assigned avatar back · Photo: remove failed
+- **Identity: seen by another User:** Seller card: generated name + avatar · Seller card: set name + photo · Conversation header: generated name + avatar · Conversation header: set name + photo · Conversation header: deleted user · Messages rows
+
+"Messages stub" under "Other tabs" now opens the same Messages rows.
+
+### Draft wording for a native-speaker pass
+
+| Key | EN | RU | TK |
+|---|---|---|---|
+| Generated-name prefix | Driver | Водитель | Sürüji |
+
+"Водитель" and "Sürüji" are the plain words for a person who drives. Both are masculine by form; Russian has no neutral everyday word, and "Sürüji" is used for either sex. Every other new string (the rule, the four errors, the photo sheet, the permission dialog, the upload messages) is a draft too. The slicing answer 4 on #353 says to build with the drafts.
+
+### Design choices the founder decisions did not settle
+
+Each is one line with its reason.
+
+**Name**
+
+1. The number has four digits, 1000 to 9999, and is random and not unique. Names are not unique anyway (b), and four digits are quick to read out.
+2. The server stores the number, not the text, and each viewer sees the prefix in their own language. A Russian reader should not see "Driver" on someone's Listing, and the stored name stays empty until the User sets one.
+3. The name on Profile is the entry point, marked with a pencil. No extra "Name" row, so Profile stays as minimal as the founder approved.
+4. The editor is its own screen, like Add phone and Add email. A sheet leaves too little room for the keyboard and an error.
+5. The field opens holding the current name, also when it is the generated one. The User sees exactly what others see before changing it.
+6. Spaces at the ends are dropped, runs of spaces become one, and the length is counted in characters after that. "  A  " is one character, and no name can look empty.
+7. The field lets the User type past 30 and shows the error and a red counter, up to a hard stop at 40. Silently cutting a pasted name hides the reason.
+8. The rule line is neutral until the field is edited; after that an error replaces it at once. No error is shown for a name the User has not touched.
+9. An empty name is refused, and there is no "back to the generated name" control. The founder did not ask for one; it is listed as an open question.
+10. Nothing but length is checked: any script, digits and emoji pass. Decision (b) says no moderation.
+11. Back with unsaved text leaves without asking. It is one short field.
+12. Leaving while a save is in flight does not cancel it; Profile shows the result when it lands. The earlier review asked for exactly this (P3-3 on the code screen).
+13. A failed save keeps the typed text and turns the button into Retry; offline uses the app's existing offline sentence. Nothing has to be typed twice.
+14. After a save the User is back on Profile with a short "Name saved". In the build that message uses Profile's notice line, which never covers a button.
+
+**Assigned avatar**
+
+15. The twelve marks and their order are fixed: 0 sedan, 1 hatchback, 2 SUV, 3 pickup, 4 van, 5 steering wheel, 6 wheel, 7 key, 8 speedometer, 9 gear shift, 10 road, 11 headlight. The server stores the position, so the order may only ever grow at the end.
+16. An app that receives an index it does not have takes it modulo its own set size. An older build then still draws a car instead of nothing.
+17. Each mark has its own soft tint, lighter in light theme and deeper in dark, and none is the brand red. Twelve grey circles look alike in a chat list, and red means an action in this app.
+18. The User cannot choose a car avatar. Decision (c) says the server assigns it; a picker is listed as an open question.
+19. A signed-out Cabinet row and a deleted User show the neutral person icon, not a car. A car there would suggest an account.
+20. Sizes: 72 on Profile, 48 on the Cabinet row, 44 on the seller block, 36 in the Conversation header, 24 on a Messages row. The first three are the sizes those screens use today.
+
+**Photo**
+
+21. The avatar itself is the entry point and carries a small camera badge. It is where people look for it, and it needs no new row.
+22. The sheet has Take photo and Choose from library, and Remove photo only when a photo is set. A Remove that does nothing should not be offered.
+23. Only the camera asks for permission. Choosing from the library uses Android's system photo picker, which needs none, so there is no "library access denied" state.
+24. When camera permission is denied, a dialog explains and offers Open settings and Cancel. The app cannot ask again once Android has stopped showing the prompt.
+25. There is no crop screen in the app. The system picker's square crop is used and the photo is shown in a circle.
+26. While uploading, the avatar shows the chosen photo dimmed with a progress ring, and a line gives the percent. There is no Cancel: the file is small and the upload is short.
+27. The earlier avatar stays until the upload succeeds. A failure never leaves the User without an avatar.
+28. A failed upload shows a box under the header with Retry and Cancel; Retry reuses the chosen photo. Offline uses the same box with the offline sentence.
+29. Too large and unsupported are found on the device before anything is sent, and offer "Choose another photo". Retrying the same file cannot help.
+30. The limits shown are the Listing pipeline's: 5 MB, and JPEG, PNG or WebP. The app compresses to JPEG first, so the size error should be rare.
+31. Remove photo has no confirm dialog. Choosing a photo again undoes it.
+32. A failed removal keeps the photo and offers Retry in the same box.
+
+**Seen by another User**
+
+33. In the seller block the avatar replaces the grey person icon, and "Private seller" always sits under the name. The role is a fact about the seller and no longer stands in for a missing name.
+34. In the Conversation header the avatar sits to the left of the name.
+35. In a Messages row the Listing thumbnail still leads (#352 D8) and the other User's avatar is a 24-point badge on its corner. The row keeps its layout and gains the face.
+36. A deleted User keeps today's "Deleted user" name with the person icon.
+37. "Private seller" and "Buyer" stop being used as names. Every User now has one.
+38. A name is always one line and ends in "…" when it does not fit. Thirty wide characters do not fit beside an avatar on a small phone.
+
+### Not designed here
+
+- Name and avatar on the web Listing page, in the admin console and in push notification titles. The same rule applies (name, or prefix and number in the reader's language), but no screen was drawn.
+- A "Report this name or photo" path. Decision (b) puts moderation outside the reviewer release.
+- The system camera, the system photo picker and its crop. They are Android's own screens; the prototype goes straight from the sheet to the upload.
+
+### Verification of the identity update
+
+- `node /tmp/identity-353/check.cjs`: the page script run in Node against a stub document. All 97 jump states in EN, RU and TK, light and dark (582 renders, each also rebuilding the side panel): no exception, no `undefined`, `NaN` or `[object` in visible text or attributes, and every string key has three values. 42 assertions passed: the name rule at its edges (0, 1, 2, 30, 31 characters, spaces), Save disabled until valid and changed, save, a failed save and its retry, offline keeping the text, a save that lands after the User left, upload to success, Remove offered only with a photo, removal restoring the assigned avatar, a failed upload and its retry, too large, unsupported, camera permission denied, a failed removal and its retry, and the generated name in three languages.
+- Headless Chrome on the file URL with a private profile under `/tmp`, nine states screenshotted and looked at (Profile, the editor's too-long error in Russian dark, uploading in Turkmen, the failed upload in Russian, the photo sheet in dark, the seller block in Russian dark, the Conversation header in Turkmen, the Messages rows, and Cabinet with a 30-character name in Turkmen dark). No console error was logged. Two defects were found and fixed this way: the tints did not apply in light theme, and a 30-character name wrapped onto two lines on the Cabinet row.
+- Not evidenced: the 446,976-render sweep and the 215 DOM flows above were not rerun; no independent review of this commit; no native Android check; no screen reader or keyboard check; RU and TK wording not reviewed by a native speaker; repository gates not run (one HTML file and two notes changed).

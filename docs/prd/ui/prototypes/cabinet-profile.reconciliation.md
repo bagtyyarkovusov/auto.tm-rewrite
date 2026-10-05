@@ -1,6 +1,8 @@
 # Cabinet and account prototype reconciliation, 2026-10-02
 
 > Historical. This note describes the version at `a051fafb`, which the founder rejected on 2026-10-02. The current prototype is described in [cabinet-profile.autoru.md](cabinet-profile.autoru.md).
+>
+> Updated 2026-10-05: two statements below no longer describe the prototype file. The Cabinet and Profile screens now show a name for every User (the one they set, or a generated one such as "Driver 4821") and an assigned car avatar or a profile photo, and Profile has a name editor and a photo sheet. The mock account logic this note verifies (sign-in, add and change, taken value, deletion, restore) was not touched. See "Identity update, 2026-10-05" in the other note for the states, the choices made and what was checked.
 
 This is throwaway evidence for #353 on `prototype/cabinet-profile`. It is not an application implementation, a production PR, or founder approval of the surviving proposals. Preserve the branch and worktree.
 

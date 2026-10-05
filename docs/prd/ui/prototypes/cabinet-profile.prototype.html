@@ -17,16 +17,49 @@
   Account values and codes are made up. Support contacts are the founder-approved public contacts (#352 D10).
   Colours are AutoTM tokens from apps/mobile/global.css. Auto.ru is a structure reference, not a visual template (ADR-0051).
   New RU/TK wording needs founder review.
+
+  Identity update (2026-10-05), added on top of the approved version at 8402d60 without changing it. It follows the
+  founder decisions of 2026-10-02 on #353 (slicing answer 5 and "identity design" a to d): a generated display name
+  ("Driver 4821"), a name editor with the 2 to 30 rule, a bundled car-themed avatar library of 12 with a server-assigned
+  index, a profile photo that reuses the Listing upload pipeline, and the places where another User sees the name and
+  avatar. The 12 marks are original line drawings made for this file: no brand logos, nothing copied from Auto.ru.
+  The "photos" are made-up drawings, not people. Choices the founder decisions did not settle are listed in
+  cabinet-profile.autoru.md under "Identity update".
 -->
 <style>
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#171717;background:#f4f4f2}
   .wrap{display:flex;gap:24px;padding:20px 20px 90px;align-items:flex-start}
-  .phone{
+  .phone,.tok{
     --bg:hsl(0 0% 100%);--fg:hsl(0 0% 9%);--primary:hsl(0 90% 48%);--secondary:hsl(45 5% 96%);
-    --muted:hsl(45 5% 92%);--mfg:hsl(0 0% 45%);--border:hsl(45 8% 90%);--destructive:hsl(8 78% 46%);--info:#2563eb;
+    --muted:hsl(45 5% 92%);--mfg:hsl(0 0% 45%);--border:hsl(45 8% 90%);--destructive:hsl(8 78% 46%);--info:#2563eb}
+  .phone{
     width:372px;height:780px;flex:none;border:10px solid #111;border-radius:36px;background:var(--bg);color:var(--fg);position:sticky;top:20px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18)}
-  .phone.dark{--bg:hsl(0 0% 5%);--fg:hsl(60 10% 96%);--primary:hsl(0 90% 54%);--secondary:hsl(0 0% 11%);--muted:hsl(240 4% 20%);--mfg:hsl(45 4% 62%);--border:hsl(0 0% 18%);--destructive:hsl(8 85% 64%);--info:#7aa7ff}
+  .phone.dark,.tok.dark{--bg:hsl(0 0% 5%);--fg:hsl(60 10% 96%);--primary:hsl(0 90% 54%);--secondary:hsl(0 0% 11%);--muted:hsl(240 4% 20%);--mfg:hsl(45 4% 62%);--border:hsl(0 0% 18%);--destructive:hsl(8 85% 64%);--info:#7aa7ff}
+  /* identity update: assigned car avatar, photo entry point, upload progress, other-User stubs */
+  .av.cav{background:hsl(var(--h) 46% 89%);color:hsl(var(--h) 48% 28%)}
+  .dark .av.cav{background:hsl(var(--h) 26% 22%);color:hsl(var(--h) 58% 80%)}
+  .avbtn{position:relative;border:0;background:none;padding:0;cursor:pointer;border-radius:50%;display:block;color:inherit;font:inherit}
+  .avbtn[disabled]{cursor:default}
+  .avbadge{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:var(--bg);color:var(--fg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  .avdim{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
+  .nmbtn{border:0;background:none;color:var(--fg);font:inherit;font-size:20px;font-weight:600;margin-top:10px;min-height:44px;padding:0 8px;cursor:pointer;display:flex;align-items:center;gap:6px;max-width:100%}
+  .nmbtn span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .nmbtn .pen{color:var(--mfg);display:flex;flex:none}
+  .upbox{margin:0 16px 12px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;font-size:14px}
+  .upbox .acts{display:flex;gap:18px;margin-top:2px}
+  .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;animation:sp .8s linear infinite;flex:none}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .mrow{display:flex;gap:12px;padding:10px 16px;position:relative;cursor:pointer}
+  .mrow+.mrow::before{content:"";position:absolute;top:0;left:84px;right:0;height:1px;background:var(--border)}
+  .mrow .th{width:56px;height:56px;border-radius:10px;background:var(--muted);flex:none;position:relative}
+  .mrow .th .av{position:absolute;right:-5px;bottom:-5px;box-shadow:0 0 0 2px var(--bg)}
+  .mrow .one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bub{max-width:76%;padding:8px 12px;border-radius:16px;font-size:15px;margin:6px 12px;background:var(--secondary)}
+  .bub.me{margin-left:auto;background:var(--primary);color:#fff}
+  .gal{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border-radius:8px;background:var(--bg);color:var(--fg);border:1px solid #ddd}
+  .gal .it{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;cursor:pointer;padding:3px;border-radius:8px;border:1.5px solid transparent;color:var(--mfg)}
+  .gal .it.on{border-color:var(--fg);color:var(--fg)}
   .sbar{height:24px;font-size:11px;color:var(--mfg);padding:4px 18px;display:flex;justify-content:space-between}
   .scr{position:absolute;top:24px;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden}
   .scr::-webkit-scrollbar{display:none}
@@ -235,6 +268,39 @@ const TX={
  protoFillNum:["prototype: fill a made-up number","прототип: подставить выдуманный номер","prototip: toslama belgi goý"], protoFillMail:["prototype: fill a made-up address","прототип: подставить выдуманный адрес","prototip: toslama salgy goý"], /* prototype only */
  webNote:["Opens in the system browser.","Открывается в браузере.","Brauzerde açylýar."], /* prototype only */
  tabStubNote:["Not part of this prototype.","Не входит в этот прототип.","Bu prototipe girmeýär."], /* prototype only */
+ /* ── identity update (2026-10-05). Every key below is new and a draft unless marked "existing": RU/TK need a native-speaker pass ── */
+ namePrefix:["Driver","Водитель","Sürüji"], /* generated name = prefix + space + number, in the viewer's language */
+ nameT:["Name","Имя","At"], editName:["Edit name","Изменить имя","Ady üýtget"],
+ nameH:["Other people see this name on your Listings and in chats.","Это имя видят другие люди в ваших объявлениях и переписках.","Bu ady beýleki adamlar bildirişleriňizde we ýazyşmalarda görýär."],
+ nameRule:["2 to 30 characters","От 2 до 30 символов","2-den 30-a çenli nyşan"],
+ nameShort:["Use at least 2 characters.","Введите не меньше 2 символов.","Azyndan 2 nyşan giriziň."],
+ nameLong:["Use 30 characters or fewer.","Введите не больше 30 символов.","30 nyşandan köp girizmäň."],
+ nameEmpty:["Enter a name.","Введите имя.","At giriziň."],
+ nameSpaces:["A name can't be only spaces.","Имя не может состоять только из пробелов.","At diňe boşluklardan durup bilmez."],
+ save:["Save","Сохранить","Ýatda sakla"], saving:["Saving...","Сохранение...","Ýatda saklanýar..."], /* existing */
+ nameFail:["Couldn't save the name. Try again.","Не удалось сохранить имя. Попробуйте ещё раз.","Ady ýatda saklap bolmady. Täzeden synanyşyň."],
+ nameSaved:["Name saved","Имя сохранено","At ýatda saklandy"],
+ photoT:["Profile photo","Фото профиля","Profil suraty"], changePhoto:["Change profile photo","Изменить фото профиля","Profil suratyny üýtget"],
+ takePhoto:["Take photo","Сделать фото","Surata al"], chooseLib:["Choose from library","Выбрать из галереи","Galereýadan saýla"], removePhoto:["Remove photo","Удалить фото","Suraty aýyr"],
+ permT:["Camera access is off","Нет доступа к камере","Kamera rugsady ýok"],
+ permD:["To take a photo, allow camera access for AutoTM in system settings.","Чтобы сделать фото, разрешите AutoTM доступ к камере в настройках системы.","Surata almak üçin ulgam sazlamalarynda AutoTM-e kamera rugsadyny beriň."],
+ openSettings:["Open settings","Открыть настройки","Sazlamalary aç"],
+ appSettingsToast:["Android app settings would open","Откроются настройки приложения в Android","Android programma sazlamalary açylar"], /* prototype only */
+ uploading:["Uploading photo... {p}%","Загрузка фото... {p}%","Surat ýüklenýär... {p}%"],
+ photoFail:["Couldn't upload the photo.","Не удалось загрузить фото.","Suraty ýükläp bolmady."],
+ photoBig:["This photo is too large. Choose one up to 5 MB.","Фото слишком большое. Выберите фото до 5 МБ.","Surat gaty uly. 5 MB-dan uly bolmadyk surat saýlaň."],
+ photoType:["This file can't be used. Choose a JPEG, PNG or WebP photo.","Этот файл не подходит. Выберите фото в формате JPEG, PNG или WebP.","Bu faýl ýaramaýar. JPEG, PNG ýa-da WebP surat saýlaň."],
+ chooseOther:["Choose another photo","Выбрать другое фото","Başga surat saýla"],
+ photoSaved:["Photo updated","Фото обновлено","Surat täzelendi"], photoRemoved:["Photo removed","Фото удалено","Surat aýryldy"],
+ photoRmFail:["Couldn't remove the photo.","Не удалось удалить фото.","Suraty aýryp bolmady."],
+ seller:["Seller","Продавец","Satyjy"], privateSeller:["Private seller","Частный продавец","Şahsy satyjy"], /* existing */
+ sellerSince:["On AutoTM since September 2026","На AutoTM с сентября 2026 г.","AutoTM-de 2026-njy ýylyň sentýabryndan bäri"], /* existing key with a date */
+ deletedUser:["Deleted user","Удалённый пользователь","Pozulan ulanyjy"], online:["online","онлайн","onlaýn"], /* existing */
+ writeSeller:["Message","Написать","Ýaz"], msgPh:["Message","Сообщение","Habar"],
+ m1:["Is it still for sale?","Ещё продаётся?","Henizem satylýarmy?"], m2:["Yes. Come and see it.","Да. Приезжайте посмотреть.","Hawa. Gelip görüň."], m3:["Can you lower the price?","Торг возможен?","Bahasyny arzanladyp bolarmy?"], /* sample chat, prototype only */
+ stubDetail:["Stub. Listing detail belongs to #351; only the seller block is shown here.","Заглушка. Экран объявления относится к #351; здесь показан только блок продавца.","Wagtlaýyn görnüş. Bildiriş ekrany #351-e degişli; bu ýerde diňe satyjy bölegi görkezilýär."], /* prototype only */
+ stubMsg:["Stub. Messages belong to #352; only the name and avatar are shown here.","Заглушка. Сообщения относятся к #352; здесь показаны только имя и аватар.","Wagtlaýyn görnüş. Habarlar #352-ä degişli; bu ýerde diňe at we awatar görkezilýär."], /* prototype only */
+ protoName:["prototype: fill","прототип: подставить","prototip: goý"], pf1:["1 character","1 символ","1 nyşan"], pf34:["34 characters","34 символа","34 nyşan"], pfSp:["only spaces","только пробелы","diňe boşluklar"], pfOk:["a valid name","подходящее имя","dogry at"], /* prototype only */
 };
 const t=(k,v)=>{const a=TX[k];if(!a)throw new Error("Missing translation: "+k);let s=a[LANGS.indexOf(S.lang)];if(s==null)throw new Error("Missing translation: "+k+" ("+S.lang+")");if(v)for(const x in v)s=s.split("{"+x+"}").join(v[x]);return s;};
 const LANGNAME={en:"English",ru:"Русский",tk:"Türkmençe"};
@@ -248,7 +314,41 @@ const S={
   dec:"set", data:"ok", outcome:"ok", req:"ok", delOut:"ok",
   flow:null, ret:null, toast:null, sheet:null, dlg:null, web:null, delChecked:false,
   notif:{os:"granted"}, picker:null, name:null, inv:"some", blocked:false, ltab:null,
+  /* identity update: what the server assigned (number, avatar index), the photo, and the editor and upload state */
+  nameNo:4821, avIdx:7, photo:null, ned:null, up:null, nameOut:"ok", photoOut:"ok", camPerm:"granted", peer:"gen",
 };
+/* ───────────── identity: generated name, name rule, car avatar library, mock photos ───────────── */
+const NAME_MIN=2, NAME_MAX=30;
+const genName=no=>t("namePrefix")+" "+no;
+const dispName=()=>S.name||genName(S.nameNo);
+const me=()=>({photo:S.photo,idx:S.avIdx});
+/* trim the ends, collapse runs of spaces, count characters (not bytes) */
+const normName=v=>v.replace(/\s+/g," ").trim();
+const nameLen=v=>[...normName(v)].length;
+function nameErr(v){if(v.length===0)return "empty";const n=normName(v);if(!n)return "spaces";const l=[...n].length;return l<NAME_MIN?"short":l>NAME_MAX?"long":null;}
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const WH=(a,b,r=1.8)=>`<circle cx="${a}" cy="15.5" r="${r}"/><circle cx="${b}" cy="15.5" r="${r}"/>`;
+/* 12 original line marks. [name, hue, paths]. The index is what the server stores on the User. */
+const CARS=[
+ ["Sedan",212,`<path d="M3 15v-2.6l2.3-.8 2.4-3.1h6.3l3.1 3.1 3.9 .9V15"/><path d="M3 15h2.2M9.8 15h4.4M18.8 15H21M11 8.5v3.2"/>${WH(7.5,16.5)}`],
+ ["Hatchback",158,`<path d="M3 15v-3l2-1.1L7.6 8H14l4.2 3.6 2.8.7V15"/><path d="M3 15h2M9.6 15h4.4M18.6 15H21M11.5 8v3.6"/>${WH(7.3,16.3)}`],
+ ["SUV",28,`<path d="M3 15V9.4C3 8.6 3.6 8 4.4 8H15l3.2 3.6 2.8.6V15"/><path d="M3 15h1.6M9.4 15h5.2M19.4 15H21M3 11.6h15.2M9.5 8v3.6"/>${WH(7,17,2)}`],
+ ["Pickup",265,`<path d="M3 15v-3.4h8.5V8H16l2.4 3.6 2.6.6V15"/><path d="M3 15h1.6M9.4 15h5.2M19.4 15H21M11.5 11.6h7"/>${WH(7,17,2)}`],
+ ["Van",190,`<path d="M3 15V8.2C3 7.5 3.5 7 4.2 7h11.3l4 4.6 1.5.5V15"/><path d="M3 15h1.6M9.4 15h5.2M19.4 15H21M14.5 7v4.6h5"/>${WH(7,17,2)}`],
+ ["Steering wheel",42,`<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12.5" r="2"/><path d="M3.8 10.4c3.2-1 5.2-.8 6.5.9M20.2 10.4c-3.2-1-5.2-.8-6.5.9M12 14.5v6"/>`],
+ ["Wheel",338,`<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.6"/><path d="M12 3.5v5.9M12 14.6v5.9M3.9 9.4l5.6 1.8M14.5 12.8l5.6 1.8M7 18.9l3.5-4.8M13.5 9.9L17 5.1"/>`],
+ ["Key",122,`<circle cx="7.5" cy="12" r="4"/><path d="M11.5 12H21M17 12v3M20 12v2.4M6.5 12h.01"/>`],
+ ["Speedometer",14,`<path d="M4.2 17a8.5 8.5 0 1 1 15.6 0"/><path d="M12 14.5l3.8-5.2"/><circle cx="12" cy="14.8" r="1.3"/><path d="M6.6 12.4h.01M8.6 8.6h.01M12 7.2h.01M17.4 12.4h.01"/>`],
+ ["Gear shift",232,`<path d="M6 6.5v11M12 6.5v11M18 6.5V12H6"/><circle cx="6" cy="5" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="18" cy="5" r="1.5"/><circle cx="6" cy="19" r="1.5"/><circle cx="12" cy="19" r="1.5"/>`],
+ ["Road",285,`<path d="M8.5 3L4 21M15.5 3L20 21M12 4v3M12 10.5v3M12 17v3"/>`],
+ ["Headlight",82,`<path d="M10 6a6 6 0 0 0 0 12c1.6 0 3-2.6 3-6s-1.4-6-3-6z"/><path d="M16 8h4.5M16 12h5M16 16h4.5"/>`],
+];
+/* made-up "photos": flat drawings that only stand for a picture the User chose */
+const PHOTO=(a,b,c)=>sz=>`<svg viewBox="0 0 40 40" width="${sz}" height="${sz}" aria-hidden="true"><rect width="40" height="40" fill="${a}"/><circle cx="31" cy="9" r="5" fill="${b}" opacity=".7"/><circle cx="20" cy="16" r="7" fill="${c}"/><path d="M6 40c0-9 6-14 14-14s14 5 14 14z" fill="${c}"/></svg>`;
+const PHOTOS={p1:PHOTO("#c9a27e","#f3dcc0","#5b4636"),p2:PHOTO("#7fa3b8","#d7e6ee","#2f4858"),p3:PHOTO("#93a877","#e3ecd2","#3e4a2c")};
+/* another User as the viewer sees them: generated name + assigned avatar, a set name + photo, a set name without a photo, a purged account */
+const PEERS={gen:{no:2057,idx:2},set:{name:"Merdan",no:7310,idx:9,photo:"p2"},named:{name:"Aýna Garaýewa",no:6644,idx:5},del:{del:true}};
+const peerName=p=>p.del?t("deletedUser"):p.name||genName(p.no);
 const hasPhone=()=>S.acct==="phone"||S.acct==="both", hasEmail=()=>S.acct==="email"||S.acct==="both", signed=()=>S.acct!=="out";
 
 const mockAccount=()=>({acct:S.acct,phone:hasPhone()?S.phone:null,email:hasEmail()?S.email:null});
@@ -375,6 +475,10 @@ const IC={
  chat:'<path d="M4 5h16v11H9l-5 4z"/>',
  warn:'<path d="M12 4l9 16H3z"/><path d="M12 10v5M12 17.5h.01"/>',
  cal:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+ camera:'<path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>',
+ image:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4.5 4"/>',
+ pencil:'<path d="M4 20l1-4L16.5 4.5a1.8 1.8 0 0 1 2.5 0l.5.5a1.8 1.8 0 0 1 0 2.5L8 19z"/><path d="M14.5 6.5l3 3"/>',
+ dots:'<path d="M5 12h.01M12 12h.01M19 12h.01"/>',
 };
 function icon(n,sz=22){if(!IC[n])throw new Error("Missing icon: "+n);return `<svg viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;}
 function row(o){
@@ -391,7 +495,14 @@ function appbar(title,o={}){return `<div class="appbar"><button class="ib" aria-
 function btn(label,fn,cls="brand",dis=false,k=""){return `<button class="btn ${cls}" ${k?`data-k="${k}"`:""} ${dis?"disabled":""} onclick="${fn}">${label}</button>`;}
 function skeletonLines(){return `<div class="pad" style="padding-top:14px">${[0,1,2,3,4].map(i=>`<div style="display:flex;gap:14px;align-items:center;height:56px"><div class="skel" style="height:24px;width:24px;border-radius:50%"></div><div class="skel" style="height:14px;width:${[55,40,62,35,48][i]}%"></div></div>`).join("")}</div>`;}
 function errState(){return `<div class="pad" style="text-align:center;padding-top:90px"><div class="mute" style="display:flex;justify-content:center">${icon("warn",34)}</div><div class="b" style="font-size:17px;margin:10px 0 4px">${t("wrong")}</div><div class="mute s13" style="margin-bottom:18px">${t("offline")}</div><div style="max-width:180px;margin:auto">${btn(t("retry"),"S.data='ok';render()","out",false,"retry")}</div></div>`;}
-function avatar(sz,nm){return `<div class="av" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz/2.3)}px">${nm?nm[0].toUpperCase():icon("user",Math.round(sz*0.5))}</div>`;}
+/* who = {photo, idx}: the photo when one is set, else the assigned car mark. No who (signed out) or a purged User: the neutral person icon. */
+function avatar(sz,who){
+  const box=`width:${sz}px;height:${sz}px`;
+  if(!who||who.del)return `<div class="av" data-av="none" style="${box}">${icon("user",Math.round(sz*0.5))}</div>`;
+  if(who.photo)return `<div class="av" data-av="photo" style="${box};overflow:hidden">${PHOTOS[who.photo](sz)}</div>`;
+  const c=CARS[who.idx%CARS.length], g=Math.round(sz*0.62);
+  return `<div class="av cav" data-av="car-${who.idx%CARS.length}" style="${box};--h:${c[1]}"><svg viewBox="0 0 24 24" width="${g}" height="${g}" fill="none" stroke="currentColor" stroke-width="${sz<40?2:1.6}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${c[2]}</svg></div>`;
+}
 function idLabel(){return hasPhone()?maskPhoneDisp(S.phone):maskEmail(S.email);}
 function legalLinks(){return `<div class="xs mute" style="padding:0 16px 14px">${t("legalPre")} <a style="color:var(--info);text-decoration:underline;cursor:pointer" onclick="openLegal('terms')">${t("terms")}</a> ${t("and")} <a style="color:var(--info);text-decoration:underline;cursor:pointer" onclick="openLegal('privacy')">${t("privacy")}</a>.</div>`;}
 function langSwitch(){return `<div style="display:flex;gap:2px;padding-right:8px">${LANGS.map(l=>`<button data-k="lang-${l}" style="border:0;background:none;font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;cursor:pointer;color:${S.lang===l?"var(--fg)":"var(--mfg)"};font-weight:${S.lang===l?600:400}" onclick="S.lang='${l}';render()">${l.toUpperCase()}</button>`).join("")}</div>`;}
@@ -412,7 +523,8 @@ function groups(){
 /* ───────────── screens ───────────── */
 function profileRow(){
   if(!signed())return row({k:"signin",cls:"big",lead:avatar(48),label:t("signIn"),sub:t("signInSub"),fn:"startSignIn()",chev:true});
-  return row({k:"profile",cls:"big",lead:avatar(48,S.name),label:S.name||idLabel(),sub:S.name?idLabel():"",fn:"push('profile')",chev:true});
+  /* every User has a name now: the one they set, or the generated one */
+  return row({k:"profile",cls:"big",lead:avatar(48,me()),label:`<span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(dispName())}</span>`,sub:idLabel(),fn:"push('profile')",chev:true});
 }
 function sellRows(){
   if(!signed())return "";
@@ -459,9 +571,119 @@ function profileScreen(){
     const fn=has&&S.v.chg==="B"?`S.sheet={t:'chg',type:'${type}'};render()`:`startMethod('${has?"change":"add"}','${type}')`;
     return row({k:"m-"+type,icon:type==="phone"?"phone":"mail",label:t(type),value:has?(type==="phone"?maskPhoneDisp(S.phone):maskEmail(S.email)):t("add"),accent:!has,fn,chev:true});
   };
-  h+=`<div style="display:flex;flex-direction:column;align-items:center;padding:8px 16px 18px">${avatar(72,S.name)}${S.name?`<div class="b" style="font-size:20px;margin-top:10px">${S.name}</div>`:""}</div>`;
+  h+=profileHeader();
   h+=`<div class="foot" style="padding-bottom:2px">${t("methods")}</div>`+list(m("phone")+m("email"));
   if(S.v.acct==="A")h+=gap()+list(acctRows());
+  return h;
+}
+/* ───────────── identity: Profile header, name editor, profile photo ───────────── */
+function ring(p){const c=94.25;return `<svg viewBox="0 0 36 36" width="44" height="44" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(c*p/100).toFixed(1)} ${c}" transform="rotate(-90 18 18)"/></svg>`;}
+function profileHeader(){
+  const u=S.up, busy=u&&u.st==="uploading";
+  /* the avatar is the entry point to the photo sheet; while a photo uploads it shows the picked photo dimmed, with progress */
+  const av=busy?`<button class="avbtn" data-k="avatar" disabled aria-label="${t("uploading",{p:u.pct})}">${avatar(72,{photo:u.p})}<span class="avdim">${ring(u.pct)}</span></button>`
+    :`<button class="avbtn" data-k="avatar" aria-label="${t("changePhoto")}" onclick="photoSheet()">${avatar(72,me())}<span class="avbadge">${icon("camera",15)}</span></button>`;
+  let h=`<div style="display:flex;flex-direction:column;align-items:center;padding:8px 16px 10px">${av}<button class="nmbtn" data-k="name" aria-label="${t("editName")}" onclick="openNameEdit()"><span class="n">${esc(dispName())}</span><span class="pen">${icon("pencil",17)}</span></button>${busy?`<div class="mute s13" role="status" data-k="upstatus">${t("uploading",{p:u.pct})}</div>`:""}</div>`;
+  if(u&&!busy){
+    const fixable=u.st==="fail"||u.st==="offline";
+    const msg=u.st==="offline"?t("offline"):u.st==="big"?t("photoBig"):u.st==="type"?t("photoType"):u.rm?t("photoRmFail"):t("photoFail");
+    h+=`<div class="upbox" role="alert" data-k="uperr"><div style="color:var(--destructive)">${msg}</div><div class="acts">${fixable?`<button class="btn link" data-k="upretry" onclick="retryUpload()">${t("retry")}</button>`:`<button class="btn link" data-k="upother" onclick="S.up=null;photoSheet()">${t("chooseOther")}</button>`}<button class="btn link" style="color:var(--mfg)" data-k="upcancel" onclick="S.up=null;render()">${t("cancel")}</button></div></div>`;
+  }
+  return h;
+}
+function openNameEdit(){S.ned={val:dispName(),touched:false,st:"idle"};push("nameEdit");}
+/* leaving while a save is in flight does not cancel it: Profile shows the result when it lands */
+function closeNameEdit(){const n=S.ned;if(n&&n.st==="saving")n.left=true;else S.ned=null;pop();}
+const nameCanSave=n=>!nameErr(n.val)&&normName(n.val)!==dispName();
+function nameMeta(){
+  const n=S.ned, e=n.touched?nameErr(n.val):null, l=nameLen(n.val);
+  const bad=n.st==="fail"?t("nameFail"):n.st==="offline"?t("offline"):e?t({empty:"nameEmpty",spaces:"nameSpaces",short:"nameShort",long:"nameLong"}[e]):"";
+  return `<div style="display:flex;justify-content:space-between;gap:12px;margin-top:6px"><span ${bad?`class="errtx" role="alert" data-k="nameerr" style="margin:0"`:`class="mute s13"`}>${bad||t("nameRule")}</span><span class="s13" data-k="namecount" style="white-space:nowrap;color:${l>NAME_MAX?"var(--destructive)":"var(--mfg)"}">${l}/${NAME_MAX}</span></div>`;
+}
+function nameBtn(){
+  const n=S.ned;
+  if(n.st==="saving")return `<button class="btn brand" data-k="namesave" disabled><span class="spin"></span>${t("saving")}</button>`;
+  const again=n.st==="fail"||n.st==="offline";
+  return btn(t(again?"retry":"save"),"saveName()","brand",!nameCanSave(n),"namesave");
+}
+/* typing must not rebuild the screen (the field would lose focus), so only the rule line, the field border and the button change */
+function nameLive(){
+  const n=S.ned, e=n.touched?nameErr(n.val):null;
+  const f=document.getElementById("nfield");if(f)f.className="field"+(e?" err":"");
+  const m=document.getElementById("nmeta");if(m)m.innerHTML=nameMeta();
+  const b=document.getElementById("nbtn");if(b)b.innerHTML=nameBtn();
+}
+function nameInput(el){const n=S.ned;n.val=el.value;n.touched=true;n.st="idle";nameLive();}
+function nameFill(k){const n=S.ned;n.val={one:"A",long:"Amanmuhammet Annagurbanow, Aşgabat",spaces:"    ",ok:"Aman"}[k];n.touched=true;n.st="idle";render();}
+function saveName(){
+  const n=S.ned;if(!n||n.st==="saving"||!nameCanSave(n))return;
+  n.st="saving";render();
+  setTimeout(()=>{
+    const o=S.nameOut;S.nameOut="ok";
+    if(o==="fail"||o==="offline"){n.st=o;if(n.left){S.ned=null;toast(o==="offline"?t("offline"):t("nameFail"));}else render();return;}
+    S.name=normName(n.val);if(S.ned===n)S.ned=null;
+    if(!n.left&&topScreen().id==="nameEdit")S.stack.pop();
+    render();toast(t("nameSaved"));
+  },900);
+}
+function nameEditScreen(){
+  const n=S.ned, e=n.touched?nameErr(n.val):null, saving=n.st==="saving";
+  const fills=[["one","pf1"],["long","pf34"],["spaces","pfSp"],["ok","pfOk"]].map(([k,l])=>`<a data-k="fill-${k}" style="text-decoration:underline;cursor:pointer" onclick="nameFill('${k}')">${t(l)}</a>`).join(" · ");
+  return appbar(t("nameT"),{back:"closeNameEdit()"})+`<div class="pad" style="margin-top:10px"><div class="mute" style="margin-bottom:16px">${t("nameH")}</div>
+  <div class="field${e?" err":""}" id="nfield"><input id="ninp" aria-label="${t("nameT")}" value="${esc(n.val)}" maxlength="40" autocomplete="off" ${saving?"disabled":""} oninput="nameInput(this)" onkeydown="if(event.key==='Enter')saveName()"></div>
+  <div id="nmeta">${nameMeta()}</div>
+  <div style="margin-top:16px" id="nbtn">${nameBtn()}</div>
+  <div class="xs mute" style="margin-top:10px">${t("protoName")}: ${fills}</div></div>`;
+}
+function photoSheet(){if(S.up&&S.up.st==="uploading")return;S.sheet={t:"photo"};render();}
+function pickPhoto(src){
+  S.sheet=null;
+  if(src==="camera"&&S.camPerm==="denied"){S.dlg="perm";render();return;}
+  const o=S.photoOut;S.photoOut="ok";
+  /* too large or not a picture is known on the device before anything is sent */
+  if(o==="big"||o==="type"){S.up={st:o,src};render();return;}
+  const u=S.up={st:"uploading",pct:0,src,p:S.photo==="p1"?"p3":"p1",out:o};render();tickUpload(u);
+}
+function tickUpload(u){
+  setTimeout(()=>{
+    if(S.up!==u||u.st!=="uploading")return;
+    u.pct+=20;
+    if((u.out==="fail"||u.out==="offline")&&u.pct>=60){u.st=u.out;render();return;}
+    if(u.pct>=100){S.photo=u.p;S.up=null;render();toast(t("photoSaved"));return;}
+    renderPhone();tickUpload(u);
+  },380);
+}
+function retryUpload(){
+  const u=S.up;if(!u)return;
+  if(u.rm){S.up=null;removePhoto();return;}
+  const o=S.photoOut;S.photoOut="ok";u.st="uploading";u.pct=0;u.out=o;render();tickUpload(u);
+}
+/* removing the photo brings the assigned car avatar back; the index never changed */
+function removePhoto(){
+  S.sheet=null;const o=S.photoOut;S.photoOut="ok";
+  if(o==="fail"||o==="offline"){S.up={st:o,rm:true};render();return;}
+  S.photo=null;S.up=null;render();toast(t("photoRemoved"));
+}
+/* ───────────── identity: where another User sees the name and avatar (stubs; #351 and #352 own the screens) ───────────── */
+function listingStubScreen(){
+  const p=PEERS[S.peer];
+  return appbar("")+`<div style="height:168px;background:var(--muted)"></div><div class="pad" style="padding-top:12px"><div class="b" style="font-size:19px">Toyota Camry, 2018</div><div class="b" style="font-size:22px;margin-top:2px">185 000 TMT</div></div><div class="stub">${t("stubDetail")}</div>
+  <div class="pad" style="padding-top:6px"><div class="b" style="font-size:18px;margin-bottom:10px">${t("seller")}</div><div data-k="sellercard" style="display:flex;gap:12px;align-items:center">${avatar(44,p)}<div style="min-width:0;flex:1"><div class="b" style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(peerName(p))}</div><div class="mute s13">${t("privateSeller")}</div><div class="mute s13">${t("sellerSince")}</div></div></div>
+  <div style="margin-top:16px">${btn(icon("chat",18)+t("writeSeller"),"push('convo')","out",false,"writeseller")}</div></div>`;
+}
+function convoScreen(){
+  const p=PEERS[S.peer];
+  return `<div class="appbar" style="border-bottom:1px solid var(--border);gap:8px"><button class="ib" aria-label="Back" data-k="back" onclick="pop()">${icon("back")}</button><div data-k="convohead" style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">${avatar(36,p)}<div style="min-width:0"><div class="b" style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(peerName(p))}</div>${p.del?"":`<div class="mute xs">${t("online")}</div>`}</div></div><span class="ib" style="cursor:default">${icon("dots")}</span></div>
+  <div style="display:flex;gap:10px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border)"><div style="width:44px;height:34px;border-radius:6px;background:var(--muted);flex:none"></div><div style="min-width:0"><div class="s13">Toyota Camry, 2018</div><div class="b s13">185 000 TMT</div></div></div>
+  <div class="stub">${t("stubMsg")}</div><div style="display:flex;flex-direction:column;padding-top:4px"><div class="bub me">${t("m1")}</div><div class="bub">${t("m2")}</div></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;padding:8px 12px;border-top:1px solid var(--border);background:var(--bg)"><div class="field" style="height:44px"><span class="mute">${t("msgPh")}</span></div></div>`;
+}
+function messagesScreen(){
+  let h=`<div class="appbar"><div class="t">${t("tabMsg")}</div></div>`;
+  if(!signed())return h+`<div class="pad mute" style="padding-top:70px;text-align:center">${t("tabStubNote")}<br>#352</div>`;
+  /* the Listing thumbnail leads the row (#352 D8); the other User's avatar sits on its corner */
+  const rows=[["gen","Toyota Camry, 2018","m2","09:12"],["set","Hyundai Elantra, 2020","m3","Mon"],["named","Kia Rio, 2017","m1","Sun"],["del","Lexus RX, 2012","m1","28.09"]];
+  h+=`<div class="stub">${t("stubMsg")}</div>`+rows.map(([k,car,m,tm])=>{const p=PEERS[k];return `<div class="mrow" data-k="msg-${k}" role="button" tabindex="0" onclick="S.peer='${k}';push('convo')"><div class="th">${avatar(24,p)}</div><div style="flex:1;min-width:0"><div style="display:flex;gap:8px"><span class="b one" style="flex:1;font-size:16px">${esc(peerName(p))}</span><span class="mute xs">${tm}</span></div><div class="mute s13 one">${car}</div><div class="s13 one">${t(m)}</div></div></div>`;}).join("");
   return h;
 }
 function pickItems(k){return k==="lang"?LANGS.map(l=>[l,LANGNAME[l],`setLang('${l}')`,S.lang===l]):["light","dark","system"].map(m=>[m,t(m),`setTheme('${m}')`,S.theme===m]);}
@@ -582,7 +804,11 @@ function overlays(){
     const url=`${webBase()}/${S.lang}/legal/${S.web.kind}`;
     o+=`<div class="br"><div class="bar"><button class="ib" style="color:#222" data-k="webclose" onclick="S.web=null;render()">${icon("x")}</button><div class="url">${url}</div></div><div style="padding:16px"><div style="font-size:20px;font-weight:700;margin-bottom:8px">${S.web.kind==="privacy"?t("privacy"):t("terms")}</div><div class="skel" style="height:12px;background:#ddd;margin:8px 0"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:90%"></div><div class="skel" style="height:12px;background:#ddd;margin:8px 0;width:80%"></div><div style="color:#666;font-size:12px;margin-top:14px">${t("webNote")}</div><a data-k="webdelete" style="display:block;margin-top:14px;color:#2563eb;text-decoration:underline;cursor:pointer" onclick="S.web=null;S.flow={kind:'webdelete',type:'phone',val:'',err:null,step:'entry'};S.stack.push({id:'webDelete'});render()">${t("deleteAcc")}: ${webBase()}/${S.lang}/account/delete</a></div></div>`;
   }
-  if(S.sheet){
+  if(S.sheet&&S.sheet.t==="photo"){
+    /* Remove photo is offered only when a photo is set */
+    const acts=row({k:"ph-camera",icon:"camera",label:t("takePhoto"),fn:"pickPhoto('camera')"})+row({k:"ph-library",icon:"image",label:t("chooseLib"),fn:"pickPhoto('library')"})+(S.photo?row({k:"ph-remove",icon:"trash",cls:"danger",label:t("removePhoto"),fn:"removePhoto()"}):"");
+    o+=`<div class="dim" onclick="S.sheet=null;render()"></div><div class="sheet" data-sheet="photo"><div class="hd"><div class="tt">${t("photoT")}</div><button class="ib" aria-label="Close" data-k="sheetclose" onclick="S.sheet=null;render()">${icon("x")}</button></div>${list(acts)}</div>`;
+  }else if(S.sheet){
     const s=S.sheet;
     o+=`<div class="dim" onclick="S.sheet=null;render()"></div><div class="sheet" style="padding:20px 16px"><div class="b" style="font-size:19px;margin-bottom:6px">${t("chgWarnT",{x:t(s.type==="phone"?"chgWarnX":"chgWarnY")})}</div><div class="mute" style="margin-bottom:16px">${t("chgWarnD")}</div><div style="display:grid;gap:8px">${btn(t("contin"),`S.sheet=null;startMethod('change','${s.type}')`,"brand",false,"sheetcontinue")}${btn(t("cancel"),"S.sheet=null;render()","out",false,"sheetcancel")}</div></div>`;
   }
@@ -596,6 +822,7 @@ function overlays(){
     if(d==="logout")c=`<div class="b" style="font-size:18px">${t("logoutT")}</div><div class="mute" style="margin:6px 0 16px">${t("logoutD")}</div>`+two(btn(t("cancel"),"S.dlg=null;render()","out",false,"dlgcancel"),btn(t("logout"),"doLogout()","brand",false,"dlgok"));
     if(d==="delete")c=`<div class="b" style="font-size:18px">${t("delConfT")}</div><div class="mute" style="margin:6px 0 16px">${t("delConfD",{d:t("delDate")})}</div>`+two(btn(t("cancel"),"S.dlg=null;render()","out",false,"dlgcancel"),btn(t("delDo"),"doDelete()","dest",false,"dlgok"));
     if(d==="restore")c=`<div class="b" style="font-size:18px">${t("restT")}</div><div class="mute" style="margin:6px 0 16px">${t("restD",{d:t("delDate")})}</div>`+two(btn(t("cancel"),"restoreCancel()","out",false,"dlgcancel"),btn(t("restDo"),"restore()","brand",false,"dlgok"));
+    if(d==="perm")c=`<div class="b" style="font-size:18px">${t("permT")}</div><div class="mute" style="margin:6px 0 16px">${t("permD")}</div>`+two(btn(t("cancel"),"S.dlg=null;render()","out",false,"dlgcancel"),btn(t("openSettings"),"S.dlg=null;toast(t('appSettingsToast'))","brand",false,"dlgok"));
     o+=`<div class="dim"></div><div class="dlg" data-dlg="${d}">${c}</div>`;
   }
   if(S.toast)o+=`<div class="toast">${S.toast}</div>`;
@@ -607,7 +834,7 @@ function tabbar(){
 }
 
 /* ───────────── render ───────────── */
-const SCREENS={cabinet:cabinetScreen,sell:sellScreen,settings:settingsScreen,notifs:notifsScreen,profile:profileScreen,pick:pickScreen,about:aboutScreen,signin:signinScreen,code:codeScreen,methodEntry:methodEntryScreen,taken:takenScreen,delete:deleteScreen,scheduled:scheduledScreen,webDelete:webDeleteScreen,listings:listingsScreen,support:supportScreen};
+const SCREENS={cabinet:cabinetScreen,sell:sellScreen,settings:settingsScreen,notifs:notifsScreen,profile:profileScreen,pick:pickScreen,about:aboutScreen,signin:signinScreen,code:codeScreen,methodEntry:methodEntryScreen,taken:takenScreen,delete:deleteScreen,scheduled:scheduledScreen,webDelete:webDeleteScreen,listings:listingsScreen,support:supportScreen,nameEdit:nameEditScreen,listing:listingStubScreen,convo:convoScreen,messages:messagesScreen};
 function currentScreen(){const id=topScreen().id;return (SCREENS[id]||(()=>tabStub(id)))();}
 function renderPhone(){
   const id=topScreen().id;const tabs=isTab(id);
@@ -673,7 +900,7 @@ function switcher(){
 
 /* ───────────── jumps (every state is one click) ───────────── */
 const J=[];const grp=n=>J.push({g:n});const jp=(l,f)=>J.push({l,f});
-const openAs=(acct,id)=>{S.toast=null;S.phone=S.phone||"+993 61 00-00-00";S.email=S.email||"name@example.com";S.acct=acct;S.savedAccount=acct==="out"?null:mockAccount();S.deletedAccount=S.restoreAccount=null;S.data="ok";S.flow=null;S.outcome=S.req=S.delOut="ok";S.delChecked=S.delFailed=S.deletionPending=false;S.sheet=S.dlg=S.web=S.picker=null;S.histories={};reset("cabinet");if(id&&id!=="cabinet")push(id);};
+const openAs=(acct,id)=>{S.toast=null;S.phone=S.phone||"+993 61 00-00-00";S.email=S.email||"name@example.com";S.acct=acct;S.savedAccount=acct==="out"?null:mockAccount();S.deletedAccount=S.restoreAccount=null;S.data="ok";S.flow=null;S.outcome=S.req=S.delOut="ok";S.delChecked=S.delFailed=S.deletionPending=false;S.sheet=S.dlg=S.web=S.picker=null;S.ned=S.up=null;S.nameOut=S.photoOut="ok";S.camPerm="granted";S.histories={};reset("cabinet");if(id&&id!=="cabinet")push(id);};
 const codeFlow=(kind,type,extra={})=>{S.flow=Object.assign({kind,type,val:type==="phone"?"60 00-00-00":"name@example.com",err:null,code:"",cerr:null,sec:15,resends:0,step:"code",back:[{id:"cabinet"},{id:"profile"}]},extra);};
 grp("Cabinet");
 jp("Signed out",()=>openAs("out"));jp("Phone only",()=>openAs("phone"));jp("Email only",()=>openAs("email"));jp("Phone + email",()=>openAs("both"));
@@ -717,6 +944,41 @@ jp("Add: value taken (email)",()=>{openAs("phone","profile");codeFlow("add","ema
 jp("Add: value taken (phone)",()=>{openAs("email","profile");codeFlow("add","phone");S.stack=[{id:"cabinet"},{id:"profile"},{id:"methodEntry"},{id:"taken"}];render();});
 jp("Change phone: sheet/entry",()=>{openAs("both","profile");S.v.chg==="B"?(S.sheet={t:"chg",type:"phone"},render()):startMethod("change","phone");});
 jp("Change email: sheet/entry",()=>{openAs("both","profile");S.v.chg==="B"?(S.sheet={t:"chg",type:"email"},render()):startMethod("change","email");});
+/* identity update. Each jump sets the name and photo it needs, so the order of clicks does not matter. */
+const LONGNAME="Amanmuhammet Annagurbanow Aşg.";
+const idAs=(name,photo,id)=>{S.name=name;S.photo=photo;openAs("both",id);};
+const nedAt=(val,st,touched=true,name=null)=>{idAs(name,null,"profile");openNameEdit();Object.assign(S.ned,{val,st:st||"idle",touched});render();};
+const upAt=(u,photo=null)=>{idAs(null,photo,"profile");S.up=u;render();};
+const peerAt=(k,id)=>{S.peer=k;idAs(S.name,S.photo);if(id==="messages")switchTab("messages");else if(id==="convo"){switchTab("messages");push("convo");}else{switchTab("search");push("listing");}};
+grp("Identity: name and assigned avatar");
+jp("Cabinet: generated name",()=>idAs(null,null));jp("Profile: generated name",()=>idAs(null,null,"profile"));
+jp("Cabinet: set name + photo",()=>idAs("Aman","p1"));jp("Profile: set name + photo",()=>idAs("Aman","p1","profile"));
+jp("Profile: set name, assigned avatar",()=>idAs("Aman",null,"profile"));
+jp("Cabinet: 30-character name",()=>idAs(LONGNAME,null));jp("Profile: 30-character name",()=>idAs(LONGNAME,null,"profile"));
+grp("Identity: name editor");
+jp("Name: editor opens",()=>{idAs(null,null,"profile");openNameEdit();});
+jp("Name: editor, set name",()=>{idAs("Aman",null,"profile");openNameEdit();});
+jp("Name: valid, changed",()=>nedAt("Aman"));
+jp("Name: too short",()=>nedAt("A"));jp("Name: too long",()=>nedAt("Amanmuhammet Annagurbanow, Aşgabat"));
+jp("Name: empty",()=>nedAt(""));jp("Name: only spaces",()=>nedAt("    "));
+jp("Name: saving",()=>nedAt("Aman","saving"));jp("Name: save failed",()=>nedAt("Aman","fail"));jp("Name: offline",()=>nedAt("Aman","offline"));
+jp("Name: saved",()=>{idAs("Aman",null,"profile");toast(t("nameSaved"));});
+grp("Identity: profile photo");
+jp("Photo: entry point on avatar",()=>idAs(null,null,"profile"));
+jp("Photo: sheet (no photo)",()=>{idAs(null,null,"profile");photoSheet();});
+jp("Photo: sheet (photo set)",()=>{idAs("Aman","p1","profile");photoSheet();});
+jp("Photo: camera permission denied",()=>{idAs(null,null,"profile");S.dlg="perm";render();});
+jp("Photo: uploading",()=>upAt({st:"uploading",pct:40,p:"p1",out:"ok"}));
+jp("Photo: upload failed",()=>upAt({st:"fail",pct:60,p:"p1"}));jp("Photo: offline",()=>upAt({st:"offline",pct:60,p:"p1"}));
+jp("Photo: too large",()=>upAt({st:"big"}));jp("Photo: unsupported file",()=>upAt({st:"type"}));
+jp("Photo: success",()=>{idAs(null,"p1","profile");toast(t("photoSaved"));});
+jp("Photo: removed, assigned avatar back",()=>{idAs("Aman",null,"profile");toast(t("photoRemoved"));});
+jp("Photo: remove failed",()=>upAt({st:"fail",rm:true},"p1"));
+grp("Identity: seen by another User (stubs; #351 and #352 own the screens)");
+jp("Seller card: generated name + avatar",()=>peerAt("gen","listing"));jp("Seller card: set name + photo",()=>peerAt("set","listing"));
+jp("Conversation header: generated name + avatar",()=>peerAt("gen","convo"));jp("Conversation header: set name + photo",()=>peerAt("set","convo"));
+jp("Conversation header: deleted user",()=>peerAt("del","convo"));
+jp("Messages rows",()=>peerAt(S.peer,"messages"));
 grp("Account");
 jp("Log out dialog",()=>{openAs("both",acctHome());S.dlg="logout";render();});
 jp("Delete: intro",()=>{openAs("both",acctHome());push("delete");});
@@ -767,21 +1029,38 @@ const STATES=[
  ["Add / change a method, value taken","Profile jumps","app/account/add-phone.tsx, add-email.tsx, verify-sign-in-method.tsx","exists; warning sheet is a proposal"],
  ["Log out, Delete account, scheduled","Account jumps","settings.tsx, app/account/delete.tsx","exists; placement is a proposal; “what happens” list and checkbox are proposals"],
  ["Web deletion page","Account jumps","apps/web/src/app/[locale]/account/delete/page.tsx","exists locally; deployment is #496"],
+ ["Generated name on Cabinet and Profile","Identity: name and assigned avatar","app/(tabs)/services.tsx, app/profile.tsx; GetMe.ts returns displayName, which nothing sets","new: number and avatar index on the User"],
+ ["Name editor: rule errors, saving, failure, offline, saved","Identity: name editor","none; there is no PATCH /me","new"],
+ ["Assigned car avatar, 12 marks","Identity jumps and the gallery above","components/ui/avatar (person icon or initial)","new: bundled set, index from the server"],
+ ["Profile photo: sheet, permission, upload, failure, removal","Identity: profile photo","User.avatarUrl exists and nothing sets it; Listing pipeline in src/listings/uploadStaging and POST /uploads/presign","new; reuses the Listing upload pipeline"],
+ ["Seller card, Conversation header, Messages row","Identity: seen by another User","src/listings/components/SellerBlock.tsx, src/conversations/components/ConversationHeader.tsx, ConversationListItem.tsx, usePeerName.ts","exists with a name fallback (“Private seller”, “Buyer”) and no avatar"],
 ];
 
 /* ───────────── panel ───────────── */
 function seg(items,cur,fn){return `<div class="seg">${items.map(([k,n])=>`<button class="${cur===k?"on":""}" onclick="${fn}('${k}')">${n}</button>`).join("")}</div>`;}
 window.pWeb=k=>{S.webProfile=k;render();};
 window.pAcct=k=>openAs(k);
-window.pName=k=>{S.name=k==="yes"?"Aman":null;render();};
+window.pName=k=>{S.name=k==="yes"?"Aman":k==="long"?LONGNAME:null;render();};
+window.pPhoto=k=>{S.photo=k==="yes"?"p1":null;S.up=null;render();};window.pAv=i=>{S.avIdx=i;render();};window.pPeer=k=>{S.peer=k;render();};
+window.pNameOut=k=>{S.nameOut=k;render();};window.pPhotoOut=k=>{S.photoOut=k;render();};window.pCam=k=>{S.camPerm=k;render();};
+/* the library, drawn with the app's tokens in light or dark; a click sets the index "the server assigned" */
+function gallery(dark){return `<div class="tok gal${dark?" dark":""}">${CARS.map((c,i)=>`<span class="it${S.avIdx===i?" on":""}" data-k="av-${i}" title="${c[0]}" onclick="pAv(${i})">${avatar(48,{idx:i})}<span>${i} ${c[0]}</span></span>`).join("")}</div>`;}
+function sizes(dark){const who={idx:S.avIdx};return `<div class="tok gal${dark?" dark":""}" style="align-items:flex-end;gap:14px">${[[72,"Profile header"],[48,"Cabinet row"],[44,"Seller card"],[36,"Conversation header"],[24,"Messages row badge"]].map(([s,n])=>`<span class="it" style="cursor:default">${avatar(s,who)}<span>${s} px · ${n}</span></span>`).join("")}</div>`;}
 window.pInv=k=>{S.inv=k;render();};window.pBlocked=k=>{S.blocked=k==="yes";render();};
 window.pLang=k=>{S.lang=k;render();};window.pTheme=k=>{S.theme=k;render();};window.pOs=k=>{S.os=k==="dark";render();};
 window.pOut=k=>{S.outcome=k;render();};window.pReq=k=>{S.req=k;render();};window.pDel=k=>{S.delOut=k;render();};window.pData=k=>{S.data=k;render();};
 window.pDec=(k,o)=>setV(k,o);
 function panel(){
   let h=`<h1>PROTOTYPE — Cabinet, Profile and Settings, Auto.ru-style</h1><div class="s13" style="color:#555">Throwaway (issue #353, third version). Everything in the phone is clickable; jump buttons set up any state in one click; ← → flip the option of the highlighted decision. Account values are made up; type any six digits as a code. Resend countdown is 15 s here (60 s in the product). Nothing below is approved except the “Locked” list. New RU and TK wording needs founder review.</div>
-  <h2>Account state</h2>${seg([["out","Signed out"],["phone","Phone only"],["email","Email only"],["both","Phone + email"]],S.acct,"pAcct")} &nbsp; Display name ${seg([["no","none"],["yes","“Aman”"]],S.name?"yes":"no","pName")}
-  <div class="s13" style="color:#555;margin-top:4px"><code>User.displayName</code> exists in the schema but nothing sets it (there is no <code>PATCH /me</code>), so most Users have none. The prototype adds no name editor.</div>
+  <div class="q" style="margin-top:8px"><b>Identity update, 2026-10-05.</b> Added on top of the approved version: the generated name, the name editor, the assigned car avatar, the profile photo, and the places another User sees them. Use the “Identity” jump groups. On Profile, tap the avatar for the photo sheet and the name for the editor. Design choices the founder decisions did not settle are listed in <code>cabinet-profile.autoru.md</code>, “Identity update”.</div>
+  <h2>Account state</h2>${seg([["out","Signed out"],["phone","Phone only"],["email","Email only"],["both","Phone + email"]],S.acct,"pAcct")}
+  <h2>Identity (founder decisions of 2026-10-02)</h2>
+  <div class="q"><p>Display name ${seg([["no","generated: "+genName(S.nameNo)],["yes","set: “Aman”"],["long","set: 30 characters"]],!S.name?"no":S.name===LONGNAME?"long":"yes","pName")} &nbsp; Photo ${seg([["no","none (assigned avatar)"],["yes","set"]],S.photo?"yes":"no","pPhoto")}</p>
+  <p>Server-assigned for this User: number <b>${S.nameNo}</b>, avatar index <b>${S.avIdx}</b> of 0 to ${CARS.length-1} (${CARS[S.avIdx][0]}). The prefix is drawn in the viewer's language: ${LANGS.map(l=>`<code>${TX.namePrefix[LANGS.indexOf(l)]} ${S.nameNo}</code>`).join(", ")}.</p>
+  <p>Another User is shown as ${seg([["gen","generated name + assigned avatar"],["set","set name + photo"],["named","set name, assigned avatar"],["del","deleted user"]],S.peer,"pPeer")}</p></div>
+  <div class="s13" style="color:#555;margin:6px 0 4px">Assigned avatar library: ${CARS.length} original line marks, light and dark. Click one to assign it. The User cannot pick one; the server assigns the index and it shows until a photo is set.</div>${gallery(false)}<div style="height:6px"></div>${gallery(true)}
+  <div class="s13" style="color:#555;margin:8px 0 4px">The assigned avatar at every size it is drawn:</div>${sizes(false)}<div style="height:6px"></div>${sizes(true)}
+  <div class="q" style="margin-top:8px">Next name save ${seg([["ok","Saves"],["fail","Fails"],["offline","Offline"]],S.nameOut,"pNameOut")} &nbsp; Next photo ${seg([["ok","Uploads"],["fail","Fails"],["offline","Offline"],["big","Too large"],["type","Unsupported file"]],S.photoOut,"pPhotoOut")} &nbsp; Camera permission ${seg([["granted","Allowed"],["denied","Denied"]],S.camPerm,"pCam")}<div class="xs" style="color:#777;margin-top:4px">“Fails” and “Offline” also apply to Remove photo. Choosing from the library needs no permission on Android (system photo picker).</div></div>
   <h2>Seller inventory (mock)</h2>${seg([["some","2 active, 1 draft, 1 sold, 1 archived"],["none","No listings"]],S.inv,"pInv")} &nbsp; Blocked Listing ${seg([["no","no"],["yes","yes"]],S.blocked?"yes":"no","pBlocked")}
   <h2>Language / theme</h2>${seg([["en","EN"],["ru","RU"],["tk","TK"]],S.lang,"pLang")} ${seg([["light","Light"],["dark","Dark"],["system","System"]],S.theme,"pTheme")} <span class="s13">device is</span> ${seg([["light","light"],["dark","dark"]],S.os?"dark":"light","pOs")}
   <h2>Next result (one-shot, then back to OK)</h2>
@@ -815,7 +1094,13 @@ function panel(){
   <p><b>Not in the archive:</b> an Auto.ru screen for drafts, an archive or status tabs for own listings, the settings behind the profile gear, Log out, or account deletion.</p></div></details>`;
   document.getElementById("panel").innerHTML=h;
 }
-render();
+/* deep link: #j=<jump name>&lang=ru&theme=dark opens that state, so a ticket or a screenshot can point at one */
+function fromHash(){
+  const q=new URLSearchParams(((window.location&&window.location.hash)||"").slice(1)),l=q.get("lang"),th=q.get("theme"),j=q.get("j");
+  if(LANGS.includes(l))S.lang=l;if(["light","dark","system"].includes(th))S.theme=th;
+  const x=j&&J.find(y=>y.l===j);if(x)x.f();
+}
+render();fromHash();render();
 </script>
 </body>
 </html>
