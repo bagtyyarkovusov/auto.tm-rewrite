@@ -63,7 +63,7 @@ These should be added during S8 if cheap, or immediately after beta if needed:
 - More detailed city drilldowns.
 - Seller response-time distribution by city/dealer.
 - Zero-result search review queue for catalog cleanup.
-- Simple feedback form linked from Settings or support.
+- Simple feedback form linked from Help.
 
 ### Post-MLP bets
 
