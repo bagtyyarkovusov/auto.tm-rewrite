@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 
 import { server } from "../../../test/msw";
+import { queryKeys } from "../queryKeys";
 
 import { useRequestContactPhoneCode } from "./useRequestContactPhoneCode";
 
@@ -84,6 +85,84 @@ describe("useRequestContactPhoneCode", () => {
       status: "confirmed",
       contactPhone,
     });
+  });
+
+  it("invalidates the contact phone list when the number is already confirmed", async () => {
+    server.use(
+      http.post("*/me/contact-phones/request", () =>
+        HttpResponse.json(
+          {
+            status: "confirmed",
+            contactPhone: {
+              phone: "+99362000002",
+              source: "confirmed",
+              confirmedAt: "2026-10-05T09:00:00.000Z",
+              reusableUntil: "2026-10-12T09:00:00.000Z",
+            },
+          },
+          { status: 200 },
+        ),
+      ),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    // The list this device holds does not know the number yet: it was
+    // confirmed elsewhere.
+    client.setQueryData(queryKeys.listings.myContactPhones("user-1"), {
+      items: [],
+    });
+    const withClient = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useRequestContactPhoneCode(), {
+      wrapper: withClient,
+    });
+
+    result.current.mutate({ phone: "+99362000002" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(
+      client.getQueryState(queryKeys.listings.myContactPhones("user-1"))
+        ?.isInvalidated,
+    ).toBe(true);
+  });
+
+  it("leaves the contact phone list alone when a code was sent", async () => {
+    server.use(
+      http.post("*/me/contact-phones/request", () =>
+        HttpResponse.json(
+          {
+            status: "code_sent",
+            requestId: "550e8400-e29b-41d4-a716-446655440000",
+            resendInSeconds: 60,
+          },
+          { status: 200 },
+        ),
+      ),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(queryKeys.listings.myContactPhones("user-1"), {
+      items: [],
+    });
+    const withClient = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useRequestContactPhoneCode(), {
+      wrapper: withClient,
+    });
+
+    result.current.mutate({ phone: "+99365123456" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(
+      client.getQueryState(queryKeys.listings.myContactPhones("user-1"))
+        ?.isInvalidated,
+    ).toBe(false);
   });
 
   it("surfaces RATE_LIMITED with details on the daily limit", async () => {
