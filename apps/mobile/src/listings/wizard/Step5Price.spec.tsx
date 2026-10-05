@@ -214,7 +214,7 @@ describe("Price step errors", () => {
     expect(screen.getByText("Price is required")).toBeTruthy();
   });
 
-  it("says the amount is required after the seller taps Continue", () => {
+  it("says the amount is required when the wizard asks the step to show its errors", () => {
     const screen = renderMobile(<ErrorsStep showErrors />);
 
     expect(screen.getByText("Price is required")).toBeTruthy();

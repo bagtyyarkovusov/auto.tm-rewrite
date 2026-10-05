@@ -308,7 +308,7 @@ describe("Step2Photos errors", () => {
     expect(screen.getByText("At least one photo is required")).toBeTruthy();
   });
 
-  it("says a photo is required after the seller taps Continue", () => {
+  it("says a photo is required when the wizard asks the step to show its errors", () => {
     const screen = renderMobile(<Step2Photos {...defaults()} fieldErrors={required} showErrors />);
 
     expect(screen.getByText("At least one photo is required")).toBeTruthy();
