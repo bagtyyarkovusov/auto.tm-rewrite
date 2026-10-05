@@ -92,8 +92,8 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0080](0080-a-new-car-skips-the-damaged-question.md) | A New car skips the "Damaged / needs repair" question (amends ADR-0052's required-to-publish rule) | Accepted | 2026-10-02 |
 | [0081](0081-contact-phone-confirmation-api-for-listings.md) | Contact phone confirmation API for Listings (complements ADR-0056 under ADR-0054's code budgets; amends ADR-0056's editing rule) | Accepted | 2026-10-03 |
 | [0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md) | An issue may carry up to three ordered slices (amends ADR-0064 reviewer eligibility for sliced issues; complements ADR-0065, ADR-0067 and ADR-0070) | Accepted | 2026-10-05 |
-| [0083](0083-a-standards-reviewer-may-commit-small-fixes.md) | A Standards reviewer may commit small fixes, trial (amends ADR-0058's read-only reviewer rule; bounded by ADR-0065 and ADR-0069) | Proposed | 2026-10-05 |
-| [0084](0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md) | Related issues of one parent may ship on one integration branch and pull request (amends ADR-0058's one-PR-per-issue rule for grouped issues) | Proposed | 2026-10-05 |
+| [0083](0083-a-standards-reviewer-may-commit-small-fixes.md) | A Standards reviewer may commit small fixes, trial (amends ADR-0058's and ADR-0069's read-only reviewer rule; bounded by ADR-0065 and ADR-0069) | Proposed | 2026-10-05 |
+| [0084](0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md) | Related issues of one parent may ship on one integration branch and pull request (amends ADR-0058's one-PR-per-issue rule and ADR-0069's one-branch-one-PR sentence for grouped issues) | Proposed | 2026-10-05 |
 
 ## Per-app ADRs
 

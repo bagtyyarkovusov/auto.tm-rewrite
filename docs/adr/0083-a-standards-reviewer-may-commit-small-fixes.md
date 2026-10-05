@@ -3,7 +3,7 @@
 - **Status**: Proposed
 - **Date**: 2026-10-05
 - **Deciders**: AutoTM founder
-- **Amends**: [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md)'s rule that every reviewer is read-only, for the Standards axis and the fixes below only, during the trial. [ADR-0065](0065-small-changes-skip-the-issue-ceremony.md)'s fix-in-place limits and `Delta` review, and [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s one-writer and worktree rules, stay in force and bound this decision.
+- **Amends**: [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md)'s rule that every reviewer is read-only, and [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s sentence that a reviewer "never edits, commits, or pushes", for the Standards axis and the fixes below only, during the trial. [ADR-0065](0065-small-changes-skip-the-issue-ceremony.md)'s fix-in-place limits and `Delta` review, and [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s one-writer and worktree rules, stay in force and bound this decision.
 
 ## Context
 
@@ -23,8 +23,9 @@ Matt Pocock argues the opposite default on the AI Engineer podcast: "The reviewe
 - **One writer.** The orchestrator launches the committing reviewer only after the implementer has stopped and with auto-merge off. The reviewer works in its own host-created worktree, detached at the pinned SHA, and pushes fast-forward with `git push origin HEAD:<branch>`. If the branch head has moved past the pinned SHA, it commits nothing and reports.
 - **Commits.** One commit per finding, on top of the pinned SHA. The reviewer runs the focused checks for the touched files before each push.
 - **Verdict.** The Standards verdict names the pinned SHA and lists each finding as `fixed in <sha>` or `left as finding`.
-- **Independence.** A fresh read-only `Delta` reviewer checks the reviewer's commits against their findings and carries both verdicts forward, as ADR-0065 describes. The author of a fix never passes it.
-- **Trial.** The next five queue PRs. For each, the orchestrator records in the PR's `Execution state` the time from Standards verdict to `Delta` pass, the tokens the fix round used, the `Delta` findings against reviewer commits, and any revert. The founder then keeps, changes or ends the rule. Until then this ADR stays Proposed and FINALIZATION points here.
+- **Independence.** A fresh read-only `Delta` reviewer checks the reviewer's commits against their findings and carries both verdicts forward, as ADR-0065 describes. That `Delta` review replaces a full Standards re-review of the reviewer's commits: the commits alone do not void the Standards verdict, and ADR-0065's full re-review applies only to an axis the `Delta` reviewer finds no longer holds. The author of a fix never passes it.
+- **Rejected commit.** When the `Delta` reviewer rejects a reviewer's commit, a fresh implementer reverts or repairs that commit on the PR branch, and the `Delta` review reruns on the new head.
+- **Trial.** The next five queue PRs. An integration PR ([ADR-0084](0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md)) counts as one of the five. For each, the orchestrator records in the PR's `Execution state` the time from Standards verdict to `Delta` pass, the tokens the fix round used, the `Delta` findings against reviewer commits, and any revert. The founder then keeps, changes or ends the rule. Until then this ADR stays Proposed and FINALIZATION points here.
 
 ## Consequences
 

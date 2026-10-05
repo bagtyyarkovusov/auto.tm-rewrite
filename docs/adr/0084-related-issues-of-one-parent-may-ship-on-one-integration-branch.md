@@ -3,7 +3,7 @@
 - **Status**: Proposed
 - **Date**: 2026-10-05
 - **Deciders**: AutoTM founder
-- **Amends**: [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md)'s one-pull-request-per-issue rule, for issues the founder groups under one parent spec. ADR-0058's reservation branches, `Execution state`, fixed-commit reviews and CI gate, [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s worktree rules and [ADR-0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md)'s slices stay in force.
+- **Amends**: [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md)'s one-pull-request-per-issue rule, and [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s sentence that "an issue has one branch, one PR", for issues the founder groups under one parent spec: a grouped issue keeps its own `agent/issue-<N>` branch and shares the integration branch and its PR. ADR-0058's reservation branches, `Execution state`, fixed-commit reviews and CI gate, [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s worktree rules and [ADR-0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md)'s slices stay in force.
 
 ## Context
 
@@ -19,6 +19,7 @@ Matt Pocock's `implement-spec` skill builds every ticket of one spec on one inte
 - **Issue branches.** Each issue's implementer works on `agent/issue-<N>` from the integration branch, pushes checkpoints, and opens no PR. Before it reports, it merges the integration branch's current tip into its branch, reruns its focused checks, and pushes.
 - **Merger.** A merger agent merges each finished issue branch into the integration branch and opens one draft PR into `main`. Its body has a `Closes #<N>` line for every issue and one `Execution state` per issue.
 - **Review.** One Standards and one Spec review of the integration PR at its head. The Spec reviewer checks every issue's acceptance criteria and every slice's. Findings, `Delta` reviews and the merge follow the normal rules for that one PR.
+- **Fix rounds.** When one issue of the group fails review, the fix round writes on the integration branch, because an issue branch is finished once the merger has folded it. No re-merge is needed.
 - **First group.** #640 and #644, under parent #353, on `agent/spec-353-identity`.
 
 ## Consequences
@@ -37,7 +38,7 @@ Matt Pocock's `implement-spec` skill builds every ticket of one spec on one inte
 
 ### Neutral
 
-- Issue branches still serve as reservations; an issue in a group is resumed from its own branch.
+- Issue branches still serve as reservations; an issue in a group is resumed from its own branch until the merger has folded it.
 - Ungrouped issues, sliced issues and the small-change path are unchanged.
 
 ## Alternatives considered
