@@ -114,6 +114,66 @@ export function completedSteps(
   return DATA_STEPS.filter((step) => isStepValid(step, payload));
 }
 
+/**
+ * The step the seller left, from the payload's `currentStep` (a position, 1 to 7).
+ * Earlier wizards wrote 1 once and never updated it, and the eight-step wizard
+ * could write 8, so 1 and anything out of range mean "not recorded" and the
+ * draft resumes at its first incomplete step.
+ */
+function savedStep(payload: WizardSchemas.WizardDraftPayload): WizardMachineStep | null {
+  const position = payload.currentStep;
+  if (position === undefined || !Number.isInteger(position)) return null;
+  if (position < 2 || position > WIZARD_STEPS.length) return null;
+  return WIZARD_STEPS[position - 1] ?? null;
+}
+
+/** The payload a new Listing's draft starts with, apart from the step bookkeeping. */
+const NEW_DRAFT_DEFAULTS: Record<string, unknown> = {
+  condition: Enums.ListingCondition.Used,
+  allowCalls: true,
+  allowChat: true,
+  priceCurrency: "TMT",
+};
+
+function isEmptyValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === "") return true;
+  if (Array.isArray(value)) return value.every(isEmptyValue);
+  if (typeof value === "object") return Object.values(value).every(isEmptyValue);
+  return false;
+}
+
+/**
+ * True while the seller has not changed anything from what tapping New listing
+ * created: every field is empty or still at its starting value. A field that was
+ * changed and cleared again counts as untouched.
+ */
+export function isUntouchedPayload(payload: WizardSchemas.WizardDraftPayload): boolean {
+  return Object.entries(payload).every(([key, value]) => {
+    if (key === "currentStep" || key === "validatedSteps") return true;
+    if (key in NEW_DRAFT_DEFAULTS) {
+      return value === undefined || value === NEW_DRAFT_DEFAULTS[key];
+    }
+    return isEmptyValue(value);
+  });
+}
+
+/**
+ * Moves to a step. A create draft records the position in its payload so the
+ * autosave sends it and a later resume opens there; an edit has no draft.
+ */
+function moveTo(
+  state: WizardMachineState,
+  step: WizardMachineStep,
+): Pick<WizardMachineState, "currentStep" | "payload"> {
+  return {
+    currentStep: step,
+    payload:
+      state.mode === "create"
+        ? { ...state.payload, currentStep: stepIndex(step) + 1 }
+        : state.payload,
+  };
+}
+
 // ── Initial state ──
 
 export function createInitialState(): WizardMachineState {
@@ -177,13 +237,16 @@ export function wizardMachineReducer(
 
       // Resume at the first incomplete step up to the entry step; with no
       // entry step, at the first incomplete step or at review when all are done.
-      // `currentStep` in the payload is not a real position yet; a later slice
-      // saves the step the seller left.
+      // A create draft that recorded the step the seller left opens there, but
+      // never past the first incomplete step, because later steps depend on it.
       const target: WizardMachineStep = action.entryStep ?? "review";
-      const resumeStep =
+      const firstIncomplete =
         WIZARD_STEPS.slice(0, stepIndex(target)).find(
           (step) => !validatedSteps.includes(step),
         ) ?? target;
+      const left = mode === "create" && !action.entryStep ? savedStep(payload) : null;
+      const resumeStep =
+        left && stepIndex(left) < stepIndex(firstIncomplete) ? left : firstIncomplete;
 
       return {
         ...state,
@@ -192,7 +255,11 @@ export function wizardMachineReducer(
         listingId: action.listingId ?? null,
         mode,
         editEntryAtReview: false,
-        payload,
+        // A create draft records the step it opens at, like every later move.
+        payload:
+          mode === "create"
+            ? { ...payload, currentStep: stepIndex(resumeStep) + 1 }
+            : payload,
         validatedSteps,
         currentStep: resumeStep,
         saveError: null,
@@ -225,7 +292,7 @@ export function wizardMachineReducer(
 
       return {
         ...state,
-        currentStep: getStepAtIndex(currentIdx + 1),
+        ...moveTo(state, getStepAtIndex(currentIdx + 1)),
         validatedSteps: newValidated,
         saveError: null,
       };
@@ -237,7 +304,7 @@ export function wizardMachineReducer(
       if (currentIdx <= 0) return state;
       return {
         ...state,
-        currentStep: getStepAtIndex(currentIdx - 1),
+        ...moveTo(state, getStepAtIndex(currentIdx - 1)),
         saveError: null,
       };
     }
@@ -282,7 +349,7 @@ export function wizardMachineReducer(
 
       // Always allow going backward
       if (targetIdx < currentIdx) {
-        return { ...state, currentStep: action.step, saveError: null };
+        return { ...state, ...moveTo(state, action.step), saveError: null };
       }
 
       // Going forward: target's dependencies must all be validated
@@ -290,7 +357,7 @@ export function wizardMachineReducer(
       const allDepsValid = deps.every((d) => state.validatedSteps.includes(d));
       if (!allDepsValid) return state;
 
-      return { ...state, currentStep: action.step, saveError: null };
+      return { ...state, ...moveTo(state, action.step), saveError: null };
     }
 
     case "PUBLISH_START": {

@@ -372,6 +372,53 @@ describe("useUploadQueue — parallel batch compression", () => {
     expect(result.current.photos[0]?.state).toBe("uploaded");
   });
 
+  describe("when the wizard moves to another draft", () => {
+    const empty = { photos: [] };
+
+    async function openDraftWithOnePhoto() {
+      mockCompressPhoto.mockResolvedValue({
+        uri: "file:///doc/listing-staging/draft-a/photo-id.jpg",
+        width: 100,
+        height: 100,
+        fileSize: 1024,
+      });
+      const hook = renderHook(
+        ({ stagingKey }) => useUploadQueue(stagingKey, empty),
+        { wrapper, initialProps: { stagingKey: "draft-a" } },
+      );
+      await waitFor(() => expect(mockListLocalPhotoIds).toHaveBeenCalledWith("draft-a"));
+      await act(async () => {
+        await hook.result.current.addPhoto("file:///picker/photo.jpg");
+      });
+      await waitFor(() => expect(hook.result.current.photos[0]?.state).toBe("uploaded"));
+      return hook;
+    }
+
+    it("drops the closed draft's photos, so the next draft opened starts with its own", async () => {
+      const { result, rerender } = await openDraftWithOnePhoto();
+
+      // ✕ closes the wizard: no draft is open.
+      rerender({ stagingKey: "" });
+      await waitFor(() => expect(result.current.photos).toEqual([]));
+
+      rerender({ stagingKey: "draft-b" });
+      await waitFor(() => expect(mockListLocalPhotoIds).toHaveBeenCalledWith("draft-b"));
+      await act(async () => undefined);
+
+      expect(result.current.photos).toEqual([]);
+    });
+
+    it("does not carry photos straight from one draft into another", async () => {
+      const { result, rerender } = await openDraftWithOnePhoto();
+
+      rerender({ stagingKey: "draft-b" });
+      await waitFor(() => expect(mockListLocalPhotoIds).toHaveBeenCalledWith("draft-b"));
+      await act(async () => undefined);
+
+      expect(result.current.photos).toEqual([]);
+    });
+  });
+
   describe("local photos from an earlier session", () => {
     const payload = { photos: [{ photoId: "server-1", key: "listings/l1/server-1/original.jpg", sortOrder: 0 }] };
 
@@ -468,6 +515,32 @@ describe("useUploadQueue — parallel batch compression", () => {
       expect(result.current.photos).toHaveLength(1);
       expect(result.current.photos[0]).toMatchObject({ photoId: "server-1", key: payload.photos[0]?.key });
       expect(mockPresignMutateAsync).not.toHaveBeenCalled();
+      mockListLocalPhotoIds.mockImplementation(() => Promise.resolve([]));
+    });
+
+    it("restores a draft reopened before the closed wizard's empty queue has settled", async () => {
+      const noDraft = {};
+      let releaseIdle: ((ids: string[]) => void) | undefined;
+      mockListLocalPhotoIds.mockImplementation((key: string) =>
+        key === "" ? new Promise<string[]>((resolve) => { releaseIdle = resolve; }) : Promise.resolve([]),
+      );
+      const { result, rerender } = renderHook(
+        ({ stagingKey }) => useUploadQueue(stagingKey, stagingKey ? payload : noDraft),
+        { wrapper, initialProps: { stagingKey: "draft-9" } },
+      );
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+      expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]);
+
+      // ✕, then Continue on the same draft while the device is still answering.
+      rerender({ stagingKey: "" });
+      rerender({ stagingKey: "draft-9" });
+      expect(result.current.isReady).toBe(false);
+
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+      expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]);
+      act(() => releaseIdle?.([]));
+      await act(async () => undefined);
+      expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]);
       mockListLocalPhotoIds.mockImplementation(() => Promise.resolve([]));
     });
 

@@ -215,10 +215,9 @@ describe("legacy Listing edit", () => {
       return screen;
     }
 
+    // Retry 0 is the status line under the progress bar, Retry 1 the failure banner on Review.
     function retryButton(screen: ReturnType<typeof renderMobile>, index: number) {
-      const button = screen.getAllByRole("button", { name: "Retry" }).at(index);
-      if (!button) throw new Error(`No Retry button at ${index}`);
-      return button;
+      return screen.getByRole("button", { name: index === 0 ? "Not saved. Retry" : "Retry" });
     }
 
     it("shows which operations succeeded and failed", () => {
