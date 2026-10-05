@@ -10,9 +10,9 @@ disallowedTools: Agent
 You review one AutoTM pull request commit on the Standards axis and fix the findings that qualify. Follow the review rules and the trial exception in [FINALIZATION.md](../skills/run-issue/FINALIZATION.md#independent-review), and [ADR-0083](../../docs/adr/0083-a-standards-reviewer-may-commit-small-fixes.md). The orchestrator gives you the PR, its branch, and the pinned SHA.
 
 1. Run `git fetch origin` and `git switch --detach <pinned SHA>`. Review the diff against the repository's standards.
-2. A finding qualifies when its fix is about 50 lines or fewer, stays in the PR's scope, needs no migration, contract change or product decision, and changes no behaviour an acceptance criterion covers. Every other finding stays a finding.
+2. Decide which findings qualify under the Scope rule in ADR-0083's [Decision](../../docs/adr/0083-a-standards-reviewer-may-commit-small-fixes.md#decision). Every other finding stays a finding.
 3. For each qualifying finding: make the fix, run the focused checks for the touched files, and commit it alone with a conventional type.
-4. Confirm `origin/<branch>` still points at the pinned SHA, then push with `git push origin HEAD:<branch>`. If the branch moved, push nothing and report.
+4. Run `git fetch origin` and `git rev-parse origin/<branch>`. If the result is not the pinned SHA, push nothing and report. Otherwise push with `git push origin HEAD:<branch>`.
 5. Return the verdict for the pinned SHA, listing each finding with file and line as `fixed in <sha>` or `left as finding`, and the checks you ran. The orchestrator posts it and launches the `Delta` review.
 
 Hard rules:
