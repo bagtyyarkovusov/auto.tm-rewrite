@@ -252,11 +252,11 @@ function EditListingSession({ listingId }: { listingId: string }) {
   // The upload queue starts empty and then holds the Listing's own photos; until
   // then its photos say nothing about what the seller changed.
   const photosReady = uploadQueue.isReady !== false;
-  const hasChanges = hasEditChanges(
-    editPayload,
-    machineState.payload,
-    photosReady ? uploadQueue.photos : null,
-  );
+  // A failed save may have applied part of the edit (ADR-0025), so the session
+  // counts as changed until a save succeeds, whatever the fields now hold.
+  const hasChanges =
+    saveEdit.status === "failed" ||
+    hasEditChanges(editPayload, machineState.payload, photosReady ? uploadQueue.photos : null);
   // A new number that still needs a code: the server would refuse the save.
   const contactBlocksSave =
     contactNeedsCode &&

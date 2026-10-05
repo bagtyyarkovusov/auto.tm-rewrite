@@ -295,6 +295,10 @@ describe("Save changes (#589)", () => {
     expect(screen.getByRole("button", { name: "Price, 179,000 TMT, Change" })).toBeTruthy();
     expect(routerMock.replace).not.toHaveBeenCalled();
     expect(screen.queryByText("Changes saved")).toBeNull();
+    // Still unsaved: leaving asks first.
+    fireEvent.press(screen.getByRole("button", { name: "Close" }));
+    fireEvent.press(screen.getByRole("button", { name: "Keep editing" }));
+    expect(routerMock.back).not.toHaveBeenCalled();
 
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Retry" })); });
 
