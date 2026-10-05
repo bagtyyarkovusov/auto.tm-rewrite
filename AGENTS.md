@@ -22,6 +22,7 @@ Use the [glossary](docs/domain/GLOSSARY.md) when interpreting or changing domain
 | Mobile API calls or caching | [Mobile data fetching](docs/agents/mobile-data-fetching.md) |
 | Mobile screen, navigation, or discovery | [ADR-0051](docs/adr/0051-auto-ru-inspired-mobile-discovery-before-google-play-review.md), then the affected approved UI specification |
 | TypeScript imports, package exports, or shared runtime packages | [Runtime boundaries](docs/agents/typescript-runtime.md) |
+| New modules, new tests, or a Standards review | [Coding standards](docs/agents/coding-standards.md); advisory and new lines only until the first store release |
 | Document roles, new PRDs, or decision/sprint changes | [Domain documentation policy](docs/agents/domain.md#document-authority) |
 
 ## Guardrails

@@ -46,6 +46,10 @@ For each acceptance criterion, inspect the [acceptance evidence](VERIFICATION.md
 - For UI behaviour, does the test actually render and exercise the component or screen?
 - For UI look, are PR-attached simulator or emulator screenshots present for every governing design state, and does each agree with its spec? Record mismatches and missing states as findings. No screenshot or snapshot matcher is required.
 
+### Standards scope
+
+The Standards reviewer checks the diff against the repository's documented standards and cites the document a finding breaks: [AGENTS.md](../../../AGENTS.md) guardrails, the affected area's `CONTEXT.md`, the guides under [docs/agents](../../../docs/agents), and [VERIFICATION.md](VERIFICATION.md). For module shape and test quality it applies [Coding standards](../../../docs/agents/coding-standards.md), within that file's own limits: new lines only, non-blocking until the first store release, and no refactor requests in a feature pull request.
+
 ## Ready PR
 
 The PR title mirrors the issue. Its body starts with `Closes #<N>` and keeps one mutable `Execution state`, followed by:

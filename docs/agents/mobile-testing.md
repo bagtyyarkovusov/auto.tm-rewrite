@@ -52,9 +52,10 @@ Router calls and route parameters reset before each test. `canGoBack` defaults
 to true; reset any changed return implementation in your spec. `useIsFocused`
 returns `screenFocus.focused`, true before each test; set it to false and
 rerender for a screen that another screen covers. Data, auth and
-native services still need explicit fixtures or MSW handlers. Prefer mocking
-the external service or hook boundary while rendering the actual screen and
-feature components. See `listingDetail.spec.tsx` for ownership, contact, retry,
+native services still need explicit fixtures or MSW handlers. Render the actual
+screen and feature components and mock the external service. For a new spec,
+[Coding standards](coding-standards.md#tests) prefer MSW with the real API
+hooks over a stubbed hook; a new test in an existing spec follows that spec. See `listingDetail.spec.tsx` for ownership, contact, retry,
 similar navigation and inspection behavior.
 
 ## What the adapter does
