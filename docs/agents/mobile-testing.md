@@ -49,7 +49,9 @@ component's supplied dimensions, but cannot prove native layout.
 `routerMock` records `push`, `navigate`, `replace`, `back` and `setParams` calls.
 Set `routeParams.id` and other string parameters before rendering a screen.
 Router calls and route parameters reset before each test. `canGoBack` defaults
-to true; reset any changed return implementation in your spec. Data, auth and
+to true; reset any changed return implementation in your spec. `useIsFocused`
+returns `screenFocus.focused`, true before each test; set it to false and
+rerender for a screen that another screen covers. Data, auth and
 native services still need explicit fixtures or MSW handlers. Prefer mocking
 the external service or hook boundary while rendering the actual screen and
 feature components. See `listingDetail.spec.tsx` for ownership, contact, retry,
@@ -107,6 +109,13 @@ not copy these stubs into a spec.
   message in the adapter's `AccessibilityInfo.announcements` array and speaks
   nothing; a spec empties the array before asserting, as `toast.spec.tsx` does.
 
+`BackHandler` is a recording stub: `addEventListener` registers the handler and
+returns `{ remove }`, and the adapter's `pressHardwareBack()` calls them newest
+first until one returns true, like Android's back button. A spec reads it from the
+aliased module, as it does `scrollRequests`, and wraps the press in `act`
+(`test/routes/sell-close.spec.tsx`). Listeners from a spec's unmounted screens are
+removed by their own cleanup. Nothing exits the app.
+
 A `FlatList` ref records `scrollToIndex` and `scrollToOffset` calls into the
 `scrollRequests` export of `react-native`. Specs and `native-setup.ts` import
 `react-native` through the Vite alias, which Vite inlines as one module instance,
@@ -139,7 +148,9 @@ screen-reader output, or focus effects. `useFocusEffect` is a no-op. Router mock
 do not mount a navigation tree or prove a route exists. Use Expo Router's
 `renderRouter` integration setup for navigation-tree behavior when needed.
 RNTL's Jest-dependent fake-timer and `userEvent` paths are not covered here;
-these specs use real timers and `fireEvent`. React 19 prints the upstream
+these specs use real timers and `fireEvent`. A spec that must pass a long wait
+fakes only `setTimeout` and `clearTimeout` with Vitest and advances them inside
+`act`, as the close-wait cases in `test/routes/sell-close.spec.tsx` do. React 19 prints the upstream
 react-test-renderer deprecation warning; it is retained in test output.
 
 Run [mobile/Expo checks](mobile-expo.md) for dependency and bundle evidence.

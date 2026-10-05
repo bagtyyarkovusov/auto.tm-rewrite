@@ -24,13 +24,16 @@ const fixture = vi.hoisted(() => {
       seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
     },
     listing: {} as Record<string, unknown>,
-    photos: [{ photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 }],
+    saved: { photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 } as Record<string, unknown>,
+    photos: [] as Record<string, unknown>[],
+    gate: { canPublish: true, blockers: [] as string[] },
   };
 });
+fixture.photos = [fixture.saved];
 fixture.listing = { ...fixture.baseline };
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
-  photos: fixture.photos, publishGate: { canPublish: true, blockers: [] },
+  photos: fixture.photos, publishGate: fixture.gate,
 }) }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: fixture.deleteDraftDir }));
 vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
@@ -74,6 +77,8 @@ beforeEach(() => {
   fixture.saveState = { status: "idle", error: null, opStates: {} };
   fixture.pending = false;
   fixture.listing = { ...fixture.baseline };
+  fixture.photos = [fixture.saved];
+  fixture.gate = { canPublish: true, blockers: [] };
 });
 
 describe("legacy Listing edit", () => {
@@ -174,6 +179,29 @@ describe("legacy Listing edit", () => {
     expect(fixture.deleteDraftDir).toHaveBeenCalledWith(`edit-${fixture.id}`);
   });
 
+  describe("with a photo that keeps Save changes disabled", () => {
+    function renderReview(photo: Record<string, unknown>, blocker: string) {
+      fixture.listing = { ...fixture.baseline, conditionDisclosure: { damaged: false } };
+      fixture.photos = [fixture.saved, { photoId: "new-photo", sortOrder: 1, retryCount: 0, ...photo }];
+      fixture.gate = { canPublish: false, blockers: [blocker] };
+      const screen = renderMobile(<EditListingScreen />);
+      expect(screen.getByRole("button", { name: "Save changes", disabled: true })).toBeTruthy();
+      return screen;
+    }
+
+    it("counts a photo waiting for the network as uploading, in the chip and the reason", () => {
+      const screen = renderReview({ state: "waiting_for_network" }, "wizardErrors.uploadsInProgress");
+      expect(screen.getByText("1 uploading")).toBeTruthy();
+      expect(screen.getByText("Wait for 1 photos to finish uploading")).toBeTruthy();
+    });
+
+    it("counts a lost photo as failed, in the chip and the reason", () => {
+      const screen = renderReview({ state: "lost" }, "wizardErrors.uploadsFailed");
+      expect(screen.getByText("1 failed")).toBeTruthy();
+      expect(screen.getByText("1 failed — retry or remove")).toBeTruthy();
+    });
+  });
+
   describe("after a partial save failure", () => {
     function renderFailedReview() {
       fixture.saveState = {
@@ -187,10 +215,9 @@ describe("legacy Listing edit", () => {
       return screen;
     }
 
+    // Retry 0 is the status line under the progress bar, Retry 1 the failure banner on Review.
     function retryButton(screen: ReturnType<typeof renderMobile>, index: number) {
-      const button = screen.getAllByRole("button", { name: "Retry" }).at(index);
-      if (!button) throw new Error(`No Retry button at ${index}`);
-      return button;
+      return screen.getByRole("button", { name: index === 0 ? "Not saved. Retry" : "Retry" });
     }
 
     it("shows which operations succeeded and failed", () => {

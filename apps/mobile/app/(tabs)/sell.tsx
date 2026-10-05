@@ -1,11 +1,11 @@
 import { PlusCircle } from "lucide-react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { NavigationContext } from "@react-navigation/native";
 import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useRef } from "react";
-import { View } from "react-native";
+import { BackHandler, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
+import { ListingsSchemas, type WizardSchemas } from "@auto-tm/contracts";
 
 import { ApiError } from "../../src/api/client";
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
@@ -16,12 +16,15 @@ import { usePublishDraft } from "../../src/api/listings/usePublishDraft";
 import { useBrands } from "../../src/api/catalog/useBrands";
 import { useModels } from "../../src/api/catalog/useModels";
 import { deleteDraftDir } from "../../src/listings/uploadStaging/stagingDir";
+import { countUploads } from "../../src/listings/uploadStaging/uploadCounts";
 import { useUploadQueue } from "../../src/listings/uploadStaging/useUploadQueue";
 import {
   wizardMachineReducer,
   createInitialState,
   buildMachineContext,
+  isUntouchedPayload,
 } from "../../src/listings/wizard/wizardMachine";
+import { LeaveUnsavedDialog } from "../../src/listings/wizard/LeaveUnsavedDialog";
 import { WizardLayout } from "../../src/listings/wizard/WizardLayout";
 import { useWizardAutosave } from "../../src/listings/wizard/useWizardAutosave";
 import { useAuth } from "../../src/auth/useAuth";
@@ -40,7 +43,9 @@ import Step4Specs from "../../src/listings/wizard/Step4Specs";
 import Step5Price from "../../src/listings/wizard/Step5Price";
 import Step6Location from "../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
-import Step8Review from "../../src/listings/wizard/Step8Review";
+import CheckAndPublish from "../../src/listings/wizard/CheckAndPublish";
+import { publishBlockerLines } from "../../src/listings/wizard/publishBlockers";
+import { publishFailureMessage, publishFailureOf } from "../../src/listings/wizard/publishFailure";
 
 
 import { useToast } from "@/components/ui/toast";
@@ -48,6 +53,8 @@ import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 
+// What is saved and published: only photos that have a key, since the API treats
+// a draft photo as attached and Publish needs a keyed one.
 function buildPayloadPhotos(
   photos: ReturnType<typeof useUploadQueue>["photos"],
 ): NonNullable<WizardSchemas.WizardDraftPayload["photos"]> {
@@ -60,6 +67,31 @@ function buildPayloadPhotos(
     }));
 }
 
+// What the Photos step validates: every picked photo, key or not, so Continue
+// does not wait for an upload. Never saved; see buildPayloadPhotos.
+function buildPickedPhotos(
+  photos: ReturnType<typeof useUploadQueue>["photos"],
+): NonNullable<WizardSchemas.WizardDraftPayload["photos"]> {
+  return photos.map((p) => ({
+    photoId: p.photoId,
+    ...(p.key ? { key: p.key } : {}),
+    sortOrder: p.sortOrder,
+  }));
+}
+
+// How long ✕ waits for its save or delete. One request can take 30 seconds to time
+// out, and a token refresh before it more, which is too long to hold ✕ disabled.
+const CLOSE_WAIT_MS = 10_000;
+
+/** `work`, or `onTimeout` if it has not settled within the close wait. */
+function withinCloseWait<T>(work: Promise<T>, onTimeout: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(onTimeout), CLOSE_WAIT_MS);
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+}
+
 export default function SellScreen() {
   const { t } = useTranslation();
   // `phone` follows the live auth session, so signing in from this tab's own
@@ -70,16 +102,9 @@ export default function SellScreen() {
     userId: viewer?.userId ?? null,
     enabled: !!isAuthenticated,
   });
-  const { show, setTopClearance } = useToast();
-  const wizardHeaderHeight = useRef(0);
-  const publishErrorToastId = useRef<string | null>(null);
-  const handleHeaderHeightChange = useCallback((height: number) => {
-    wizardHeaderHeight.current = height;
-    if (publishErrorToastId.current) {
-      setTopClearance(publishErrorToastId.current, height);
-    }
-  }, [setTopClearance]);
+  const { show } = useToast();
   const navigation = useContext(NavigationContext);
+  const isFocused = useIsFocused();
   const params = useLocalSearchParams<{
     resumeDraftId?: string;
     confirmedContactPhone?: string;
@@ -87,6 +112,14 @@ export default function SellScreen() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [draftLimitOpen, setDraftLimitOpen] = useState(false);
   const [publishPhoneError, setPublishPhoneError] = useState(false);
+  const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const closingRef = useRef(false);
+  const publishingRef = useRef(false);
+  // The draft that tapping New listing created in this session. Only that draft is
+  // removed when the seller closes it untouched; a draft reopened from the Sell tab
+  // or My listings is never deleted by ✕.
+  const newDraftIdRef = useRef<string | null>(null);
   const [machineState, dispatch] = useReducer(
     wizardMachineReducer,
     createInitialState(),
@@ -95,6 +128,8 @@ export default function SellScreen() {
     Partial<Record<WizardSchemas.WizardStep, boolean>>
   >({});
   const resumedRef = useRef<string | null>(null);
+  // Whether the upload queue held the open draft's photos at the last sync.
+  const queueWasReady = useRef(false);
 
   // Hide the bottom tab bar while the wizard is open — the wizard is a focused
   // flow that should not advertise navigation to other tabs.
@@ -135,7 +170,7 @@ export default function SellScreen() {
     (m) => m.id === draftsData?.items?.[0]?.payload.modelId,
   )?.name;
 
-  const { save, forceSave, retrySave, saveStatus, saveError } =
+  const { save, forceSave, flush, discardPending, retrySave, saveStatus, saveError } =
     useWizardAutosave(machineState.draftId ?? undefined);
   const uploadQueue = useUploadQueue(
     machineState.draftId ? `draft-${machineState.draftId}` : "",
@@ -144,42 +179,67 @@ export default function SellScreen() {
 
   const ctx = buildMachineContext(machineState);
 
-  // Sync upload queue photos into payload
+  // Sync the picked photos into the payload the steps validate. Only which photos
+  // there are, and their order, count: a photo's key arriving later changes nothing
+  // the Photos step checks, so it must not reset the steps after it. Nor does the
+  // first sync of a resumed draft: a photo that was still uploading when the app
+  // closed comes back from staging, and that is not a change the seller made.
+  // Until the queue holds the open draft's photos it is empty, or holds the last
+  // draft's, and says nothing about this one: the saved photos stay as they are.
+  const queueReady = uploadQueue.isReady === true && machineState.draftId !== null;
   useEffect(() => {
-    const photosFromQueue = buildPayloadPhotos(uploadQueue.photos);
-    const currentPhotos = JSON.stringify(machineState.payload.photos ?? []);
-    const newPhotos = JSON.stringify(photosFromQueue);
-    if (currentPhotos !== newPhotos) {
+    const restoring = queueReady && !queueWasReady.current;
+    queueWasReady.current = queueReady;
+    if (!queueReady) return;
+    const picked = buildPickedPhotos(uploadQueue.photos);
+    const current = machineState.payload.photos ?? [];
+    const sameOrder =
+      current.length === picked.length &&
+      current.every((photo, index) => photo.photoId === picked[index]?.photoId);
+    if (!sameOrder) {
       dispatch({
         type: "UPDATE_FIELDS",
         updates: {
-          photos: photosFromQueue,
+          photos: picked,
         },
+        keepValidSteps: restoring,
       });
     }
-  }, [uploadQueue.photos]);
+  }, [uploadQueue.photos, queueReady]);
+
+  // The photos a save sends: the queue's keyed ones. Until the queue holds the open
+  // draft's photos, the keyed ones the draft was opened with, so Back, Continue or
+  // ✕ in that moment does not write the draft without its photos.
+  const photosToSave = useMemo(
+    () =>
+      queueReady
+        ? buildPayloadPhotos(uploadQueue.photos)
+        : (machineState.payload.photos ?? []).filter((p) => !!p.key),
+    [queueReady, uploadQueue.photos, machineState.payload.photos],
+  );
 
   // Stable key for autosave trigger — avoids 25+ individual deps and reference churn
   const payloadKey = useMemo(
     () =>
       JSON.stringify({
         ...machineState.payload,
-        photos: buildPayloadPhotos(uploadQueue.photos),
+        photos: photosToSave,
         validatedSteps: machineState.validatedSteps,
       }),
-    [machineState.payload, machineState.validatedSteps, uploadQueue.photos],
+    [machineState.payload, machineState.validatedSteps, photosToSave],
   );
 
-  // Autosave when payload changes
+  // Autosave when payload changes. Not before the queue holds this draft's photos:
+  // a save built from the queue until then would write the draft without them.
   useEffect(() => {
-    if (!machineState.draftId || machineState.status !== "step") return;
+    if (!queueReady || machineState.status !== "step") return;
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
-      photos: buildPayloadPhotos(uploadQueue.photos),
+      photos: photosToSave,
       validatedSteps: machineState.validatedSteps,
     };
     save(fullPayload);
-  }, [machineState.draftId, machineState.status, payloadKey, save]);
+  }, [machineState.draftId, queueReady, machineState.status, payloadKey, save]);
 
   const handleStartListing = useCallback(() => {
     if (!isAuthenticated) {
@@ -203,6 +263,7 @@ export default function SellScreen() {
 
     createDraft.mutate(undefined, {
       onSuccess: (draft) => {
+        newDraftIdRef.current = draft.id;
         dispatch({
           type: "INIT",
           draftId: draft.id,
@@ -281,14 +342,16 @@ export default function SellScreen() {
 
   const handleBack = useCallback(() => {
     dispatch({ type: "BACK" });
-    // Force save on navigation
+    // Force save on navigation, with the step it moves to: the payload in hand
+    // still names the step being left.
+    const moved = wizardMachineReducer(machineState, { type: "BACK" });
     const fullPayload: WizardSchemas.WizardDraftPayload = {
-      ...machineState.payload,
-      photos: buildPayloadPhotos(uploadQueue.photos),
-      validatedSteps: machineState.validatedSteps,
+      ...moved.payload,
+      photos: photosToSave,
+      validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [machineState.payload, machineState.validatedSteps, uploadQueue.photos, forceSave]);
+  }, [machineState, photosToSave, forceSave]);
 
   const handleContinue = useCallback(() => {
     if (discardDraft.isPending || publishDraft.isPending) return;
@@ -317,72 +380,175 @@ export default function SellScreen() {
       return;
     }
 
-    dispatch({ type: "NEXT" });
-    // Force save on navigation
+    // Done on a step opened from Check returns there; Continue moves on.
+    const advance = { type: ctx.editDetourActive ? "RETURN_TO_REVIEW" : "NEXT" } as const;
+    dispatch(advance);
+    // Force save on navigation, with the step it moves to.
+    const moved = wizardMachineReducer(machineState, advance);
     const fullPayload: WizardSchemas.WizardDraftPayload = {
-      ...machineState.payload,
-      photos: buildPayloadPhotos(uploadQueue.photos),
-      validatedSteps: machineState.validatedSteps,
+      ...moved.payload,
+      photos: photosToSave,
+      validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, machineState, uploadQueue.photos, forceSave, discardDraft.isPending, publishDraft.isPending, accountPhone, contactPhonesData]);
+  }, [ctx.canContinue, ctx.editDetourActive, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending, accountPhone, contactPhonesData]);
 
   const handlePublish = useCallback(async () => {
-    if (!machineState.draftId) return;
+    // One publish at a time: a second tap lands before the button re-renders disabled.
+    if (!machineState.draftId || publishingRef.current) return;
+    publishingRef.current = true;
 
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
       description: machineState.payload.description?.trim(),
-      photos: buildPayloadPhotos(uploadQueue.photos),
+      photos: photosToSave,
       validatedSteps: machineState.validatedSteps,
     };
 
     dispatch({ type: "PUBLISH_START" });
 
+    // Publish sends what the server holds, so the draft must be saved first. One
+    // attempt: a retry left running could change the draft after it is published.
+    // A failed save sends nothing, and the save status says what went wrong.
+    if (!(await flush(fullPayload))) {
+      dispatch({ type: "PUBLISH_ABORTED" });
+      publishingRef.current = false;
+      return;
+    }
+
     try {
-      await forceSave(fullPayload);
       const result = await publishDraft.mutateAsync(machineState.draftId);
-      dispatch({ type: "PUBLISH_SUCCESS", listingId: result.id });
       show({
         title: t("listingPublished"),
         variant: "success",
       });
       router.replace(`/(public)/listings/${result.id}`);
+      // The draft is a Listing now, so the wizard closes and the Sell tab is back
+      // at its entry. No success screen (founder decision D8 on #354).
+      newDraftIdRef.current = null;
+      dispatch({ type: "DISCARD" });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : t("failedToPublish");
-      dispatch({ type: "PUBLISH_ERROR", error: message });
-      // ADR-0081: the contact phone needs a fresh confirmation. Keep the
-      // draft and send the seller to the Contact step instead of a toast.
+      // ADR-0081: the contact phone needs a confirmation. Nothing was published
+      // and the draft is saved, so this is not a publish failure to word on
+      // Check: the seller goes to the Contact step, and Done brings them back.
       if (isContactPhonePublishError(err)) {
-        dispatch({ type: "GO_TO_STEP", step: "contact" });
+        dispatch({ type: "PUBLISH_ABORTED" });
+        dispatch({ type: "CHANGE_FROM_REVIEW", step: "contact" });
         setPublishPhoneError(true);
         return;
       }
-      publishErrorToastId.current = show({
-        title: message, variant: "destructive", topClearance: wizardHeaderHeight.current,
-      });
+      // The wizard stays on Check with the draft saved; the error is worded above
+      // Publish.
+      dispatch({ type: "PUBLISH_ERROR", error: publishFailureOf(err) });
+    } finally {
+      publishingRef.current = false;
     }
-  }, [machineState, uploadQueue.photos, forceSave, publishDraft, show]);
+  }, [machineState, photosToSave, flush, publishDraft, show]);
 
-  const handleDiscard = useCallback(() => {
-    const id = machineState.draftId;
-    if (!id) return;
-
-    // Always clear local state immediately so the user can escape a broken
-    // draft (e.g., orphaned draftId after a server restart / DB reset).
-    void deleteDraftDir(`draft-${id}`);
+  const closeWizard = useCallback(() => {
+    newDraftIdRef.current = null;
+    setUnsavedDialogOpen(false);
     dispatch({ type: "DISCARD" });
+  }, []);
 
-    // Best-effort server-side delete. If the draft is already gone (404) or
-    // the request fails for any other reason, we don't block the user.
-    discardDraft.mutate(id, {
-      onError: (err) => {
-        const message = err instanceof Error ? err.message : t("failedToDiscard");
-        show({ title: message, variant: "destructive" });
-      },
+  // ✕: the draft is already on the server, so closing saves the pending change and
+  // leaves. A new Listing the seller never touched is deleted instead, so it neither
+  // lingers as an empty draft nor counts toward the five-draft limit. A failed save
+  // asks before anything is lost. `retry` skips the "last save failed" shortcut so
+  // the dialog's Retry really tries again.
+  const handleClose = useCallback(
+    async (retry = false) => {
+      const id = machineState.draftId;
+      if (!id || closingRef.current) return;
+      if (machineState.status !== "step" && machineState.status !== "publishError") return;
+
+      const payload: WizardSchemas.WizardDraftPayload = {
+        ...machineState.payload,
+        photos: photosToSave,
+        validatedSteps: machineState.validatedSteps,
+      };
+
+      closingRef.current = true;
+      setIsClosing(true);
+      try {
+        // A picked photo without a key is not in the payload yet, but it is a change.
+        if (
+          id === newDraftIdRef.current &&
+          uploadQueue.photos.length === 0 &&
+          isUntouchedPayload(payload)
+        ) {
+          discardPending();
+          try {
+            // Wait, so a New listing tapped right after counts the drafts without this one.
+            // A delete that has not answered in time is left to finish on its own.
+            await withinCloseWait(discardDraft.mutateAsync(id).then(() => undefined), undefined);
+          } catch {
+            // Nothing was typed, so nothing is lost; the empty draft stays and can be
+            // deleted from My listings.
+          }
+          void deleteDraftDir(`draft-${id}`);
+          closeWizard();
+          return;
+        }
+
+        if (!retry && saveStatus === "error") {
+          setUnsavedDialogOpen(true);
+          return;
+        }
+        // A save that has not answered in time counts as failed: the seller is asked
+        // instead of waiting out a dead connection with ✕ disabled.
+        if (!(await withinCloseWait(flush(payload), false))) {
+          setUnsavedDialogOpen(true);
+          return;
+        }
+        closeWizard();
+        show({ title: t("savedToDrafts"), variant: "success" });
+      } finally {
+        closingRef.current = false;
+        setIsClosing(false);
+      }
+    },
+    [
+      machineState.draftId,
+      machineState.status,
+      machineState.payload,
+      machineState.validatedSteps,
+      uploadQueue.photos,
+      photosToSave,
+      saveStatus,
+      flush,
+      discardPending,
+      discardDraft,
+      closeWizard,
+      show,
+      t,
+    ],
+  );
+
+  // Android system back: on the first step it behaves as ✕, on later steps it goes
+  // back one step. The create wizard hides the tab bar, so nothing else would handle it.
+  // Only while the Sell tab is the focused screen and the wizard can be left: a
+  // screen opened over the tabs keeps its own back, and so does a published Listing.
+  const backIsWizards =
+    isFocused &&
+    inWizard &&
+    machineState.mode === "create" &&
+    (machineState.status === "step" || machineState.status === "publishError");
+  useEffect(() => {
+    if (!backIsWizards) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (isClosing) return true;
+      // The dialog is on top: back dismisses it, like Keep editing.
+      if (unsavedDialogOpen) {
+        setUnsavedDialogOpen(false);
+        return true;
+      }
+      if (ctx.canGoBack) handleBack();
+      else void handleClose();
+      return true;
     });
-  }, [machineState.draftId, discardDraft, show]);
+    return () => subscription.remove();
+  }, [backIsWizards, ctx.canGoBack, isClosing, unsavedDialogOpen, handleBack, handleClose]);
 
   const handlePayloadChange = useCallback(
     (updates: Partial<WizardSchemas.WizardDraftPayload>) => {
@@ -412,35 +578,20 @@ export default function SellScreen() {
           : null;
 
     // Compute upload status counts for chip + publishGate reason
-    const uploadStatus = {
-      inflight: uploadQueue.photos.filter((p) =>
-        ["selected", "compressed", "presigned", "uploading"].includes(p.state),
-      ).length,
-      failed: uploadQueue.photos.filter((p) => p.state === "failed").length,
-      total: uploadQueue.photos.length,
-    };
+    const uploadStatus = countUploads(uploadQueue.photos);
 
-    // Compose a clear reason text when Publish/Continue is disabled.
+    // On Check, everything that blocks Publish is named above it. Until the queue
+    // holds this draft's photos its counts say nothing about the draft.
+    const publishBlockers = ctx.isLastStep
+      ? publishBlockerLines(t, {
+          validatedSteps: machineState.validatedSteps,
+          uploads: queueReady ? uploadStatus : null,
+        })
+      : [];
+
+    // Why Continue or Done is disabled on a step the seller tried to leave.
     let disabledReason: string | undefined;
-    if (ctx.isLastStep && !uploadQueue.publishGate.canPublish) {
-      if (uploadStatus.failed > 0) {
-        disabledReason = t("failed");
-      } else if (uploadStatus.inflight > 0) {
-        disabledReason = t("waitForPhotos", { count: uploadStatus.inflight });
-      } else {
-        disabledReason =
-          translateWizardError(t, uploadQueue.publishGate.blockers[0]) ??
-          t("cannotPublishYet");
-      }
-    } else if (ctx.isLastStep && !ctx.canPublish) {
-      const missing = WizardSchemas.WIZARD_STEPS.filter(
-        (s) =>
-          s !== "review" && !machineState.validatedSteps.includes(s),
-      );
-      if (missing.length > 0) {
-        disabledReason = t("completeStepsBeforePublish", { count: missing.length });
-      }
-    } else if (
+    if (
       !ctx.isLastStep &&
       !ctx.canContinue &&
       attemptedSteps[currentStep] &&
@@ -448,10 +599,15 @@ export default function SellScreen() {
     ) {
       disabledReason = translateWizardError(t, ctx.stepErrors[0]);
     }
+    // On Check, Publish waits for the queue to hold this draft's photos. That is
+    // not something to fix, so it reads as a neutral line, not a blocker.
+    if (ctx.isLastStep && !queueReady) {
+      disabledReason = t("loadingEllipsis");
+    }
 
     return (
+      <>
       <WizardLayout
-        onHeaderHeightChange={handleHeaderHeightChange}
         routeTitle={t("sellCar")}
         stepTitle={t(`wizardSteps.${currentStep}`)}
         stepNumber={ctx.stepNumber}
@@ -459,14 +615,16 @@ export default function SellScreen() {
         onBack={handleBack}
         onContinue={handleContinue}
         onPublish={handlePublish}
-        onDiscard={handleDiscard}
+        onReturnToReview={handleContinue}
+        onClose={() => void handleClose()}
+        isClosing={isClosing}
         mode={machineState.mode}
         editDetourActive={ctx.editDetourActive}
         canContinue={
           (ctx.canContinue || currentStep === "specs" || currentStep === "contact") &&
           !discardDraft.isPending && !publishDraft.isPending
         }
-        canPublish={ctx.canPublish && uploadQueue.publishGate.canPublish}
+        canPublish={ctx.canPublish && queueReady && uploadQueue.publishGate.canPublish}
         canGoBack={ctx.canGoBack}
         isLastStep={ctx.isLastStep}
         saveStatus={saveStatus}
@@ -474,9 +632,18 @@ export default function SellScreen() {
         onRetrySave={retrySave}
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
+        publishBlockers={publishBlockers}
+        isPublishing={machineState.status === "publishing"}
+        publishError={
+          machineState.status === "publishError"
+            ? publishFailureMessage(t, machineState.publishError, machineState.payload.priceCurrency)
+            : null
+        }
         uploadStatus={uploadStatus}
-        isDiscarding={discardDraft.isPending}
-        discardError={discardDraft.error?.message ?? null}
+        onUploadStatusPress={() =>
+          // From Check the chip opens Photos as a change, so Done comes back.
+          dispatch({ type: ctx.isLastStep ? "CHANGE_FROM_REVIEW" : "GO_TO_STEP", step: "photos" })
+        }
       >
         {currentStep === "photos" && (
           <Step2Photos
@@ -548,14 +715,22 @@ export default function SellScreen() {
           />
         )}
         {currentStep === "review" && (
-          <Step8Review
+          <CheckAndPublish
             payload={machineState.payload}
             validatedSteps={machineState.validatedSteps}
-            onGoToStep={(step) => dispatch({ type: "GO_TO_STEP", step })}
+            onChangeStep={(step) => dispatch({ type: "CHANGE_FROM_REVIEW", step })}
             photos={uploadQueue.photos}
+            photosReady={queueReady}
           />
         )}
       </WizardLayout>
+      <LeaveUnsavedDialog
+        open={unsavedDialogOpen}
+        onOpenChange={setUnsavedDialogOpen}
+        onRetry={() => void handleClose(true)}
+        onLeave={closeWizard}
+      />
+      </>
     );
   }
 

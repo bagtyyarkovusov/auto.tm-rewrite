@@ -36,6 +36,7 @@ const fixture = vi.hoisted(() => {
     mutation: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, error: null },
     publish: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, error: null },
     toastShow: vi.fn(),
+    flush: vi.fn(),
   };
 });
 
@@ -67,12 +68,14 @@ vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => ({ userId: "user-1
 vi.mock("../../src/listings/wizard/useWizardAutosave", () => ({
   useWizardAutosave: () => ({
     save: vi.fn(), forceSave: vi.fn().mockResolvedValue(undefined), retrySave: vi.fn(),
+    // Publish saves the draft first (#588); the save succeeds here.
+    flush: fixture.flush, discardPending: vi.fn(),
     saveStatus: "idle", saveError: null,
   }),
 }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
   photos: [{ photoId: fixture.id, key: "photo.jpg", sortOrder: 0, state: "uploaded" }],
-  publishGate: { canPublish: true, blockers: [] },
+  publishGate: { canPublish: true, blockers: [] }, isReady: true,
 }) }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: vi.fn() }));
 vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => fixture.auth }));
@@ -111,6 +114,7 @@ beforeEach(() => {
   fixture.confirmedPhones = [];
   fixture.publish.mutateAsync.mockReset();
   fixture.toastShow.mockClear();
+  fixture.flush.mockReset().mockResolvedValue(true);
 });
 
 describe("Sell wizard Contact step", () => {
@@ -168,14 +172,15 @@ describe("Sell wizard Contact step", () => {
     resume("stale");
     const screen = renderMobile(<SellScreen />);
 
-    fireEvent.press(screen.getByRole("button", { name: "Edit Contact" }));
+    // Opened from Check and publish (#588), so the step ends with Done.
+    fireEvent.press(screen.getByRole("button", { name: /^Contact, .*Change$/ }));
 
     expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
     expect(
       screen.getByText("Confirmation expired. Tap to confirm again."),
     ).toBeTruthy();
 
-    fireEvent.press(screen.getByRole("button", { name: "Continue" }));
+    fireEvent.press(screen.getByRole("button", { name: "Done" }));
 
     expect(
       screen.getByText("Confirm this number again or choose another"),
@@ -236,6 +241,53 @@ describe("Sell wizard Contact step", () => {
       ).toBeTruthy();
       expect(screen.getByLabelText(STALE_PHONE)).toBeTruthy();
       expect(fixture.toastShow).not.toHaveBeenCalled();
+      // The draft was saved before the publish was tried, and stays open.
+      expect(fixture.flush).toHaveBeenCalledOnce();
+
+      // Picking a number that needs no code and Done returns to Check, where
+      // Publish is ready again and no publish failure is worded (#588).
+      fireEvent.press(screen.getByLabelText("+99365000000"));
+      expect(
+        screen.queryByText("Confirm the contact phone again to publish."),
+      ).toBeNull();
+      await act(async () => {
+        fireEvent.press(screen.getByRole("button", { name: "Done" }));
+      });
+      expect(
+        screen.getByRole("button", { name: "Publish" }).props.accessibilityState,
+      ).toMatchObject({ disabled: false });
+      expect(
+        screen.queryByText("Could not publish. Your draft is saved. Try again."),
+      ).toBeNull();
     },
   );
+
+  it("Continue is enabled with the preselected sign-in phone and moves to Check and publish", async () => {
+    resume("atContact");
+    const screen = renderMobile(<SellScreen />);
+
+    const next = screen.getByRole("button", { name: "Continue" });
+    expect(next.props.accessibilityState).toMatchObject({ disabled: false });
+    await act(async () => { fireEvent.press(next); });
+
+    expect(screen.queryByText("Choose or confirm a contact phone")).toBeNull();
+    expect(
+      screen.getByRole("header", { name: "Check and publish, Step 7 of 7" }),
+    ).toBeTruthy();
+  });
+
+  it("Continue is enabled with a confirmed number selected and moves to Check and publish", async () => {
+    fixture.confirmedPhones = [confirmedEntry(CONFIRMED_PHONE, 3)];
+    resume("atContact");
+    const screen = renderMobile(<SellScreen />);
+
+    fireEvent.press(screen.getByLabelText(CONFIRMED_PHONE));
+    const next = screen.getByRole("button", { name: "Continue" });
+    expect(next.props.accessibilityState).toMatchObject({ disabled: false });
+    await act(async () => { fireEvent.press(next); });
+
+    expect(
+      screen.getByRole("header", { name: "Check and publish, Step 7 of 7" }),
+    ).toBeTruthy();
+  });
 });

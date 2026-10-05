@@ -50,7 +50,7 @@ describe("draftProgress", () => {
     { year: 1800 },
     { vin: "X".repeat(18) },
     { conditionDisclosure: {} },
-    { photos: [{ photoId: id, sortOrder: 0 }] },
+    { photos: [] },
     { priceAmount: 0 },
     { description: "" },
     { contactPhone: "invalid" },

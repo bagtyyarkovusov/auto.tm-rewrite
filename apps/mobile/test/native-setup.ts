@@ -37,18 +37,23 @@ const routerMock = vi.hoisted(() => ({
   dismissTo: vi.fn(), dismissAll: vi.fn(), canDismiss: vi.fn(() => true),
 }));
 const routeParams = vi.hoisted(() => ({} as Record<string, string>));
+// Whether the rendered screen is the focused one; a spec sets `focused` to false
+// for a screen that another screen covers.
+const screenFocus = vi.hoisted(() => ({ focused: true }));
 vi.mock("expo-router", () => ({
   router: routerMock, useRouter: () => routerMock,
   useLocalSearchParams: () => routeParams,
   useFocusEffect: vi.fn(),
+  useIsFocused: () => screenFocus.focused,
 }));
 beforeEach(() => {
   scrollRequests.length = 0;
+  screenFocus.focused = true;
   Object.values(routerMock).forEach((mock) => mock.mockClear());
   Object.keys(routeParams).forEach((key) => Reflect.deleteProperty(routeParams, key));
 });
 
-export { routerMock, routeParams };
+export { routerMock, routeParams, screenFocus };
 
 // The installed Slot distribution retains JSX in .mjs. Its clone behavior is
 // enough for this host adapter; native primitive overlays are mocked per spec.

@@ -5,6 +5,7 @@ import {
   wizardMachineReducer,
   createInitialState,
   buildMachineContext,
+  isUntouchedPayload,
 } from "./wizardMachine";
 
 const validUuid = "550e8400-e29b-41d4-a716-446655440000";
@@ -61,7 +62,7 @@ describe("INIT", () => {
     expect(next.status).toBe("step");
     expect(next.draftId).toBe("draft-1");
     expect(next.mode).toBe("create");
-    expect(next.payload).toEqual({ vin: "WBA123", condition: "used" });
+    expect(next.payload).toEqual({ vin: "WBA123", condition: "used", currentStep: 1 });
     expect(next.currentStep).toBe("vehicle");
   });
 
@@ -498,36 +499,39 @@ describe("PUBLISH lifecycle", () => {
     state = wizardMachineReducer(state, { type: "PUBLISH_START" });
     state = wizardMachineReducer(state, {
       type: "PUBLISH_ERROR",
-      error: "Publish failed",
+      error: "server",
     });
 
     expect(state.status).toBe("publishError");
-    expect(state.publishError).toBe("Publish failed");
+    expect(state.publishError).toBe("server");
   });
 
-  it("lets GO_TO_STEP leave publishError for the Contact step, keeping the draft", () => {
+  it("a publish refused for the contact phone opens Contact with no publish error, and Done returns to Check (#593)", () => {
     let state = wizardMachineReducer(createInitialState(), {
       type: "INIT",
       draftId: "draft-1",
-      payload: { ...car, ...details },
+      payload: completePayload,
     });
+    expect(state.currentStep).toBe("review");
 
+    // The route's sequence for CONTACT_PHONE_*: it is not a PublishFailure.
     state = wizardMachineReducer(state, { type: "PUBLISH_START" });
-    state = wizardMachineReducer(state, {
-      type: "PUBLISH_ERROR",
-      error: "CONTACT_PHONE_NOT_CONFIRMED",
-    });
-
-    const back = wizardMachineReducer(state, {
-      type: "GO_TO_STEP",
+    state = wizardMachineReducer(state, { type: "PUBLISH_ABORTED" });
+    const contact = wizardMachineReducer(state, {
+      type: "CHANGE_FROM_REVIEW",
       step: "contact",
     });
 
-    expect(back.status).toBe("step");
-    expect(back.currentStep).toBe("contact");
-    expect(back.publishError).toBeNull();
-    expect(back.draftId).toBe("draft-1");
-    expect(back.payload.brandId).toBe(car.brandId);
+    expect(contact.status).toBe("step");
+    expect(contact.currentStep).toBe("contact");
+    expect(contact.publishError).toBeNull();
+    expect(contact.changingFromReview).toBe(true);
+    expect(contact.draftId).toBe("draft-1");
+    expect(contact.payload.brandId).toBe(completePayload.brandId);
+
+    const back = wizardMachineReducer(contact, { type: "RETURN_TO_REVIEW" });
+    expect(back.currentStep).toBe("review");
+    expect(buildMachineContext(back).canPublish).toBe(true);
   });
 });
 
@@ -692,5 +696,95 @@ describe("New draft resume with field-derived completion (ADR-0080)", () => {
     });
     expect(state.validatedSteps).toEqual(["vehicle"]);
     expect(state.currentStep).toBe("specs");
+  });
+});
+
+describe("Resume at the step the seller left (#585)", () => {
+  const upToPrice = { ...car, ...details, photos: [validPhoto] };
+  const init = (payload: WizardSchemas.WizardDraftPayload) =>
+    wizardMachineReducer(createInitialState(), { type: "INIT", draftId: "draft-1", payload });
+
+  it("opens the saved step when it is at or before the first incomplete step", () => {
+    // Vehicle, Details and Photos are complete, so Price is the first incomplete step.
+    expect(init({ ...upToPrice, currentStep: 4 }).currentStep).toBe("price");
+    // The seller went back to Details and left there.
+    expect(init({ ...upToPrice, currentStep: 2 }).currentStep).toBe("specs");
+    expect(init({ ...upToPrice, currentStep: 3 }).currentStep).toBe("photos");
+  });
+
+  it("records the step it opens, so the next save holds the position", () => {
+    // Saved as 1 by an earlier wizard; it opens on Price and now says so.
+    expect(init({ ...upToPrice, currentStep: 1 }).payload.currentStep).toBe(4);
+    expect(init({ ...car, currentStep: 6 }).payload.currentStep).toBe(2);
+    expect(init({ currentStep: 1 }).payload.currentStep).toBe(1);
+  });
+
+  it("never opens a step whose earlier steps are incomplete", () => {
+    expect(init({ ...car, currentStep: 6 }).currentStep).toBe("specs");
+  });
+
+  it("opens Check and publish when the seller left on it", () => {
+    expect(init({ ...completePayload, currentStep: 7 }).currentStep).toBe("review");
+  });
+
+  it("keeps the first-incomplete rule for a draft saved before this change", () => {
+    // Earlier wizards wrote currentStep 1 once and never updated it.
+    expect(init({ ...upToPrice, currentStep: 1 }).currentStep).toBe("price");
+    expect(init({ ...upToPrice }).currentStep).toBe("price");
+    // The eight-step wizard's out-of-range value is ignored too.
+    expect(init({ ...upToPrice, currentStep: 8 as number }).currentStep).toBe("price");
+  });
+
+  it("writes the new position into the create payload when the step changes", () => {
+    let state = init({ ...car, currentStep: 1 });
+    expect(state.currentStep).toBe("specs");
+
+    state = wizardMachineReducer(state, { type: "UPDATE_FIELDS", updates: { ...details } });
+    state = wizardMachineReducer(state, { type: "NEXT" });
+    expect(state.currentStep).toBe("photos");
+    expect(state.payload.currentStep).toBe(3);
+
+    state = wizardMachineReducer(state, { type: "BACK" });
+    expect(state.payload.currentStep).toBe(2);
+
+    state = wizardMachineReducer(state, { type: "GO_TO_STEP", step: "vehicle" });
+    expect(state.payload.currentStep).toBe(1);
+  });
+
+  it("does not add a currentStep to the payload of an edit", () => {
+    const state = wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: null, listingId: "listing-1", mode: "edit", entryStep: "review",
+      payload: { ...completePayload },
+    });
+    expect(state.payload.currentStep).toBeUndefined();
+    const detour = wizardMachineReducer(state, { type: "GO_TO_STEP", step: "price" });
+    expect(detour.payload.currentStep).toBeUndefined();
+  });
+});
+
+describe("isUntouchedPayload (#585)", () => {
+  const created = { currentStep: 1, allowCalls: true, allowChat: true, priceCurrency: "TMT" as const };
+
+  it("is true for the payload a new Listing starts with, before and after INIT", () => {
+    expect(isUntouchedPayload(created)).toBe(true);
+    const state = wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: "draft-1", payload: created,
+    });
+    expect(isUntouchedPayload({ ...state.payload, photos: [], validatedSteps: state.validatedSteps })).toBe(true);
+  });
+
+  it("ignores empty values left behind by clearing a field", () => {
+    expect(isUntouchedPayload({ ...created, vin: "", description: "", photos: [], conditionDisclosure: {} })).toBe(true);
+  });
+
+  it("is false once any field differs from the starting payload", () => {
+    expect(isUntouchedPayload({ ...created, brandId: validUuid })).toBe(false);
+    expect(isUntouchedPayload({ ...created, vin: "W" })).toBe(false);
+    expect(isUntouchedPayload({ ...created, photos: [validPhoto] })).toBe(false);
+    expect(isUntouchedPayload({ ...created, allowCalls: false })).toBe(false);
+    expect(isUntouchedPayload({ ...created, priceCurrency: "USD" })).toBe(false);
+    expect(isUntouchedPayload({ ...created, condition: "new" })).toBe(false);
+    expect(isUntouchedPayload({ ...created, mileageKm: 0 })).toBe(false);
+    expect(isUntouchedPayload({ ...created, conditionDisclosure: { damaged: false } })).toBe(false);
   });
 });

@@ -1,5 +1,7 @@
 import { Enums, WizardSchemas } from "@auto-tm/contracts";
 
+import type { PublishFailure } from "./publishFailure";
+
 const {
   WIZARD_STEPS,
   validateStep,
@@ -23,11 +25,16 @@ export interface WizardMachineState {
   listingId: string | null;
   mode: "create" | "edit";
   editEntryAtReview: boolean;
+  /**
+   * A create draft's step was opened from Check and publish. The step shows Done
+   * in place of Continue, and Done or Back returns to Check.
+   */
+  changingFromReview: boolean;
   currentStep: WizardMachineStep;
   payload: WizardSchemas.WizardDraftPayload;
   validatedSteps: WizardSchemas.WizardStep[];
   saveError: string | null;
-  publishError: string | null;
+  publishError: PublishFailure | null;
   completedListingId: string | null;
 }
 
@@ -58,11 +65,29 @@ export type WizardMachineAction =
     }
   | { type: "NEXT" }
   | { type: "BACK" }
-  | { type: "UPDATE_FIELDS"; updates: Partial<WizardSchemas.WizardDraftPayload> }
+  | {
+      type: "UPDATE_FIELDS";
+      updates: Partial<WizardSchemas.WizardDraftPayload>;
+      /**
+       * The update restores what the seller already had (photos back from
+       * staging), so completed steps stay completed while they are still valid.
+       */
+      keepValidSteps?: boolean;
+    }
   | { type: "GO_TO_STEP"; step: WizardMachineStep }
+  /** Create flow: open a step from Check and publish, to come back with Done. */
+  | { type: "CHANGE_FROM_REVIEW"; step: WizardMachineStep }
+  /** Create flow: Done on a step opened from Check and publish. */
+  | { type: "RETURN_TO_REVIEW" }
   | { type: "PUBLISH_START" }
+  /**
+   * Nothing was published and there is no publish failure to word: back to Check.
+   * The save before publishing failed, or the server asked for the contact phone
+   * to be confirmed (#593), which the route follows with CHANGE_FROM_REVIEW.
+   */
+  | { type: "PUBLISH_ABORTED" }
   | { type: "PUBLISH_SUCCESS"; listingId: string }
-  | { type: "PUBLISH_ERROR"; error: string }
+  | { type: "PUBLISH_ERROR"; error: PublishFailure }
   | { type: "DISCARD" };
 
 // ── Helpers ──
@@ -106,6 +131,81 @@ export function completedSteps(
   return DATA_STEPS.filter((step) => isStepValid(step, payload));
 }
 
+/**
+ * The step the seller left, from the payload's `currentStep` (a position, 1 to 7).
+ * Earlier wizards wrote 1 once and never updated it, and the eight-step wizard
+ * could write 8, so 1 and anything out of range mean "not recorded" and the
+ * draft resumes at its first incomplete step.
+ */
+function savedStep(payload: WizardSchemas.WizardDraftPayload): WizardMachineStep | null {
+  const position = payload.currentStep;
+  if (position === undefined || !Number.isInteger(position)) return null;
+  if (position < 2 || position > WIZARD_STEPS.length) return null;
+  return WIZARD_STEPS[position - 1] ?? null;
+}
+
+/** The payload a new Listing's draft starts with, apart from the step bookkeeping. */
+const NEW_DRAFT_DEFAULTS: Record<string, unknown> = {
+  condition: Enums.ListingCondition.Used,
+  allowCalls: true,
+  allowChat: true,
+  priceCurrency: "TMT",
+};
+
+function isEmptyValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === "") return true;
+  if (Array.isArray(value)) return value.every(isEmptyValue);
+  if (typeof value === "object") return Object.values(value).every(isEmptyValue);
+  return false;
+}
+
+/**
+ * True while the seller has not changed anything from what tapping New listing
+ * created: every field is empty or still at its starting value. A field that was
+ * changed and cleared again counts as untouched.
+ */
+export function isUntouchedPayload(payload: WizardSchemas.WizardDraftPayload): boolean {
+  return Object.entries(payload).every(([key, value]) => {
+    if (key === "currentStep" || key === "validatedSteps") return true;
+    if (key in NEW_DRAFT_DEFAULTS) {
+      return value === undefined || value === NEW_DRAFT_DEFAULTS[key];
+    }
+    return isEmptyValue(value);
+  });
+}
+
+/**
+ * Moves to a step. A create draft records the position in its payload so the
+ * autosave sends it and a later resume opens there; an edit has no draft.
+ */
+function moveTo(
+  state: WizardMachineState,
+  step: WizardMachineStep,
+): Pick<WizardMachineState, "currentStep" | "payload"> {
+  return {
+    currentStep: step,
+    payload:
+      state.mode === "create"
+        ? { ...state.payload, currentStep: stepIndex(step) + 1 }
+        : state.payload,
+  };
+}
+
+/**
+ * Ends a change that began on Check and publish. A changed field reset the steps
+ * after its own, so completion is read from the fields again, as on resume: the
+ * steps the change left valid are complete, and Check names the others.
+ */
+function backToReview(state: WizardMachineState): WizardMachineState {
+  return {
+    ...state,
+    ...moveTo(state, "review"),
+    changingFromReview: false,
+    validatedSteps: completedSteps(state.payload),
+    saveError: null,
+  };
+}
+
 // ── Initial state ──
 
 export function createInitialState(): WizardMachineState {
@@ -115,6 +215,7 @@ export function createInitialState(): WizardMachineState {
     listingId: null,
     mode: "create",
     editEntryAtReview: false,
+    changingFromReview: false,
     currentStep: "vehicle",
     payload: {},
     validatedSteps: [],
@@ -154,6 +255,7 @@ export function wizardMachineReducer(
           listingId: action.listingId ?? null,
           mode,
           editEntryAtReview: true,
+          changingFromReview: false,
           payload,
           validatedSteps: DATA_STEPS,
           // ADR-0080: a New Listing is not asked Damaged, so it needs no answer here.
@@ -169,13 +271,16 @@ export function wizardMachineReducer(
 
       // Resume at the first incomplete step up to the entry step; with no
       // entry step, at the first incomplete step or at review when all are done.
-      // `currentStep` in the payload is not a real position yet; a later slice
-      // saves the step the seller left.
+      // A create draft that recorded the step the seller left opens there, but
+      // never past the first incomplete step, because later steps depend on it.
       const target: WizardMachineStep = action.entryStep ?? "review";
-      const resumeStep =
+      const firstIncomplete =
         WIZARD_STEPS.slice(0, stepIndex(target)).find(
           (step) => !validatedSteps.includes(step),
         ) ?? target;
+      const left = mode === "create" && !action.entryStep ? savedStep(payload) : null;
+      const resumeStep =
+        left && stepIndex(left) < stepIndex(firstIncomplete) ? left : firstIncomplete;
 
       return {
         ...state,
@@ -184,7 +289,12 @@ export function wizardMachineReducer(
         listingId: action.listingId ?? null,
         mode,
         editEntryAtReview: false,
-        payload,
+        changingFromReview: false,
+        // A create draft records the step it opens at, like every later move.
+        payload:
+          mode === "create"
+            ? { ...payload, currentStep: stepIndex(resumeStep) + 1 }
+            : payload,
         validatedSteps,
         currentStep: resumeStep,
         saveError: null,
@@ -217,20 +327,26 @@ export function wizardMachineReducer(
 
       return {
         ...state,
-        currentStep: getStepAtIndex(currentIdx + 1),
+        ...moveTo(state, getStepAtIndex(currentIdx + 1)),
         validatedSteps: newValidated,
         saveError: null,
       };
     }
 
     case "BACK": {
-      if (state.status !== "step") return state;
+      // A failed publish leaves the seller on Check, and Back still works there.
+      if (state.status !== "step" && state.status !== "publishError") return state;
+      // Back from a step opened on Check returns to Check, valid or not: Check
+      // then names the step as one to fill in.
+      if (state.changingFromReview) return backToReview(state);
       const currentIdx = stepIndex(state.currentStep);
       if (currentIdx <= 0) return state;
       return {
         ...state,
-        currentStep: getStepAtIndex(currentIdx - 1),
+        ...moveTo(state, getStepAtIndex(currentIdx - 1)),
+        status: "step",
         saveError: null,
+        publishError: null,
       };
     }
 
@@ -254,7 +370,9 @@ export function wizardMachineReducer(
       const newValidatedSteps =
         state.mode === "edit"
           ? computeValidatedSteps(newPayload, DATA_STEPS)
-          : state.validatedSteps.filter((s) => !invalidated.includes(s));
+          : action.keepValidSteps
+            ? computeValidatedSteps(newPayload, state.validatedSteps)
+            : state.validatedSteps.filter((s) => !invalidated.includes(s));
 
       return {
         ...state,
@@ -265,27 +383,14 @@ export function wizardMachineReducer(
     }
 
     case "GO_TO_STEP": {
-      // A publish rejection (ADR-0081: CONTACT_PHONE_*) sends the seller back
-      // to the Contact step from publishError; the draft payload stays as is.
-      if (state.status !== "step" && state.status !== "publishError") {
-        return state;
-      }
+      if (state.status !== "step") return state;
 
       const targetIdx = stepIndex(action.step);
-      const currentIdx =
-        state.status === "publishError"
-          ? WIZARD_STEPS.length
-          : stepIndex(state.currentStep);
+      const currentIdx = stepIndex(state.currentStep);
 
       // Always allow going backward
       if (targetIdx < currentIdx) {
-        return {
-          ...state,
-          status: "step",
-          currentStep: action.step,
-          saveError: null,
-          publishError: null,
-        };
+        return { ...state, ...moveTo(state, action.step), saveError: null };
       }
 
       // Going forward: target's dependencies must all be validated
@@ -293,18 +398,40 @@ export function wizardMachineReducer(
       const allDepsValid = deps.every((d) => state.validatedSteps.includes(d));
       if (!allDepsValid) return state;
 
+      return { ...state, ...moveTo(state, action.step), saveError: null };
+    }
+
+    case "CHANGE_FROM_REVIEW": {
+      // Also after a failed publish, which leaves the seller on Check.
+      if (state.status !== "step" && state.status !== "publishError") return state;
+      if (state.mode !== "create" || state.currentStep !== "review") return state;
+      if (action.step === "review") return state;
       return {
         ...state,
+        ...moveTo(state, action.step),
         status: "step",
-        currentStep: action.step,
+        changingFromReview: true,
         saveError: null,
         publishError: null,
       };
     }
 
+    case "RETURN_TO_REVIEW": {
+      if (state.status !== "step" || !state.changingFromReview) return state;
+      if (!isStepValid(state.currentStep, state.payload)) return state;
+      return backToReview(state);
+    }
+
     case "PUBLISH_START": {
-      if (state.status !== "step") return state;
+      // A failed publish leaves the seller on Check, where it can be tried again.
+      if (state.status !== "step" && state.status !== "publishError") return state;
       return { ...state, status: "publishing", publishError: null };
+    }
+
+    case "PUBLISH_ABORTED": {
+      // The save status or the Contact step says what went wrong; there is no publish error.
+      if (state.status !== "publishing") return state;
+      return { ...state, status: "step", publishError: null };
     }
 
     case "PUBLISH_SUCCESS": {
@@ -338,7 +465,8 @@ export function buildMachineContext(
 ): WizardMachineContext {
   const currentIdx = stepIndex(state.currentStep);
   const isLastStep = state.currentStep === "review";
-  const editDetourActive = state.mode === "edit" && !isLastStep;
+  const editDetourActive =
+    (state.mode === "edit" && !isLastStep) || (state.changingFromReview && !isLastStep);
 
   const validation = validateStep(state.currentStep, state.payload);
 
@@ -353,7 +481,9 @@ export function buildMachineContext(
   const canGoBack =
     state.mode === "edit"
       ? false
-      : currentIdx > 0 && state.status === "step";
+      : // The first step has a Back too when it was opened from Check.
+        (currentIdx > 0 || state.changingFromReview) &&
+        (state.status === "step" || state.status === "publishError");
 
   // Position-based progress: where in the wizard am I right now.
   const stepNumber = currentIdx + 1;

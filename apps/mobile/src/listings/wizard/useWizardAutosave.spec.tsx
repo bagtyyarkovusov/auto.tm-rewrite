@@ -4,6 +4,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import NetInfo from "@react-native-community/netinfo";
 
 const mockMutateAsync = vi.fn();
 
@@ -261,5 +262,188 @@ describe("useWizardAutosave", () => {
 
     expect(result.current.saveStatus).toBe("error");
     expect(result.current.saveError).toBe("saveTimedOut");
+  });
+});
+
+describe("useWizardAutosave leaving the wizard (#585)", () => {
+  const withDraft = (id: string | undefined) =>
+    renderHook(({ draftId }: { draftId: string | undefined }) => useWizardAutosave(draftId), {
+      wrapper,
+      initialProps: { draftId: id },
+    });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("flush() resolves true after one request and false when it fails", async () => {
+    mockMutateAsync.mockResolvedValueOnce({});
+    const { result } = withDraft("draft-1");
+
+    let saved: boolean | undefined;
+    await act(async () => {
+      saved = await result.current.flush({ vin: "A" });
+    });
+    expect(saved).toBe(true);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+
+    mockMutateAsync.mockRejectedValue(new Error("Server error"));
+    await act(async () => {
+      saved = await result.current.flush({ vin: "B" });
+    });
+    expect(saved).toBe(false);
+    expect(result.current.saveStatus).toBe("error");
+  });
+
+  it("flush() makes a single attempt: no retry loop to wait for when the seller is leaving", async () => {
+    mockMutateAsync.mockRejectedValue(new Error("Server error"));
+    const { result } = withDraft("draft-1");
+
+    await act(async () => {
+      await result.current.flush({ vin: "A" });
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+    expect(result.current.saveStatus).toBe("error");
+  });
+
+  it("flush() resolves false on a network failure", async () => {
+    mockMutateAsync.mockRejectedValue(makeNetworkError());
+    const { result } = withDraft("draft-1");
+
+    let saved: boolean | undefined;
+    await act(async () => {
+      saved = await result.current.flush({ vin: "A" });
+    });
+
+    expect(saved).toBe(false);
+    expect(result.current.saveError).toBe("noInternetWillRetry");
+  });
+
+  it("flush() cancels the pending debounce and sends nothing for a payload already saved", async () => {
+    mockMutateAsync.mockResolvedValue({});
+    const { result } = withDraft("draft-1");
+
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" });
+    });
+    act(() => {
+      result.current.save({ vin: "B" });
+    });
+
+    let saved: boolean | undefined;
+    await act(async () => {
+      saved = await result.current.flush({ vin: "A" });
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(saved).toBe(true);
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps saying Saved until the next change instead of clearing after two seconds", async () => {
+    mockMutateAsync.mockResolvedValue({});
+    const { result } = withDraft("draft-1");
+
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" });
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(result.current.saveStatus).toBe("saved");
+  });
+
+  it("discardPending() drops a save that has not been sent", () => {
+    const { result } = withDraft("draft-1");
+
+    act(() => {
+      result.current.save({ vin: "A" });
+      result.current.discardPending();
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("starts clean for the next draft: no old status, error, retry payload or saved-payload match", async () => {
+    mockMutateAsync.mockResolvedValueOnce({}).mockRejectedValue(makeNetworkError());
+    const { result, rerender } = withDraft("draft-1");
+
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" });
+    });
+    await act(async () => {
+      await result.current.forceSave({ vin: "B" });
+    });
+    expect(result.current.saveStatus).toBe("error");
+
+    rerender({ draftId: undefined });
+    expect(result.current.saveStatus).toBe("idle");
+    expect(result.current.saveError).toBeNull();
+
+    mockMutateAsync.mockClear();
+    mockMutateAsync.mockResolvedValue({});
+    rerender({ draftId: "draft-2" });
+    await act(async () => {
+      result.current.retrySave();
+    });
+    // Nothing is pending for draft-2, so Retry must not send draft-1's payload to it.
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+
+    // The same payload that draft-1 saved is still new to draft-2.
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" });
+    });
+    expect(mockMutateAsync).toHaveBeenCalledWith({ draftId: "draft-2", payload: { vin: "A" } });
+  });
+
+  it("ignores a save that finishes after the seller left its draft", async () => {
+    let resolveMutation: (value: unknown) => void = () => {};
+    mockMutateAsync.mockImplementation(() => new Promise((res) => { resolveMutation = res; }));
+    const { result, rerender } = withDraft("draft-1");
+
+    act(() => {
+      void result.current.forceSave({ vin: "A" });
+    });
+    expect(result.current.saveStatus).toBe("saving");
+
+    rerender({ draftId: undefined });
+    await act(async () => {
+      resolveMutation({});
+    });
+
+    expect(result.current.saveStatus).toBe("idle");
+  });
+
+  it("retries the pending save for the current draft when the network returns", async () => {
+    mockMutateAsync.mockRejectedValueOnce(makeNetworkError()).mockResolvedValue({});
+    // The wizard mounts the hook before it has a draft, so the draft arrives on a later render.
+    const { result, rerender } = withDraft(undefined);
+    rerender({ draftId: "draft-1" });
+
+    await act(async () => {
+      await result.current.forceSave({ vin: "A" });
+    });
+    expect(result.current.saveStatus).toBe("error");
+
+    const listener = vi.mocked(NetInfo.addEventListener).mock.calls[0]?.[0];
+    await act(async () => {
+      listener?.({ isConnected: true } as never);
+    });
+
+    expect(mockMutateAsync).toHaveBeenLastCalledWith({ draftId: "draft-1", payload: { vin: "A" } });
+    expect(result.current.saveStatus).toBe("saved");
   });
 });
