@@ -23,6 +23,7 @@ import { UpdateDraft } from "../application/UpdateDraft";
 import { DiscardDraft } from "../application/DiscardDraft";
 import { ListMyDrafts } from "../application/ListMyDrafts";
 import { ValidateDraftStep } from "../application/ValidateDraftStep";
+import { decodeListingsCursor } from "../application/decodeListingsCursor";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -159,7 +160,7 @@ export class DraftsController {
     const pagination = this.parseOrThrow(ListingsSchemas.FeedQuerySchema, query);
 
     const cursor = pagination.cursor
-      ? ListingsSchemas.decodeCursor(pagination.cursor)
+      ? decodeListingsCursor(pagination.cursor)
       : undefined;
 
     const result = await this.listMyDraftsUC.execute({
