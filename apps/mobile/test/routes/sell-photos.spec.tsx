@@ -81,7 +81,7 @@ vi.mock("../../src/listings/wizard/Step4Specs", () => ({ default: () => null }))
 vi.mock("../../src/listings/wizard/Step5Price", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step6Location", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step7DescContact", () => ({ default: () => null }));
-vi.mock("../../src/listings/wizard/CheckAndPublish",() => ({ default: () => null }));
+vi.mock("../../src/listings/wizard/CheckAndPublish", () => ({ default: () => null }));
 vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [] } }) }));
 vi.mock("../../src/api/catalog/useModels", () => ({ useModels: () => ({ data: { items: [] } }) }));
 

@@ -78,7 +78,7 @@ vi.mock("../../src/listings/wizard/Step4Specs", () => ({ default: () => null }))
 vi.mock("../../src/listings/wizard/Step5Price", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step6Location", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step7DescContact", () => ({ default: () => null }));
-vi.mock("../../src/listings/wizard/CheckAndPublish",() => ({ default: () => null }));
+vi.mock("../../src/listings/wizard/CheckAndPublish", () => ({ default: () => null }));
 
 const car = { brandId: fixture.id, modelId: fixture.id, year: 2020 };
 const details = { condition: "used", mileageKm: 10000, conditionDisclosure: { damaged: false } };

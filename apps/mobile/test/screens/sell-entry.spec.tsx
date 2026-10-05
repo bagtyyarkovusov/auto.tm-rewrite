@@ -60,7 +60,7 @@ vi.mock("../../src/listings/wizard/Step4Specs", () => ({ default: () => null }))
 vi.mock("../../src/listings/wizard/Step5Price", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step6Location", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step7DescContact", () => ({ default: () => null }));
-vi.mock("../../src/listings/wizard/CheckAndPublish",() => ({ default: () => null }));
+vi.mock("../../src/listings/wizard/CheckAndPublish", () => ({ default: () => null }));
 vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("react-native")).View }));
 vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [{ id: "550e8400-e29b-41d4-a716-446655440001", name: "Toyota" }] } }) }));
 vi.mock("../../src/api/catalog/useModels", () => ({ useModels: () => ({ data: { items: [{ id: "550e8400-e29b-41d4-a716-446655440002", name: "Camry" }] } }) }));
