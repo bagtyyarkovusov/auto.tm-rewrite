@@ -1,11 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
 import { ListingsSchemas } from "@auto-tm/contracts";
 
 import { ApiError } from "../../src/api/client";
 import { EditSessionError } from "../../src/listings/edit/useSaveListingEdit";
 import EditListingScreen from "../../app/listings/[id]/edit";
-
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -53,7 +51,7 @@ vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQue
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: vi.fn() }));
 vi.mock("../../src/listings/edit/useSaveListingEdit", async (importOriginal) => ({
   // The real error class and helpers; only the hook is replaced.
-  ...(await importOriginal<typeof import("../../src/listings/edit/useSaveListingEdit")>()),
+  ...(await importOriginal<object>()),
   useSaveListingEdit: () => ({
     save: fixture.save, retry: fixture.retry, isPending: false, ...fixture.saveState,
   }),
