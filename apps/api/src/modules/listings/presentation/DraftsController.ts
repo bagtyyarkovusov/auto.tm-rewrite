@@ -56,7 +56,7 @@ export class DraftsController {
     const result = schema.safeParse(data);
     if (result.success) return result.data;
     // eslint-disable-next-line no-console
-    console.error("[Zod validation failed]", result.error.flatten(), "body:", JSON.stringify(data));
+    console.error("[Zod validation failed]", Object.keys(result.error.flatten().fieldErrors));
     throw new BadRequestException({
       code: "VALIDATION_ERROR",
       message: "Request validation failed",
