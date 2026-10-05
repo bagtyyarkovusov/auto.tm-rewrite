@@ -1,9 +1,9 @@
 # ADR-0084: Related issues of one parent may ship on one integration branch and pull request
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-05
 - **Deciders**: AutoTM founder
-- **Amends**: [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md)'s one-pull-request-per-issue rule, and [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s sentence that "an issue has one branch, one PR", for issues the founder groups under one parent spec: a grouped issue keeps its own `agent/issue-<N>` branch and shares the integration branch and its PR. ADR-0058's reservation branches, `Execution state`, fixed-commit reviews and CI gate, [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s worktree rules and [ADR-0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md)'s slices stay in force.
+- **Amends**: [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md)'s one-pull-request-per-issue rule, [ADR-0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md)'s restatement that each issue has "exactly one `agent/issue-<N>` branch, worktree, draft pull request", [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md)'s sentence that "an issue has one branch, one PR" and its Branch handoff for a fix round after the merger has folded the issue branch, and [ADR-0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md)'s "one draft PR" for a sliced issue in a group, for issues the founder groups under one parent spec: a grouped issue keeps its own `agent/issue-<N>` branch and shares the integration branch and its PR. ADR-0058's reservation branches, `Execution state`, fixed-commit reviews and CI gate, ADR-0069's other worktree rules and ADR-0082's other slice rules stay in force.
 
 ## Context
 
@@ -16,9 +16,9 @@ Matt Pocock's `implement-spec` skill builds every ticket of one spec on one inte
 **Issues the founder groups under one parent spec ship on one integration branch and one pull request, reviewed once. Unrelated issues keep one PR each.**
 
 - **Integration branch.** The orchestrator creates `agent/spec-<parent>-<slug>` from `origin/main` and pushes it.
-- **Issue branches.** Each issue's implementer works on `agent/issue-<N>` from the integration branch, pushes checkpoints, and opens no PR. Before it reports, it merges the integration branch's current tip into its branch, reruns its focused checks, and pushes.
-- **Merger.** A merger agent merges each finished issue branch into the integration branch and opens one draft PR into `main`. Its body has a `Closes #<N>` line for every issue and one `Execution state` per issue.
-- **Review.** One Standards and one Spec review of the integration PR at its head. The Spec reviewer checks every issue's acceptance criteria and every slice's. Findings, `Delta` reviews and the merge follow the normal rules for that one PR.
+- **Issue branches.** Each issue's implementer works on `agent/issue-<N>` from the integration branch, pushes checkpoints, and opens no PR. Until the integration PR exists, it keeps its `Execution state` in a comment on its issue, and a resumed grouped issue never opens its own PR. Before it reports, it merges the integration branch's current tip into its branch, reruns its focused checks, and pushes.
+- **Merger.** A merger agent runs once, after every grouped issue has reported. It merges the issue branches into the integration branch in issue-number order, merges `origin/main` when `main` has moved, and opens one draft PR into `main`. Its body has a `Closes #<N>` line for every issue and one `Execution state` per issue, copied from the issue comments. It resolves mechanical conflicts itself, and stops and reports on a conflict with more than one valid resolution. One agent writes the integration branch at a time: the merger, a fix-round implementer and a committing reviewer never overlap. [run-queue](../../.claude/skills/run-queue/SKILL.md#integration-branches) owns the commands.
+- **Review.** One Standards and one Spec review of the integration PR at its head, started only after the last grouped issue is merged. The Spec reviewer checks every issue's acceptance criteria and every slice's. Findings, `Delta` reviews and the merge follow the normal rules for that one PR.
 - **Fix rounds.** When one issue of the group fails review, the fix round writes on the integration branch, because an issue branch is finished once the merger has folded it. No re-merge is needed.
 - **First group.** #640 and #644, under parent #353, on `agent/spec-353-identity`.
 
@@ -49,7 +49,7 @@ Matt Pocock's `implement-spec` skill builds every ticket of one spec on one inte
 
 ## References
 
-- [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md), [ADR-0065](0065-small-changes-skip-the-issue-ceremony.md), [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md), [ADR-0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md)
+- [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md), [ADR-0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md), [ADR-0065](0065-small-changes-skip-the-issue-ceremony.md), [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md), [ADR-0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md)
 - Issues [#662](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/662), [#353](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353), [#640](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/640), [#644](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/644)
 - Matt Pocock's skills: [implement-spec](https://github.com/mattpocock/skills/blob/main/skills/engineering/implement-spec/SKILL.md), [chief-of-staff](https://github.com/mattpocock/skills/blob/main/skills/in-progress/chief-of-staff/SKILL.md)
 - [Skills changelog v1.3](https://www.aihero.dev/skills-changelog-v13-implement-spec-pr-retro-and-glossary-md)
