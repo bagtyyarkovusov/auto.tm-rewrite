@@ -25,6 +25,7 @@ import {
 } from "../domain/ports/EmailCodeSenderPort";
 import { toCodePurpose } from "../infrastructure/codePurpose";
 import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
+import { eventually } from "../../../../test/helpers/eventually";
 
 function reviewerDemoAccount(index: number): { phone: string; email: string; code: string } {
   return {
@@ -579,17 +580,20 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
     expect(res.body.user.id).toBe(user.id);
     expect(await prisma.otpRequest.count()).toBe(0);
 
-    const auditLog = await prisma.auditLog.findFirst({
-      where: {
-        action: "REVIEWER_OTP_BYPASS_LOGIN",
-        targetType: "user",
-        targetId: user.id,
-      },
-    });
+    const auditLog = await eventually(
+      () =>
+        prisma.auditLog.findFirst({
+          where: {
+            action: "REVIEWER_OTP_BYPASS_LOGIN",
+            targetType: "user",
+            targetId: user.id,
+          },
+        }),
+      { description: "the REVIEWER_OTP_BYPASS_LOGIN audit row" },
+    );
 
-    expect(auditLog).not.toBeNull();
-    expect(auditLog?.actorId).toBeNull();
-    expect(auditLog?.details).toMatchObject({
+    expect(auditLog.actorId).toBeNull();
+    expect(auditLog.details).toMatchObject({
       authMethod: "reviewer_otp_bypass",
       role: "buyer",
     });
