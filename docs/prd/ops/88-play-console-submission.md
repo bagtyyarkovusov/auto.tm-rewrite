@@ -2,6 +2,15 @@
 
 ## Founder decisions (2026-10-06)
 
+**The store release updates the existing Play app `com.auto_tm.ynamly`** (founder decision, 2026-10-06, [#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697)). That app, the Flutter build from a year ago, has completed its closed-test requirements and can apply for production; a new app would have to repeat 12 testers for 14 days. The EAS `production` profile therefore builds package `com.auto_tm.ynamly`. The build refuses to start if the `production` profile has any other package, or if another profile sets one (`validate:eas-env`). This also settles checklist steps 10 and 11: the testing requirement is already met on this app, and the track is its existing closed track. **Before the first `production` build (checklist step 2)** the founder:
+
+1. **Firebase.** In the production Firebase project, add an Android app with package `com.auto_tm.ynamly` (no SHA-1 needed; the app uses push only), download its `google-services.json`, and store it as the `GOOGLE_SERVICES_JSON` file variable of the EAS `production` environment. The worker's service account does not change.
+2. **Upload key.** The EAS Android credentials for `com.auto_tm.ynamly` must hold the upload key Play has for the app. Upload the Flutter keystore to EAS, or request an upload key reset in Play Console (Setup, App signing) with a key EAS generates. A reset needs the new key's certificate exported as a PEM file, and Play takes up to about 48 hours to accept the new key, so start this first. Do not run a `production` build before this is settled, or EAS generates a keystore Play does not know.
+3. **Version code.** Find the highest versionCode ever uploaded to the app in Play Console and set the EAS remote version above it (`eas build:version:set --platform android --profile production`). The `production` profile has `autoIncrement`, so each later build takes the next number.
+4. **Store listing.** Replace the old title, icon, descriptions, screenshots, Data safety answers and privacy URL with this page's.
+5. **Closed track first.** Upload the new build to the existing closed track, let the testers use it for a few days, then apply for production and answer the application's questions about that build.
+
+
 The founder accepted every recommendation below on 2026-10-06 (recorded on #685). Where a row further down still says **Founder decides**, this list wins.
 
 - **Store title:** `AutoTM – Car Marketplace`. **Category:** Auto & Vehicles.

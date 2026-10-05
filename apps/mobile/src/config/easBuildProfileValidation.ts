@@ -163,7 +163,33 @@ export function validateEasBuildProfile(input: ValidationInput): string[] {
   return errors;
 }
 
+export const STORE_ANDROID_APPLICATION_ID = "com.auto_tm.ynamly";
+
+/**
+ * The store build updates the existing Play app, so only `production` may set
+ * the package, and only to that app's. A stray value on another profile would
+ * repackage an internal build without anyone noticing.
+ */
+export function validateAndroidApplicationId(
+  profile: string | undefined,
+  applicationId: string | undefined,
+): string[] {
+  if (profile === "production") {
+    return applicationId === STORE_ANDROID_APPLICATION_ID
+      ? []
+      : [`ANDROID_APPLICATION_ID must be ${STORE_ANDROID_APPLICATION_ID} for the production profile`];
+  }
+  return applicationId ? [`ANDROID_APPLICATION_ID must not be set for the ${profile ?? "unknown"} profile`] : [];
+}
+
 export function validateCurrentEasBuildProfile(env: Record<string, string | undefined>): string[] {
+  return [
+    ...validateBuildUrls(env),
+    ...validateAndroidApplicationId(env["EAS_BUILD_PROFILE"], env["ANDROID_APPLICATION_ID"]),
+  ];
+}
+
+function validateBuildUrls(env: Record<string, string | undefined>): string[] {
   return validateEasBuildProfile({
     profile: env["EAS_BUILD_PROFILE"],
     apiUrl: env["EXPO_PUBLIC_API_URL"],

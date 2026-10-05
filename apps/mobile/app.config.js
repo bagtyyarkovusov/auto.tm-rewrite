@@ -1,5 +1,10 @@
 /* global module, process */
 
+// The store release updates the Play app that already exists, whose package
+// can never change (#697). Only the EAS `production` profile sets this;
+// every other build keeps tm.auto.app, with its own Firebase app.
+const ANDROID_PACKAGE = process.env.ANDROID_APPLICATION_ID || "tm.auto.app";
+
 const config = {
   expo: {
     name: "AutoTM",
@@ -23,7 +28,7 @@ const config = {
       },
     },
     android: {
-      package: "tm.auto.app",
+      package: ANDROID_PACKAGE,
       // No Android backup: the session lives in SecureStore, whose keys do not
       // survive a restore onto another device.
       allowBackup: false,
