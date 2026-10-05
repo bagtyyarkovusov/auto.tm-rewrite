@@ -357,14 +357,20 @@ export default function SellScreen() {
     if (discardDraft.isPending || publishDraft.isPending) return;
     // The Contact step's Continue stays tappable so its selection error can
     // appear (same pattern as the specs step): a number whose 7-day window
-    // ended, or no number at all, must be confirmed or changed first.
+    // ended, or no number at all, must be confirmed or changed first. A
+    // number the app cannot judge yet (`pending`: the confirmed list is loading
+    // or failed) goes on, unless a publish has already refused it.
     if (machineState.currentStep === "contact") {
       const selection = resolveContactPhoneSelection({
         phone: machineState.payload.contactPhone,
         accountPhone,
         confirmedPhones: contactPhonesData?.items,
       });
-      if (selection.kind === "stale" || selection.kind === "none") {
+      if (
+        selection.kind === "stale" ||
+        selection.kind === "none" ||
+        (selection.kind === "pending" && publishPhoneError)
+      ) {
         setAttemptedSteps((current) =>
           current.contact ? current : { ...current, contact: true },
         );
@@ -391,7 +397,7 @@ export default function SellScreen() {
       validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, ctx.editDetourActive, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending, accountPhone, contactPhonesData]);
+  }, [ctx.canContinue, ctx.editDetourActive, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending, accountPhone, contactPhonesData, publishPhoneError]);
 
   const handlePublish = useCallback(async () => {
     // One publish at a time: a second tap lands before the button re-renders disabled.
@@ -571,7 +577,9 @@ export default function SellScreen() {
           })
         : null;
     const contactSelectionError =
-      attemptedSteps.contact && contactSelection?.kind === "stale"
+      attemptedSteps.contact &&
+      (contactSelection?.kind === "stale" ||
+        (contactSelection?.kind === "pending" && publishPhoneError))
         ? t("confirmAgainOrChoose")
         : attemptedSteps.contact && contactSelection?.kind === "none"
           ? t("chooseOrConfirmContactPhone")
