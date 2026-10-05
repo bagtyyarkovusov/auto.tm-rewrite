@@ -302,6 +302,12 @@ The questionnaire asks about the app's content and its interactive features ([ra
 
 Hosts come from [83-legal](83-legal.md#where-they-live) and `eas.json` (`production` and `production-smoke`: `EXPO_PUBLIC_WEB_URL = https://autotm.bagtyyar.dev`). The app builds the links in `apps/mobile/src/config/publicWebUrl.ts` (`legalPageUrl`).
 
+**Hosts the store build talks to** ([#700](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/700), founder decision 2026-10-06): the production API on `api.autotm.bagtyyar.dev` and media on `media.autotm.bagtyyar.dev`, custom domains on the Railway production services. The `production` build refuses any host outside `autotm.bagtyyar.dev` or `auto.tm`, and any Railway-generated host. Before the first `production` build the founder:
+
+1. Brings the production API up on current `main` ([#375](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/375)). On 2026-10-06 the production `api` and `admin` services had no active deployment, so both API domains answered "Application not found". Then confirms that both custom domains show a valid certificate in Railway, that `https://api.autotm.bagtyyar.dev/readyz` answers 200, and that `https://media.autotm.bagtyyar.dev/minio/health/live` answers 200. The media domain must target MinIO's S3 port 9000, not the console on 9001. `/readyz` reaches MinIO over the private endpoint, so it says nothing about the media host.
+2. Sets `MINIO_PUBLIC_URL=https://media.autotm.bagtyyar.dev` on the Railway **production** API service (the worker does not read it) and redeploys. Presigned uploads are signed against this host, so a wrong value breaks every upload while existing photos still load: after the switch, check that a Listing photo loads, and that one Listing photo and one chat image upload succeed. No CORS change is needed: the API enables no HTTP CORS, and the app's socket is websocket-only, which `SOCKET_IO_CORS_ORIGIN` does not gate.
+3. Sets the EAS `production` environment variables `EXPO_PUBLIC_API_URL=https://api.autotm.bagtyyar.dev/api/v1`, `EXPO_PUBLIC_WS_URL=wss://api.autotm.bagtyyar.dev/ws/chat` and `EXPO_PUBLIC_MEDIA_URL=https://media.autotm.bagtyyar.dev`.
+
 | Console field | URL | Status |
 |---|---|---|
 | Privacy policy | `https://autotm.bagtyyar.dev/en/legal/privacy` | Must load from an outside network before submission ([#496](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/496)) |
