@@ -69,6 +69,8 @@ interface WizardLayoutProps {
   disabledReason?: string;
   /** Create flow, last step: what keeps Publish disabled, listed above it in this order. */
   publishBlockers?: string[];
+  /** Create flow: Publish reads "Publishing..." and takes no taps. */
+  isPublishing?: boolean;
   secondaryAction?: FooterAction;
   publishLabel?: string;
   discardTitle?: string;
@@ -337,10 +339,12 @@ function WizardFooter({
   editDetourActive,
   disabledReason,
   publishBlockers,
+  isPublishing = false,
   secondaryAction,
   publishLabel,
 }: {
   publishBlockers?: string[];
+  isPublishing?: boolean;
   isLastStep: boolean;
   canContinue: boolean;
   canPublish: boolean;
@@ -449,9 +453,11 @@ function WizardFooter({
             size="pill"
             className="flex-1"
             onPress={onPublish}
-            disabled={!canPublish}
+            // Disabled while publishing, so a second tap cannot publish twice.
+            disabled={!canPublish || isPublishing}
+            accessibilityState={{ busy: isPublishing }}
           >
-            <Text>{publishLabel ?? t("publish")}</Text>
+            <Text>{isPublishing ? t("publishingEllipsis") : (publishLabel ?? t("publish"))}</Text>
           </Button>
         ) : (
           <Button
@@ -562,6 +568,7 @@ export function WizardLayout({
   children,
   disabledReason,
   publishBlockers,
+  isPublishing,
   secondaryAction,
   publishLabel,
   discardTitle,
@@ -621,6 +628,7 @@ export function WizardLayout({
             editDetourActive={editDetourActive}
             disabledReason={disabledReason}
             publishBlockers={publishBlockers}
+            isPublishing={isPublishing}
             secondaryAction={secondaryAction}
             publishLabel={publishLabel}
           />

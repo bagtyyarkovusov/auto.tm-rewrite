@@ -109,6 +109,7 @@ export default function SellScreen() {
   const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const closingRef = useRef(false);
+  const publishingRef = useRef(false);
   // The draft that tapping New listing created in this session. Only that draft is
   // removed when the seller closes it untouched; a draft reopened from the Sell tab
   // or My listings is never deleted by ✕.
@@ -361,7 +362,9 @@ export default function SellScreen() {
   }, [ctx.canContinue, ctx.editDetourActive, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending]);
 
   const handlePublish = useCallback(async () => {
-    if (!machineState.draftId) return;
+    // One publish at a time: a second tap lands before the button re-renders disabled.
+    if (!machineState.draftId || publishingRef.current) return;
+    publishingRef.current = true;
 
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...machineState.payload,
@@ -375,12 +378,15 @@ export default function SellScreen() {
     try {
       await forceSave(fullPayload);
       const result = await publishDraft.mutateAsync(machineState.draftId);
-      dispatch({ type: "PUBLISH_SUCCESS", listingId: result.id });
       show({
         title: t("listingPublished"),
         variant: "success",
       });
       router.replace(`/(public)/listings/${result.id}`);
+      // The draft is a Listing now, so the wizard closes and the Sell tab is back
+      // at its entry. No success screen (founder decision D8 on #354).
+      newDraftIdRef.current = null;
+      dispatch({ type: "DISCARD" });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : t("failedToPublish");
@@ -388,6 +394,8 @@ export default function SellScreen() {
       publishErrorToastId.current = show({
         title: message, variant: "destructive", topClearance: wizardHeaderHeight.current,
       });
+    } finally {
+      publishingRef.current = false;
     }
   }, [machineState, photosToSave, forceSave, publishDraft, show]);
 
@@ -560,6 +568,7 @@ export default function SellScreen() {
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
         publishBlockers={publishBlockers}
+        isPublishing={machineState.status === "publishing"}
         uploadStatus={uploadStatus}
         onUploadStatusPress={() =>
           // From Check the chip opens Photos as a change, so Done comes back.
