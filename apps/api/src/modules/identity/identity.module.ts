@@ -47,6 +47,7 @@ import { OtplibTotpVerifier } from "./infrastructure/OtplibTotpVerifier";
 import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrottleAdapter";
 import { PinoSecurityLoggerAdapter } from "./infrastructure/PinoSecurityLoggerAdapter";
 import { PrismaAccountDeletionListingsAdapter } from "./infrastructure/PrismaAccountDeletionListingsAdapter";
+import { PrismaAccountRestoreUnitOfWork } from "./infrastructure/PrismaAccountRestoreUnitOfWork";
 import { NodeConstantTimeComparator } from "./infrastructure/NodeConstantTimeComparator";
 import { parseReviewerOtpBypassConfig } from "./infrastructure/ReviewerOtpBypassConfigFactory";
 import { EventEmitterIdentityEventBus } from "./infrastructure/EventEmitterIdentityEventBus";
@@ -57,6 +58,7 @@ import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
 import { SELLER_PROFILE_READ_PORT } from "./domain/ports/SellerProfileReadPort";
 import { PrismaSellerProfileReadAdapter } from "./infrastructure/PrismaSellerProfileReadAdapter";
 import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
+import { ACCOUNT_RESTORE_UNIT_OF_WORK } from "./domain/ports/AccountRestoreUnitOfWork";
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
 import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeComparatorPort";
 import { RANDOM_SOURCE_PORT } from "./domain/ports/RandomSourcePort";
@@ -105,6 +107,10 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     {
       provide: ACCOUNT_DELETION_LISTINGS_PORT,
       useClass: PrismaAccountDeletionListingsAdapter,
+    },
+    {
+      provide: ACCOUNT_RESTORE_UNIT_OF_WORK,
+      useClass: PrismaAccountRestoreUnitOfWork,
     },
     {
       provide: IDENTITY_TOKENS.OtpTestMode,

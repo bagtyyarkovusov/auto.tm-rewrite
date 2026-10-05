@@ -54,7 +54,6 @@ class FakeUserRepository implements UserRepository {
     this.scheduledDeletions.set(userId, deletionScheduledAt);
   }
 
-  async clearDeletionSchedule(_userId: string): Promise<void> {}
   async findUsersWithExpiredDeletionGrace(_now: Date): Promise<User[]> { return []; }
   async purgePersonalData(_userId: string): Promise<void> {}
 }
@@ -79,14 +78,9 @@ class FakeSessionRepository implements SessionRepository {
 
 class FakeListingsPort implements AccountDeletionListingsPort {
   archivedSellerId: string | null = null;
-  republishedSellerId: string | null = null;
 
   async archiveActiveListingsBySeller(sellerId: string): Promise<void> {
     this.archivedSellerId = sellerId;
-  }
-
-  async republishArchivedByDeletionListingsBySeller(sellerId: string): Promise<void> {
-    this.republishedSellerId = sellerId;
   }
 }
 

@@ -41,7 +41,6 @@ class FakeUserRepository implements UserRepository {
 
   async delete(_id: string): Promise<void> {}
   async scheduleDeletion(_userId: string, _deletionScheduledAt: Date): Promise<void> {}
-  async clearDeletionSchedule(_userId: string): Promise<void> {}
   async findUsersWithExpiredDeletionGrace(_now: Date): Promise<User[]> { return []; }
   async purgePersonalData(_userId: string): Promise<void> {}
 }
