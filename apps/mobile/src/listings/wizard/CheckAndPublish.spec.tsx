@@ -1,7 +1,7 @@
 import type { WizardSchemas } from "@auto-tm/contracts";
 import { describe, expect, it, vi } from "vitest";
 
-import { renderMobile, within } from "../../../test/render";
+import { fireEvent, renderMobile, within } from "../../../test/render";
 import type { StagedPhoto } from "../uploadStaging/types";
 
 import CheckAndPublish from "./CheckAndPublish";
@@ -89,5 +89,81 @@ describe("Check and publish, the card preview", () => {
     ["tk", "Alyjylar bildirişiňizi şu görnüşde görer"],
   ])("has the buyers' note in %s", (locale, note) => {
     expect(check({}, locale).getByText(note)).toBeTruthy();
+  });
+});
+
+describe("Check and publish, the sections", () => {
+  const rowLabels = (screen: ReturnType<typeof check>) =>
+    screen.getAllByTestId("check-section").map((row) => String(row.props.accessibilityLabel));
+
+  it("lists one row per step in the wizard's order, each with a summary and Change", () => {
+    const screen = check({
+      payload: {
+        ...usedCar, generationId: ID, vin: "WBA1234567890ABCD",
+        acceptsExchange: true, locationText: "Near the bazaar",
+      },
+    });
+
+    expect(rowLabels(screen)).toEqual([
+      "Car, Toyota Camry, 2020 · XV70 · VIN WBA1234567890ABCD, Change",
+      "Details and condition, 45,000 km · Automatic · Petrol · Damaged / needs repair: No, Change",
+      "Photos, Photos: 2, Change",
+      "Price, 185,000 TMT · Exchange possible, Change",
+      "Description and place, One owner, serviced on time · Ashgabat, Near the bazaar, Change",
+      "Contact, +99365000000 · Phone calls, In-app chat, Change",
+    ]);
+  });
+
+  it("opens the step a row names", () => {
+    const onChangeStep = vi.fn();
+    const screen = check({ onChangeStep });
+
+    fireEvent.press(screen.getByRole("button", { name: /^Price, / }));
+    fireEvent.press(screen.getByRole("button", { name: /^Description and place, / }));
+
+    expect(onChangeStep.mock.calls).toEqual([["price"], ["location"]]);
+  });
+
+  it("offers Fill in for a step that is not complete", () => {
+    const screen = check({
+      payload: { ...usedCar, priceAmount: undefined },
+      validatedSteps: ["vehicle", "specs", "photos"],
+    });
+
+    expect(rowLabels(screen)).toEqual([
+      expect.stringMatching(/^Car, .*, Change$/),
+      expect.stringMatching(/^Details and condition, .*, Change$/),
+      expect.stringMatching(/^Photos, .*, Change$/),
+      "Price, Fill in",
+      expect.stringMatching(/^Description and place, .*, Fill in$/),
+      expect.stringMatching(/^Contact, .*, Fill in$/),
+    ]);
+  });
+
+  it("offers Fill in on Photos while a photo has failed, since that is where it is fixed", () => {
+    const screen = check({ photos: [photo(0), photo(1, "failed")] });
+
+    expect(rowLabels(screen)[2]).toBe("Photos, Photos: 2, Fill in");
+  });
+
+  it("says whether the car is damaged for a Used car only", () => {
+    const used = check({ payload: { ...usedCar, conditionDisclosure: { damaged: true } } });
+    expect(used.getByText(/Damaged \/ needs repair: Yes/)).toBeTruthy();
+
+    const fresh = check({
+      payload: { ...usedCar, condition: "new", mileageKm: undefined, conditionDisclosure: { damaged: false } },
+    });
+    expect(fresh.queryByText(/Damaged/)).toBeNull();
+    expect(fresh.getByRole("button", { name: "Details and condition, New · Automatic · Petrol, Change" })).toBeTruthy();
+  });
+
+  it.each([
+    ["ru", "Изменить", "Заполнить"],
+    ["tk", "Üýtget", "Doldur"],
+  ])("names the actions in %s", (locale, change, fillIn) => {
+    const screen = check({ validatedSteps: ["vehicle"] }, locale);
+
+    expect(screen.getAllByText(change)).toHaveLength(1);
+    expect(screen.getAllByText(fillIn)).toHaveLength(5);
   });
 });
