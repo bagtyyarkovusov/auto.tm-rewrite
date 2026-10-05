@@ -51,6 +51,11 @@ interface WizardLayoutProps {
    * place of Back, the title alone, and no step position or progress bar.
    */
   sectionList?: boolean;
+  /**
+   * Edit flow: the car's title, under "Edit listing" on the section list and on
+   * every step. An edit's steps have no position in the wizard and no progress bar.
+   */
+  subtitle?: string;
   editDetourActive: boolean;
   canContinue: boolean;
   canPublish: boolean;
@@ -133,6 +138,7 @@ function WizardHeader({
   onBack,
   mode,
   sectionList,
+  subtitle,
   onClose,
   isClosing,
   progressPercent,
@@ -149,6 +155,7 @@ function WizardHeader({
   onBack: () => void;
   mode: WizardLayoutProps["mode"];
   sectionList: boolean;
+  subtitle?: string;
   onClose?: (() => void) | undefined;
   isClosing: boolean;
   progressPercent: number;
@@ -159,9 +166,12 @@ function WizardHeader({
 }) {
   const { t } = useTranslation();
   const stepPosition = t("stepOf", { step: stepNumber, total: stepCount });
-  // A screen reader hears the step title with its position each time a step opens;
-  // an edit's section list is not a step and has no position.
-  const stepAnnouncement = sectionList ? stepTitle : `${stepTitle}, ${stepPosition}`;
+  // An edit is not walked step by step: neither its section list nor a step opened
+  // from it has a position in the wizard or a progress bar.
+  const isEdit = mode === "edit";
+  // A screen reader hears the step title, with its position in the create wizard,
+  // each time a step opens.
+  const stepAnnouncement = isEdit || sectionList ? stepTitle : `${stepTitle}, ${stepPosition}`;
   const closeButton = (
     <Button
       variant="ghost"
@@ -204,7 +214,16 @@ function WizardHeader({
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
           {/* The heading below already reads the position, so this row reads only the route. */}
-          {sectionList ? null : (
+          {sectionList ? null : isEdit ? (
+            <View className="items-center">
+              <Text className="text-xs font-medium text-foreground">{routeTitle}</Text>
+              {subtitle ? (
+                <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
+          ) : (
             <Text className="text-xs text-muted-foreground" accessibilityLabel={routeTitle}>
               {routeTitle} · {stepPosition}
             </Text>
@@ -223,10 +242,14 @@ function WizardHeader({
       >
         {stepTitle}
       </Text>
+      {sectionList && subtitle ? (
+        <Text className="-mt-1 text-sm text-muted-foreground">{subtitle}</Text>
+      ) : null}
 
-      {/* Row 3: progress */}
-      {sectionList ? null : (
+      {/* Row 3: progress, in the create wizard only */}
+      {isEdit || sectionList ? null : (
         <Progress
+          testID="wizard-progress"
           value={progressPercent}
           className="bg-muted h-1"
           indicatorClassName="bg-foreground"
@@ -516,6 +539,7 @@ export function WizardLayout({
   isClosing = false,
   mode,
   sectionList = false,
+  subtitle,
   editDetourActive,
   canContinue,
   canPublish,
@@ -546,6 +570,7 @@ export function WizardLayout({
         onBack={onBack}
         mode={mode}
         sectionList={sectionList}
+        subtitle={subtitle}
         onClose={onClose}
         isClosing={isClosing}
         progressPercent={progressPercent}

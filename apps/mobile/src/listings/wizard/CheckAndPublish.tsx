@@ -40,18 +40,24 @@ export interface CheckAndPublishProps {
   photosReady?: boolean;
 }
 
+/** "Brand Model, year", as the Listing card titles it. Also heads an edit's steps. */
+export function useCarTitle(payload: WizardSchemas.WizardDraftPayload): string {
+  const { data: brands } = useBrands();
+  const { data: models } = useModels(payload.brandId ?? "");
+  const brandName = brands?.items.find((b) => b.id === payload.brandId)?.name;
+  const modelName = models?.items.find((m) => m.id === payload.modelId)?.name;
+  const identity = [brandName, modelName].filter(Boolean).join(" ");
+  return [identity, payload.year].filter((value) => value != null && value !== "").join(", ");
+}
+
 /** The catalog names and formatted values that the preview and the section summaries share. */
 function useCheckValues(payload: WizardSchemas.WizardDraftPayload) {
   const { t, i18n } = useTranslation();
-  const { data: brands } = useBrands();
-  const { data: models } = useModels(payload.brandId ?? "");
+  const title = useCarTitle(payload);
   const { data: transmissions } = useTransmissions();
   const { data: engineTypes } = useEngineTypes();
   const { groups: cityGroups } = useCityGroups();
 
-  const brandName = brands?.items.find((b) => b.id === payload.brandId)?.name;
-  const modelName = models?.items.find((m) => m.id === payload.modelId)?.name;
-  const identity = [brandName, modelName].filter(Boolean).join(" ");
   const isNew = payload.condition === Enums.ListingCondition.New;
   const specs = listingSpecLine({
     mileageKm: isNew ? null : payload.mileageKm,
@@ -62,8 +68,7 @@ function useCheckValues(payload: WizardSchemas.WizardDraftPayload) {
   });
 
   return {
-    /** "Brand Model, year", as the Listing card titles it. */
-    title: [identity, payload.year].filter((value) => value != null && value !== "").join(", "),
+    title,
     /** The amount in the currency the seller chose; buyers see it converted to TMT. */
     price:
       payload.priceAmount != null

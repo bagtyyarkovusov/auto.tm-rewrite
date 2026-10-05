@@ -18,7 +18,7 @@ import {
   opLabel,
   type OpState,
 } from "../../../src/listings/edit/useSaveListingEdit";
-import { EditSectionList } from "../../../src/listings/wizard/CheckAndPublish";
+import { EditSectionList, useCarTitle } from "../../../src/listings/wizard/CheckAndPublish";
 import Step2Photos from "../../../src/listings/wizard/Step2Photos";
 import Step4Specs from "../../../src/listings/wizard/Step4Specs";
 import Step5Price from "../../../src/listings/wizard/Step5Price";
@@ -179,6 +179,8 @@ function EditListingSession({ listingId }: { listingId: string }) {
     if (!sessionListing) return EMPTY_PAYLOAD;
     return listingToPayload(sessionListing);
   }, [sessionListing]);
+  // Car is locked in an edit, so the published Listing names it.
+  const carTitle = useCarTitle(editPayload);
 
   // Photos staged by an earlier session cannot be attached by this one.
   const uploadQueue = useUploadQueue(
@@ -415,6 +417,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
         onClose={handleLeave}
         mode={machineState.mode}
         sectionList={ctx.isLastStep}
+        subtitle={carTitle || undefined}
         editDetourActive={ctx.editDetourActive}
         canContinue={
           (ctx.canContinue || currentStep === "specs" || currentStep === "contact") &&
