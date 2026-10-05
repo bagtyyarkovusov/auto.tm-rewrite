@@ -5,7 +5,7 @@ import { waitFor } from "@testing-library/react-native";
 
 import EditListingScreen from "../../app/listings/[id]/edit";
 import { server } from "../msw";
-import { act, fireEvent, renderMobile, routeParams, routerMock, screenFocus } from "../render";
+import { act, fireEvent, renderMobile, routeParams, routerMock, screenFocus, screenOptions } from "../render";
 
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -488,6 +488,18 @@ describe("leaving the edit (#589)", () => {
 
     expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
     expect(routerMock.back).not.toHaveBeenCalled();
+  });
+
+  it("the iOS swipe back closes an unchanged edit, and cannot close one with changes", async () => {
+    createListingApi();
+    const screen = await openEdit();
+    expect(screenOptions.current.gestureEnabled).toBe(true);
+
+    changePrice(screen, "100000", "179000");
+    expect(screenOptions.current.gestureEnabled).toBe(false);
+
+    changePrice(screen, "179000", "100000");
+    expect(screenOptions.current.gestureEnabled).toBe(true);
   });
 
   it("leaves system back to a screen opened over the edit", async () => {
