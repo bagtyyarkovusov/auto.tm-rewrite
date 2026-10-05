@@ -1,5 +1,5 @@
 import * as RN from "react-native";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SellScreen from "../../app/(tabs)/sell";
 import { act, fireEvent, renderMobile, routeParams, screenFocus } from "../render";
@@ -338,6 +338,47 @@ describe("✕ when the latest changes are not saved (#585)", () => {
     expect(screen.getByText("Latest changes are not saved")).toBeTruthy();
     expect(wizardIsOpen(screen)).toBe(true);
     expect(screen.queryByText("Saved to Drafts")).toBeNull();
+  });
+
+  describe("on a connection that never answers", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("stops waiting for the save after about ten seconds and asks, with ✕ usable again", async () => {
+      fixture.autosave.flush.mockReturnValue(new Promise<boolean>(() => {}));
+      const screen = openNewListing();
+      fireEvent.press(screen.getByRole("button", { name: "Change car" }));
+
+      await pressClose(screen);
+      await act(async () => { await vi.advanceTimersByTimeAsync(9_000); });
+      expect(screen.queryByText("Latest changes are not saved")).toBeNull();
+      expect(screen.getByRole("button", { name: "Close" }).props.accessibilityState).toMatchObject({ disabled: true });
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
+
+      expect(screen.getByText("Latest changes are not saved")).toBeTruthy();
+      expect(wizardIsOpen(screen)).toBe(true);
+      expect(screen.queryByText("Saved to Drafts")).toBeNull();
+      expect(screen.getByRole("button", { name: "Close" }).props.accessibilityState).not.toMatchObject({ disabled: true });
+    });
+
+    it("stops waiting for the delete of an untouched new Listing and closes", async () => {
+      fixture.discard.mockReturnValue(new Promise<void>(() => {}));
+      const screen = openNewListing();
+
+      await pressClose(screen);
+      await act(async () => { await vi.advanceTimersByTimeAsync(9_000); });
+      expect(wizardIsOpen(screen)).toBe(true);
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
+
+      expect(wizardIsOpen(screen)).toBe(false);
+      expect(screen.queryByText("Saved to Drafts")).toBeNull();
+    });
   });
 });
 

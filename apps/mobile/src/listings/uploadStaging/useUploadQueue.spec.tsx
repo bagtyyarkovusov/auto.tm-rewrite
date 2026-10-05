@@ -518,6 +518,32 @@ describe("useUploadQueue — parallel batch compression", () => {
       mockListLocalPhotoIds.mockImplementation(() => Promise.resolve([]));
     });
 
+    it("restores a draft reopened before the closed wizard's empty queue has settled", async () => {
+      const noDraft = {};
+      let releaseIdle: ((ids: string[]) => void) | undefined;
+      mockListLocalPhotoIds.mockImplementation((key: string) =>
+        key === "" ? new Promise<string[]>((resolve) => { releaseIdle = resolve; }) : Promise.resolve([]),
+      );
+      const { result, rerender } = renderHook(
+        ({ stagingKey }) => useUploadQueue(stagingKey, stagingKey ? payload : noDraft),
+        { wrapper, initialProps: { stagingKey: "draft-9" } },
+      );
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+      expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]);
+
+      // ✕, then Continue on the same draft while the device is still answering.
+      rerender({ stagingKey: "" });
+      rerender({ stagingKey: "draft-9" });
+      expect(result.current.isReady).toBe(false);
+
+      await waitFor(() => expect(result.current.isReady).toBe(true));
+      expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]);
+      act(() => releaseIdle?.([]));
+      await act(async () => undefined);
+      expect(result.current.photos.map((p) => p.photoId)).toEqual(["server-1"]);
+      mockListLocalPhotoIds.mockImplementation(() => Promise.resolve([]));
+    });
+
     it("says when the photos of the open draft are restored", async () => {
       const { result, rerender } = renderHook(
         ({ stagingKey }) => useUploadQueue(stagingKey, payload),
