@@ -22,17 +22,15 @@ export class PurgeExpiredAccounts {
       select: { id: true, phone: true, email: true },
     });
 
-    try {
-      for (const user of expiredUsers) {
-        await this.purgeUser(user);
-      }
-    } finally {
-      // Every run also drops sign-in code records past their retention, so
-      // the phone, email and IP they hold are gone after 30 days for
-      // everyone. A purge that fails must not hold this back.
-      await this.prisma.otpRequest.deleteMany({
-        where: { createdAt: { lt: new Date(input.now.getTime() - CODE_REQUEST_RETENTION_MS) } },
-      });
+    // Every run first drops sign-in code records past their retention, so the
+    // phone, email and IP they hold are gone after 30 days for everyone. It
+    // runs before the purges so that a purge that fails cannot hold it back.
+    await this.prisma.otpRequest.deleteMany({
+      where: { createdAt: { lt: new Date(input.now.getTime() - CODE_REQUEST_RETENTION_MS) } },
+    });
+
+    for (const user of expiredUsers) {
+      await this.purgeUser(user);
     }
 
     return { purgedCount: expiredUsers.length };
