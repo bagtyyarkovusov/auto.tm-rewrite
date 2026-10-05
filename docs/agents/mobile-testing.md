@@ -148,7 +148,9 @@ screen-reader output, or focus effects. `useFocusEffect` is a no-op. Router mock
 do not mount a navigation tree or prove a route exists. Use Expo Router's
 `renderRouter` integration setup for navigation-tree behavior when needed.
 RNTL's Jest-dependent fake-timer and `userEvent` paths are not covered here;
-these specs use real timers and `fireEvent`. React 19 prints the upstream
+these specs use real timers and `fireEvent`. A spec that must pass a long wait
+fakes only `setTimeout` and `clearTimeout` with Vitest and advances them inside
+`act`, as the close-wait cases in `test/routes/sell-close.spec.tsx` do. React 19 prints the upstream
 react-test-renderer deprecation warning; it is retained in test output.
 
 Run [mobile/Expo checks](mobile-expo.md) for dependency and bundle evidence.
