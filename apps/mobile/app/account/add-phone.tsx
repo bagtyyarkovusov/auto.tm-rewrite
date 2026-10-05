@@ -8,6 +8,7 @@ import { ApiError } from "../../src/api/client";
 import { useMe } from "../../src/api/identity/useMe";
 import { useRequestSignInMethodChange } from "../../src/api/identity/useRequestSignInMethodChange";
 import { getRequestOtpErrorCopy } from "../../src/auth/requestOtpError";
+import { useAuth } from "../../src/auth/useAuth";
 import { usePhoneField } from "../../src/auth/usePhoneField";
 
 import { Text } from "@/components/ui/text";
@@ -17,7 +18,10 @@ import { Text } from "@/components/ui/text";
 export default function AddPhoneScreen() {
   const { t } = useTranslation("account");
   const { t: tAuth } = useTranslation("auth");
-  const { data: me } = useMe();
+  const { isAuthenticated } = useAuth();
+  const { data } = useMe({ enabled: isAuthenticated === true });
+  // A `/me` still cached for the previous User is not read without a session.
+  const me = isAuthenticated === true ? data : undefined;
   const isChange = Boolean(me?.phone);
   const phone = usePhoneField(tAuth);
   const { mutateAsync: requestCode, isPending: isSubmitting } =
@@ -60,6 +64,9 @@ export default function AddPhoneScreen() {
       );
     }
   }
+
+  // Until the session is known the title cannot say Add or Change.
+  if (isAuthenticated === null) return null;
 
   return (
     <SignInMethodEntryScreen
