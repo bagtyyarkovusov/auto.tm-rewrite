@@ -556,7 +556,6 @@ export function WizardLayout({
   uploadStatus,
   onUploadStatusPress,
 }: WizardLayoutProps) {
-  const { t } = useTranslation();
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   return (
