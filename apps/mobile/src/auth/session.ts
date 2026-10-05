@@ -24,11 +24,15 @@ export async function storeAuthSession(
   const previousUserId = lastUserId;
   lastUserId = session.user.id;
   // Before the session listeners, so no screen renders the new User as signed
-  // in while the previous User's data is still held.
-  if (previousUserId !== null && previousUserId !== session.user.id) {
-    userChangeListeners.forEach((listener) => listener());
+  // in while the previous User's data is still held. The session is already
+  // stored, so the session listeners hear of it even when one of these throws.
+  try {
+    if (previousUserId !== null && previousUserId !== session.user.id) {
+      userChangeListeners.forEach((listener) => listener());
+    }
+  } finally {
+    notifySessionChanged();
   }
-  notifySessionChanged();
 }
 
 export async function loadAuthSession(): Promise<StoredAuthSession | null> {
