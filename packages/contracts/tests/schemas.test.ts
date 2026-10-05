@@ -399,6 +399,10 @@ describe("ListingDetailSchema", () => {
     publicNumber: 10482,
     seller: {
       displayName: null,
+      nameNumber: 2057,
+      avatarIndex: 4,
+      avatarKey: null,
+      deleted: false,
       memberSince: "2025-01-01T00:00:00.000Z",
     },
   };
@@ -1709,6 +1713,10 @@ const validConversationSummary = {
   peer: {
     id: "550e8400-e29b-41d4-a716-446655440006",
     displayName: "Aman",
+    nameNumber: 4821,
+    avatarIndex: 0,
+    avatarKey: null,
+    deleted: false,
   },
   blockedByMe: false,
   lastMessage: validMessageSummary,

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Currency, ListingCondition, ListingStatus } from "../enums";
 
 import { PhoneTm } from "./auth";
+import { PublicIdentitySchema } from "./identity";
 
 // ── Shared enums as Zod schemas ──
 
@@ -111,8 +112,7 @@ export const ListingDetailSchema = z.object({
   id: z.string().uuid(),
   publicNumber: z.number().int().positive(),
   sellerId: z.string().uuid(),
-  seller: z.object({
-    displayName: z.string().nullable(),
+  seller: PublicIdentitySchema.extend({
     memberSince: z.string().datetime(),
   }),
   status: ListingStatusSchema,
