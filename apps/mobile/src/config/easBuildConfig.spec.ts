@@ -13,7 +13,44 @@ function requireFreshAppConfig() {
   return require(appConfigPath);
 }
 
+/** The app config as EAS resolves it for a build profile: `base` env, then the profile's. */
+function appConfigForProfile(profile: string | null) {
+  const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+  const profileEnv: Record<string, string> = profile
+    ? { ...easJson.build.base.env, ...easJson.build[profile].env }
+    : {};
+  const saved = process.env["ANDROID_APPLICATION_ID"];
+  Reflect.deleteProperty(process.env, "ANDROID_APPLICATION_ID");
+  Object.assign(process.env, profileEnv);
+  try {
+    return requireFreshAppConfig().expo;
+  } finally {
+    for (const key of Object.keys(profileEnv)) Reflect.deleteProperty(process.env, key);
+    if (saved !== undefined) process.env["ANDROID_APPLICATION_ID"] = saved;
+  }
+}
+
 describe("EAS build configuration", () => {
+  it("builds the store release as the existing Play app's package", () => {
+    // Play can never change an app's package, and the closed test that unlocks
+    // production was completed on com.auto_tm.ynamly (#697).
+    expect(appConfigForProfile("production").android.package).toBe("com.auto_tm.ynamly");
+  });
+
+  it.each(["staging", "production-smoke", null])(
+    "keeps tm.auto.app for the %s build, so internal builds and development clients are unchanged",
+    (profile) => {
+      expect(appConfigForProfile(profile).android.package).toBe("tm.auto.app");
+    },
+  );
+
+  it.each(["production", "staging", "production-smoke", null])(
+    "leaves the iOS bundle identifier alone for the %s build",
+    (profile) => {
+      expect(appConfigForProfile(profile).ios.bundleIdentifier).toBe("tm.auto.app");
+    },
+  );
+
   it("turns Android backup off, so no session data is restored onto another device", () => {
     expect(requireFreshAppConfig().expo.android.allowBackup).toBe(false);
   });
