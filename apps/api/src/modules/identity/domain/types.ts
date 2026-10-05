@@ -8,6 +8,7 @@ export type SignInCodeChannel =
 
 export const IDENTITY_ERROR_CODES = {
   SIGN_IN_METHOD_TAKEN: "SIGN_IN_METHOD_TAKEN",
+  INVALID_DISPLAY_NAME: "INVALID_DISPLAY_NAME",
 } as const;
 
 export class IdentityDomainError extends Error {

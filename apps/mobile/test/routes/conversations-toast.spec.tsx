@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   mutation: { mutate: vi.fn(), isPending: false },
   conversation: {
     id: "conversation-1", listing: null, buyerId: "buyer", sellerId: "seller", myRole: "buyer",
-    peer: { id: "seller", displayName: "Merdan Ataýew" }, blockedByMe: false,
+    peer: { id: "seller", displayName: "Merdan Ataýew", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false }, blockedByMe: false,
     updatedAt: "2026-10-01T10:00:00.000Z",
   },
 }));

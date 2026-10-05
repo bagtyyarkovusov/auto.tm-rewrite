@@ -1,11 +1,13 @@
 import {
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   Inject,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Req,
   Body,
@@ -15,7 +17,7 @@ import {
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import type { z } from "zod";
-import { AuthSchemas, IdentitySchemas } from "@auto-tm/contracts";
+import { AdminSchemas, AuthSchemas, IdentitySchemas } from "@auto-tm/contracts";
 
 import { resolveClientIp } from "../../../common/client-ip";
 import { GetMe } from "../application/GetMe";
@@ -26,6 +28,9 @@ import { IsBlocked } from "../application/IsBlocked";
 import { RequestSignInMethodChange } from "../application/RequestSignInMethodChange";
 import { ConfirmSignInMethodChange } from "../application/ConfirmSignInMethodChange";
 import { RecoverAccount } from "../application/RecoverAccount";
+import { UpdateDisplayName } from "../application/UpdateDisplayName";
+import { InvalidDisplayNameError } from "../domain/DisplayName";
+import { UserSuspendedError } from "../domain/UserSuspendedError";
 import { AllowPendingDeletion } from "../../../common/allow-pending-deletion.decorator";
 import {
   IDENTITY_ERROR_CODES,
@@ -48,6 +53,8 @@ export class MeController {
     @Inject(ConfirmSignInMethodChange)
     private readonly confirmSignInMethodChange: ConfirmSignInMethodChange,
     @Inject(RecoverAccount) private readonly recoverAccount: RecoverAccount,
+    @Inject(UpdateDisplayName)
+    private readonly updateDisplayName: UpdateDisplayName,
   ) {}
 
   @Get()
@@ -57,6 +64,46 @@ export class MeController {
     try {
       return await this.getMe.execute({ userId });
     } catch (err: unknown) {
+      if (err instanceof Error && err.message === "User not found") {
+        throw new NotFoundException({
+          code: "USER_NOT_FOUND",
+          message: "User not found.",
+        });
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Sets the signed-in User's Display Name and answers with /me. Only the
+   * name can change; other body fields are dropped. The name is never logged.
+   */
+  @Patch()
+  async update(@Req() req: FastifyRequest, @Body() body: unknown) {
+    const userId = this.userId(req);
+    const parsed = this.parseOrThrow(IdentitySchemas.UpdateMeRequestSchema, body);
+
+    try {
+      await this.updateDisplayName.execute({
+        userId,
+        displayName: parsed.displayName,
+      });
+      return await this.getMe.execute({ userId });
+    } catch (err: unknown) {
+      if (err instanceof InvalidDisplayNameError) {
+        throw new BadRequestException({
+          code: IDENTITY_ERROR_CODES.INVALID_DISPLAY_NAME,
+          message: "The name does not meet the rule.",
+          details: { reason: err.reason },
+        });
+      }
+      if (err instanceof UserSuspendedError) {
+        throw new ForbiddenException({
+          code: "FORBIDDEN",
+          message: "User is suspended",
+          details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
+        });
+      }
       if (err instanceof Error && err.message === "User not found") {
         throw new NotFoundException({
           code: "USER_NOT_FOUND",

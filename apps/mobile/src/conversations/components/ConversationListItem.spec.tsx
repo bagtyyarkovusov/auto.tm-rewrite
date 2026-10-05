@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { Image } from "expo-image";
 
-import { fireEvent, renderMobile, routerMock } from "../../../test/render";
+import { fireEvent, first, renderMobile, routerMock, within } from "../../../test/render";
 import { queryKeys } from "../../api/queryKeys";
 import type { ConversationSummaryData } from "../../api/conversations/useConversation";
 
@@ -33,6 +34,32 @@ function message(senderId: string, overrides: Partial<NonNullable<ConversationSu
   };
 }
 
+type Row = ReturnType<typeof renderMobile>;
+type Host = { type: unknown; props: Record<string, unknown>; parent: Host | null };
+
+/** Rendered host nodes of one native type, such as the avatar's `Svg`. */
+const hosts = (row: Row, type: string) => row.UNSAFE_queryAllByType(type as never) as unknown as Host[];
+const marks = (row: Row) => hosts(row, "Path").map((path) => path.props.d);
+const personIcons = (row: Row) => hosts(row, "Icon").filter((icon) => icon.props.name === "User");
+/** The native view that holds the car mark: the avatar's circle. */
+function avatarCircle(row: Row): Record<string, unknown> {
+  let node = first(hosts(row, "Svg")).parent;
+  while (node && typeof node.type !== "string") node = node.parent;
+  return node?.props ?? {};
+}
+/** The photos drawn inside the badge on the thumbnail's corner. */
+const badgePhotos = (row: Row) => within(row.getByTestId("conversation-row-peer-avatar")).UNSAFE_queryAllByType(Image);
+
+// The first stroke of the key, the mark for avatar index 7.
+const KEY_MARK = "M11.5 12H21M17 12v3M20 12v2.4M6.5 12h.01";
+const PHOTO_KEY = "avatars/u2/original.jpg";
+const PHOTO_URL = "https://media.autotm.tm/listing-photos/avatars/u2/thumbnail.jpg";
+
+/** Merdan, avatar index 7, name number 2057, no photo. */
+function peer(id: string, updates: Partial<ConversationSummaryData["peer"]> = {}): ConversationSummaryData["peer"] {
+  return { id, displayName: "Merdan", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false, ...updates };
+}
+
 /** The viewer is the buyer unless `myRole` says otherwise; the peer is Merdan, the seller. */
 function summary(overrides: Partial<ConversationSummaryData> = {}): ConversationSummaryData {
   return {
@@ -41,7 +68,7 @@ function summary(overrides: Partial<ConversationSummaryData> = {}): Conversation
     buyerId: BUYER,
     sellerId: SELLER,
     myRole: "buyer",
-    peer: { id: SELLER, displayName: "Merdan" },
+    peer: peer(SELLER),
     blockedByMe: false,
     lastMessage: message(SELLER),
     updatedAt: "2026-10-01T10:00:00.000Z",
@@ -116,7 +143,7 @@ describe("ConversationListItem", () => {
   });
 
   it("works out the viewer's own Messages from the seller side too", () => {
-    const row = renderRow(summary({ myRole: "seller", peer: { id: BUYER, displayName: "Aman" }, lastMessage: message(SELLER) }));
+    const row = renderRow(summary({ myRole: "seller", peer: peer(BUYER, { displayName: "Aman" }), lastMessage: message(SELLER) }));
     expect(row.getByTestId("conversation-row-tick-sent")).toBeTruthy();
   });
 
@@ -157,11 +184,45 @@ describe("ConversationListItem", () => {
     expect(row.getByTestId("conversation-row-placeholder")).toBeTruthy();
   });
 
-  it("names a seller with no display name Private seller, and a buyer Buyer", () => {
-    expect(renderRow(summary({ peer: { id: SELLER, displayName: null } })).getByText("Private seller")).toBeTruthy();
-    expect(
-      renderRow(summary({ myRole: "seller", peer: { id: BUYER, displayName: "  " } })).getByText("Buyer"),
-    ).toBeTruthy();
+  it("names a seller or a buyer without a name of their own by their generated name", () => {
+    const seller = renderRow(summary({ peer: peer(SELLER, { displayName: null }) }));
+    expect(seller.getByText("Driver 2057")).toBeTruthy();
+    expect(seller.queryByText("Private seller")).toBeNull();
+
+    const buyer = renderRow(summary({ myRole: "seller", peer: peer(BUYER, { displayName: "  ", nameNumber: 4821 }) }));
+    expect(buyer.getByText("Driver 4821")).toBeTruthy();
+    expect(buyer.queryByText("Buyer")).toBeNull();
+  });
+
+  it.each([
+    ["en", "Driver 2057"],
+    ["ru", "Водитель 2057"],
+    ["tk", "Sürüji 2057"],
+  ])("writes the generated name in %s", (locale, name) => {
+    expect(renderRow(summary({ peer: peer(SELLER, { displayName: null }) }), locale).getByText(name)).toBeTruthy();
+  });
+
+  it("keeps Private seller and Buyer for a deleted User, with the person icon and no car", () => {
+    const seller = renderRow(summary({ peer: peer(SELLER, { displayName: null, deleted: true }) }));
+    expect(seller.getByText("Private seller")).toBeTruthy();
+    expect(seller.queryByText("Driver 2057")).toBeNull();
+    expect(personIcons(seller)).toHaveLength(1);
+    expect(hosts(seller, "Svg")).toHaveLength(0);
+
+    const buyer = renderRow(summary({ myRole: "seller", peer: peer(BUYER, { displayName: null, deleted: true }) }));
+    expect(buyer.getByText("Buyer")).toBeTruthy();
+    expect(personIcons(buyer)).toHaveLength(1);
+    expect(hosts(buyer, "Svg")).toHaveLength(0);
+  });
+
+  it.each([
+    ["en", "Abdyrahman Gurbanguly Atamyrad"],
+    ["ru", "Абдырахман Гурбангулыев Атамыр"],
+    ["tk", "Abdyrahman Gurbangulyýew Çaryý"],
+  ])("keeps a 30-character name on one line that ends in an ellipsis in %s", (locale, name) => {
+    expect(name).toHaveLength(30);
+    const row = renderRow(summary({ peer: peer(SELLER, { displayName: name }) }), locale);
+    expect(row.getByText(name).props).toMatchObject({ numberOfLines: 1, ellipsizeMode: "tail" });
   });
 
   it("keeps the photo, Listing and deleted previews", () => {
@@ -191,9 +252,69 @@ describe("ConversationListItem", () => {
     expect(ru.getByText("Продано")).toBeTruthy();
     expect(ru.getByText("Пользователь заблокирован")).toBeTruthy();
 
-    const tk = renderRow(summary({ listing: null, peer: { id: SELLER, displayName: null } }), "tk");
+    const tk = renderRow(summary({ listing: null, peer: peer(SELLER, { displayName: null, deleted: true }) }), "tk");
     expect(tk.getByText("Şahsy satyjy")).toBeTruthy();
     expect(tk.getByText("Bildiriş elýeterli däl")).toBeTruthy();
+  });
+});
+
+describe("ConversationListItem avatar badge", () => {
+  it("puts the other participant's car mark on the thumbnail's lower corner as a 24-point badge", () => {
+    const row = renderRow(summary());
+    const badge = row.getByTestId("conversation-row-peer-avatar");
+
+    expect(marks(row)[0]).toBe(KEY_MARK);
+    expect(avatarCircle(row).style).toMatchObject({ width: 24, height: 24 });
+    expect(badge.props.className).toContain("absolute");
+    expect(badge.props.className).toContain("-bottom-1");
+    expect(badge.props.className).toContain("-right-1");
+    expect(personIcons(row)).toHaveLength(0);
+  });
+
+  it("rings the badge in the background colour so it reads on any photo", () => {
+    const badge = renderRow(summary()).getByTestId("conversation-row-peer-avatar");
+    expect(badge.props.className).toContain("rounded-full");
+    expect(badge.props.className).toContain("bg-background");
+    expect(badge.props.className).toContain("p-0.5");
+  });
+
+  it("still leads the row with the Listing thumbnail, whose photo the badge does not replace", () => {
+    const row = renderRow(summary({ peer: peer(SELLER, { avatarKey: PHOTO_KEY }) }));
+    const thumbnail = within(row.getByTestId("conversation-row-thumbnail")).UNSAFE_getByType(Image);
+    expect(thumbnail.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/listings/a1/cover.jpg/thumbnail.jpg" });
+    // The badge sits beside the clipped thumbnail, not inside it, so it is not clipped or dimmed.
+    expect(within(row.getByTestId("conversation-row-thumbnail")).queryByTestId("conversation-row-peer-avatar")).toBeNull();
+  });
+
+  it("shows the other participant's photo in the badge, sized for 24 points", () => {
+    const row = renderRow(summary({ peer: peer(SELLER, { avatarKey: PHOTO_KEY }) }));
+    const photos = badgePhotos(row);
+
+    expect(photos).toHaveLength(1);
+    expect(first(photos).props.source).toEqual({ uri: PHOTO_URL });
+    expect(first(photos).props.style).toMatchObject({ width: 24, height: 24 });
+    expect(hosts(row, "Svg")).toHaveLength(0);
+  });
+
+  it("goes back to the car mark when the photo does not load", () => {
+    const row = renderRow(summary({ peer: peer(SELLER, { avatarKey: PHOTO_KEY }) }));
+    fireEvent(first(badgePhotos(row)), "error");
+
+    expect(badgePhotos(row)).toHaveLength(0);
+    expect(marks(row)[0]).toBe(KEY_MARK);
+  });
+
+  it("is not read on its own: the row stays one button whose label carries the name", () => {
+    const row = renderRow(summary());
+
+    expect(row.getAllByRole("button")).toHaveLength(1);
+    expect(row.queryByRole("image")).toBeNull();
+    expect(avatarCircle(row)).toMatchObject({
+      accessible: false, accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants",
+    });
+    expect(row.getByRole("button").props.accessibilityLabel).toBe(
+      "Merdan, 2018 Toyota Camry · 285,000 TMT, Yes, it is still for sale",
+    );
   });
 });
 

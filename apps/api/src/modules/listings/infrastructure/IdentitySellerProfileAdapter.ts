@@ -16,7 +16,16 @@ export class IdentitySellerProfileAdapter implements SellerProfilePort {
     private readonly identityProfiles: SellerProfileReadPort,
   ) {}
 
-  getSellerProfile(userId: string): Promise<SellerProfile | null> {
-    return this.identityProfiles.getSellerProfile(userId);
+  async getSellerProfile(userId: string): Promise<SellerProfile | null> {
+    const profile = await this.identityProfiles.getSellerProfile(userId);
+    if (!profile) return null;
+    return {
+      displayName: profile.displayName,
+      nameNumber: profile.nameNumber,
+      avatarIndex: profile.avatarIndex,
+      avatarKey: profile.avatarKey,
+      deleted: profile.deleted,
+      memberSince: profile.memberSince,
+    };
   }
 }

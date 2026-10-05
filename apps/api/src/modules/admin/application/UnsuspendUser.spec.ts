@@ -3,7 +3,7 @@ import { NotFoundException, ConflictException, ForbiddenException } from "@nestj
 
 import { UnsuspendUser } from "./UnsuspendUser";
 import type { AuditLogRepository, AuditLogRow } from "../domain/ports/AuditLogRepository";
-import type { IdentityAdminPort, IdentityReadPort } from "../../identity/identity.public";
+import type { IdentityUserSummary, IdentityAdminPort, IdentityReadPort } from "../../identity/identity.public";
 import { AdminSchemas } from "@auto-tm/contracts";
 
 class FakeAuditLogRepository implements AuditLogRepository {
@@ -39,10 +39,10 @@ class FakeAuditLogRepository implements AuditLogRepository {
 class FakeIdentityReadPort implements IdentityReadPort {
   users: Record<
     string,
-    { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null }
+    IdentityUserSummary
   > = {};
 
-  async findUserById(id: string): Promise<{ id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | null> {
+  async findUserById(id: string): Promise<IdentityUserSummary | null> {
     return this.users[id] ?? null;
   }
 
@@ -65,6 +65,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
     this.users[id] = {
       id,
       displayName: data.displayName ?? null,
+      nameNumber: 1000,
+      avatarIndex: 0,
+      avatarKey: null,
+      deleted: false,
       role: data.role ?? "buyer",
       suspendedAt: data.suspendedAt ?? null,
       suspendedById: data.suspendedById ?? null,

@@ -114,7 +114,7 @@ function createMediaApi(initial: ListingsSchemas.ListingMedia[]) {
         createdAt: "2026-05-21T12:00:00.000Z",
         updatedAt: "2026-05-21T12:00:00.000Z",
         publicNumber: 10482,
-        seller: { displayName: null, memberSince: "2025-01-01T00:00:00.000Z" },
+        seller: { displayName: null, nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false, memberSince: "2025-01-01T00:00:00.000Z" },
       });
     }),
     http.post("*/listings/:id/media/attach", async ({ request }) => {

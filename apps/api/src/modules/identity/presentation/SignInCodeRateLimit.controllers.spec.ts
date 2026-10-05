@@ -69,6 +69,7 @@ const ENDPOINTS: Array<[string, Call]> = [
         rejecting(error) as never,
         {} as never,
         {} as never,
+        {} as never,
       ).requestMethodChange(request, { email: "buyer@example.com" }),
   ],
   [

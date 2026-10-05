@@ -76,7 +76,7 @@ function createListingApi(overrides: Record<string, unknown> = {}) {
     ],
     viewCount: 0, favoriteCount: 0, publishedAt: "2026-09-30T00:00:00.000Z",
     createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
-    seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
+    seller: { displayName: "Seller", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false, memberSince: "2026-01-01T00:00:00.000Z" },
     ...overrides,
   };
   const api = { listing, patches: [] as Record<string, unknown>[], removed: [] as string[], failEdits: 0 };

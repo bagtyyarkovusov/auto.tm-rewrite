@@ -79,6 +79,13 @@ export class PrismaUserRepository implements UserRepository, SignInMethodReposit
     }
   }
 
+  async updateDisplayName(userId: string, displayName: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { displayName },
+    });
+  }
+
   async delete(id: string): Promise<void> {
     await this.prisma.user.delete({ where: { id } });
   }

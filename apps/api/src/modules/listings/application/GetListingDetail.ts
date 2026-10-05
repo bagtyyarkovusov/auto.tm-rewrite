@@ -93,6 +93,10 @@ export class GetListingDetail {
       sellerId: listing.sellerId,
       seller: {
         displayName: seller.displayName,
+        nameNumber: seller.nameNumber,
+        avatarIndex: seller.avatarIndex,
+        avatarKey: seller.avatarKey,
+        deleted: seller.deleted,
         memberSince: seller.memberSince.toISOString(),
       },
       status: listing.status,

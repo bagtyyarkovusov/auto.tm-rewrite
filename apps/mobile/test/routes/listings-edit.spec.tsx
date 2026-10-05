@@ -21,7 +21,7 @@ const fixture = vi.hoisted(() => {
       contactPhone: "+99361234567", allowCalls: true, allowChat: true, acceptsExchange: false, installmentAvailable: false,
       media, viewCount: 0, favoriteCount: 0, publishedAt: "2026-09-30T00:00:00.000Z",
       createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
-      seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
+      seller: { displayName: "Seller", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false, memberSince: "2026-01-01T00:00:00.000Z" },
     },
     listing: {} as Record<string, unknown>,
     saved: { photoId: id, key: "photo.jpg", state: "uploaded", sortOrder: 0, retryCount: 0 } as Record<string, unknown>,

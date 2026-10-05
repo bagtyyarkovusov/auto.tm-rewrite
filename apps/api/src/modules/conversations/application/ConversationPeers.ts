@@ -1,8 +1,48 @@
-import type { IdentityReadPort } from "../../identity/identity.public";
+import type {
+  IdentityReadPort,
+  IdentityUserSummary,
+} from "../../identity/identity.public";
 
+/** The other participant: id and public identity, no Sign-in Method data. */
 export interface ConversationPeer {
   id: string;
   displayName: string | null;
+  nameNumber: number;
+  avatarIndex: number;
+  avatarKey: string | null;
+  deleted: boolean;
+}
+
+/**
+ * The peer when no User row is found. Rows are kept after account deletion
+ * and Conversations cascade with their Users, so this should not happen; it
+ * answers as a deleted User, whose number and index the app does not show.
+ */
+export function missingPeer(id: string): ConversationPeer {
+  return {
+    id,
+    displayName: null,
+    nameNumber: 1000,
+    avatarIndex: 0,
+    avatarKey: null,
+    deleted: true,
+  };
+}
+
+/** The peer's public identity, or `missingPeer` when the User is not found. */
+export function toConversationPeer(
+  id: string,
+  user: IdentityUserSummary | undefined,
+): ConversationPeer {
+  if (!user) return missingPeer(id);
+  return {
+    id,
+    displayName: user.displayName,
+    nameNumber: user.nameNumber,
+    avatarIndex: user.avatarIndex,
+    avatarKey: user.avatarKey,
+    deleted: user.deleted,
+  };
 }
 
 export interface ConversationPeerView {
@@ -22,9 +62,9 @@ export function peerIdOf(conversation: Participants, viewerId: string): string {
 }
 
 /**
- * Reads the other participant's display name and the viewer's block state for
- * a set of Conversations with one identity read each, however many rows.
- * A peer that no longer exists keeps a null display name.
+ * Reads the other participant's public identity and the viewer's block state
+ * for a set of Conversations with one identity read each, however many rows.
+ * A peer that no longer exists answers as `missingPeer`.
  */
 export async function readConversationPeers(
   identityRead: IdentityReadPort,
@@ -40,14 +80,14 @@ export async function readConversationPeers(
     identityRead.findUsersByIds(peerIds),
     identityRead.findBlockedUserIds(viewerId, peerIds),
   ]);
-  const displayNames = new Map(users.map((u) => [u.id, u.displayName]));
+  const usersById = new Map(users.map((u) => [u.id, u]));
   const blocked = new Set(blockedIds);
 
   return new Map(
     peerIds.map((id) => [
       id,
       {
-        peer: { id, displayName: displayNames.get(id) ?? null },
+        peer: toConversationPeer(id, usersById.get(id)),
         blockedByMe: blocked.has(id),
       },
     ]),
