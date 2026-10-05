@@ -18,19 +18,4 @@ export class PrismaAccountDeletionListingsAdapter implements AccountDeletionList
       },
     });
   }
-
-  async republishArchivedByDeletionListingsBySeller(sellerId: string): Promise<void> {
-    await this.prisma.listing.updateMany({
-      where: {
-        sellerId,
-        status: "archived",
-        archivedByDeletion: true,
-      },
-      data: {
-        status: "active",
-        archivedByDeletion: false,
-        publishedAt: new Date(),
-      },
-    });
-  }
 }
