@@ -67,6 +67,8 @@ interface WizardLayoutProps {
   progressPercent: number;
   children: React.ReactNode;
   disabledReason?: string;
+  /** Create flow, last step: what keeps Publish disabled, listed above it in this order. */
+  publishBlockers?: string[];
   secondaryAction?: FooterAction;
   publishLabel?: string;
   discardTitle?: string;
@@ -334,9 +336,11 @@ function WizardFooter({
   mode,
   editDetourActive,
   disabledReason,
+  publishBlockers,
   secondaryAction,
   publishLabel,
 }: {
+  publishBlockers?: string[];
   isLastStep: boolean;
   canContinue: boolean;
   canPublish: boolean;
@@ -405,6 +409,16 @@ function WizardFooter({
           {disabledReason}
         </Text>
       )}
+      {isLastStep && publishBlockers && publishBlockers.length > 0 ? (
+        // One line each, so a screen reader reads them in this order before Publish.
+        <View testID="publish-blockers" className="gap-0.5">
+          {publishBlockers.map((line) => (
+            <Text key={line} className="text-xs text-destructive">
+              {line}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       <View className="flex-row gap-3">
         {canGoBack ? (
           <Button
@@ -547,6 +561,7 @@ export function WizardLayout({
   progressPercent,
   children,
   disabledReason,
+  publishBlockers,
   secondaryAction,
   publishLabel,
   discardTitle,
@@ -605,6 +620,7 @@ export function WizardLayout({
             mode={mode}
             editDetourActive={editDetourActive}
             disabledReason={disabledReason}
+            publishBlockers={publishBlockers}
             secondaryAction={secondaryAction}
             publishLabel={publishLabel}
           />

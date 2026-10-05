@@ -125,7 +125,7 @@ describe("Sell wizard, resuming a draft whose saved photo is still staged on the
     await screen.findByText(/^photo /);
     await letAutosaveRun();
 
-    expect(screen.queryByText(/Complete \d+ step\(s\) before publishing/)).toBeNull();
+    expect(screen.queryByText(/^Fill in: /)).toBeNull();
     expect(publishButton(screen).props.accessibilityState).toMatchObject({ disabled: false });
     // The photo kept its key and was not uploaded a second time.
     expect(screen.getByText(`photo ${photoId} attached ${savedPhoto.key}`)).toBeTruthy();

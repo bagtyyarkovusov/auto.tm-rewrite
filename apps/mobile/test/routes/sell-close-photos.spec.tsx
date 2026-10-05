@@ -129,7 +129,7 @@ async function closeWithX(screen: Screen) {
 
 function expectDraftAsSaved(screen: Screen, draft: typeof a) {
   expect(screen.getByRole("header", { name: "Check and publish, Step 7 of 7" })).toBeTruthy();
-  expect(screen.queryByText(/Complete \d+ step\(s\) before publishing/)).toBeNull();
+  expect(screen.queryByText(/^Fill in: /)).toBeNull();
   expect(publishButton(screen).props.accessibilityState).toMatchObject({ disabled: false });
   // The photo kept its key and was not uploaded a second time.
   expect(screen.getByText(photoLine(draft))).toBeTruthy();

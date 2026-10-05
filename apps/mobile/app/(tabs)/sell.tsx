@@ -5,7 +5,7 @@ import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useR
 import { BackHandler, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
-import { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
+import { ListingsSchemas, type WizardSchemas } from "@auto-tm/contracts";
 
 import { ApiError } from "../../src/api/client";
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
@@ -40,6 +40,7 @@ import Step5Price from "../../src/listings/wizard/Step5Price";
 import Step6Location from "../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
 import CheckAndPublish from "../../src/listings/wizard/CheckAndPublish";
+import { publishBlockerLines } from "../../src/listings/wizard/publishBlockers";
 
 
 import { useToast } from "@/components/ui/toast";
@@ -510,27 +511,18 @@ export default function SellScreen() {
     // Compute upload status counts for chip + publishGate reason
     const uploadStatus = countUploads(uploadQueue.photos);
 
-    // Compose a clear reason text when Publish/Continue is disabled.
+    // On Check, everything that blocks Publish is named above it. Until the queue
+    // holds this draft's photos its counts say nothing about the draft.
+    const publishBlockers = ctx.isLastStep
+      ? publishBlockerLines(t, {
+          validatedSteps: machineState.validatedSteps,
+          uploads: queueReady ? uploadStatus : null,
+        })
+      : [];
+
+    // Why Continue or Done is disabled on a step the seller tried to leave.
     let disabledReason: string | undefined;
-    if (ctx.isLastStep && !uploadQueue.publishGate.canPublish) {
-      if (uploadStatus.failed > 0) {
-        disabledReason = t("photosGateFailed", { count: uploadStatus.failed });
-      } else if (uploadStatus.inflight > 0) {
-        disabledReason = t("photosGateUploading", { count: uploadStatus.inflight });
-      } else {
-        disabledReason =
-          translateWizardError(t, uploadQueue.publishGate.blockers[0]) ??
-          t("cannotPublishYet");
-      }
-    } else if (ctx.isLastStep && !ctx.canPublish) {
-      const missing = WizardSchemas.WIZARD_STEPS.filter(
-        (s) =>
-          s !== "review" && !machineState.validatedSteps.includes(s),
-      );
-      if (missing.length > 0) {
-        disabledReason = t("completeStepsBeforePublish", { count: missing.length });
-      }
-    } else if (
+    if (
       !ctx.isLastStep &&
       !ctx.canContinue &&
       attemptedSteps[currentStep] &&
@@ -567,6 +559,7 @@ export default function SellScreen() {
         onRetrySave={retrySave}
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
+        publishBlockers={publishBlockers}
         uploadStatus={uploadStatus}
         onUploadStatusPress={() =>
           // From Check the chip opens Photos as a change, so Done comes back.

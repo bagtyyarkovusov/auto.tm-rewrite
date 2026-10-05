@@ -274,12 +274,12 @@ describe("Sell wizard, upload status on later steps", () => {
     const screen = renderMobile(<SellScreen />);
 
     expect(screen.getByRole("header", { name: "Check and publish, Step 7 of 7" })).toBeTruthy();
-    expect(screen.queryByText(/Complete \d+ step\(s\) before publishing/)).toBeNull();
+    expect(screen.queryByText(/^Fill in: /)).toBeNull();
 
     // A photo the seller adds afterwards is a change of theirs, and is checked again.
     fixture.queuePhotos = [keyed(ids.a, 0), staged(ids.b, 1, "compressed"), staged(ids.c, 2, "selected")];
     screen.rerender(<SellScreen />);
-    expect(screen.getByText(/Complete \d+ step\(s\) before publishing/)).toBeTruthy();
+    expect(screen.getByText(/^Fill in: /)).toBeTruthy();
   });
 
   it("can publish once every photo is attached", () => {
