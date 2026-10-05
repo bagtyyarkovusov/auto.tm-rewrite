@@ -142,3 +142,54 @@ describe("Changing a step from Check and publish (#588)", () => {
     expect(buildMachineContext(reopened).editDetourActive).toBe(false);
   });
 });
+
+describe("Changing a step from an edit's section list (#589)", () => {
+  /** A published Listing's edit, which opens on its section list. */
+  function atSectionList(payload: Record<string, unknown> = completePayload): WizardMachineState {
+    return wizardMachineReducer(createInitialState(), {
+      type: "INIT", draftId: null, listingId: "listing-1", mode: "edit", entryStep: "review", payload,
+    });
+  }
+
+  it("opens a step with Done and Back, and Done returns to the list with the change", () => {
+    let state = wizardMachineReducer(atSectionList(), { type: "CHANGE_FROM_REVIEW", step: "price" });
+    expect(state.currentStep).toBe("price");
+    expect(buildMachineContext(state)).toMatchObject({ editDetourActive: true, canGoBack: true });
+
+    state = wizardMachineReducer(state, { type: "UPDATE_FIELDS", updates: { priceAmount: 179000 } });
+    state = wizardMachineReducer(state, { type: "RETURN_TO_REVIEW" });
+
+    expect(state).toMatchObject({ currentStep: "review", payload: { priceAmount: 179000 } });
+    expect(buildMachineContext(state)).toMatchObject({ canPublish: true, canGoBack: false });
+  });
+
+  it("keeps the seller on a step that is not valid, and Back leaves it named on the list", () => {
+    let state = wizardMachineReducer(atSectionList(), { type: "CHANGE_FROM_REVIEW", step: "price" });
+    state = wizardMachineReducer(state, { type: "UPDATE_FIELDS", updates: { priceAmount: undefined } });
+
+    expect(wizardMachineReducer(state, { type: "RETURN_TO_REVIEW" }).currentStep).toBe("price");
+
+    state = wizardMachineReducer(state, { type: "BACK" });
+    expect(state.currentStep).toBe("review");
+    expect(state.validatedSteps).toEqual(["vehicle", "specs", "photos", "location", "contact"]);
+    expect(buildMachineContext(state).canPublish).toBe(false);
+  });
+
+  it("never opens Car, which is locked after publishing", () => {
+    const state = atSectionList();
+
+    expect(wizardMachineReducer(state, { type: "CHANGE_FROM_REVIEW", step: "vehicle" })).toBe(state);
+  });
+
+  it("returns to the list from the Damaged question a legacy Listing opens on", () => {
+    let state = atSectionList({ ...completePayload, conditionDisclosure: undefined });
+    expect(state.currentStep).toBe("specs");
+    expect(buildMachineContext(state).canGoBack).toBe(true);
+
+    state = wizardMachineReducer(state, { type: "UPDATE_FIELDS", updates: { conditionDisclosure: { damaged: true } } });
+    state = wizardMachineReducer(state, { type: "RETURN_TO_REVIEW" });
+
+    expect(state.currentStep).toBe("review");
+    expect(buildMachineContext(state).canPublish).toBe(true);
+  });
+});

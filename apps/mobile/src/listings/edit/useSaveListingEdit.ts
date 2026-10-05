@@ -7,6 +7,8 @@ import { useRemoveMedia } from "../../api/listings/useRemoveMedia";
 import { useReorderMedia } from "../../api/listings/useReorderMedia";
 import type { StagedPhoto } from "../uploadStaging/types";
 
+import { EDITABLE_FIELDS } from "./editChanges";
+
 export type OpState = "pending" | "in_flight" | "succeeded" | "failed";
 
 export class EditSessionError extends Error {
@@ -85,29 +87,6 @@ function reducer(state: State, action: Action): State {
       return state;
   }
 }
-
-const EDITABLE_FIELDS: (keyof ListingsSchemas.EditListingRequest)[] = [
-  "priceAmount",
-  "priceCurrency",
-  "description",
-  "condition",
-  "mileageKm",
-  "colorId",
-  "bodyTypeId",
-  "transmissionId",
-  "driveTypeId",
-  "engineTypeId",
-  "enginePower",
-  "regionId",
-  "cityId",
-  "locationText",
-  "contactPhone",
-  "allowCalls",
-  "allowChat",
-  "acceptsExchange",
-  "installmentAvailable",
-  "conditionDisclosure",
-];
 
 export function buildFieldsPatch(
   payload: WizardSchemas.WizardDraftPayload,

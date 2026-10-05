@@ -26,8 +26,8 @@ export interface WizardMachineState {
   mode: "create" | "edit";
   editEntryAtReview: boolean;
   /**
-   * A create draft's step was opened from Check and publish. The step shows Done
-   * in place of Continue, and Done or Back returns to Check.
+   * A step was opened from Check and publish, or from an edit's section list. The
+   * step shows Done in place of Continue, and Done or Back returns there.
    */
   changingFromReview: boolean;
   currentStep: WizardMachineStep;
@@ -75,9 +75,12 @@ export type WizardMachineAction =
       keepValidSteps?: boolean;
     }
   | { type: "GO_TO_STEP"; step: WizardMachineStep }
-  /** Create flow: open a step from Check and publish, to come back with Done. */
+  /**
+   * Open a step from Check and publish or from an edit's section list, to come
+   * back with Done. An edit never opens Car: it is locked after publishing (ADR-0024).
+   */
   | { type: "CHANGE_FROM_REVIEW"; step: WizardMachineStep }
-  /** Create flow: Done on a step opened from Check and publish. */
+  /** Done on a step opened with CHANGE_FROM_REVIEW. */
   | { type: "RETURN_TO_REVIEW" }
   | { type: "PUBLISH_START" }
   /**
@@ -248,6 +251,10 @@ export function wizardMachineReducer(
       const validatedSteps = completedSteps(payload);
 
       if (mode === "edit" && action.entryStep === "review") {
+        // ADR-0080: a New Listing is not asked Damaged, so it needs no answer here.
+        const needsDamagedAnswer =
+          payload.condition !== Enums.ListingCondition.New &&
+          payload.conditionDisclosure?.damaged === undefined;
         return {
           ...state,
           status: "step",
@@ -255,15 +262,11 @@ export function wizardMachineReducer(
           listingId: action.listingId ?? null,
           mode,
           editEntryAtReview: true,
-          changingFromReview: false,
+          // Opened on Details for the missing answer: Done and Back lead to the list.
+          changingFromReview: needsDamagedAnswer,
           payload,
           validatedSteps: DATA_STEPS,
-          // ADR-0080: a New Listing is not asked Damaged, so it needs no answer here.
-          currentStep:
-            payload.condition !== Enums.ListingCondition.New &&
-            payload.conditionDisclosure?.damaged === undefined
-              ? "specs"
-              : "review",
+          currentStep: needsDamagedAnswer ? "specs" : "review",
           saveError: null,
           publishError: null,
         };
@@ -404,8 +407,8 @@ export function wizardMachineReducer(
     case "CHANGE_FROM_REVIEW": {
       // Also after a failed publish, which leaves the seller on Check.
       if (state.status !== "step" && state.status !== "publishError") return state;
-      if (state.mode !== "create" || state.currentStep !== "review") return state;
-      if (action.step === "review") return state;
+      if (state.currentStep !== "review" || action.step === "review") return state;
+      if (state.mode === "edit" && action.step === "vehicle") return state;
       return {
         ...state,
         ...moveTo(state, action.step),
@@ -480,7 +483,8 @@ export function buildMachineContext(
 
   const canGoBack =
     state.mode === "edit"
-      ? false
+      ? // An edit has no step order: Back only leaves a step opened from the list.
+        state.changingFromReview && !isLastStep && state.status === "step"
       : // The first step has a Back too when it was opened from Check.
         (currentIdx > 0 || state.changingFromReview) &&
         (state.status === "step" || state.status === "publishError");

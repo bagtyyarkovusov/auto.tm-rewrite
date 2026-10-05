@@ -55,6 +55,7 @@ describe("WizardLayout step header", () => {
     expect(screen.getByText("Sell car · Step 1 of 7")).toBeTruthy();
     expect(screen.getByRole("header", { name: "Car, Step 1 of 7" })).toBeTruthy();
     expect(announcements).toEqual(["Car, Step 1 of 7"]);
+    expect(screen.getByTestId("wizard-progress")).toBeTruthy();
 
     screen.rerender(layout("Details and condition", 2));
 
@@ -117,21 +118,43 @@ describe("WizardLayout close button (#585)", () => {
     expect(screen.getByRole("button", { name: label })).toBeTruthy();
   });
 
-  it("keeps Cancel and the Leave edit mode dialog when editing a published Listing", () => {
-    const onDiscard = vi.fn();
+  it("heads an edit's section list with ✕ and the title alone (#589)", () => {
+    const onClose = vi.fn();
     const screen = renderMobile(
-      layout("Price", 4, {
-        mode: "edit",
-        onClose: undefined,
-        onDiscard,
-        discardTitle: "Leave edit mode?",
-        discardDescription: "Any unsaved changes will be lost.",
+      layout("Edit listing", 7, {
+        mode: "edit", sectionList: true, isLastStep: true, onClose, subtitle: "Toyota Camry, 2020",
       }),
     );
 
+    expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
+    // The car's title under the heading, as on every step of the edit.
+    expect(screen.getByText("Toyota Camry, 2020")).toBeTruthy();
+    expect(screen.queryByText(/Step 7 of 7/)).toBeNull();
+    expect(screen.queryByTestId("wizard-progress")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("gives a step opened from an edit's section list Back and no ✕ (#589)", () => {
+    const onBack = vi.fn();
+    const screen = renderMobile(
+      layout("Price", 4, {
+        routeTitle: "Edit listing", mode: "edit", canGoBack: true, editDetourActive: true, onBack,
+        subtitle: "Toyota Camry, 2020",
+      }),
+    );
+
+    // An edit's step has no position in the wizard and no progress bar.
+    expect(announcements.at(-1)).toBe("Price");
+    expect(screen.getByRole("header", { name: "Price" })).toBeTruthy();
+    expect(screen.queryByText(/Step 4 of 7/)).toBeNull();
+    expect(screen.queryByTestId("wizard-progress")).toBeNull();
+    expect(screen.getByText("Edit listing")).toBeTruthy();
+    expect(screen.getByText("Toyota Camry, 2020")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
-    fireEvent.press(screen.getByText("Cancel"));
-    expect(screen.getByText("Leave edit mode?")).toBeTruthy();
+    expect(screen.queryByText("Cancel")).toBeNull();
+    fireEvent.press(screen.getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalledOnce();
   });
 });
 

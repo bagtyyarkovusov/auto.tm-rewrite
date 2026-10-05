@@ -1,5 +1,5 @@
 import { ChevronLeft, AlertCircle, RefreshCw, X } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -11,16 +11,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
@@ -48,13 +38,24 @@ interface WizardLayoutProps {
   onContinue: () => void;
   onPublish: () => void;
   onReturnToReview?: () => void;
-  /** Create flow: ✕ saves the draft and closes. The screen owns the save and the unsaved dialog. */
+  /**
+   * ✕ in the header. Create flow: saves the draft and closes. Edit flow: leaves the
+   * edit from its section list. The screen owns the save, the leave rule and its dialog.
+   */
   onClose?: () => void;
   /** ✕ is disabled while a close is in progress. */
   isClosing?: boolean;
-  /** Edit flow: Cancel opens "Leave edit mode?" and this runs when the seller confirms. */
-  onDiscard?: () => void;
   mode: "create" | "edit";
+  /**
+   * Edit flow: this is the Listing's section list, not a step. Its header has ✕ in
+   * place of Back, the title alone, and no step position or progress bar.
+   */
+  sectionList?: boolean;
+  /**
+   * Edit flow: the car's title, under "Edit listing" on the section list and on
+   * every step. An edit's steps have no position in the wizard and no progress bar.
+   */
+  subtitle?: string;
   editDetourActive: boolean;
   canContinue: boolean;
   canPublish: boolean;
@@ -74,10 +75,6 @@ interface WizardLayoutProps {
   publishError?: string | null;
   secondaryAction?: FooterAction;
   publishLabel?: string;
-  discardTitle?: string;
-  discardDescription?: string;
-  isDiscarding?: boolean;
-  discardError?: string | null;
   uploadStatus?: UploadStatusChip;
   /** Tapping the header's upload chip: open Photos. Without it the chip is plain status. */
   onUploadStatusPress?: () => void;
@@ -140,9 +137,10 @@ function WizardHeader({
   canGoBack,
   onBack,
   mode,
+  sectionList,
+  subtitle,
   onClose,
   isClosing,
-  onOpenDiscard,
   progressPercent,
   saveStatus,
   onRetrySave,
@@ -156,9 +154,10 @@ function WizardHeader({
   canGoBack: boolean;
   onBack: () => void;
   mode: WizardLayoutProps["mode"];
+  sectionList: boolean;
+  subtitle?: string;
   onClose?: (() => void) | undefined;
   isClosing: boolean;
-  onOpenDiscard: () => void;
   progressPercent: number;
   saveStatus: WizardLayoutProps["saveStatus"];
   onRetrySave: () => void;
@@ -167,8 +166,25 @@ function WizardHeader({
 }) {
   const { t } = useTranslation();
   const stepPosition = t("stepOf", { step: stepNumber, total: stepCount });
-  // A screen reader hears the step title with its position each time a step opens.
-  const stepAnnouncement = `${stepTitle}, ${stepPosition}`;
+  // An edit is not walked step by step: neither its section list nor a step opened
+  // from it has a position in the wizard or a progress bar.
+  const isEdit = mode === "edit";
+  // A screen reader hears the step title, with its position in the create wizard,
+  // each time a step opens.
+  const stepAnnouncement = isEdit || sectionList ? stepTitle : `${stepTitle}, ${stepPosition}`;
+  const closeButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      // Left on the section list of an edit, right in the create wizard; a mounted button is only ever one of them.
+      className={sectionList ? "-ml-3" : "-mr-3"}
+      onPress={onClose}
+      disabled={isClosing}
+      accessibilityLabel={t("close")}
+    >
+      <Icon as={X} className="size-5 text-foreground" />
+    </Button>
+  );
   useEffect(() => {
     AccessibilityInfo.announceForAccessibility(stepAnnouncement);
   }, [stepAnnouncement]);
@@ -177,7 +193,9 @@ function WizardHeader({
     <View className="border-b border-border px-5 py-3 gap-2">
       {/* Row 1: nav + position marker + close */}
       <View className="flex-row items-center justify-between">
-        {canGoBack ? (
+        {sectionList ? (
+          closeButton
+        ) : canGoBack ? (
           <Button
             variant="ghost"
             size="sm"
@@ -196,33 +214,24 @@ function WizardHeader({
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
           {/* The heading below already reads the position, so this row reads only the route. */}
-          <Text className="text-xs text-muted-foreground" accessibilityLabel={routeTitle}>
-            {routeTitle} · {stepPosition}
-          </Text>
+          {sectionList ? null : isEdit ? (
+            <View className="items-center">
+              <Text className="text-xs font-medium text-foreground">{routeTitle}</Text>
+              {subtitle ? (
+                <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <Text className="text-xs text-muted-foreground" accessibilityLabel={routeTitle}>
+              {routeTitle} · {stepPosition}
+            </Text>
+          )}
         </View>
 
-        {mode === "create" ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="-mr-3"
-            onPress={onClose}
-            disabled={isClosing}
-            accessibilityLabel={t("close")}
-          >
-            <Icon as={X} className="size-5 text-foreground" />
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-10 px-0 -mr-1"
-            onPress={onOpenDiscard}
-            accessibilityLabel={t("discard")}
-          >
-            <Text className="text-sm font-medium text-muted-foreground">{t("cancel")}</Text>
-          </Button>
-        )}
+        {/* An edit is left from its section list; a step opened from it has Back only. */}
+        {mode === "create" ? closeButton : <View className="w-16" />}
       </View>
 
       {/* Row 2: the prominent step title — the ONE title */}
@@ -233,13 +242,19 @@ function WizardHeader({
       >
         {stepTitle}
       </Text>
+      {sectionList && subtitle ? (
+        <Text className="-mt-1 text-sm text-muted-foreground">{subtitle}</Text>
+      ) : null}
 
-      {/* Row 3: progress */}
-      <Progress
-        value={progressPercent}
-        className="bg-muted h-1"
-        indicatorClassName="bg-foreground"
-      />
+      {/* Row 3: progress, in the create wizard only */}
+      {isEdit || sectionList ? null : (
+        <Progress
+          testID="wizard-progress"
+          value={progressPercent}
+          className="bg-muted h-1"
+          indicatorClassName="bg-foreground"
+        />
+      )}
 
       {/* Row 4: where the draft stands; the line's height is kept so nothing jumps */}
       <SaveStatusLine saveStatus={saveStatus} onRetrySave={onRetrySave} />
@@ -511,60 +526,6 @@ function WizardFooter({
   );
 }
 
-function DiscardConfirmationDialog({
-  open,
-  onOpenChange,
-  onDiscard,
-  discardTitle,
-  discardDescription,
-  isDiscarding,
-  discardError,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDiscard: () => void;
-  discardTitle: string;
-  discardDescription: string;
-  isDiscarding?: boolean;
-  discardError?: string | null;
-}) {
-  const { t } = useTranslation();
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{discardTitle}</AlertDialogTitle>
-          <AlertDialogDescription>{discardDescription}</AlertDialogDescription>
-        </AlertDialogHeader>
-        {discardError ? (
-          <Text className="text-sm text-destructive">{discardError}</Text>
-        ) : null}
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDiscarding} onPress={() => onOpenChange(false)}>
-            <Text>{t("keepEditing")}</Text>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive active:bg-destructive/90"
-            disabled={isDiscarding}
-            onPress={() => {
-              onDiscard();
-            }}
-          >
-            {isDiscarding ? (
-              <View className="flex-row items-center gap-2">
-                <ActivityIndicator size="small" color="white" />
-                <Text className="text-destructive-foreground">{t("discarding")}</Text>
-              </View>
-            ) : (
-              <Text className="text-destructive-foreground">{t("discard")}</Text>
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
 export function WizardLayout({
   routeTitle,
   stepTitle,
@@ -576,8 +537,9 @@ export function WizardLayout({
   onReturnToReview,
   onClose,
   isClosing = false,
-  onDiscard,
   mode,
+  sectionList = false,
+  subtitle,
   editDetourActive,
   canContinue,
   canPublish,
@@ -594,15 +556,9 @@ export function WizardLayout({
   publishError,
   secondaryAction,
   publishLabel,
-  discardTitle,
-  discardDescription,
-  isDiscarding = false,
-  discardError = null,
   uploadStatus,
   onUploadStatusPress,
 }: WizardLayoutProps) {
-  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
-
   return (
     <SafeAreaView className="flex-1 bg-background">
       <WizardHeader
@@ -613,9 +569,10 @@ export function WizardLayout({
         canGoBack={canGoBack}
         onBack={onBack}
         mode={mode}
+        sectionList={sectionList}
+        subtitle={subtitle}
         onClose={onClose}
         isClosing={isClosing}
-        onOpenDiscard={() => setShowDiscardDialog(true)}
         progressPercent={progressPercent}
         saveStatus={saveStatus}
         onRetrySave={onRetrySave}
@@ -658,18 +615,6 @@ export function WizardLayout({
         </View>
       </View>
 
-      {/* Only the edit flow confirms before leaving; the create wizard has ✕ and no discard. */}
-      {mode === "edit" && onDiscard && discardTitle && discardDescription ? (
-        <DiscardConfirmationDialog
-          open={showDiscardDialog}
-          onOpenChange={setShowDiscardDialog}
-          onDiscard={onDiscard}
-          discardTitle={discardTitle}
-          discardDescription={discardDescription}
-          isDiscarding={isDiscarding}
-          discardError={discardError}
-        />
-      ) : null}
     </SafeAreaView>
   );
 }

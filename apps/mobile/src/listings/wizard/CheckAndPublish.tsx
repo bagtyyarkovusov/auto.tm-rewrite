@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import * as Linking from "expo-linking";
-import { Camera } from "lucide-react-native";
+import { Camera, Lock } from "lucide-react-native";
 import { Enums, WizardSchemas } from "@auto-tm/contracts";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -40,18 +40,24 @@ export interface CheckAndPublishProps {
   photosReady?: boolean;
 }
 
+/** "Brand Model, year", as the Listing card titles it. Also heads an edit's steps. */
+export function useCarTitle(payload: WizardSchemas.WizardDraftPayload): string {
+  const { data: brands } = useBrands();
+  const { data: models } = useModels(payload.brandId ?? "");
+  const brandName = brands?.items.find((b) => b.id === payload.brandId)?.name;
+  const modelName = models?.items.find((m) => m.id === payload.modelId)?.name;
+  const identity = [brandName, modelName].filter(Boolean).join(" ");
+  return [identity, payload.year].filter((value) => value != null && value !== "").join(", ");
+}
+
 /** The catalog names and formatted values that the preview and the section summaries share. */
 function useCheckValues(payload: WizardSchemas.WizardDraftPayload) {
   const { t, i18n } = useTranslation();
-  const { data: brands } = useBrands();
-  const { data: models } = useModels(payload.brandId ?? "");
+  const title = useCarTitle(payload);
   const { data: transmissions } = useTransmissions();
   const { data: engineTypes } = useEngineTypes();
   const { groups: cityGroups } = useCityGroups();
 
-  const brandName = brands?.items.find((b) => b.id === payload.brandId)?.name;
-  const modelName = models?.items.find((m) => m.id === payload.modelId)?.name;
-  const identity = [brandName, modelName].filter(Boolean).join(" ");
   const isNew = payload.condition === Enums.ListingCondition.New;
   const specs = listingSpecLine({
     mileageKm: isNew ? null : payload.mileageKm,
@@ -62,8 +68,7 @@ function useCheckValues(payload: WizardSchemas.WizardDraftPayload) {
   });
 
   return {
-    /** "Brand Model, year", as the Listing card titles it. */
-    title: [identity, payload.year].filter((value) => value != null && value !== "").join(", "),
+    title,
     /** The amount in the currency the seller chose; buyers see it converted to TMT. */
     price:
       payload.priceAmount != null
@@ -210,6 +215,93 @@ function SectionRow({
         <Text key="change" className="text-sm font-medium text-info-500">{action}</Text>
       )}
     </Pressable>
+  );
+}
+
+/** A step the seller cannot open: its title, what it holds, and why it is locked. */
+function LockedSectionRow({ title, summary, note }: { title: string; summary: string; note: string }) {
+  return (
+    <View
+      testID="check-section"
+      accessible
+      accessibilityLabel={join([title, summary, note], ", ")}
+      // Not a button and disabled, so a screen reader says it cannot be changed.
+      accessibilityState={{ disabled: true }}
+      className="min-h-14 flex-row items-center gap-3 border-b border-border py-3"
+    >
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text className="text-base text-foreground">{title}</Text>
+        {summary ? (
+          <Text className="text-sm text-muted-foreground" numberOfLines={2}>{summary}</Text>
+        ) : null}
+        <Text className="text-xs text-muted-foreground">{note}</Text>
+      </View>
+      <Icon as={Lock} className="size-4 text-muted-foreground" />
+    </View>
+  );
+}
+
+export interface EditSectionListProps {
+  payload: WizardSchemas.WizardDraftPayload;
+  validatedSteps: WizardSchemas.WizardStep[];
+  /** Opens a step from the list; Done on that step returns here. Never called for Car. */
+  onChangeStep: (step: WizardSchemas.WizardStep) => void;
+  /** Every photo of the edit in order, the cover first. */
+  photos: StagedPhoto[];
+  /** False until the upload queue holds this Listing's photos; see `CheckAndPublishProps`. */
+  photosReady?: boolean;
+  /** Steps that pass their format check but still need the seller, such as an unconfirmed contact phone. */
+  stepsNeedingSeller?: readonly WizardSchemas.WizardStep[];
+}
+
+/**
+ * The section list a published Listing's edit opens on: Check and publish's rows
+ * without the buyer preview, the Posting rules line or Publish. Car is locked
+ * after publishing (ADR-0024), so its row has no Change.
+ */
+export function EditSectionList({
+  payload,
+  validatedSteps,
+  onChangeStep,
+  photos: queuePhotos,
+  photosReady = true,
+  stepsNeedingSeller = [],
+}: EditSectionListProps) {
+  const { t } = useTranslation();
+  const photos = photosReady ? queuePhotos : NO_PHOTOS;
+  const values = useCheckValues(payload);
+  const summaries = useSectionSummaries(payload, values, photos.length);
+  const photosNeedSeller = countUploads(photos).failed > 0;
+
+  return (
+    <View className="gap-3 py-5">
+      <Text className="text-xs text-muted-foreground">{t("editChangesNote")}</Text>
+
+      <View className="border-t border-border">
+        {DATA_STEPS.map((step) =>
+          step === "vehicle" ? (
+            <LockedSectionRow
+              key={step}
+              title={t(`wizardSteps.${step}`)}
+              summary={summaries[step]}
+              note={t("editCarLockedNote")}
+            />
+          ) : (
+            <SectionRow
+              key={step}
+              title={t(`wizardSteps.${step}`)}
+              summary={summaries[step]}
+              needsSeller={
+                !validatedSteps.includes(step) ||
+                stepsNeedingSeller.includes(step) ||
+                (step === "photos" && photosNeedSeller)
+              }
+              onPress={() => onChangeStep(step)}
+            />
+          ),
+        )}
+      </View>
+    </View>
   );
 }
 
