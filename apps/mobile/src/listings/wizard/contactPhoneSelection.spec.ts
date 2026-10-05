@@ -65,6 +65,55 @@ describe("resolveContactPhoneSelection", () => {
     ).toEqual({ kind: "stale" });
   });
 
+  it("is pending for a saved number while the confirmed list is not known", () => {
+    // The list is loading or its request failed: the app cannot judge the
+    // number, so it does not call it expired. The server still checks.
+    expect(
+      resolveContactPhoneSelection({
+        phone: "+99362000002",
+        accountPhone: "+99365000000",
+        confirmedPhones: undefined,
+        now: NOW,
+      }),
+    ).toEqual({ kind: "pending" });
+  });
+
+  it("still knows the account phone and the Listing's number without the list", () => {
+    expect(
+      resolveContactPhoneSelection({
+        phone: "+99365000000",
+        accountPhone: "+99365000000",
+        confirmedPhones: undefined,
+      }),
+    ).toEqual({ kind: "account" });
+    expect(
+      resolveContactPhoneSelection({
+        phone: "+99362000002",
+        accountPhone: "+99365000000",
+        currentListingPhone: "+99362000002",
+        confirmedPhones: undefined,
+      }),
+    ).toEqual({ kind: "current" });
+  });
+
+  it("is stale for a listed number whose window has ended", () => {
+    expect(
+      resolveContactPhoneSelection({
+        phone: "+99361000009",
+        accountPhone: "+99365000000",
+        confirmedPhones: [
+          {
+            phone: "+99361000009",
+            source: "confirmed" as const,
+            confirmedAt: "2026-09-28T12:00:00.000Z",
+            reusableUntil: inDays(-0.1),
+          },
+        ],
+        now: NOW,
+      }),
+    ).toEqual({ kind: "stale" });
+  });
+
   it("is stale for an email-only User's saved number that is not reusable", () => {
     expect(
       resolveContactPhoneSelection({

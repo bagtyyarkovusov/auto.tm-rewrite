@@ -85,8 +85,45 @@ describe("Contact step", () => {
       confirmedPhones,
     });
 
-    fireEvent.press(screen.getByLabelText("+99361000001"));
+    fireEvent.press(
+      screen.getByRole("radio", {
+        name: "+99361000001, Confirmed. 4 days left without a new code.",
+      }),
+    );
     expect(onChange).toHaveBeenCalledWith({ contactPhone: "+99361000001" });
+  });
+
+  it("reads each row with its sub line, as a radio that says whether it is chosen", () => {
+    const { screen } = renderStep({
+      payload: { contactPhone: "+99361000002", allowCalls: true, allowChat: true },
+      accountPhone: "+99365000000",
+      confirmedPhones,
+    });
+
+    const account = screen.getByRole("radio", {
+      name: "+99365000000, Your sign-in phone. No code needed.",
+    });
+    expect(account.props.accessibilityState).toMatchObject({ checked: false });
+    const chosen = screen.getByRole("radio", {
+      name: "+99361000002, Confirmed. 7 days left without a new code.",
+    });
+    expect(chosen.props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+  });
+
+  it("reads the Listing's current number with its sub line in edit mode", () => {
+    const { screen } = renderStep({
+      payload: { contactPhone: "+99362000002", allowCalls: true, allowChat: true },
+      accountPhone: "+99365000000",
+      currentListingPhone: "+99362000002",
+      confirmedPhones: [],
+    });
+
+    expect(
+      screen.getByRole("radio", {
+        name: "+99362000002, Current number of this Listing",
+      }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
   });
 
   it("marks a saved number past its 7 days and offers to confirm it again", () => {
@@ -102,7 +139,92 @@ describe("Contact step", () => {
       screen.getByText("Confirmation expired. Tap to confirm again."),
     ).toBeTruthy();
 
-    fireEvent.press(screen.getByLabelText("+99362999999"));
+    // The expired row starts a confirmation; it is a button, not a choice.
+    expect(screen.queryByRole("radio", { name: /^\+99362999999/ })).toBeNull();
+    fireEvent.press(
+      screen.getByRole("button", {
+        name: "+99362999999, Confirmation expired. Tap to confirm again.",
+      }),
+    );
+    expect(onConfirmExpired).toHaveBeenCalledWith("+99362999999");
+  });
+
+  it("shows a listed number with no days left once, as the expired row", () => {
+    const { screen } = renderStep({
+      payload: { contactPhone: "+99361000009", allowCalls: true, allowChat: true },
+      accountPhone: "+99365000000",
+      confirmedPhones: [
+        ...confirmedPhones,
+        {
+          phone: "+99361000009",
+          source: "confirmed" as const,
+          confirmedAt: "2026-09-28T12:00:00.000Z",
+          reusableUntil: inDays(-0.1),
+        },
+      ],
+    });
+
+    expect(screen.getAllByText("+99361000009")).toHaveLength(1);
+    expect(
+      screen.getByRole("button", {
+        name: "+99361000009, Confirmation expired. Tap to confirm again.",
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/0 days left/)).toBeNull();
+  });
+
+  it("leaves out a listed number with no days left that is not the chosen one", () => {
+    const { screen } = renderStep({
+      payload: { contactPhone: "+99365000000", allowCalls: true, allowChat: true },
+      accountPhone: "+99365000000",
+      confirmedPhones: [
+        {
+          phone: "+99361000009",
+          source: "confirmed" as const,
+          confirmedAt: "2026-09-28T12:00:00.000Z",
+          reusableUntil: inDays(-0.1),
+        },
+      ],
+    });
+
+    expect(screen.queryByText("+99361000009")).toBeNull();
+    expect(screen.queryByText(/0 days left/)).toBeNull();
+  });
+
+  it("does not call a saved number expired while the confirmed list is not known", () => {
+    const onConfirmExpired = vi.fn();
+    const { screen, onChange } = renderStep({
+      payload: { contactPhone: "+99362999999", allowCalls: true, allowChat: true },
+      accountPhone: "+99365000000",
+      confirmedPhones: undefined,
+      onConfirmExpired,
+    });
+
+    expect(
+      screen.queryByText("Confirmation expired. Tap to confirm again."),
+    ).toBeNull();
+    const saved = screen.getByRole("radio", { name: "+99362999999" });
+    expect(saved.props.accessibilityState).toMatchObject({ checked: true });
+    fireEvent.press(saved);
+    expect(onConfirmExpired).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith({ contactPhone: "+99362999999" });
+  });
+
+  it("offers to confirm the saved number again once a publish refused it, list or no list", () => {
+    const onConfirmExpired = vi.fn();
+    const { screen } = renderStep({
+      payload: { contactPhone: "+99362999999", allowCalls: true, allowChat: true },
+      accountPhone: "+99365000000",
+      confirmedPhones: undefined,
+      publishPhoneError: true,
+      onConfirmExpired,
+    });
+
+    fireEvent.press(
+      screen.getByRole("button", {
+        name: "+99362999999, Confirmation expired. Tap to confirm again.",
+      }),
+    );
     expect(onConfirmExpired).toHaveBeenCalledWith("+99362999999");
   });
 

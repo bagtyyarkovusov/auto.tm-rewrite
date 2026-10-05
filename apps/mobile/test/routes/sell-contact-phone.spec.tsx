@@ -36,7 +36,8 @@ const fixture = vi.hoisted(() => {
     } as Record<string, Record<string, unknown>>,
     payload: {} as Record<string, unknown>,
     auth: { isAuthenticated: true, phone: "+99365000000" as string | null },
-    confirmedPhones: [] as ListingsSchemas.VerifiedContactPhone[],
+    // undefined: the list is still loading, or its request failed.
+    confirmedPhones: [] as ListingsSchemas.VerifiedContactPhone[] | undefined,
     mutation: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, error: null },
     publish: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, error: null },
     toastShow: vi.fn(),
@@ -66,7 +67,9 @@ vi.mock("../../src/api/listings/useCreateDraft", () => ({ useCreateDraft: () => 
 vi.mock("../../src/api/listings/usePublishDraft", () => ({ usePublishDraft: () => fixture.publish }));
 vi.mock("../../src/api/listings/useDiscardDraft", () => ({ useDiscardDraft: () => fixture.mutation }));
 vi.mock("../../src/api/listings/useMyContactPhones", () => ({
-  useMyContactPhones: () => ({ data: { items: fixture.confirmedPhones } }),
+  useMyContactPhones: () => ({
+    data: fixture.confirmedPhones ? { items: fixture.confirmedPhones } : undefined,
+  }),
 }));
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => ({ userId: "user-1" }) }));
 vi.mock("../../src/listings/wizard/useWizardAutosave", () => ({
@@ -131,8 +134,8 @@ describe("Sell wizard Contact step", () => {
     expect(screen.getByText("Contact phone")).toBeTruthy();
 
     expect(
-      screen.getByLabelText("+99365000000").props.accessibilityState,
-    ).toMatchObject({ selected: true });
+      screen.getByLabelText("+99365000000", { exact: false }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
     expect(screen.getByText("Your sign-in phone. No code needed.")).toBeTruthy();
     expect(
       screen.getByText("Confirmed. 3 days left without a new code."),
@@ -162,11 +165,11 @@ describe("Sell wizard Contact step", () => {
     const screen = renderMobile(<SellScreen />);
 
     expect(
-      screen.getByLabelText(CONFIRMED_PHONE).props.accessibilityState,
-    ).toMatchObject({ selected: true });
+      screen.getByLabelText(CONFIRMED_PHONE, { exact: false }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
     expect(
-      screen.getByLabelText("+99365000000").props.accessibilityState,
-    ).toMatchObject({ selected: false });
+      screen.getByLabelText("+99365000000", { exact: false }).props.accessibilityState,
+    ).toMatchObject({ checked: false });
     expect(routerMock.setParams).toHaveBeenCalledWith({
       confirmedContactPhone: undefined,
     });
@@ -191,7 +194,7 @@ describe("Sell wizard Contact step", () => {
     ).toBeTruthy();
     expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
 
-    fireEvent.press(screen.getByLabelText(STALE_PHONE));
+    fireEvent.press(screen.getByLabelText(STALE_PHONE, { exact: false }));
 
     expect(routerMock.push).toHaveBeenCalledWith({
       pathname: "/listings/contact-phone",
@@ -201,6 +204,35 @@ describe("Sell wizard Contact step", () => {
         returnPathname: "/(tabs)/sell",
       },
     });
+  });
+
+  it("does not call a saved number expired while the confirmed list is not known, and Done goes on", async () => {
+    fixture.confirmedPhones = undefined;
+    resume("stale");
+    const screen = renderMobile(<SellScreen />);
+
+    fireEvent.press(screen.getByRole("button", { name: /^Contact, .*Change$/ }));
+
+    expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+    expect(
+      screen.queryByText("Confirmation expired. Tap to confirm again."),
+    ).toBeNull();
+    expect(
+      screen.getByRole("radio", { name: STALE_PHONE }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Done" }));
+    });
+
+    // The app cannot judge the number yet, so it does not hold the seller
+    // here; a publish the server refuses still comes back to Contact.
+    expect(
+      screen.queryByText("Confirm this number again or choose another"),
+    ).toBeNull();
+    expect(
+      screen.getByRole("header", { name: "Check and publish, Step 7 of 7" }),
+    ).toBeTruthy();
   });
 
   it("asks an email-only User to choose or confirm a contact phone", () => {
@@ -243,14 +275,14 @@ describe("Sell wizard Contact step", () => {
       expect(
         screen.getByText("Confirm the contact phone again to publish."),
       ).toBeTruthy();
-      expect(screen.getByLabelText(STALE_PHONE)).toBeTruthy();
+      expect(screen.getByLabelText(STALE_PHONE, { exact: false })).toBeTruthy();
       expect(fixture.toastShow).not.toHaveBeenCalled();
       // The draft was saved before the publish was tried, and stays open.
       expect(fixture.flush).toHaveBeenCalledOnce();
 
       // Picking a number that needs no code and Done returns to Check, where
       // Publish is ready again and no publish failure is worded (#588).
-      fireEvent.press(screen.getByLabelText("+99365000000"));
+      fireEvent.press(screen.getByLabelText("+99365000000", { exact: false }));
       expect(
         screen.queryByText("Confirm the contact phone again to publish."),
       ).toBeNull();
@@ -299,7 +331,7 @@ describe("Sell wizard Contact step", () => {
     resume("atContact");
     const screen = renderMobile(<SellScreen />);
 
-    fireEvent.press(screen.getByLabelText(CONFIRMED_PHONE));
+    fireEvent.press(screen.getByLabelText(CONFIRMED_PHONE, { exact: false }));
     const next = screen.getByRole("button", { name: "Continue" });
     expect(next.props.accessibilityState).toMatchObject({ disabled: false });
     await act(async () => { fireEvent.press(next); });

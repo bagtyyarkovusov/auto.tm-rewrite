@@ -23,7 +23,8 @@ const fixture = vi.hoisted(() => {
       status: string; error: Error | null; opStates: Record<string, string>;
     },
     auth: { isAuthenticated: true, phone: "+99365000000" as string | null },
-    confirmedPhones: [] as ListingsSchemas.VerifiedContactPhone[],
+    // undefined: the list is still loading, or its request failed.
+    confirmedPhones: [] as ListingsSchemas.VerifiedContactPhone[] | undefined,
     listing: {
       id, sellerId: id, publicNumber: 458, status: "active", brandId: id, modelId: id,
       year: 2020, condition: "used", mileageKm: 10000, priceAmount: 100000, priceCurrency: "TMT",
@@ -41,7 +42,9 @@ const fixture = vi.hoisted(() => {
 
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/api/listings/useMyContactPhones", () => ({
-  useMyContactPhones: () => ({ data: { items: fixture.confirmedPhones } }),
+  useMyContactPhones: () => ({
+    data: fixture.confirmedPhones ? { items: fixture.confirmedPhones } : undefined,
+  }),
 }));
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => ({ userId: "user-1" }) }));
 vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => fixture.auth }));
@@ -109,8 +112,8 @@ describe("Listing edit Contact step", () => {
     openContactStep(screen);
 
     expect(
-      screen.getByLabelText("+99361234567").props.accessibilityState,
-    ).toMatchObject({ selected: true });
+      screen.getByLabelText("+99361234567", { exact: false }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
     expect(screen.getByText("Current number of this Listing")).toBeTruthy();
     expect(screen.getByText("Your sign-in phone. No code needed.")).toBeTruthy();
     expect(screen.getByLabelText("Another number")).toBeTruthy();
@@ -140,11 +143,11 @@ describe("Listing edit Contact step", () => {
     openContactStep(screen);
 
     expect(
-      screen.getByLabelText(CONFIRMED_PHONE).props.accessibilityState,
-    ).toMatchObject({ selected: true });
+      screen.getByLabelText(CONFIRMED_PHONE, { exact: false }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
     expect(
-      screen.getByLabelText("+99361234567").props.accessibilityState,
-    ).toMatchObject({ selected: false });
+      screen.getByLabelText("+99361234567", { exact: false }).props.accessibilityState,
+    ).toMatchObject({ checked: false });
     expect(routerMock.setParams).toHaveBeenCalledWith({
       confirmedContactPhone: undefined,
     });
@@ -154,11 +157,11 @@ describe("Listing edit Contact step", () => {
     const screen = renderMobile(<EditListingScreen />);
     openContactStep(screen);
 
-    fireEvent.press(screen.getByLabelText("+99365000000"));
+    fireEvent.press(screen.getByLabelText("+99365000000", { exact: false }));
 
     expect(
-      screen.getByLabelText("+99365000000").props.accessibilityState,
-    ).toMatchObject({ selected: true });
+      screen.getByLabelText("+99365000000", { exact: false }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
     fireEvent.press(screen.getByRole("button", { name: "Done" }));
     expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
     expect(routerMock.push).not.toHaveBeenCalled();
@@ -177,7 +180,7 @@ describe("Listing edit Contact step", () => {
     expect(screen.getByText("Confirm this number again or choose another")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
 
-    fireEvent.press(screen.getByLabelText(CONFIRMED_PHONE));
+    fireEvent.press(screen.getByLabelText(CONFIRMED_PHONE, { exact: false }));
     expect(routerMock.push).toHaveBeenCalledWith({
       pathname: "/listings/contact-phone",
       params: {
@@ -186,6 +189,27 @@ describe("Listing edit Contact step", () => {
         returnPathname: `/listings/${fixture.id}/edit`,
       },
     });
+  });
+
+  it("does not call a new number expired while the confirmed list is not known, and Done goes on", () => {
+    fixture.confirmedPhones = undefined;
+    routeParams.confirmedContactPhone = CONFIRMED_PHONE;
+    const screen = renderMobile(<EditListingScreen />);
+    openContactStep(screen);
+
+    expect(
+      screen.queryByText("Confirmation expired. Tap to confirm again."),
+    ).toBeNull();
+    expect(
+      screen.getByRole("radio", { name: CONFIRMED_PHONE }).props.accessibilityState,
+    ).toMatchObject({ checked: true });
+
+    fireEvent.press(screen.getByRole("button", { name: "Done" }));
+
+    expect(
+      screen.queryByText("Confirm this number again or choose another"),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
   });
 
   it("a save refused with CONTACT_PHONE_NOT_CONFIRMED returns to the Contact step", async () => {
