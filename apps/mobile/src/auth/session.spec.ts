@@ -105,6 +105,28 @@ describe("subscribeAuthUserChange", () => {
     expect(heard).toEqual(["user", "session"]);
   });
 
+  it("signs the new User in and tells every listener when a user-change listener throws", async () => {
+    const app = await startApp();
+    await app.storeAuthSession(session as never);
+    await app.clearAuthSession();
+    const sessionListener = vi.fn();
+    const laterListener = vi.fn();
+    app.subscribeAuthSession(sessionListener);
+    app.subscribeAuthUserChange(() => {
+      throw new Error("listener failed");
+    });
+    app.subscribeAuthUserChange(laterListener);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(app.storeAuthSession(otherSession as never)).resolves.toBeUndefined();
+
+    expect(logged).toHaveBeenCalledTimes(1);
+    logged.mockRestore();
+    expect(laterListener).toHaveBeenCalledTimes(1);
+    expect(sessionListener).toHaveBeenCalledTimes(1);
+    expect((await app.loadAuthSession())?.user.id).toBe(otherSession.user.id);
+  });
+
   it("knows the previous User from the session the app started with", async () => {
     await storeAuthSession(session as never);
     const app = await startApp();

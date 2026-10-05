@@ -2,12 +2,15 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import CabinetScreen from "../../app/(tabs)/services";
+import ProfileScreen from "../../app/profile";
 import { clearAuthSession, storeAuthSession } from "../../src/auth/session";
 import { AppNavigationEffects } from "../../src/navigation/AppNavigationEffects";
 import { server } from "../msw";
 import { act, first, renderMobile, routerMock } from "../render";
 
-// Cabinet under the root's own effects, with the real session, API client and
+import { ToastProvider } from "@/components/ui/toast";
+
+// Cabinet and Profile under the root's own effects, with the real session, API client and
 // queries against an in-memory API. Only the device is replaced: its storage,
 // its notifications and the navigator.
 
@@ -34,6 +37,7 @@ vi.mock("expo-notifications", () => ({
 const tab = vi.hoisted(() => ({ onFocus: null as null | (() => void) }));
 vi.mock("expo-router", async () => ({
   router: (await import("../native-setup")).routerMock,
+  useRouter: () => routerMock,
   usePathname: () => "/services",
   useRootNavigationState: () => undefined,
   useFocusEffect: (callback: () => void) => { tab.onFocus = callback; },
@@ -116,6 +120,50 @@ describe("Signing in as someone else after the API ended the session", () => {
     });
     expect(await view.findByRole("button", { name: `Driver 2057, ${PHONE}` })).toBeTruthy();
     expect(first(hosts(view, "Path")).props.d).toBe(SUV_MARK);
+    expect(view.queryByText("Aman")).toBeNull();
+    await act(async () => { await clearAuthSession(); });
+  });
+
+  it("shows nobody on Profile while signed out, then only the new User", async () => {
+    accepted.set("aman", () => HttpResponse.json(meOf({ displayName: "Aman" })));
+    await signIn("aman", AMAN_ID);
+    // Profile is stacked above Cabinet, which stays mounted under it.
+    const view = renderMobile(
+      <ToastProvider><AppNavigationEffects /><CabinetScreen /><ProfileScreen /></ToastProvider>,
+    );
+    await view.findByRole("button", { name: "Edit name" });
+    expect(view.getByText("Sign-in methods")).toBeTruthy();
+    expect(view.getAllByText(PHONE).length).toBeGreaterThan(0);
+
+    // A request other than /me is refused, and so is the refresh. Aman's /me
+    // is still cached, and nobody is signed in.
+    accepted.delete("aman");
+    await act(async () => { tab.onFocus?.(); });
+    await vi.waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/phone"));
+    await vi.waitFor(() => expect(view.queryByText("Aman")).toBeNull());
+    expect(view.queryByText("Sign-in methods")).toBeNull();
+    expect(view.queryByText(PHONE)).toBeNull();
+    expect(hosts(view, "Svg")).toHaveLength(0);
+    expect(view.queryByRole("button", { name: "Log out" })).toBeNull();
+    expect(view.getByText("Profile")).toBeTruthy();
+
+    // Merdan signs in on the same phone. His /me has not answered yet.
+    let answer: ((response: Response) => void) | null = null;
+    accepted.set("merdan", () => new Promise<Response>((resolve) => { answer = resolve; }));
+    await act(async () => { await signIn("merdan", MERDAN_ID); });
+    await vi.waitFor(() => expect(answer).not.toBeNull());
+    expect(view.queryByText("Aman")).toBeNull();
+    expect(view.queryByText("Sign-in methods")).toBeNull();
+    expect(hosts(view, "Svg")).toHaveLength(0);
+
+    await act(async () => {
+      answer?.(HttpResponse.json(meOf({ id: MERDAN_ID, nameNumber: 2057, avatarIndex: 2 })));
+    });
+    expect(await view.findByRole("button", { name: "Edit name" })).toBeTruthy();
+    // Cabinet's row and Profile's name.
+    expect(view.getAllByText("Driver 2057")).toHaveLength(2);
+    expect(view.getByText("Sign-in methods")).toBeTruthy();
+    expect(view.getByRole("button", { name: "Log out" })).toBeTruthy();
     expect(view.queryByText("Aman")).toBeNull();
     await act(async () => { await clearAuthSession(); });
   });

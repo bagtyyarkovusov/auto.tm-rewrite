@@ -16,12 +16,14 @@ type CodeEntryProps = ComponentProps<typeof CodeEntryForm>;
 vi.stubGlobal("__DEV__", false);
 
 const state = vi.hoisted(() => ({
+  isAuthenticated: true as boolean | null,
   me: { phone: "+99365123456" as string | null, email: "aman@example.com" as string | null },
   verify: vi.fn(),
   requestCode: vi.fn(),
   codeEntry: null as CodeEntryProps | null,
 }));
 
+vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: state.isAuthenticated }) }));
 vi.mock("../../src/api/identity/useMe", () => ({ useMe: () => ({ data: state.me }) }));
 vi.mock("../../src/api/identity/useVerifySignInMethodChange", () => ({
   useVerifySignInMethodChange: () => ({ mutateAsync: state.verify }),
@@ -38,6 +40,7 @@ vi.mock("../../components/auth/CodeEntryForm", () => ({
 }));
 
 beforeEach(() => {
+  state.isAuthenticated = true;
   state.me = { phone: "+99365123456", email: "aman@example.com" };
   state.verify.mockReset();
   state.requestCode.mockReset().mockResolvedValue({ resendInSeconds: 60 });
@@ -188,6 +191,33 @@ describe("Entering the value the User already has", () => {
     expect(routerMock.push).toHaveBeenCalledWith(expect.objectContaining({
       params: expect.objectContaining({ method: "email", kind: "add" }),
     }));
+  });
+
+  // The previous User's /me can outlive their session in the cache.
+  it("offers a signed-out visitor Add, not Change, and does not compare with the cached phone", async () => {
+    state.isAuthenticated = false;
+    const view = renderMobile(<AddPhoneScreen />);
+    expect(view.getByText(view.i18n.t("account:addPhoneTitle"))).toBeTruthy();
+    expect(view.queryByText(view.i18n.t("account:changePhoneTitle"))).toBeNull();
+    fireEvent.changeText(view.getByLabelText("Phone number"), "65123456");
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Get code" })); });
+    expect(view.queryByText("This is already your number.")).toBeNull();
+  });
+
+  it("offers a signed-out visitor Add, not Change, and does not compare with the cached email", async () => {
+    state.isAuthenticated = false;
+    const view = renderMobile(<AddEmailScreen />);
+    expect(view.getByText(view.i18n.t("account:addEmailTitle"))).toBeTruthy();
+    expect(view.queryByText(view.i18n.t("account:changeEmailTitle"))).toBeNull();
+    fireEvent.changeText(view.getByLabelText("Email"), "aman@example.com");
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Get code" })); });
+    expect(view.queryByText("This is already your email.")).toBeNull();
+  });
+
+  it.each([AddPhoneScreen, AddEmailScreen])("renders nothing until the session is known", (Screen) => {
+    state.isAuthenticated = null;
+    const view = renderMobile(<Screen />);
+    expect(view.toJSON()).toBeNull();
   });
 
   it.each(["ru", "tk"])("reads the refusal in %s", (locale) => {
