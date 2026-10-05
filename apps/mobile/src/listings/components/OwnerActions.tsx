@@ -88,6 +88,9 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
 
   const handleConfirm = () => {
     if (!confirmAction) return;
+    // The add-a-phone hint belongs to the relist that was refused; it goes
+    // when the next action starts.
+    setRelistPhoneRequired(false);
 
     switch (confirmAction) {
       case "markSold":
