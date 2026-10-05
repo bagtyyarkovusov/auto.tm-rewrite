@@ -63,4 +63,11 @@ describe("stripImageMetadata", () => {
   it("throws for bytes that are not an image", async () => {
     await expect(stripImageMetadata(Buffer.from("not an image"), "jpeg", 5_000_000)).rejects.toThrow();
   });
+
+  it("throws for an image with more pixels than the limit given", async () => {
+    const input = await noisyPhotoWithExif();
+
+    await expect(stripImageMetadata(input, "jpeg", 5_000_000, 400 * 300 - 1)).rejects.toThrow();
+    await expect(stripImageMetadata(input, "jpeg", 5_000_000, 400 * 300)).resolves.not.toBeNull();
+  });
 });

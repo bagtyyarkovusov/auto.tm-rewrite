@@ -13,12 +13,21 @@ const KEY =
 function fakeBucket(initial: Record<string, Buffer>) {
   const objects = new Map(Object.entries(initial));
   const puts: PutObjectCommand[] = [];
+  const reads: string[] = [];
   const send = async (command: unknown) => {
     if (command instanceof GetObjectCommand) {
       expect(command.input.Bucket).toBe("chat-attachments");
       const body = objects.get(command.input.Key!);
       if (!body) throw Object.assign(new Error("NoSuchKey"), { name: "NoSuchKey" });
-      return { Body: { transformToByteArray: async () => new Uint8Array(body) } };
+      return {
+        ContentLength: body.length,
+        Body: {
+          transformToByteArray: async () => {
+            reads.push(command.input.Key!);
+            return new Uint8Array(body);
+          },
+        },
+      };
     }
     if (command instanceof PutObjectCommand) {
       puts.push(command);
@@ -27,7 +36,7 @@ function fakeBucket(initial: Record<string, Buffer>) {
     }
     throw new Error("unexpected command");
   };
-  return { objects, puts, send };
+  return { objects, puts, reads, send };
 }
 
 function cleanerWith(bucket: ReturnType<typeof fakeBucket>) {
@@ -108,6 +117,26 @@ describe("SharpChatAttachmentCleaner", () => {
     const bucket = fakeBucket({ [KEY]: Buffer.from("not an image") });
 
     await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
+    expect(bucket.puts).toHaveLength(0);
+  });
+
+  it("reports a PNG stored under a .jpg key as invalid and does not rewrite it", async () => {
+    const png = await sharp({
+      create: { width: 30, height: 20, channels: 3, background: { r: 1, g: 2, b: 3 } },
+    })
+      .png()
+      .toBuffer();
+    const bucket = fakeBucket({ [KEY]: png });
+
+    await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
+    expect(bucket.puts).toHaveLength(0);
+  });
+
+  it("reports a stored object over the 5 MB cap as invalid without reading it", async () => {
+    const bucket = fakeBucket({ [KEY]: Buffer.alloc(5 * 1024 * 1024 + 1) });
+
+    await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
+    expect(bucket.reads).toEqual([]);
     expect(bucket.puts).toHaveLength(0);
   });
 });
