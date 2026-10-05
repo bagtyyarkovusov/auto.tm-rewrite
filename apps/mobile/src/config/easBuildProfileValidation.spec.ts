@@ -44,6 +44,34 @@ describe("validateEasBuildProfile", () => {
     ).toEqual([]);
   });
 
+  it("allows the production hosts under autotm.bagtyyar.dev, the domain AutoTM runs on today", () => {
+    expect(
+      validateEasBuildProfile({
+        profile: "production",
+        apiUrl: "https://api.autotm.bagtyyar.dev/api/v1",
+        wsUrl: "wss://api.autotm.bagtyyar.dev/ws/chat",
+        mediaUrl: "https://media.autotm.bagtyyar.dev",
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([
+    "https://bagtyyar.dev/api/v1",
+    "https://api.bagtyyar.dev/api/v1",
+    "https://autotm.bagtyyar.dev.evil.example/api/v1",
+    "https://notautotm.bagtyyar.dev/api/v1",
+    "https://api.autotm.bagtyyar.dev.evil.example/api/v1",
+  ])("rejects %s for production: only AutoTM's own domains count", (apiUrl) => {
+    expect(
+      validateEasBuildProfile({
+        profile: "production",
+        apiUrl,
+        wsUrl: "wss://api.autotm.bagtyyar.dev/ws/chat",
+        mediaUrl: "https://media.autotm.bagtyyar.dev",
+      }),
+    ).toEqual(["EXPO_PUBLIC_API_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production"]);
+  });
+
   it("rejects Railway hosts for production", () => {
     expect(
       validateEasBuildProfile({
