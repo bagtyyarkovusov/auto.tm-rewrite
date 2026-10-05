@@ -144,7 +144,16 @@ describe("the section list of a published Listing (#589)", () => {
     const screen = await openEdit();
 
     expect(screen.getByText("Buyers see the changes only after you save.")).toBeTruthy();
-    expect(screen.getAllByTestId("check-section")).toHaveLength(6);
+    // The wizard's step order, VIN under Car and the description under its place.
+    expect(screen.getAllByTestId("check-section").map((row) => String(row.props.accessibilityLabel)))
+      .toEqual([
+        "Car, Toyota Camry, 2020 · VIN WBA1234567890ABCD, Brand, model, generation, year and VIN cannot be changed after publishing.",
+        "Details and condition, 10,000 km · Damaged / needs repair: No, Change",
+        "Photos, Photos: 2, Change",
+        "Price, 100,000 TMT, Change",
+        "Description and place, One owner, Change",
+        "Contact, +99361000000 · Phone calls, In-app chat, Change",
+      ]);
     expect(screen.getByRole("button", { name: "Price, 100,000 TMT, Change" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Photos, Photos: 2, Change" })).toBeTruthy();
     // Edit has no buyer preview, no Posting rules line and no Publish.
