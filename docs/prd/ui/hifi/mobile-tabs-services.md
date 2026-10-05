@@ -150,7 +150,7 @@ Reduced motion: the sheet follows the system setting.
 ## Implementation notes
 
 - Signed in, the large row opens Profile; signed out, it opens sign-in with Cabinet as the return route. Profile shows the same avatar at 72 pt with the Display Name under it, also on one line.
-- The My listings total counts Listings and drafts together; it is hidden while loading or failed and when it is zero, and it refreshes when Cabinet regains focus.
+- The My listings total counts Listings and drafts together; it is hidden before the first count arrives, after a failed request and when it is zero, and kept through a refresh, and it refreshes when Cabinet regains focus.
 - Legal rows open the localized web page for the current language; they do not deep-link into the app.
 - Help is the release's only support entry. The code screen links to it only at the daily Sign-in Code limit ([mobile OTP login flow](mobile-otp-login-flow.md)).
 - Log out and a finished account deletion land on Cabinet, signed out.
