@@ -504,6 +504,31 @@ describe("PUBLISH lifecycle", () => {
     expect(state.status).toBe("publishError");
     expect(state.publishError).toBe("Publish failed");
   });
+
+  it("lets GO_TO_STEP leave publishError for the Contact step, keeping the draft", () => {
+    let state = wizardMachineReducer(createInitialState(), {
+      type: "INIT",
+      draftId: "draft-1",
+      payload: { ...car, ...details },
+    });
+
+    state = wizardMachineReducer(state, { type: "PUBLISH_START" });
+    state = wizardMachineReducer(state, {
+      type: "PUBLISH_ERROR",
+      error: "CONTACT_PHONE_NOT_CONFIRMED",
+    });
+
+    const back = wizardMachineReducer(state, {
+      type: "GO_TO_STEP",
+      step: "contact",
+    });
+
+    expect(back.status).toBe("step");
+    expect(back.currentStep).toBe("contact");
+    expect(back.publishError).toBeNull();
+    expect(back.draftId).toBe("draft-1");
+    expect(back.payload.brandId).toBe(car.brandId);
+  });
 });
 
 describe("DISCARD", () => {
