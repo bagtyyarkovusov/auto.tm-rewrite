@@ -63,7 +63,7 @@ beforeEach(() => {
   requests.length = 0;
 });
 
-function serve(path: string, json: unknown) {
+function serve(path: string, json: Record<string, unknown>) {
   server.use(http.get(`*${path}`, ({ request }) => {
     requests.push(new URL(request.url).pathname.replace(/^\/api\/v1/, ""));
     return HttpResponse.json(json);

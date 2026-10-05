@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Linking from "expo-linking";
-
 import { Image } from "expo-image";
 
 import { act, fireEvent, first, renderMobile } from "../../../test/render";

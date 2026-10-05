@@ -10,6 +10,7 @@ import { usePeerName } from "../usePeerName";
 import { ConversationMenuSheet } from "./ConversationMenuSheet";
 import { PeerPresenceLabel, type PeerPresence } from "./PeerPresenceLabel";
 
+import { PublicUserAvatar } from "@/components/identity/PublicUserAvatar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,15 +81,7 @@ export function ConversationHeader({
 
       {conversation && peerName ? (
         <>
-          <View
-            className="h-9 w-9 items-center justify-center rounded-full bg-muted"
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            <Text className="text-base font-bold text-foreground">
-              {peerName.charAt(0).toLocaleUpperCase(i18n.language)}
-            </Text>
-          </View>
+          <PublicUserAvatar size={36} user={conversation.peer} />
           <View className="flex-1 min-w-0">
             <View className="flex-row items-center gap-1.5">
               <Text
