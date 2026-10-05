@@ -323,7 +323,7 @@ export function decodeCursor(token: string): {
 } {
   const json = Buffer.from(token, "base64url").toString("utf8");
   return z
-    .object({ timestamp: z.string(), id: z.string().uuid() })
+    .object({ timestamp: z.string().datetime(), id: z.string().uuid() })
     .parse(JSON.parse(json));
 }
 

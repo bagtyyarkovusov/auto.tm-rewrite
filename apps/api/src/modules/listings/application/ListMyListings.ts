@@ -8,6 +8,8 @@ import {
   type ListingCardReadPort,
 } from "../domain/ports/ListingCardReadPort";
 
+import { decodeListingsCursor } from "./decodeListingsCursor";
+
 export interface ListMyListingsInput {
   userId: string;
   cursor?: string;
@@ -27,7 +29,7 @@ export class ListMyListings {
     const limit = Math.min(input.limit ?? 20, 50);
 
     const decodedCursor = input.cursor
-      ? ListingsSchemas.decodeCursor(input.cursor)
+      ? decodeListingsCursor(input.cursor)
       : undefined;
 
     const result = await this.cards.getOwnerCards(input.userId, {
