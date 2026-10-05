@@ -210,14 +210,25 @@ class FakeIdentityReadPort implements IdentityReadPort {
     isUserBlockedBy: 0,
   };
 
-  addUser(id: string, displayName: string | null) {
+  addUser(
+    id: string,
+    displayName: string | null,
+    identity: Partial<
+      Pick<IdentityUserSummary, "nameNumber" | "avatarIndex" | "avatarKey" | "deleted">
+    > = {},
+  ) {
     this.users.set(id, {
       id,
       displayName,
+      nameNumber: 4821,
+      avatarIndex: 2,
+      avatarKey: null,
+      deleted: false,
       role: "user",
       suspendedAt: null,
       suspendedById: null,
       suspensionReason: null,
+      ...identity,
     });
   }
 
@@ -500,8 +511,8 @@ describe("ListMyConversations", () => {
     it("shows the seller as the peer to a buyer", async () => {
       seedListing();
       seedConversation({ buyerId: "buyer-1", sellerId: "seller-1" });
-      identity.addUser("buyer-1", "Buyer One");
-      identity.addUser("seller-1", "Seller One");
+      identity.addUser("buyer-1", "Buyer One", { nameNumber: 1111, avatarIndex: 1 });
+      identity.addUser("seller-1", "Seller One", { nameNumber: 2057, avatarIndex: 7 });
 
       const result = await makeUseCase(repo, listings, identity).execute({
         userId: "buyer-1",
@@ -510,14 +521,18 @@ describe("ListMyConversations", () => {
       expect(result.items[0]!.peer).toEqual({
         id: "seller-1",
         displayName: "Seller One",
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
       });
     });
 
     it("shows the buyer as the peer to a seller", async () => {
       seedListing();
       seedConversation({ buyerId: "buyer-1", sellerId: "seller-1" });
-      identity.addUser("buyer-1", "Buyer One");
-      identity.addUser("seller-1", "Seller One");
+      identity.addUser("buyer-1", "Buyer One", { nameNumber: 1111, avatarIndex: 1 });
+      identity.addUser("seller-1", "Seller One", { nameNumber: 2057, avatarIndex: 7 });
 
       const result = await makeUseCase(repo, listings, identity).execute({
         userId: "seller-1",
@@ -526,10 +541,14 @@ describe("ListMyConversations", () => {
       expect(result.items[0]!.peer).toEqual({
         id: "buyer-1",
         displayName: "Buyer One",
+        nameNumber: 1111,
+        avatarIndex: 1,
+        avatarKey: null,
+        deleted: false,
       });
     });
 
-    it("returns only the id and display name, no other identity data", async () => {
+    it("returns only the id and public identity, no contact data or role", async () => {
       seedListing();
       seedConversation();
       identity.addUser("seller-1", "Seller One");
@@ -539,15 +558,19 @@ describe("ListMyConversations", () => {
       });
 
       expect(Object.keys(result.items[0]!.peer).sort()).toEqual([
+        "avatarIndex",
+        "avatarKey",
+        "deleted",
         "displayName",
         "id",
+        "nameNumber",
       ]);
     });
 
     it("keeps a null display name when the peer has none", async () => {
       seedListing();
       seedConversation();
-      identity.addUser("seller-1", null);
+      identity.addUser("seller-1", null, { nameNumber: 2057, avatarIndex: 7 });
 
       const result = await makeUseCase(repo, listings, identity).execute({
         userId: "buyer-1",
@@ -556,6 +579,41 @@ describe("ListMyConversations", () => {
       expect(result.items[0]!.peer).toEqual({
         id: "seller-1",
         displayName: null,
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
+      });
+    });
+
+    it("passes a peer's photo key through", async () => {
+      seedListing();
+      seedConversation();
+      identity.addUser("seller-1", "Seller One", { avatarKey: "avatars/seller-1/a.jpg" });
+
+      const result = await makeUseCase(repo, listings, identity).execute({
+        userId: "buyer-1",
+      });
+
+      expect(result.items[0]!.peer.avatarKey).toBe("avatars/seller-1/a.jpg");
+    });
+
+    it("marks a peer purged after account deletion, keeping the number and index", async () => {
+      seedListing();
+      seedConversation();
+      identity.addUser("seller-1", null, { nameNumber: 2057, avatarIndex: 7, deleted: true });
+
+      const result = await makeUseCase(repo, listings, identity).execute({
+        userId: "buyer-1",
+      });
+
+      expect(result.items[0]!.peer).toEqual({
+        id: "seller-1",
+        displayName: null,
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: true,
       });
     });
 
@@ -571,6 +629,10 @@ describe("ListMyConversations", () => {
       expect(result.items[0]!.peer).toEqual({
         id: "seller-1",
         displayName: null,
+        nameNumber: 1000,
+        avatarIndex: 0,
+        avatarKey: null,
+        deleted: true,
       });
       expect(result.items[0]!.blockedByMe).toBe(false);
     });

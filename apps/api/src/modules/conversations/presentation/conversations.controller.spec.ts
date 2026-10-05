@@ -393,7 +393,14 @@ describe("ConversationsController list conversations", () => {
             listing: null,
             lastMessage,
             unreadCount: 3,
-            peer: { id: "seller-1", displayName: "Seller One" },
+            peer: {
+              id: "seller-1",
+              displayName: "Seller One",
+              nameNumber: 2057,
+              avatarIndex: 7,
+              avatarKey: "avatars/seller-1/a.jpg",
+              deleted: false,
+            },
             blockedByMe: true,
           },
         ],
@@ -413,6 +420,10 @@ describe("ConversationsController list conversations", () => {
     expect(result.items[0]!.peer).toEqual({
       id: "seller-1",
       displayName: "Seller One",
+      nameNumber: 2057,
+      avatarIndex: 7,
+      avatarKey: "avatars/seller-1/a.jpg",
+      deleted: false,
     });
     expect(result.items[0]!.blockedByMe).toBe(true);
     expect(result.items[0]!.buyerId).toBe("buyer-1");
@@ -434,7 +445,14 @@ describe("ConversationsController open conversation", () => {
       execute: vi.fn().mockResolvedValue({
         conversation,
         listing: { id: "listing-1" },
-        peer: { id: "seller-1", displayName: null },
+        peer: {
+          id: "seller-1",
+          displayName: null,
+          nameNumber: 2057,
+          avatarIndex: 7,
+          avatarKey: null,
+          deleted: true,
+        },
         blockedByMe: true,
       }),
     } as unknown as OpenConversation;
@@ -445,7 +463,14 @@ describe("ConversationsController open conversation", () => {
       authReq("buyer-1") as never,
     );
 
-    expect(result.peer).toEqual({ id: "seller-1", displayName: null });
+    expect(result.peer).toEqual({
+      id: "seller-1",
+      displayName: null,
+      nameNumber: 2057,
+      avatarIndex: 7,
+      avatarKey: null,
+      deleted: true,
+    });
     expect(result.blockedByMe).toBe(true);
     expect(result.myRole).toBe("buyer");
   });
@@ -474,7 +499,14 @@ describe("ConversationsController get conversation", () => {
     peerLastReadAt: new Date("2026-01-01T00:01:00Z"),
     peerLastDeliveredAt: new Date("2026-01-01T00:02:00Z"),
     mutedAt: new Date("2026-01-01T00:03:00Z"),
-    peer: { id: "seller-1", displayName: "Seller One" },
+    peer: {
+      id: "seller-1",
+      displayName: "Seller One",
+      nameNumber: 2057,
+      avatarIndex: 7,
+      avatarKey: null,
+      deleted: false,
+    },
     blockedByMe: true,
   };
 
@@ -505,7 +537,14 @@ describe("ConversationsController get conversation", () => {
     expect(summary).toEqual(listed.items[0]);
     expect(summary).toMatchObject({
       myRole: "buyer",
-      peer: { id: "seller-1", displayName: "Seller One" },
+      peer: {
+        id: "seller-1",
+        displayName: "Seller One",
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
+      },
       blockedByMe: true,
       unreadCount: 2,
       mutedAt: "2026-01-01T00:03:00.000Z",
