@@ -1,7 +1,8 @@
 import type { ComponentProps } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { AccessibilityInfo } from "react-native";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fireEvent, renderMobile } from "../../../test/render";
+import { fireEvent, renderMobile, within } from "../../../test/render";
 
 import { WizardLayout } from "./WizardLayout";
 
@@ -72,6 +73,47 @@ describe("WizardLayout while publishing (#588)", () => {
     fireEvent.press(publish(screen));
     expect(onPublish).toHaveBeenCalledOnce();
     expect(screen.queryByText("Publishing...")).toBeNull();
+  });
+});
+
+describe("WizardLayout publish error (#588)", () => {
+  const announcements = (AccessibilityInfo as unknown as { announcements: string[] }).announcements;
+  const error = "Could not publish. Your draft is saved. Try again.";
+  beforeEach(() => {
+    announcements.length = 0;
+  });
+
+  it("shows the error above Publish as an alert and announces it once", () => {
+    const screen = renderMobile(check({ publishError: error }));
+
+    const alert = screen.getByRole("alert");
+    expect(alert.props.accessibilityLiveRegion).toBe("assertive");
+    expect(within(alert).getByText(error)).toBeTruthy();
+    expect(position(screen, error)).toBeLessThan(position(screen, '"Publish"'));
+    expect(announcements.filter((message) => message === error)).toHaveLength(1);
+
+    screen.rerender(check({ publishError: error }));
+    expect(announcements.filter((message) => message === error)).toHaveLength(1);
+  });
+
+  it("leaves Publish enabled so the seller can try again", () => {
+    const onPublish = vi.fn();
+    const screen = renderMobile(check({ publishError: error, onPublish }));
+
+    fireEvent.press(publish(screen));
+    expect(onPublish).toHaveBeenCalledOnce();
+  });
+
+  it("announces a failure again when the same one follows another try", () => {
+    const screen = renderMobile(check({ publishError: error }));
+    screen.rerender(check({ publishError: null, isPublishing: true }));
+    screen.rerender(check({ publishError: error }));
+
+    expect(announcements.filter((message) => message === error)).toHaveLength(2);
+  });
+
+  it("shows no alert without an error", () => {
+    expect(renderMobile(check()).queryByRole("alert")).toBeNull();
   });
 });
 

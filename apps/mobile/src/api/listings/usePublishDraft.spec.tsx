@@ -53,4 +53,27 @@ describe("usePublishDraft", () => {
       ]),
     );
   });
+
+  // The root layout tells TanStack Query when the device is offline. In the default
+  // network mode the publish would pause and never settle, and Check would read
+  // "Publishing..." until the network came back.
+  it("fails at once when the device is offline, instead of waiting for the network", async () => {
+    vi.mocked(apiClient.post).mockRejectedValue(
+      Object.assign(new Error("Network request failed"), { code: "NETWORK_ERROR", status: 0 }),
+    );
+    onlineManager.setOnline(false);
+    const { result } = setup();
+
+    let outcome: unknown = "paused";
+    act(() => {
+      result.current.mutateAsync(id).then(
+        () => { outcome = "published"; },
+        (error: { code?: string }) => { outcome = error.code; },
+      );
+    });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+
+    expect(outcome).toBe("NETWORK_ERROR");
+    expect(apiClient.post).toHaveBeenCalledOnce();
+  });
 });

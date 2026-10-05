@@ -1,0 +1,59 @@
+import { createInstance } from "i18next";
+import { describe, expect, it } from "vitest";
+
+import { ApiError } from "../../api/client";
+import { resources } from "../../i18n/resources";
+
+import { publishFailureMessage, publishFailureOf } from "./publishFailure";
+
+function translator(locale: string) {
+  const i18n = createInstance();
+  void i18n.init({ lng: locale, resources, defaultNS: "common", initImmediate: false });
+  return i18n.t.bind(i18n);
+}
+
+describe("publishFailureOf (#588)", () => {
+  it("is offline for a request that never reached the server", () => {
+    expect(publishFailureOf(new ApiError("NETWORK_ERROR", 0, "Network request failed"))).toBe("offline");
+    expect(publishFailureOf(new ApiError("NETWORK_ERROR", 0, "Request timed out"))).toBe("offline");
+  });
+
+  it("is rateMissing when the server has no exchange rate for the draft's currency", () => {
+    expect(
+      publishFailureOf(new ApiError("EXCHANGE_RATE_MISSING", 400, "Exchange rate from USD to TMT is not available")),
+    ).toBe("rateMissing");
+  });
+
+  it("is server for every other refusal or error", () => {
+    expect(publishFailureOf(new ApiError("INTERNAL_ERROR", 500))).toBe("server");
+    expect(publishFailureOf(new ApiError("INVALID_DRAFT_PAYLOAD", 400, "Draft is missing required fields"))).toBe("server");
+    expect(publishFailureOf(new Error("boom"))).toBe("server");
+    expect(publishFailureOf(undefined)).toBe("server");
+  });
+});
+
+describe("publishFailureMessage (#588)", () => {
+  it.each([
+    ["en", "server", "Could not publish. Your draft is saved. Try again."],
+    ["en", "offline", "No internet. Your draft is saved. Publish when you are back online."],
+    ["en", "rateMissing", "The USD rate is not available right now. Set the price in TMT or try later."],
+    ["ru", "server", "Не удалось опубликовать. Черновик сохранён. Попробуйте ещё раз."],
+    ["ru", "offline", "Нет интернета. Черновик сохранён. Опубликуйте, когда появится связь."],
+    ["ru", "rateMissing", "Курс USD сейчас недоступен. Укажите цену в TMT или попробуйте позже."],
+    ["tk", "server", "Neşir edip bolmady. Garalama saklandy. Täzeden synanyşyň."],
+    ["tk", "offline", "Internet ýok. Garalama saklandy. Baglanyşyk dikelende neşir ediň."],
+    ["tk", "rateMissing", "USD kursy häzir elýeterli däl. Bahany TMT-de görkeziň ýa-da soňrak synanyşyň."],
+  ] as const)("%s %s", (locale, failure, message) => {
+    expect(publishFailureMessage(translator(locale), failure, "USD")).toBe(message);
+  });
+
+  it("names the draft's own currency, and never shows the server's text", () => {
+    expect(publishFailureMessage(translator("en"), "rateMissing", "AED")).toBe(
+      "The AED rate is not available right now. Set the price in TMT or try later.",
+    );
+    // Anything the machine holds that is not a known failure reads as a server error.
+    expect(publishFailureMessage(translator("en"), "Exchange rate from USD to TMT is not available", "USD")).toBe(
+      "Could not publish. Your draft is saved. Try again.",
+    );
+  });
+});

@@ -1,7 +1,9 @@
+import { AccessibilityInfo } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SellScreen from "../../app/(tabs)/sell";
-import { act, fireEvent, renderMobile, routerMock } from "../render";
+import { ApiError } from "../../src/api/client";
+import { act, fireEvent, renderMobile, routerMock, within } from "../render";
 
 // The Sell route on Check and publish, with the real upload queue, wizard machine,
 // autosave and Check screen. Only the device and the network are faked: the file
@@ -222,6 +224,86 @@ describe("Check and publish: publishing (#588)", () => {
     expect(screen.queryByRole("header", { name: /Check and publish/ })).toBeNull();
     expect(screen.queryByText(/Share/)).toBeNull();
     expect(screen.getByText("Sell")).toBeTruthy();
+  });
+});
+
+describe("Check and publish: a publish that fails (#588)", () => {
+  const announcements = (AccessibilityInfo as unknown as { announcements: string[] }).announcements;
+  const publish = (screen: Screen) => screen.getByRole("button", { name: "Publish" });
+
+  async function publishAndFail(error: Error, payload = fixture.complete) {
+    fixture.payload = payload;
+    fixture.mutation.mutateAsync.mockRejectedValue(error);
+    const screen = await openCheck();
+    fixture.patch.mockClear();
+    announcements.length = 0;
+    await act(async () => { fireEvent.press(publish(screen)); });
+    return screen;
+  }
+
+  /** The wizard is still on Check, the draft was saved, and the error is the only message. */
+  function expectStillOnCheck(screen: Screen, message: string) {
+    header(screen, "Check and publish, Step 7 of 7");
+    expect(within(screen.getByRole("alert")).getByText(message)).toBeTruthy();
+    expect(announcements).toContain(message);
+    expect(savedPayloads().at(-1)).toMatchObject({ photos: [fixture.savedPhoto] });
+    expect(routerMock.replace).not.toHaveBeenCalled();
+    expect(fixture.show).not.toHaveBeenCalled();
+    expect(publish(screen).props.accessibilityState).toMatchObject({ disabled: false });
+    expect(screen.getAllByTestId("check-section")).toHaveLength(6);
+  }
+
+  it("a server error keeps the wizard on Check and says the draft is saved", async () => {
+    const screen = await publishAndFail(new ApiError("INTERNAL_ERROR", 500, "Internal server error"));
+
+    expectStillOnCheck(screen, "Could not publish. Your draft is saved. Try again.");
+    // The server's own text is never shown.
+    expect(screen.queryByText(/Internal server error/)).toBeNull();
+  });
+
+  it("being offline keeps the wizard on Check and says to publish when back online", async () => {
+    const screen = await publishAndFail(new ApiError("NETWORK_ERROR", 0, "Network request failed"));
+
+    expectStillOnCheck(screen, "No internet. Your draft is saved. Publish when you are back online.");
+  });
+
+  it("a missing exchange rate names the draft's currency", async () => {
+    const screen = await publishAndFail(
+      new ApiError("EXCHANGE_RATE_MISSING", 400, "Exchange rate from USD to TMT is not available"),
+      { ...fixture.complete, priceAmount: 12500, priceCurrency: "USD" },
+    );
+
+    expectStillOnCheck(screen, "The USD rate is not available right now. Set the price in TMT or try later.");
+  });
+
+  it("publishes on the next try, and the error is gone while it runs", async () => {
+    const screen = await publishAndFail(new ApiError("INTERNAL_ERROR", 500));
+    let finish = (_listing: { id: string }) => {};
+    fixture.mutation.mutateAsync.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+
+    await act(async () => { fireEvent.press(publish(screen)); });
+
+    expect(screen.getByRole("button", { name: "Publishing..." })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    await act(async () => { finish({ id }); });
+
+    expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${id}`);
+    expect(screen.queryByRole("header", { name: /Check and publish/ })).toBeNull();
+  });
+
+  it("lets the seller change a step after a failure, which clears the error", async () => {
+    const screen = await publishAndFail(
+      new ApiError("EXCHANGE_RATE_MISSING", 400),
+      { ...fixture.complete, priceAmount: 12500, priceCurrency: "USD" },
+    );
+
+    fireEvent.press(screen.getByRole("button", { name: /^Price, / }));
+
+    header(screen, "Price, Step 4 of 7");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Done" })); });
+    header(screen, "Check and publish, Step 7 of 7");
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

@@ -93,6 +93,17 @@ describe("Changing a step from Check and publish (#588)", () => {
     expect(state).toMatchObject({ status: "step", currentStep: "price", publishError: null });
   });
 
+  it("lets a failed publish be tried again from Check", () => {
+    let state = wizardMachineReducer(atCheck(), { type: "PUBLISH_START" });
+    state = wizardMachineReducer(state, { type: "PUBLISH_ERROR", error: "offline" });
+    expect(state).toMatchObject({ status: "publishError", currentStep: "review", publishError: "offline" });
+    expect(buildMachineContext(state).canPublish).toBe(true);
+
+    state = wizardMachineReducer(state, { type: "PUBLISH_START" });
+
+    expect(state).toMatchObject({ status: "publishing", publishError: null });
+  });
+
   it("is not a detour away from Check: a step reached with Back keeps Continue", () => {
     const state = wizardMachineReducer(atCheck(), { type: "BACK" });
 
