@@ -50,8 +50,12 @@ function isRailwayHost(hostname: string): boolean {
   return hostname === "up.railway.app" || hostname.endsWith(".up.railway.app");
 }
 
+// AutoTM runs on autotm.bagtyyar.dev until it controls auto.tm (#322, #700).
+// The rest of bagtyyar.dev is not AutoTM's.
+const AUTOTM_DOMAINS = ["autotm.bagtyyar.dev", "auto.tm"];
+
 function isAutoTmOwnedHost(hostname: string): boolean {
-  return hostname === "auto.tm" || hostname.endsWith(".auto.tm");
+  return AUTOTM_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
 }
 
 function requireProtocol(name: string, url: ParsedUrl | null, protocols: string[], errors: string[]): void {
@@ -76,7 +80,7 @@ function rejectUnsafeProductionHost(name: string, url: ParsedUrl | null, errors:
   }
 
   if (!isAutoTmOwnedHost(hostname)) {
-    errors.push(`${name} must use auto.tm or a subdomain of auto.tm in production`);
+    errors.push(`${name} must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production`);
   }
 }
 

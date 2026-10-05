@@ -302,6 +302,12 @@ The questionnaire asks about the app's content and its interactive features ([ra
 
 Hosts come from [83-legal](83-legal.md#where-they-live) and `eas.json` (`production` and `production-smoke`: `EXPO_PUBLIC_WEB_URL = https://autotm.bagtyyar.dev`). The app builds the links in `apps/mobile/src/config/publicWebUrl.ts` (`legalPageUrl`).
 
+**Hosts the store build talks to** ([#700](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/700), founder decision 2026-10-06): the production API on `api.autotm.bagtyyar.dev` and media on `media.autotm.bagtyyar.dev`, custom domains on the Railway production services. The `production` build refuses any host outside `autotm.bagtyyar.dev` or `auto.tm`, and any Railway-generated host. Before the first `production` build the founder:
+
+1. Confirms in Railway that both custom domains show a valid certificate, and that `https://api.autotm.bagtyyar.dev/readyz` answers 200.
+2. Sets, in the Railway **production** API and worker services, `MINIO_PUBLIC_URL=https://media.autotm.bagtyyar.dev` (the host inside presigned upload URLs and photo links), then redeploys and checks that a Listing photo loads from that host.
+3. Sets the EAS `production` environment variables `EXPO_PUBLIC_API_URL=https://api.autotm.bagtyyar.dev/api/v1`, `EXPO_PUBLIC_WS_URL=wss://api.autotm.bagtyyar.dev/ws/chat` and `EXPO_PUBLIC_MEDIA_URL=https://media.autotm.bagtyyar.dev`.
+
 | Console field | URL | Status |
 |---|---|---|
 | Privacy policy | `https://autotm.bagtyyar.dev/en/legal/privacy` | Must load from an outside network before submission ([#496](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/496)) |
