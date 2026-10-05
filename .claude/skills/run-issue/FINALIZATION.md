@@ -16,6 +16,8 @@ Keep terms in the PR, reviews, and reconciliation aligned with the canonical [do
 
 Run separate, fresh, read-only Standards and Spec contexts that did not implement the reviewed commit. They may work concurrently against the same fixed SHA. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push.
 
+Trial exception ([ADR-0083](../../../docs/adr/0083-a-standards-reviewer-may-commit-small-fixes.md), next five queue PRs): a Standards reviewer may commit a fix for its own finding when the fix is within the fix-in-place limits below and changes no behaviour an acceptance criterion covers. It starts only after the implementer has stopped and auto-merge is off, commits one fix per finding on top of the pinned SHA in its own worktree, runs focused checks, and pushes fast-forward; if the branch moved past the pinned SHA, it commits nothing. Its verdict lists each finding as `fixed in <sha>` or `left as finding`. Spec and `Delta` stay read-only, and a fresh `Delta` review of the reviewer's commits carries both verdicts forward. The orchestrator records turnaround, tokens, `Delta` findings on reviewer commits, and reverts in `Execution state`.
+
 Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may each perform either axis, or both, on any pull request, including high-risk changes. There is no provider-diversity requirement or per-PR waiver. See [ADR-0064](../../../docs/adr/0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md).
 
 Each review produces a PR comment with:
@@ -70,7 +72,13 @@ The PR title mirrors the issue. Its body starts with `Closes #<N>` and keeps one
 
 ## Design notes
 - <wireframe/hi-fi/UX evidence, or omit>
+
+## Merge danger
+- **Door:** <one-way or two-way; one-way when a revert cannot undo it, such as a migration, published contract, or sent data>
+- **Blast radius:** <who or what breaks if this is wrong>
 ```
+
+An integration PR ([ADR-0084](../../../docs/adr/0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md)) has one `Closes #<N>` line and one `Execution state` per issue.
 
 Mark the draft ready only after verification passes and both axes pass on its current SHA, directly or carried forward by a `Delta` review.
 

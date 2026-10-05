@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 # Run a queue of issues
 
-One orchestrator session owns a queue from start to finish, so it keeps context between related issues and does not wait idle for CI. It does not implement. Under this skill the orchestrator is the issue's integration owner, as run-issue, FINALIZATION, and ADR-0064 and ADR-0067 mean the term. Each issue's implementer is a separate agent in its own worktree, under the [host-specific lifecycle](../../../docs/agents/worktree-lifecycle.md#queue-implementer-worktrees). Every issue still follows [run-issue](../run-issue/SKILL.md) and the [coding workflow](../../../docs/agents/coding-workflow.md) in full; this skill adds ordering, implementer handoff, auto-merge, and stacking.
+One orchestrator session owns a queue from start to finish, so it keeps context between related issues and does not wait idle for CI. It does not implement. Under this skill the orchestrator is the issue's integration owner, as run-issue, FINALIZATION, and ADR-0064 and ADR-0067 mean the term. Each issue's implementer is a separate agent in its own worktree, under the [host-specific lifecycle](../../../docs/agents/worktree-lifecycle.md#queue-implementer-worktrees). Every issue still follows [run-issue](../run-issue/SKILL.md) and the [coding workflow](../../../docs/agents/coding-workflow.md) in full; this skill adds ordering, implementer handoff, auto-merge, stacking, and integration branches.
 
 ## Accept the queue
 
@@ -63,6 +63,7 @@ For the next issue whose dependencies are all closed, or whose only open depende
 
 1. Launch the issue's `queue-implementer` as above. It runs `run-issue`: reservation branch `agent/issue-<N>`, draft PR, `Execution state`, and verification.
 2. Read its report and the PR. Launch independent Standards and Spec reviewers as separate fresh `queue-reviewer` agents, read-only and pinned to the reported head SHA. Post their verdicts with their attribution, as [FINALIZATION.md](../run-issue/FINALIZATION.md#independent-review) describes. For findings, launch a fresh implementer for the fix round, then a `Delta` review when the fix qualifies under [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065).
+   During the [ADR-0083](../../../docs/adr/0083-a-standards-reviewer-may-commit-small-fixes.md) trial (the next five queue PRs), launch the Standards reviewer as `queue-review-fixer` instead, once the implementer has stopped and auto-merge is off. It commits the qualifying fixes and leaves the rest as findings. Then launch a fresh `Delta` reviewer on its commits, and a fresh implementer only for findings it left. Record the trial measures in `Execution state`.
 3. When both axes pass on the current commit, directly or carried forward by a `Delta` review, set auto-merge as [FINALIZATION.md](../run-issue/FINALIZATION.md#checks-and-merge) describes. GitHub merges the PR once the required `pr` check passes.
 4. Do not wait for CI. Start the next ready issue. Between issues, read each open queue PR with `gh pr view <PR> --json state,mergedAt,autoMergeRequest,statusCheckRollup,comments`, and come back to it when its check fails, a reviewer or the founder comments, or it merges.
 5. Before launching an implementer for a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`. A push does not cancel auto-merge, so without this GitHub would merge the unreviewed commit. Set auto-merge again after the affected reviews pass.
@@ -82,6 +83,15 @@ When the next issue depends on a PR of this queue that is reviewed but not merge
 6. Remove the child's `blocked` label. A clean rebase leaves the child's own diff unchanged: record a `Delta` review of the rebased commit that confirms this and carries the earlier verdicts forward. If a conflict changed the child's content, re-run the affected axes. Then set auto-merge.
 
 Wait instead of stacking when a rebase would need a semantic conflict resolution.
+
+## Integration branches
+
+When the founder groups issues under one parent spec ([ADR-0084](../../../docs/adr/0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md)), they share one branch and one PR instead of stacking. Unrelated issues keep one PR each.
+
+1. Create the integration branch from `origin/main` without a worktree: `git fetch origin`, then `git push origin origin/main:refs/heads/agent/spec-<parent>-<slug>`.
+2. Give each issue's implementer the integration branch as its base. It works on `agent/issue-<N>`, pushes checkpoints, opens no PR, and merges the integration tip into its branch before it reports.
+3. Launch a merger implementer that merges each finished issue branch into the integration branch and, after the first merge, opens one draft PR into `main` with a `Closes #<N>` line and an `Execution state` for every issue.
+4. Review the integration PR once at its head. Tell the Spec reviewer to check every issue's and slice's criteria. Then continue at step 3 of the per-issue loop.
 
 ## Stop and report
 
