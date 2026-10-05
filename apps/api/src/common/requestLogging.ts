@@ -18,5 +18,13 @@ export function requestLoggingOptions(level: string): Options {
   return {
     level,
     redact: { paths: SECRET_HEADER_PATHS, censor: "[Redacted]" },
+    // Search terms and other query values are not logged: the path is
+    // enough to trace a request, and Recent searches stay on the device.
+    serializers: {
+      req(req: { url?: string }) {
+        if (typeof req.url === "string") req.url = req.url.split("?")[0] ?? req.url;
+        return req;
+      },
+    },
   };
 }

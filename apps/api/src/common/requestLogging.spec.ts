@@ -16,7 +16,7 @@ describe("API request logging", () => {
     await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
   });
 
-  async function logOneRequest(headers: Record<string, string>): Promise<string> {
+  async function logOneRequest(headers: Record<string, string>, path = "/api/v1/me"): Promise<string> {
     const lines: string[] = [];
     const out = new Writable({
       write(chunk, _encoding, done) {
@@ -33,7 +33,7 @@ describe("API request logging", () => {
     await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
     const { port } = server.address() as AddressInfo;
     await new Promise<void>((resolve, reject) => {
-      const req = httpRequest({ host: "127.0.0.1", port, path: "/api/v1/me", headers }, (res) => {
+      const req = httpRequest({ host: "127.0.0.1", port, path, headers }, (res) => {
         res.resume();
         res.on("end", resolve);
       });
@@ -42,6 +42,14 @@ describe("API request logging", () => {
     });
     return lines.join("");
   }
+
+  it("logs the path of a search without its query string", async () => {
+    const log = await logOneRequest({}, "/api/v1/listings?q=toyota+camry+secret-search&limit=20");
+
+    expect(log).toContain("/api/v1/listings");
+    expect(log).not.toContain("secret-search");
+    expect(log).not.toContain("limit=20");
+  });
 
   it("never writes a bearer token, a cookie or a set-cookie to the log", async () => {
     const log = await logOneRequest({

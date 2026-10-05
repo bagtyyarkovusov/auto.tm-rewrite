@@ -14,6 +14,10 @@ function requireFreshAppConfig() {
 }
 
 describe("EAS build configuration", () => {
+  it("turns Android backup off, so no session data is restored onto another device", () => {
+    expect(requireFreshAppConfig().expo.android.allowBackup).toBe(false);
+  });
+
   it("declares internal staging and production-smoke profiles plus store production", () => {
     const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
 
