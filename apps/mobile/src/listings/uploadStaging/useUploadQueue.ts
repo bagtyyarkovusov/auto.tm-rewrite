@@ -106,6 +106,8 @@ export function useUploadQueue(
   const MAX_CONCURRENT = 2;
   const runningUploads = useRef(0);
   const uploadQueue = useRef<string[]>([]);
+  // Photo ids waiting in `uploadQueue` or being uploaded right now.
+  const uploadsInFlight = useRef(new Set<string>());
   const networkAvailable = useRef(true);
   const uploadPhotoRef = useRef<(photoId: string) => Promise<void>>(
     async () => {},
@@ -121,10 +123,26 @@ export function useUploadQueue(
       runningUploads.current += 1;
       uploadPhotoRef.current(nextId).finally(() => {
         runningUploads.current -= 1;
+        uploadsInFlight.current.delete(nextId);
         processUploadQueue();
       });
     }
   }, []);
+
+  // Queue photos for upload, leaving out any already waiting or uploading. A
+  // photo stays `compressed` until its upload has read the staged file, so the
+  // resume after init and one from the app or network can both pick it.
+  const enqueueUploads = useCallback(
+    (photoIds: string[]) => {
+      for (const photoId of photoIds) {
+        if (uploadsInFlight.current.has(photoId)) continue;
+        uploadsInFlight.current.add(photoId);
+        uploadQueue.current.push(photoId);
+      }
+      processUploadQueue();
+    },
+    [processUploadQueue],
+  );
 
   // Initialize queue from draft + local files
   useEffect(() => {
@@ -168,15 +186,12 @@ export function useUploadQueue(
       // Photos an earlier session staged but did not finish uploading resume
       // now; nothing else would start them until the app or network returns.
       const unfinished = collectPhotosToResume(reconstructed);
-      if (unfinished.length > 0) {
-        uploadQueue.current.push(...unfinished.map((p) => p.photoId));
-        processUploadQueue();
-      }
+      enqueueUploads(unfinished.map((p) => p.photoId));
     }
     void init().finally(() => {
       initializingStagingKeys.current.delete(stagingKey);
     });
-  }, [stagingKey, initialPayload, restoreLocalPhotos, processUploadQueue]);
+  }, [stagingKey, initialPayload, restoreLocalPhotos, enqueueUploads]);
 
   const transitionToFailed = useCallback((photoId: string, error: UploadError) => {
     queueRef.current = transitionPhotoToFailed(queueRef.current, photoId, error);
@@ -274,15 +289,16 @@ export function useUploadQueue(
     const cleanup = setupUploadResume({
       resumePendingUploads: () => {
         const photosToRetry = collectPhotosToResume(queueRef.current);
-        if (photosToRetry.length === 0) return;
-        uploadQueue.current.push(...photosToRetry.map((p) => p.photoId));
-        processUploadQueue();
+        enqueueUploads(photosToRetry.map((p) => p.photoId));
       },
       onNetworkAvailable: () => {
         networkAvailable.current = true;
       },
       onNetworkUnavailable: () => {
         networkAvailable.current = false;
+        // Photos that had not started are dropped from the wait; the running
+        // ones leave `uploadsInFlight` when their upload settles.
+        for (const photoId of uploadQueue.current) uploadsInFlight.current.delete(photoId);
         uploadQueue.current = [];
         queueRef.current = transitionUploadQueueToWaitingForNetwork(
           queueRef.current,
@@ -291,7 +307,7 @@ export function useUploadQueue(
       },
     });
     return cleanup;
-  }, [processUploadQueue]);
+  }, [enqueueUploads]);
 
   const addPhoto = useCallback(
     async (sourceUri: string) => {
@@ -326,8 +342,7 @@ export function useUploadQueue(
         });
         setQueue(queueRef.current);
 
-        uploadQueue.current.push(photoId);
-        processUploadQueue();
+        enqueueUploads([photoId]);
       } catch (err) {
         const uploadError = buildUploadError(err, t);
         queueRef.current = transitionPhotoToFailed(queueRef.current, photoId, uploadError);
@@ -336,7 +351,7 @@ export function useUploadQueue(
         endCompression();
       }
     },
-    [stagingKey, processUploadQueue, startCompression, endCompression],
+    [stagingKey, enqueueUploads, startCompression, endCompression],
   );
 
   const removePhoto = useCallback(
@@ -359,10 +374,9 @@ export function useUploadQueue(
 
   const retryPhoto = useCallback(
     (photoId: string) => {
-      uploadQueue.current.push(photoId);
-      processUploadQueue();
+      enqueueUploads([photoId]);
     },
-    [processUploadQueue],
+    [enqueueUploads],
   );
 
   const publishGate: PublishGateResult = computePublishGate(queue);
