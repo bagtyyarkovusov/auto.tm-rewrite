@@ -324,6 +324,56 @@ describe("Save changes (#589)", () => {
   });
 });
 
+describe("returning from the contact phone code flow (#589)", () => {
+  it("lands in the same edit, with the confirmed number and the earlier changes kept", async () => {
+    const confirmed = "+99361111111";
+    const api = createListingApi();
+    server.use(
+      http.get("*/me/contact-phones", () => HttpResponse.json({ items: [{
+        phone: confirmed, source: "confirmed",
+        confirmedAt: new Date().toISOString(),
+        reusableUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      }] })),
+    );
+    const screen = await openEdit();
+    changePrice(screen, "100000", "179000");
+    openStep(screen, /^Contact, .*Change$/, "Contact, Step 6 of 7");
+    fireEvent.press(screen.getByLabelText("Another number"));
+    expect(routerMock.push).toHaveBeenCalledWith({
+      pathname: "/listings/contact-phone",
+      params: { returnPathname: `/listings/${id}/edit` },
+    });
+
+    // The code screen confirms the number and returns with router.dismissTo: the
+    // same edit screen comes back into focus with the number as a route param.
+    routeParams.confirmedContactPhone = confirmed;
+    screen.rerender(<ToastProvider><EditListingScreen /></ToastProvider>);
+
+    expect(routerMock.setParams).toHaveBeenCalledWith({ confirmedContactPhone: undefined });
+    expect(screen.getByRole("header", { name: "Contact, Step 6 of 7" })).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByLabelText(confirmed, { exact: false }).props.accessibilityState)
+        .toMatchObject({ checked: true }),
+    );
+    fireEvent.press(screen.getByRole("button", { name: "Done" }));
+
+    expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Price, 179,000 TMT, Change" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: new RegExp(`^Contact, \\${confirmed}`) })).toBeTruthy();
+    // Still unsaved: leaving asks first.
+    fireEvent.press(screen.getByRole("button", { name: "Close" }));
+    expect(screen.getByText("Leave edit mode?")).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Keep editing" }));
+
+    await act(async () => { fireEvent.press(saveButton(screen)); });
+
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${id}`));
+    expect(api.patches).toEqual([
+      expect.objectContaining({ priceAmount: 179000, contactPhone: confirmed }),
+    ]);
+  });
+});
+
 describe("leaving the edit (#589)", () => {
   it("✕ with no changes closes at once", async () => {
     createListingApi();
