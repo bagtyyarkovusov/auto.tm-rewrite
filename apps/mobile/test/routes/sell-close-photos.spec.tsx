@@ -89,7 +89,7 @@ vi.mock("../../src/listings/wizard/Step5Price", () => ({ default: () => null }))
 vi.mock("../../src/listings/wizard/Step6Location", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step7DescContact", () => ({ default: () => null }));
 // Check and publish, reduced to the photos it was handed.
-vi.mock("../../src/listings/wizard/Step8Review", async () => {
+vi.mock("../../src/listings/wizard/CheckAndPublish",async () => {
   const { Text } = await import("react-native");
   return {
     default: ({ photos }: { photos: { photoId: string; key?: string; state: string }[] }) =>

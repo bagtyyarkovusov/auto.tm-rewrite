@@ -1,21 +1,29 @@
 import { Image } from "expo-image";
 import { Camera } from "lucide-react-native";
-import { Enums, type WizardSchemas } from "@auto-tm/contracts";
-import { View } from "react-native";
+import { Enums, WizardSchemas } from "@auto-tm/contracts";
+import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { findCityInGroups, useCityGroups } from "../../api/catalog/useCityGroups";
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
+import { useGenerations } from "../../api/catalog/useGenerations";
 import { useModels } from "../../api/catalog/useModels";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
 import { localeTag } from "../../i18n/resources";
 import { listingSpecLine } from "../feed/listingSpecLine";
 import { getPhotoUri } from "../uploadStaging/photoUri";
 import type { StagedPhoto } from "../uploadStaging/types";
+import { countUploads } from "../uploadStaging/uploadCounts";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
+
+type DataStep = Exclude<WizardSchemas.WizardStep, "review">;
+/** The steps that hold fields, in the wizard's order. */
+const DATA_STEPS = WizardSchemas.WIZARD_STEPS.filter((step): step is DataStep => step !== "review");
+const NO_PHOTOS: StagedPhoto[] = [];
 
 export interface CheckAndPublishProps {
   payload: WizardSchemas.WizardDraftPayload;
@@ -24,6 +32,11 @@ export interface CheckAndPublishProps {
   onChangeStep: (step: WizardSchemas.WizardStep) => void;
   /** Every picked photo in order, the cover first. */
   photos: StagedPhoto[];
+  /**
+   * False until the upload queue holds this draft's photos. Until then `photos`
+   * says nothing about the draft, so Check does not claim there are none.
+   */
+  photosReady?: boolean;
 }
 
 /** The catalog names and formatted values that the preview and the section summaries share. */
@@ -64,7 +77,15 @@ function useCheckValues(payload: WizardSchemas.WizardDraftPayload) {
 type CheckValues = ReturnType<typeof useCheckValues>;
 
 /** The Listing card buyers will see in Results, built from the draft. */
-function PreviewCard({ values, photos }: { values: CheckValues; photos: StagedPhoto[] }) {
+function PreviewCard({
+  values,
+  photos,
+  photosReady,
+}: {
+  values: CheckValues;
+  photos: StagedPhoto[];
+  photosReady: boolean;
+}) {
   const { t } = useTranslation();
   const cover = photos[0];
   const coverUri = cover ? getPhotoUri(cover, "list") : undefined;
@@ -82,11 +103,11 @@ function PreviewCard({ values, photos }: { values: CheckValues; photos: StagedPh
             cachePolicy="memory-disk"
             accessibilityIgnoresInvertColors
           />
-        ) : (
+        ) : photosReady ? (
           <View className="h-full items-center justify-center">
             <Text className="text-xs text-muted-foreground">{t("noPhotos")}</Text>
           </View>
-        )}
+        ) : null}
         {photos.length > 1 ? (
           <View
             accessibilityLabel={t("resultsPhotoCount", { count: photos.length })}
@@ -115,15 +136,110 @@ function PreviewCard({ values, photos }: { values: CheckValues; photos: StagedPh
   );
 }
 
-/** The last step of the Sell wizard: the Listing as buyers will see it, and what is left to fix. */
-export default function CheckAndPublish({ payload, photos }: CheckAndPublishProps) {
+const join = (parts: (string | false | null | undefined)[], separator = " · ") =>
+  parts.filter(Boolean).join(separator);
+
+/** What each step holds, in one line, for its row on Check. */
+function useSectionSummaries(
+  payload: WizardSchemas.WizardDraftPayload,
+  values: CheckValues,
+  photoCount: number,
+): Record<DataStep, string> {
   const { t } = useTranslation();
+  const { data: generations } = useGenerations(payload.modelId ?? "");
+  const generationName = generations?.items.find((g) => g.id === payload.generationId)?.name;
+  const isUsed = payload.condition !== Enums.ListingCondition.New;
+  const damaged = payload.conditionDisclosure?.damaged;
+
+  return {
+    vehicle: join([values.title, generationName, payload.vin ? `${t("vin")} ${payload.vin}` : null]),
+    // ADR-0080: a New car is never asked Damaged, so Check does not state it.
+    specs: join([
+      values.specs,
+      isUsed && damaged !== undefined ? `${t("damaged")}: ${damaged ? t("yes") : t("no")}` : null,
+    ]),
+    photos: photoCount > 0 ? t("resultsPhotoCount", { count: photoCount }) : "",
+    price: join([
+      values.price,
+      payload.acceptsExchange ? t("exchangePossible") : null,
+      payload.installmentAvailable ? t("installment") : null,
+    ]),
+    location: join([payload.description?.trim(), join([values.cityName, payload.locationText?.trim()], ", ")]),
+    contact: join([
+      payload.contactPhone,
+      join([payload.allowCalls ? t("phoneCalls") : null, payload.allowChat ? t("inAppChat") : null], ", "),
+    ]),
+  };
+}
+
+/** One step: its title, what it holds, and Change, or Fill in while it needs the seller. */
+function SectionRow({
+  title,
+  summary,
+  needsSeller,
+  onPress,
+}: {
+  title: string;
+  summary: string;
+  needsSeller: boolean;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  const action = needsSeller ? t("checkFillIn") : t("checkChange");
+
+  // The Pressable's classes never change with its state: only the action text's do.
+  return (
+    <Pressable
+      testID="check-section"
+      accessibilityRole="button"
+      accessibilityLabel={join([title, summary, action], ", ")}
+      className="min-h-14 flex-row items-center gap-3 border-b border-border py-3 active:opacity-70"
+      onPress={onPress}
+    >
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text className="text-base text-foreground">{title}</Text>
+        {summary ? (
+          <Text className="text-sm text-muted-foreground" numberOfLines={2}>{summary}</Text>
+        ) : null}
+      </View>
+      <Text className={cn("text-sm font-medium", needsSeller ? "text-destructive" : "text-info-500")}>
+        {action}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** The last step of the Sell wizard: the Listing as buyers will see it, and what is left to fix. */
+export default function CheckAndPublish({
+  payload,
+  validatedSteps,
+  onChangeStep,
+  photos: queuePhotos,
+  photosReady = true,
+}: CheckAndPublishProps) {
+  const { t } = useTranslation();
+  const photos = photosReady ? queuePhotos : NO_PHOTOS;
   const values = useCheckValues(payload);
+  const summaries = useSectionSummaries(payload, values, photos.length);
+  // A failed photo is fixed on Photos, so that row asks for the seller too.
+  const photosNeedSeller = countUploads(photos).failed > 0;
 
   return (
     <View className="gap-3 py-5">
-      <PreviewCard values={values} photos={photos} />
+      <PreviewCard values={values} photos={photos} photosReady={photosReady} />
       <Text className="text-center text-xs text-muted-foreground">{t("thisIsHowBuyersSee")}</Text>
+
+      <View className="border-t border-border">
+        {DATA_STEPS.map((step) => (
+          <SectionRow
+            key={step}
+            title={t(`wizardSteps.${step}`)}
+            summary={summaries[step]}
+            needsSeller={!validatedSteps.includes(step) || (step === "photos" && photosNeedSeller)}
+            onPress={() => onChangeStep(step)}
+          />
+        ))}
+      </View>
     </View>
   );
 }

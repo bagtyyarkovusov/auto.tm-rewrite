@@ -76,6 +76,14 @@ describe("Changing a step from Check and publish (#588)", () => {
     expect(ctx.canPublish).toBe(false);
   });
 
+  it("gives the first step a Back while it is being changed", () => {
+    const changing = wizardMachineReducer(atCheck(), { type: "CHANGE_FROM_REVIEW", step: "vehicle" });
+    expect(buildMachineContext(changing).canGoBack).toBe(true);
+
+    const back = wizardMachineReducer(changing, { type: "BACK" });
+    expect(back.currentStep).toBe("review");
+  });
+
   it("opens a step after a failed publish, and clears the failure", () => {
     let state = wizardMachineReducer(atCheck(), { type: "PUBLISH_START" });
     state = wizardMachineReducer(state, { type: "PUBLISH_ERROR", error: "server" });

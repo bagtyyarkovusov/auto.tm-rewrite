@@ -23,6 +23,11 @@ export interface WizardMachineState {
   listingId: string | null;
   mode: "create" | "edit";
   editEntryAtReview: boolean;
+  /**
+   * A create draft's step was opened from Check and publish. The step shows Done
+   * in place of Continue, and Done or Back returns to Check.
+   */
+  changingFromReview: boolean;
   currentStep: WizardMachineStep;
   payload: WizardSchemas.WizardDraftPayload;
   validatedSteps: WizardSchemas.WizardStep[];
@@ -68,6 +73,10 @@ export type WizardMachineAction =
       keepValidSteps?: boolean;
     }
   | { type: "GO_TO_STEP"; step: WizardMachineStep }
+  /** Create flow: open a step from Check and publish, to come back with Done. */
+  | { type: "CHANGE_FROM_REVIEW"; step: WizardMachineStep }
+  /** Create flow: Done on a step opened from Check and publish. */
+  | { type: "RETURN_TO_REVIEW" }
   | { type: "PUBLISH_START" }
   | { type: "PUBLISH_SUCCESS"; listingId: string }
   | { type: "PUBLISH_ERROR"; error: string }
@@ -174,6 +183,21 @@ function moveTo(
   };
 }
 
+/**
+ * Ends a change that began on Check and publish. A changed field reset the steps
+ * after its own, so completion is read from the fields again, as on resume: the
+ * steps the change left valid are complete, and Check names the others.
+ */
+function backToReview(state: WizardMachineState): WizardMachineState {
+  return {
+    ...state,
+    ...moveTo(state, "review"),
+    changingFromReview: false,
+    validatedSteps: completedSteps(state.payload),
+    saveError: null,
+  };
+}
+
 // ── Initial state ──
 
 export function createInitialState(): WizardMachineState {
@@ -183,6 +207,7 @@ export function createInitialState(): WizardMachineState {
     listingId: null,
     mode: "create",
     editEntryAtReview: false,
+    changingFromReview: false,
     currentStep: "vehicle",
     payload: {},
     validatedSteps: [],
@@ -222,6 +247,7 @@ export function wizardMachineReducer(
           listingId: action.listingId ?? null,
           mode,
           editEntryAtReview: true,
+          changingFromReview: false,
           payload,
           validatedSteps: DATA_STEPS,
           // ADR-0080: a New Listing is not asked Damaged, so it needs no answer here.
@@ -255,6 +281,7 @@ export function wizardMachineReducer(
         listingId: action.listingId ?? null,
         mode,
         editEntryAtReview: false,
+        changingFromReview: false,
         // A create draft records the step it opens at, like every later move.
         payload:
           mode === "create"
@@ -300,6 +327,9 @@ export function wizardMachineReducer(
 
     case "BACK": {
       if (state.status !== "step") return state;
+      // Back from a step opened on Check returns to Check, valid or not: Check
+      // then names the step as one to fill in.
+      if (state.changingFromReview) return backToReview(state);
       const currentIdx = stepIndex(state.currentStep);
       if (currentIdx <= 0) return state;
       return {
@@ -360,6 +390,27 @@ export function wizardMachineReducer(
       return { ...state, ...moveTo(state, action.step), saveError: null };
     }
 
+    case "CHANGE_FROM_REVIEW": {
+      // Also after a failed publish, which leaves the seller on Check.
+      if (state.status !== "step" && state.status !== "publishError") return state;
+      if (state.mode !== "create" || state.currentStep !== "review") return state;
+      if (action.step === "review") return state;
+      return {
+        ...state,
+        ...moveTo(state, action.step),
+        status: "step",
+        changingFromReview: true,
+        saveError: null,
+        publishError: null,
+      };
+    }
+
+    case "RETURN_TO_REVIEW": {
+      if (state.status !== "step" || !state.changingFromReview) return state;
+      if (!isStepValid(state.currentStep, state.payload)) return state;
+      return backToReview(state);
+    }
+
     case "PUBLISH_START": {
       if (state.status !== "step") return state;
       return { ...state, status: "publishing", publishError: null };
@@ -396,7 +447,8 @@ export function buildMachineContext(
 ): WizardMachineContext {
   const currentIdx = stepIndex(state.currentStep);
   const isLastStep = state.currentStep === "review";
-  const editDetourActive = state.mode === "edit" && !isLastStep;
+  const editDetourActive =
+    (state.mode === "edit" && !isLastStep) || (state.changingFromReview && !isLastStep);
 
   const validation = validateStep(state.currentStep, state.payload);
 
@@ -411,7 +463,8 @@ export function buildMachineContext(
   const canGoBack =
     state.mode === "edit"
       ? false
-      : currentIdx > 0 && state.status === "step";
+      : // The first step has a Back too when it was opened from Check.
+        (currentIdx > 0 || state.changingFromReview) && state.status === "step";
 
   // Position-based progress: where in the wizard am I right now.
   const stepNumber = currentIdx + 1;

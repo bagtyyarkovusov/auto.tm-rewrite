@@ -73,8 +73,17 @@ describe("Check and publish, the card preview", () => {
       payload: { ...usedCar, condition: "new", mileageKm: undefined, priceAmount: 12500, priceCurrency: "USD" },
     });
 
-    expect(screen.getByText("12,500 USD")).toBeTruthy();
-    expect(screen.getByText("New · Automatic · Petrol")).toBeTruthy();
+    const card = within(screen.getByTestId("check-preview"));
+
+    expect(card.getByText("12,500 USD")).toBeTruthy();
+    expect(card.getByText("New · Automatic · Petrol")).toBeTruthy();
+  });
+
+  it("does not say No photos before the draft's photos are read from the device", () => {
+    const screen = check({ photos: [], photosReady: false });
+
+    expect(screen.queryByText("No photos")).toBeNull();
+    expect(screen.queryByTestId("check-preview-cover")).toBeNull();
   });
 
   it("says No photos when nothing is picked", () => {

@@ -39,7 +39,7 @@ import Step4Specs from "../../src/listings/wizard/Step4Specs";
 import Step5Price from "../../src/listings/wizard/Step5Price";
 import Step6Location from "../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
-import Step8Review from "../../src/listings/wizard/Step8Review";
+import CheckAndPublish from "../../src/listings/wizard/CheckAndPublish";
 
 
 import { useToast } from "@/components/ui/toast";
@@ -346,16 +346,18 @@ export default function SellScreen() {
       return;
     }
 
-    dispatch({ type: "NEXT" });
+    // Done on a step opened from Check returns there; Continue moves on.
+    const advance = { type: ctx.editDetourActive ? "RETURN_TO_REVIEW" : "NEXT" } as const;
+    dispatch(advance);
     // Force save on navigation, with the step it moves to.
-    const moved = wizardMachineReducer(machineState, { type: "NEXT" });
+    const moved = wizardMachineReducer(machineState, advance);
     const fullPayload: WizardSchemas.WizardDraftPayload = {
       ...moved.payload,
       photos: photosToSave,
       validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending]);
+  }, [ctx.canContinue, ctx.editDetourActive, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending]);
 
   const handlePublish = useCallback(async () => {
     if (!machineState.draftId) return;
@@ -548,6 +550,7 @@ export default function SellScreen() {
         onBack={handleBack}
         onContinue={handleContinue}
         onPublish={handlePublish}
+        onReturnToReview={handleContinue}
         onClose={() => void handleClose()}
         isClosing={isClosing}
         mode={machineState.mode}
@@ -565,7 +568,10 @@ export default function SellScreen() {
         progressPercent={ctx.progressPercent}
         disabledReason={disabledReason}
         uploadStatus={uploadStatus}
-        onUploadStatusPress={() => dispatch({ type: "GO_TO_STEP", step: "photos" })}
+        onUploadStatusPress={() =>
+          // From Check the chip opens Photos as a change, so Done comes back.
+          dispatch({ type: ctx.isLastStep ? "CHANGE_FROM_REVIEW" : "GO_TO_STEP", step: "photos" })
+        }
       >
         {currentStep === "photos" && (
           <Step2Photos
@@ -618,11 +624,12 @@ export default function SellScreen() {
           />
         )}
         {currentStep === "review" && (
-          <Step8Review
+          <CheckAndPublish
             payload={machineState.payload}
             validatedSteps={machineState.validatedSteps}
-            onGoToStep={(step) => dispatch({ type: "GO_TO_STEP", step })}
+            onChangeStep={(step) => dispatch({ type: "CHANGE_FROM_REVIEW", step })}
             photos={uploadQueue.photos}
+            photosReady={queueReady}
           />
         )}
       </WizardLayout>
