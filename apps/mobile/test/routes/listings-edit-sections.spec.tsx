@@ -133,6 +133,20 @@ function changePrice(screen: Screen, from: string, to: string) {
   expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
 }
 
+/** What the RU and TK specs press, by the names a screen reader hears. */
+const localized = {
+  ru: { details: "Характеристики и состояние", notDamaged: "Битый или требует ремонта: Нет", done: "Готово" },
+  tk: { details: "Aýratynlyklar we ýagdaýy", notDamaged: "Zeperli ýa-da abatlaýyş gerek: Ýok", done: "Tamam" },
+} as const;
+
+/** From the list: opens Details, answers Damaged "No" and returns with Done. */
+function answerNotDamaged(screen: Screen, locale: keyof typeof localized) {
+  const names = localized[locale];
+  fireEvent.press(screen.getByRole("button", { name: new RegExp(`^${names.details}, `) }));
+  fireEvent.press(screen.getByRole("radio", { name: names.notDamaged }));
+  fireEvent.press(screen.getByRole("button", { name: names.done }));
+}
+
 beforeEach(() => {
   routeParams.id = id;
   routerMock.canGoBack.mockReturnValue(true);
@@ -341,9 +355,7 @@ describe("Save changes (#589)", () => {
     api.failEdits = 1;
     const screen = await openEdit({ locale, heading });
     // One tap changes the Listing: the seller answers Damaged the other way.
-    fireEvent.press(screen.getAllByTestId("check-section")[1] as never);
-    fireEvent.press(screen.getAllByRole("radio", { checked: false })[0] as never);
-    fireEvent.press(screen.getAllByRole("button").at(-1) as never);
+    answerNotDamaged(screen, locale as keyof typeof localized);
 
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: save })); });
 
@@ -489,9 +501,7 @@ describe("leaving the edit (#589)", () => {
   ])("asks in %s", async (locale, heading, close, copy) => {
     createListingApi({ conditionDisclosure: { damaged: true } });
     const screen = await openEdit({ locale, heading });
-    fireEvent.press(screen.getAllByTestId("check-section")[1] as never);
-    fireEvent.press(screen.getAllByRole("radio", { checked: false })[0] as never);
-    fireEvent.press(screen.getAllByRole("button").at(-1) as never);
+    answerNotDamaged(screen, locale as keyof typeof localized);
 
     fireEvent.press(screen.getByRole("button", { name: close }));
 

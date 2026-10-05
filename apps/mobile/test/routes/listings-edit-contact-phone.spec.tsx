@@ -250,6 +250,7 @@ describe("Listing edit Contact step", () => {
       fireEvent.press(screen.getByRole("button", { name: "Save changes" }));
     });
 
+    expect(fixture.save).toHaveBeenCalledOnce();
     expect(screen.queryByRole("header", { name: "Contact, Step 6 of 7" })).toBeNull();
     expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
   });
