@@ -32,6 +32,24 @@ A short-lived numeric code sent to a phone or email to prove control of it, used
 
 _Avoid_: Password, OTP, magic link
 
+**Display Name**
+
+The name shown for a User: the name the User set, or their Generated Name while they have set none.
+
+_Avoid_: Username, nickname, handle
+
+**Generated Name**
+
+The name a User has until they set one, a prefix in the reader's language and a number the server assigned to the User, such as Driver 4821. The number is not unique and never changes.
+
+_Avoid_: Default name, random name
+
+**Assigned Avatar**
+
+One of the car pictures bundled in the app, chosen by the server for a User when the User is created and shown until the User sets a profile photo.
+
+_Avoid_: Default avatar, placeholder avatar
+
 **Dealership Member**
 
 The membership connecting a User to a Dealership and assigning an owner or sales role within that dealership. It is distinct from the User's Marketplace Role.
