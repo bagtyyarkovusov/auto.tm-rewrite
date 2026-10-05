@@ -2,7 +2,7 @@ import * as RN from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SellScreen from "../../app/(tabs)/sell";
-import { act, fireEvent, renderMobile, routeParams, screenFocus } from "../render";
+import { act, fireEvent, renderMobile, routeParams, screenFocus, within } from "../render";
 
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -142,6 +142,18 @@ describe("✕ saves the draft and closes the Sell wizard (#585)", () => {
     expect(screen.getByRole("button", { name: "List a car" })).toBeTruthy();
     expect(screen.getByText("Saved to Drafts")).toBeTruthy();
     expect(fixture.discard).not.toHaveBeenCalled();
+  });
+
+  it("shows Saved to Drafts above the tab bar, clear of the Latest draft card at the top", async () => {
+    const screen = openNewListing();
+    fireEvent.press(screen.getByRole("button", { name: "Change car" }));
+
+    await pressClose(screen);
+
+    // The Sell tab has no header for a top toast to clear, so a top toast covered the card.
+    expect(screen.queryByTestId("toast-viewport-top")).toBeNull();
+    const viewport = screen.getByTestId("toast-viewport-above-tab-bar");
+    expect(within(viewport).getByText("Saved to Drafts")).toBeTruthy();
   });
 
   it.each([
