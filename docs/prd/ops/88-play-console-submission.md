@@ -1,5 +1,22 @@
 # 88 — Google Play Console submission pack
 
+## Founder decisions (2026-10-06)
+
+The founder accepted every recommendation below on 2026-10-06 (recorded on #685). Where a row further down still says **Founder decides**, this list wins.
+
+- **Store title:** `AutoTM – Car Marketplace`. **Category:** Auto & Vehicles.
+- **Developer contact email:** `bagtyyarkowusow.dev@gmail.com` until AutoTM owns a domain (also the privacy and terms contact, PR 689).
+- **Approximate location:** declared: collected, not shared, optional, App functionality (the seller's region and city).
+- **In-app search history:** not collected. Recent searches stay on the device, and the API request log no longer keeps query strings.
+- **Device or other IDs (FCM token):** declared: collected, optional, App functionality.
+- **Fraud prevention, security, and compliance:** added as a purpose for Phone number and Other in-app messages (code rate limits, moderation of reported messages).
+- **Sign-in code records:** deleted after 30 days, and at purge; the privacy policy says so.
+- **Contact phone on kept Listings:** removed at purge.
+- **Terms acceptance:** the "By continuing, you agree" line with links stays; no checkbox for the reviewer release.
+- **Reviewer access:** one fixed code per reserved account, only in Play Console notes; a separate reserved account for deletion testing.
+- **`android.allowBackup`:** `false`.
+- **Later:** product analytics (#602) must update this page, the privacy policy and the Data safety form in the same change, before it ships.
+
 ## Summary
 
 The repository answers for the reviewer-only Google Play submission: store listing copy, Data safety, permissions, App content, URLs, reviewer access, and the founder's Console steps. Each answer cites the code at `origin/main` that supports it. Entering the answers in Play Console is the founder's step, tracked on [#327](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/327) and [#391](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/391).
@@ -227,7 +244,7 @@ Blocked in `app.config.js`: `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `RECORD_AUD
 2. `com.google.android.gms.permission.AD_ID` is absent. Then the [advertising ID](https://support.google.com/googleplay/android-developer/answer/6048248) answer is "No". If it is present, find which library adds it and remove it with `tools:node="remove"` on its own issue, or answer truthfully.
 3. Name the library that adds `BIND_GET_INSTALL_REFERRER_SERVICE`.
 4. Record whether Firebase Messaging auto-init sends a token request before notification permission is granted. That settles the Device IDs optional question.
-5. `android:allowBackup="true"` is still the Expo default (#325, finding 1). Founder decides whether to keep it. It does not change a Data safety answer, because backup goes to the User's own Google account.
+5. `android:allowBackup="true"` is still the Expo default (#325, finding 1). Founder decides whether to keep it. It does not change a Data safety answer, because backup goes to the User's own Google account. **Resolved**: `allowBackup` is now `false` (founder decision, 2026-10-06).
 6. `expo-camera` is installed but no app code imports it (#325, finding 2). It adds `CAMERA`, which `expo-image-picker` needs anyway.
 
 ## 4. App content answers
@@ -352,10 +369,10 @@ Do these in order. Record non-secret evidence only: no codes, account values, Co
 
 Found while checking the answers above against `origin/main`. Each needs its own issue or a founder decision before step 9.
 
-1. **The privacy policy calls push "future".** `apps/web/src/app/[locale]/legal/content.ts` (lines 41 and 62, with the RU and TK equivalents) says push tokens and FCM apply "if native push notifications ship later". The app registers FCM tokens and the worker sends Message previews through FCM. Data safety will declare Device or other IDs, and the policy has to say the same before submission. The 83-legal "Future collections" row has the same problem. Owner: the legal text ([#390](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/390) or a new issue).
-2. **Sign-in Code request rows outlive deletion.** `PurgeExpiredAccounts.ts` clears `User.phone` and `User.email` but never touches `otp_requests`. Those rows keep the phone or email (`destination`) and the IP address with no retention job. The only delete is the manual `packages/db/scripts/clear-otp-rate-limit.ts`. "Deleted on request" and the policy's "PII removed" are not fully true until those rows are deleted or purged by age.
-3. **Archived Listings keep the contact phone.** After the purge, a kept Listing still holds `Listing.contactPhone`. The policy says Listings are kept. It does not say a phone number stays inside them.
-4. **API request logs.** `pinoHttp` with default serializers logs every request's URL (search terms included), remote address and headers to Railway logs. That bears on search history (section 2), and until PR 684 the logged headers also included `Authorization` bearer tokens; PR 684 redacts credential headers.
+1. **The privacy policy calls push "future".** `apps/web/src/app/[locale]/legal/content.ts` (lines 41 and 62, with the RU and TK equivalents) says push tokens and FCM apply "if native push notifications ship later". The app registers FCM tokens and the worker sends Message previews through FCM. Data safety will declare Device or other IDs, and the policy has to say the same before submission. The 83-legal "Future collections" row has the same problem. Owner: the legal text ([#390](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/390) or a new issue). **Resolved** by PR 686.
+2. **Sign-in Code request rows outlive deletion.** `PurgeExpiredAccounts.ts` clears `User.phone` and `User.email` but never touches `otp_requests`. Those rows keep the phone or email (`destination`) and the IP address with no retention job. The only delete is the manual `packages/db/scripts/clear-otp-rate-limit.ts`. "Deleted on request" and the policy's "PII removed" are not fully true until those rows are deleted or purged by age. **Resolved**: the purge deletes them, and the purge job deletes every record older than 30 days (PR for #685 decisions).
+3. **Archived Listings keep the contact phone.** After the purge, a kept Listing still holds `Listing.contactPhone`. The policy says Listings are kept. It does not say a phone number stays inside them. **Resolved**: the purge clears it (same PR).
+4. **API request logs.** `pinoHttp` with default serializers logs every request's URL (search terms included), remote address and headers to Railway logs. That bears on search history (section 2), and until PR 684 the logged headers also included `Authorization` bearer tokens; PR 684 redacts credential headers. **Resolved**: PR 684 redacts credential headers; the request log now drops query strings (same PR as above).
 5. **Photo location metadata is unproven.** Listing and chat photos are re-encoded by `expo-image-manipulator` before upload, which should drop EXIF GPS, and the Android photo picker hides location without `ACCESS_MEDIA_LOCATION`. No test proves it. Check an uploaded photo from a GPS-tagged original on the physical device (#345) before answering "Precise location: No" with confidence.
 6. **The privacy policy says device info is collected "for debugging".** `content.ts` line 36 says device model, OS and app version are collected. The app sends only a fixed device label ("Android app", `app/(auth)/otp.tsx`, line 121) and the HTTP user agent, stored on `Session`. This over-states rather than under-states, so it is not a Play risk, but the policy and the form should agree.
 

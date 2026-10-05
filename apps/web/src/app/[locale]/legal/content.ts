@@ -64,7 +64,7 @@ Future collections (if features ship): video uploads, garage vehicle data, blog 
       },
       {
         title: "6. Data retention & account deletion",
-        body: `Your data is retained while your account is active.
+        body: `Your data is retained while your account is active. Records of sign-in codes (the phone number or email address, and the IP address of the request) are deleted after 30 days.
 
 If you are signed in, you can delete your account in the app: open Cabinet, tap your profile, then tap Delete account at the bottom of the Profile screen. On the public [account deletion page](/en/account/delete) on our website, enter a phone number or email address on the account and confirm the request with a code sent to it.
 
@@ -72,7 +72,7 @@ When you request account deletion:
 - Your account enters a **30-day grace period**.
 - During this period, your listings are archived, all sessions are revoked, and your phone number and email address remain reserved to you.
 - You may recover your account at any time during the grace period by signing in again with either your phone number or your email address. Recovery reactivates your account and republishes archived listings.
-- After 30 days, your personal information is removed: your phone number and email address are freed, display name and avatar are cleared.
+- After 30 days, your personal information is removed: your phone number and email address are freed, display name and avatar are cleared, the contact phone is removed from your listings, and records of the sign-in codes sent to you are deleted.
 - Your listings, messages, and conversation history are retained with "Deleted user" attribution to preserve counterparties' records and audit trails.
 - Moderation reports and audit logs remain intact.`,
       },
@@ -147,7 +147,7 @@ When you request account deletion:
       },
       {
         title: "6. Хранение данных и удаление аккаунта",
-        body: `Данные хранятся, пока аккаунт активен.
+        body: `Данные хранятся, пока аккаунт активен. Записи о кодах входа (номер телефона или адрес почты и IP-адрес запроса) удаляются через 30 дней.
 
 Если вы вошли в аккаунт, удалить его можно в приложении: откройте «Кабинет», нажмите на свой профиль и выберите «Удалить аккаунт» внизу экрана «Профиль». На общедоступной [странице удаления аккаунта](/ru/account/delete) на нашем сайте укажите номер телефона или адрес почты из аккаунта и подтвердите запрос кодом, отправленным на выбранный способ входа.
 
@@ -155,7 +155,7 @@ When you request account deletion:
 - Аккаунт переходит в **30-дневный льготный период**.
 - В этот период объявления архивируются, все сессии завершаются, номер телефона и адрес почты остаются зарезервированными за вами.
 - Вы можете восстановить аккаунт в любой момент, войдя снова по номеру телефона или по адресу почты. Восстановление активирует аккаунт и возвращает архивные объявления.
-- Через 30 дней персональные данные удаляются: номер телефона и адрес почты освобождаются, имя и аватар очищаются.
+- Через 30 дней персональные данные удаляются: номер телефона и адрес почты освобождаются, имя и аватар очищаются, контактный телефон удаляется из объявлений, а записи об отправленных вам кодах входа удаляются.
 - Объявления, сообщения и переписка сохраняются с пометкой «Удалённый пользователь» — чтобы сохранить историю для собеседников и аудита.
 - Жалобы и журналы аудита остаются нетронутыми.`,
       },
@@ -230,7 +230,7 @@ When you request account deletion:
       },
       {
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
-        body: `Maglumatlar akkaunt işjeň bolança saklanýar.
+        body: `Maglumatlar akkaunt işjeň bolança saklanýar. Giriş kodlarynyň ýazgylary (telefon belgisi ýa-da e-poçta salgysy we haýyşyň IP salgysy) 30 günden soň pozulýar.
 
 Akkaunta giren bolsaňyz, ony programmada pozup bilersiňiz: «Kabinet» bölümini açyň, profiliňize basyň we «Profil» ekranynyň aşagyndaky «Akkaunty poz» düwmesine basyň. Saýtymyzdaky köpçülige açyk [akkaunt pozmak sahypasynda](/tk/account/delete) akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň we şol giriş usulyna iberilen kod bilen haýyşy tassyklaň.
 
@@ -238,7 +238,7 @@ Akkaunty pozan wagtyňyz:
 - **30 günlük lýgotly döwr** başlaýar.
 - Bu döwürde bildirişler arhiwlenýär, ähli sessiýalar gutarýar, telefon belgiňiz we e-poçta salgyňyz size bellenen galýar.
 - Bu döwürde islän wagtyňyz telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bilersiňiz. Dikeltme işjeň edýär we arhiwlenen bildirişleri yzyna getirýär.
-- 30 günden soň şahsy maglumatlar aýrylýar: telefon belgisi we e-poçta salgysy boşadylýar, ady we awatar arassalanýar.
+- 30 günden soň şahsy maglumatlar aýrylýar: telefon belgisi we e-poçta salgysy boşadylýar, ady we awatar arassalanýar, bildirişlerden habarlaşma belgisi aýrylýar we size iberilen giriş kodlarynyň ýazgylary pozulýar.
 - Bildirişler, habarlar we çat taryhy «Pozulan ulanyjy» diýip saklanýar — tarapyňyz üçin ýazgylary we audit ýollaryny goraşmak üçin.
 - Şikaýatlar we audit gündelikleri galyberýär.`,
       },
