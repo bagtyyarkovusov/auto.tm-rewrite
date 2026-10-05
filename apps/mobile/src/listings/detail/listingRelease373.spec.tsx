@@ -383,16 +383,18 @@ describe("issue 373 screen controls", () => {
         fireEvent.press(screen.getByText("Confirm"));
       });
       expect(state.post).toHaveBeenCalledTimes(1);
-      // React Query publishes pending state on a timer, so wait for it.
-      await screen.findByRole("button", { name: started, disabled: true });
-      for (const name of [
-        "Edit",
-        "Mark as sold",
-        "Remove from sale",
-        "Delete",
-      ])
+      // React Query publishes pending state on a timer, so wait for it on a
+      // control that is always in the bar. Waiting on the started control
+      // raced the overflow closing when it was Remove from sale.
+      await screen.findByRole("button", { name: "Edit", disabled: true });
+      expect(
+        screen.getByRole("button", { name: "Mark as sold", disabled: true }),
+      ).toBeTruthy();
+      if (!screen.queryByRole("button", { name: "Delete" }))
+        fireEvent.press(screen.getByRole("button", { name: "More options" }));
+      for (const name of ["Remove from sale", "Delete"])
         expect(
-          screen.getByRole("button", { name, disabled: true }),
+          await screen.findByRole("button", { name, disabled: true }),
         ).toBeTruthy();
       await act(async () => finish({}));
     },
