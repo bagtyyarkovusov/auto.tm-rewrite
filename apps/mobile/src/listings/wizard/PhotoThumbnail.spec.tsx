@@ -9,13 +9,15 @@ import { PhotoThumbnail } from "./PhotoThumbnail";
 
 const props = () => ({ photo: { photoId: "photo-a", sortOrder: 0, state: "attached", retryCount: 0,
   localUri: "file:///photo-a.jpg" } satisfies StagedPhoto, index: 0, total: 2,
-  onRetry: vi.fn(), onRemove: vi.fn(), onMoveUp: vi.fn(), onMoveDown: vi.fn(),
-  onSetAsCover: vi.fn(), onDragStart: vi.fn(), onDragMove: vi.fn(), onDragEnd: vi.fn() });
+  onRemove: vi.fn(), onOpenActions: vi.fn(),
+  onDragStart: vi.fn(), onDragMove: vi.fn(), onDragEnd: vi.fn() });
 
 describe("PhotoThumbnail", () => {
   it("supplies square dimensions and a cover label for the first tile", () => {
     const screen = renderMobile(<PhotoThumbnail {...props()} />);
-    expect(screen.getByText("Cover")).toBeTruthy();
+    // The badge is for the eye; a screen reader gets "Cover" in the tile's own label.
+    expect(screen.getByText("Cover", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByLabelText("Photo 1 of 2, Cover, Uploaded")).toBeTruthy();
     const tile = screen.UNSAFE_getAllByType(View).find((node) => StyleSheet.flatten(node.props.style)?.width === 111);
     expect(StyleSheet.flatten(tile?.props.style)).toMatchObject({ width: 111, height: 111 });
     expect(screen.UNSAFE_getByType(Image).props.source).toEqual({ uri: "file:///photo-a.jpg" });
@@ -23,7 +25,7 @@ describe("PhotoThumbnail", () => {
   it("removes the photo by its id", () => {
     const callbacks = props();
     const screen = renderMobile(<PhotoThumbnail {...callbacks} />);
-    fireEvent.press(screen.getByLabelText("Remove"));
+    fireEvent.press(screen.getByLabelText("Remove: Photo 1 of 2"));
     expect(callbacks.onRemove).toHaveBeenCalledWith("photo-a");
   });
   it("forwards long-press, move and end coordinates", () => {
@@ -44,10 +46,19 @@ describe("PhotoThumbnail", () => {
     expect(callbacks.onDragMove).toHaveBeenCalledWith(40, 50);
     expect(callbacks.onDragEnd).toHaveBeenCalledOnce();
   });
-  it("offers retry only for retryable failed uploads", () => {
+  it("opens the photo's actions when the tile is tapped", () => {
     const callbacks = props();
-    const screen = renderMobile(<PhotoThumbnail {...callbacks} photo={{ ...callbacks.photo, state: "failed", error: { code: "NETWORK_ERROR", message: "Offline", retryable: true } }} />);
-    fireEvent.press(screen.getByText("Retry"));
-    expect(callbacks.onRetry).toHaveBeenCalledWith("photo-a");
+    const screen = renderMobile(<PhotoThumbnail {...callbacks} />);
+    fireEvent.press(screen.getByLabelText("Photo 1 of 2, Cover, Uploaded"));
+    expect(callbacks.onOpenActions).toHaveBeenCalledWith("photo-a");
+  });
+  it("opens the actions for a failed photo too, instead of retrying on the spot", () => {
+    const callbacks = props();
+    const failed = { ...callbacks.photo, state: "failed" as const, error: { code: "NETWORK_ERROR" as const, message: "Offline", retryable: true } };
+    const screen = renderMobile(<PhotoThumbnail {...callbacks} photo={failed} />);
+    // The overlay is for the eye and never takes the tap; the label above carries the state.
+    expect(screen.getByText("Offline", { includeHiddenElements: true })).toBeTruthy();
+    fireEvent.press(screen.getByLabelText("Photo 1 of 2, Cover, Failed"));
+    expect(callbacks.onOpenActions).toHaveBeenCalledWith("photo-a");
   });
 });
