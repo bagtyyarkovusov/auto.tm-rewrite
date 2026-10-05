@@ -211,6 +211,7 @@ describe("ConversationListItem", () => {
 
     const buyer = renderRow(summary({ myRole: "seller", peer: peer(BUYER, { displayName: null, deleted: true }) }));
     expect(buyer.getByText("Deleted user")).toBeTruthy();
+    expect(buyer.queryByText("Buyer")).toBeNull();
     expect(personIcons(buyer)).toHaveLength(1);
     expect(hosts(buyer, "Svg")).toHaveLength(0);
   });

@@ -1,5 +1,7 @@
 import "reflect-metadata";
 
+import { inspect } from "node:util";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BadRequestException,
@@ -163,7 +165,8 @@ describe("MeController PATCH /api/v1/me", () => {
       identityCheck.suspend("user-1");
       await controller.update(requestFor("user-1"), { displayName: NAME }).catch(() => undefined);
 
-      expect(JSON.stringify(calls)).not.toContain("Secretname");
+      // `inspect` keeps an Error's message, which `JSON.stringify` drops.
+      expect(calls.flat().map((arg) => inspect(arg)).join("\n")).not.toContain("Secretname");
     });
   });
 

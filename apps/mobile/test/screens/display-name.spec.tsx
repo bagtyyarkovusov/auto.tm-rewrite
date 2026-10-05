@@ -110,6 +110,9 @@ describe("Opening the name editor from Profile", () => {
     const view = render(<ProfileScreen />);
     const name = await view.findByRole("button", { name: "Edit name" });
     expect(view.getByText("Driver 4821")).toBeTruthy();
+    // A value, not a hint: screen readers can switch hints off.
+    expect(name.props.accessibilityValue).toEqual({ text: "Driver 4821" });
+    expect(name.props.accessibilityHint).toBeUndefined();
     expect(classOf(name)).toContain("min-h-11");
     fireEvent.press(name);
     expect(routerMock.push).toHaveBeenCalledWith("/account/display-name");
