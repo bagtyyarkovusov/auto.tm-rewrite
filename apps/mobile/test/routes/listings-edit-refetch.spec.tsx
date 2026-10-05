@@ -33,6 +33,7 @@ vi.mock("../../src/auth/session", () => ({
   })),
   storeAuthSession: vi.fn(() => Promise.resolve()),
   clearAuthSession: vi.fn(() => Promise.resolve()),
+  subscribeAuthSession: vi.fn(() => () => {}),
 }));
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
@@ -86,6 +87,8 @@ function createListingApi() {
   const detail = () => ({ id: fixture.id, ...fields, media: media() });
 
   server.use(
+    // The Contact step picker reads the confirmed numbers; this seller has none.
+    http.get("*/me/contact-phones", () => HttpResponse.json({ items: [] })),
     http.patch("*/listings/:id", async ({ request }) => {
       const patch = (await request.json()) as Record<string, unknown>;
       requests.edit.push(patch);

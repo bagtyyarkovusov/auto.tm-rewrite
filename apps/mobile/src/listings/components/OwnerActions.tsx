@@ -15,11 +15,17 @@ import { useDeleteListing } from "../../api/listings/useDeleteListing";
 import { useMarkSold } from "../../api/listings/useMarkSold";
 import { useRepublishListing } from "../../api/listings/useRepublishListing";
 import {
+  isContactPhoneNotConfirmedError,
+  isContactPhoneRequiredError,
+} from "../wizard/contactPhoneError";
+import {
   OWNER_ACTION_CONFIRM,
   OWNER_ACTION_LABEL,
   ownerListingActions,
   type ConfirmedOwnerAction,
 } from "../ownerListingActions";
+
+import { RelistContactPhoneSheet } from "./RelistContactPhoneSheet";
 
 import {
   AlertDialog,
@@ -58,6 +64,10 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
   const [confirmAction, setConfirmAction] = useState<ListingConfirmAction | null>(
     null,
   );
+  // A relist refused over the contact phone (ADR-0081): NOT_CONFIRMED opens
+  // the confirm sheet; REQUIRED asks for a phone through Edit.
+  const [relistPhoneSheet, setRelistPhoneSheet] = useState<string | null>(null);
+  const [relistPhoneRequired, setRelistPhoneRequired] = useState(false);
 
   const markSold = useMarkSold();
   const archive = useArchiveListing();
@@ -78,6 +88,9 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
 
   const handleConfirm = () => {
     if (!confirmAction) return;
+    // The add-a-phone hint belongs to the relist that was refused; it goes
+    // when the next action starts.
+    setRelistPhoneRequired(false);
 
     switch (confirmAction) {
       case "markSold":
@@ -95,7 +108,16 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
       case "relist":
         republish.mutate(listingId, {
           onSuccess: () => setConfirmAction(null),
-          onError: () => setConfirmAction(null),
+          onError: (error) => {
+            setConfirmAction(null);
+            if (isContactPhoneNotConfirmedError(error)) {
+              republish.reset();
+              setRelistPhoneSheet(listingId);
+            } else if (isContactPhoneRequiredError(error)) {
+              republish.reset();
+              setRelistPhoneRequired(true);
+            }
+          },
         });
         break;
       case "delete":
@@ -174,14 +196,26 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
       )}
 
       {/* Mutation error banner */}
-      {(markSold.isError ||
+      {(relistPhoneRequired ||
+        markSold.isError ||
         archive.isError ||
         republish.isError ||
         deleteListing.isError) && (
         <View className="rounded-md bg-destructive/10 px-3 py-2">
-          <Text className="text-sm text-destructive">{t("actionFailed")}</Text>
+          <Text className="text-sm text-destructive">
+            {relistPhoneRequired ? t("relistPhoneRequired") : t("actionFailed")}
+          </Text>
         </View>
       )}
+
+      <RelistContactPhoneSheet
+        open={relistPhoneSheet !== null}
+        listingId={relistPhoneSheet}
+        returnPathname={`/(public)/listings/${relistPhoneSheet ?? listingId}`}
+        onOpenChange={(open) => {
+          if (!open) setRelistPhoneSheet(null);
+        }}
+      />
 
       {/* Confirmation dialog */}
       <AlertDialog open={confirmAction !== null} onOpenChange={closeDialog}>

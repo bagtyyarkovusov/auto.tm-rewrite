@@ -10,9 +10,9 @@ export type PublishFailure = "offline" | "rateMissing" | "server";
  * Sorts a publish error into the three failures Check and publish explains. The
  * server's own message is never shown.
  *
- * Seam for the contact phone (#593, ADR-0056): `CONTACT_PHONE_NOT_CONFIRMED` and
- * `CONTACT_PHONE_REQUIRED` are not sorted here. The route is to catch them before
- * calling this and send the seller to Contact; until then they read as "server".
+ * The contact phone (#593, ADR-0056): `CONTACT_PHONE_NOT_CONFIRMED` and
+ * `CONTACT_PHONE_REQUIRED` are not sorted here. The route catches them before
+ * calling this and sends the seller to Contact, so they never reach Check.
  */
 export function publishFailureOf(error: unknown): PublishFailure {
   if (error instanceof ApiError) {

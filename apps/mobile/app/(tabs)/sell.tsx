@@ -10,6 +10,7 @@ import { ListingsSchemas, type WizardSchemas } from "@auto-tm/contracts";
 import { ApiError } from "../../src/api/client";
 import { useCreateDraft } from "../../src/api/listings/useCreateDraft";
 import { useDiscardDraft } from "../../src/api/listings/useDiscardDraft";
+import { useMyContactPhones } from "../../src/api/listings/useMyContactPhones";
 import { useMyDrafts } from "../../src/api/listings/useMyDrafts";
 import { usePublishDraft } from "../../src/api/listings/usePublishDraft";
 import { useBrands } from "../../src/api/catalog/useBrands";
@@ -27,6 +28,9 @@ import { LeaveUnsavedDialog } from "../../src/listings/wizard/LeaveUnsavedDialog
 import { WizardLayout } from "../../src/listings/wizard/WizardLayout";
 import { useWizardAutosave } from "../../src/listings/wizard/useWizardAutosave";
 import { useAuth } from "../../src/auth/useAuth";
+import { useViewer } from "../../src/auth/useViewer";
+import { isContactPhonePublishError } from "../../src/listings/wizard/contactPhoneError";
+import { resolveContactPhoneSelection } from "../../src/listings/wizard/contactPhoneSelection";
 import {
   translateWizardError,
   translateWizardFieldErrors,
@@ -91,14 +95,23 @@ function withinCloseWait<T>(work: Promise<T>, onTimeout: T): Promise<T> {
 export default function SellScreen() {
   const { t } = useTranslation();
   // `phone` follows the live auth session, so signing in from this tab's own
-  // sign-in sheet fills the Step 7 contact placeholder without a remount.
-  const { isAuthenticated, phone: defaultPhone } = useAuth();
+  // sign-in sheet preselects the Contact step's account phone (ADR-0081).
+  const { isAuthenticated, phone: accountPhone } = useAuth();
+  const viewer = useViewer();
+  const { data: contactPhonesData } = useMyContactPhones({
+    userId: viewer?.userId ?? null,
+    enabled: !!isAuthenticated,
+  });
   const { show } = useToast();
   const navigation = useContext(NavigationContext);
   const isFocused = useIsFocused();
-  const params = useLocalSearchParams<{ resumeDraftId?: string }>();
+  const params = useLocalSearchParams<{
+    resumeDraftId?: string;
+    confirmedContactPhone?: string;
+  }>();
   const [showSignIn, setShowSignIn] = useState(false);
   const [draftLimitOpen, setDraftLimitOpen] = useState(false);
+  const [publishPhoneError, setPublishPhoneError] = useState(false);
   const [unsavedDialogOpen, setUnsavedDialogOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const closingRef = useRef(false);
@@ -317,6 +330,16 @@ export default function SellScreen() {
     }
   }, [params.resumeDraftId, draftsData, machineState.status, handleContinueDraft, show]);
 
+  // The contact-phone code flow returns here with the confirmed number; put it
+  // in the draft and clear the param so a rerender does not reapply it.
+  useEffect(() => {
+    const confirmed = params.confirmedContactPhone;
+    if (!confirmed) return;
+    dispatch({ type: "UPDATE_FIELDS", updates: { contactPhone: confirmed } });
+    setPublishPhoneError(false);
+    router.setParams({ confirmedContactPhone: undefined });
+  }, [params.confirmedContactPhone]);
+
   const handleBack = useCallback(() => {
     dispatch({ type: "BACK" });
     // Force save on navigation, with the step it moves to: the payload in hand
@@ -332,6 +355,28 @@ export default function SellScreen() {
 
   const handleContinue = useCallback(() => {
     if (discardDraft.isPending || publishDraft.isPending) return;
+    // The Contact step's Continue stays tappable so its selection error can
+    // appear (same pattern as the specs step): a number whose 7-day window
+    // ended, or no number at all, must be confirmed or changed first. A
+    // number the app cannot judge yet (`pending`: the confirmed list is loading
+    // or failed) goes on, unless a publish has already refused it.
+    if (machineState.currentStep === "contact") {
+      const selection = resolveContactPhoneSelection({
+        phone: machineState.payload.contactPhone,
+        accountPhone,
+        confirmedPhones: contactPhonesData?.items,
+      });
+      if (
+        selection.kind === "stale" ||
+        selection.kind === "none" ||
+        (selection.kind === "pending" && publishPhoneError)
+      ) {
+        setAttemptedSteps((current) =>
+          current.contact ? current : { ...current, contact: true },
+        );
+        return;
+      }
+    }
     if (!ctx.canContinue) {
       setAttemptedSteps((current) =>
         current[machineState.currentStep]
@@ -352,7 +397,7 @@ export default function SellScreen() {
       validatedSteps: moved.validatedSteps,
     };
     void forceSave(fullPayload);
-  }, [ctx.canContinue, ctx.editDetourActive, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending]);
+  }, [ctx.canContinue, ctx.editDetourActive, machineState, photosToSave, forceSave, discardDraft.isPending, publishDraft.isPending, accountPhone, contactPhonesData, publishPhoneError]);
 
   const handlePublish = useCallback(async () => {
     // One publish at a time: a second tap lands before the button re-renders disabled.
@@ -389,8 +434,17 @@ export default function SellScreen() {
       newDraftIdRef.current = null;
       dispatch({ type: "DISCARD" });
     } catch (err) {
+      // ADR-0081: the contact phone needs a confirmation. Nothing was published
+      // and the draft is saved, so this is not a publish failure to word on
+      // Check: the seller goes to the Contact step, and Done brings them back.
+      if (isContactPhonePublishError(err)) {
+        dispatch({ type: "PUBLISH_ABORTED" });
+        dispatch({ type: "CHANGE_FROM_REVIEW", step: "contact" });
+        setPublishPhoneError(true);
+        return;
+      }
       // The wizard stays on Check with the draft saved; the error is worded above
-      // Publish. Seam for #593: a contact phone rejection goes to Contact from here.
+      // Publish.
       dispatch({ type: "PUBLISH_ERROR", error: publishFailureOf(err) });
     } finally {
       publishingRef.current = false;
@@ -504,6 +558,7 @@ export default function SellScreen() {
 
   const handlePayloadChange = useCallback(
     (updates: Partial<WizardSchemas.WizardDraftPayload>) => {
+      if (updates.contactPhone !== undefined) setPublishPhoneError(false);
       dispatch({ type: "UPDATE_FIELDS", updates });
     },
     [],
@@ -513,6 +568,22 @@ export default function SellScreen() {
   if (machineState.status !== "idle" && machineState.draftId) {
     const currentStep = ctx.state.currentStep;
     const fieldErrors = translateWizardFieldErrors(t, ctx.fieldErrors);
+    const contactSelection =
+      currentStep === "contact"
+        ? resolveContactPhoneSelection({
+            phone: machineState.payload.contactPhone,
+            accountPhone,
+            confirmedPhones: contactPhonesData?.items,
+          })
+        : null;
+    const contactSelectionError =
+      attemptedSteps.contact &&
+      (contactSelection?.kind === "stale" ||
+        (contactSelection?.kind === "pending" && publishPhoneError))
+        ? t("confirmAgainOrChoose")
+        : attemptedSteps.contact && contactSelection?.kind === "none"
+          ? t("chooseOrConfirmContactPhone")
+          : null;
 
     // Compute upload status counts for chip + publishGate reason
     const uploadStatus = countUploads(uploadQueue.photos);
@@ -558,7 +629,7 @@ export default function SellScreen() {
         mode={machineState.mode}
         editDetourActive={ctx.editDetourActive}
         canContinue={
-          (ctx.canContinue || currentStep === "specs") &&
+          (ctx.canContinue || currentStep === "specs" || currentStep === "contact") &&
           !discardDraft.isPending && !publishDraft.isPending
         }
         canPublish={ctx.canPublish && queueReady && uploadQueue.publishGate.canPublish}
@@ -629,7 +700,26 @@ export default function SellScreen() {
           <Step7DescContact
             payload={machineState.payload}
             onChange={handlePayloadChange}
-            defaultPhone={defaultPhone}
+            accountPhone={accountPhone}
+            confirmedPhones={contactPhonesData?.items}
+            onAnotherNumber={() =>
+              router.push({
+                pathname: "/listings/contact-phone",
+                params: { returnPathname: "/(tabs)/sell" },
+              })
+            }
+            onConfirmExpired={(phone) =>
+              router.push({
+                pathname: "/listings/contact-phone",
+                params: {
+                  phone,
+                  reconfirm: "1",
+                  returnPathname: "/(tabs)/sell",
+                },
+              })
+            }
+            selectionError={contactSelectionError}
+            publishPhoneError={publishPhoneError}
           />
         )}
         {currentStep === "review" && (

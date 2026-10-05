@@ -59,6 +59,11 @@ export const queryKeys = {
       [...queryKeys.listings.myCountsAll(), userId] as const,
     /** Shared by every owner lifecycle mutation so pending state spans screens. */
     lifecycleMutation: () => ["listing-lifecycle"] as const,
+    myContactPhonesAll: () =>
+      [...queryKeys.listings.all(), "my-contact-phones"] as const,
+    /** Per User, so a cached list never shows after another User signs in. */
+    myContactPhones: (userId: string | null) =>
+      [...queryKeys.listings.myContactPhonesAll(), userId] as const,
   },
 
   uploads: {

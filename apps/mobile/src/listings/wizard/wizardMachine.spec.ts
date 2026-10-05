@@ -505,6 +505,34 @@ describe("PUBLISH lifecycle", () => {
     expect(state.status).toBe("publishError");
     expect(state.publishError).toBe("server");
   });
+
+  it("a publish refused for the contact phone opens Contact with no publish error, and Done returns to Check (#593)", () => {
+    let state = wizardMachineReducer(createInitialState(), {
+      type: "INIT",
+      draftId: "draft-1",
+      payload: completePayload,
+    });
+    expect(state.currentStep).toBe("review");
+
+    // The route's sequence for CONTACT_PHONE_*: it is not a PublishFailure.
+    state = wizardMachineReducer(state, { type: "PUBLISH_START" });
+    state = wizardMachineReducer(state, { type: "PUBLISH_ABORTED" });
+    const contact = wizardMachineReducer(state, {
+      type: "CHANGE_FROM_REVIEW",
+      step: "contact",
+    });
+
+    expect(contact.status).toBe("step");
+    expect(contact.currentStep).toBe("contact");
+    expect(contact.publishError).toBeNull();
+    expect(contact.changingFromReview).toBe(true);
+    expect(contact.draftId).toBe("draft-1");
+    expect(contact.payload.brandId).toBe(completePayload.brandId);
+
+    const back = wizardMachineReducer(contact, { type: "RETURN_TO_REVIEW" });
+    expect(back.currentStep).toBe("review");
+    expect(buildMachineContext(back).canPublish).toBe(true);
+  });
 });
 
 describe("DISCARD", () => {

@@ -30,6 +30,11 @@ import { useSafeBack } from "../../src/navigation/useSafeBack";
 import { OwnerListingCard } from "../../src/listings/components/OwnerListingCard";
 import { DraftCard } from "../../src/listings/components/DraftCard";
 import { OwnerActionSheet } from "../../src/listings/components/OwnerActionSheet";
+import { RelistContactPhoneSheet } from "../../src/listings/components/RelistContactPhoneSheet";
+import {
+  isContactPhoneNotConfirmedError,
+  isContactPhoneRequiredError,
+} from "../../src/listings/wizard/contactPhoneError";
 import {
   DRAFT_ACTIONS,
   OWNER_ACTION_CONFIRM,
@@ -221,6 +226,9 @@ export default function ManageListingsScreen() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
   const [confirm, setConfirm] = useState<{ action: ConfirmedOwnerAction; id: string } | null>(null);
+  // A relist refused over the contact phone (ADR-0081): NOT_CONFIRMED opens
+  // the confirm sheet for the Listing's own number.
+  const [relistPhoneSheet, setRelistPhoneSheet] = useState<string | null>(null);
   const goBack = useSafeBack("/(tabs)/sell");
 
   const listingsQuery = useInfiniteMyListings({
@@ -327,7 +335,21 @@ export default function ManageListingsScreen() {
         archive.mutate(id, callbacks);
         break;
       case "relist":
-        republish.mutate(id, callbacks);
+        republish.mutate(id, {
+          onSuccess: callbacks.onSuccess,
+          onError: (error) => {
+            setConfirm(null);
+            if (isContactPhoneNotConfirmedError(error)) {
+              setRelistPhoneSheet(id);
+              return;
+            }
+            if (isContactPhoneRequiredError(error)) {
+              toast.show({ title: t("relistPhoneRequired"), variant: "destructive" });
+              return;
+            }
+            toast.show({ title: t("ownerActionFailed"), variant: "destructive" });
+          },
+        });
         break;
       case "delete":
         deleteListing.mutate(id, callbacks);
@@ -536,6 +558,18 @@ export default function ManageListingsScreen() {
         onOpenChange={(open) => {
           if (!open) setSheet(null);
         }}
+      />
+
+      <RelistContactPhoneSheet
+        open={relistPhoneSheet !== null}
+        listingId={relistPhoneSheet}
+        returnPathname="/listings/manage"
+        onOpenChange={(open) => {
+          if (!open) setRelistPhoneSheet(null);
+        }}
+        onRelisted={() =>
+          toast.show({ title: t("ownerDoneRelist"), variant: "success" })
+        }
       />
 
       <AlertDialog open={confirm !== null} onOpenChange={closeConfirm}>

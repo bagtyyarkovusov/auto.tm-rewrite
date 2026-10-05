@@ -4,11 +4,11 @@ import { ListingsSchemas } from "@auto-tm/contracts";
 import { apiClient } from "../client";
 import { queryKeys } from "../queryKeys";
 
-export function useListingDetail(id: string) {
+export function useListingDetail(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.listings.detail(id),
     queryFn: () =>
       apiClient.get(`/listings/${id}`, ListingsSchemas.ListingDetailSchema),
-    enabled: !!id,
+    enabled: !!id && (options?.enabled ?? true),
   });
 }

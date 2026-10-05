@@ -5,6 +5,9 @@ import { useTranslation } from "react-i18next";
 import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 
 import { useListingDetail } from "../../../src/api/listings/useListingDetail";
+import { useMyContactPhones } from "../../../src/api/listings/useMyContactPhones";
+import { useAuth } from "../../../src/auth/useAuth";
+import { useViewer } from "../../../src/auth/useViewer";
 import { useUploadQueue } from "../../../src/listings/uploadStaging/useUploadQueue";
 import { deleteDraftDir } from "../../../src/listings/uploadStaging/stagingDir";
 import { countUploads } from "../../../src/listings/uploadStaging/uploadCounts";
@@ -21,6 +24,8 @@ import Step6Location from "../../../src/listings/wizard/Step6Location";
 import Step7DescContact from "../../../src/listings/wizard/Step7DescContact";
 import Step8Review from "../../../src/listings/wizard/Step8Review";
 import { WizardLayout } from "../../../src/listings/wizard/WizardLayout";
+import { isContactPhonePublishError } from "../../../src/listings/wizard/contactPhoneError";
+import { resolveContactPhoneSelection } from "../../../src/listings/wizard/contactPhoneSelection";
 import {
   buildMachineContext,
   createInitialState,
@@ -130,6 +135,21 @@ function EditListingSession({ listingId }: { listingId: string }) {
   const { t } = useTranslation();
   const { show } = useToast();
 
+  const { confirmedContactPhone } = useLocalSearchParams<{
+    confirmedContactPhone?: string;
+  }>();
+  // The picker's rows (ADR-0081): the sign-in phone and the numbers still
+  // inside their 7 days. The Listing's own number is always selectable.
+  const { isAuthenticated, phone: accountPhone } = useAuth();
+  const viewer = useViewer();
+  const { data: contactPhonesData } = useMyContactPhones({
+    userId: viewer?.userId ?? null,
+    enabled: !!isAuthenticated,
+  });
+  // The server refused the changed number; shown on the Contact step until
+  // the seller picks or confirms one.
+  const [contactPhoneRefused, setContactPhoneRefused] = useState(false);
+
   const { data: listing } = useListingDetail(listingId);
   const stagingKey = `edit-${listingId}`;
   const [machineState, dispatch] = useReducer(
@@ -186,10 +206,34 @@ function EditListingSession({ listingId }: { listingId: string }) {
     });
   }, [uploadQueue.photos]);
 
+  // The contact-phone code flow returns here with the confirmed number; put it
+  // in the edit and clear the param so a rerender does not reapply it.
+  useEffect(() => {
+    if (!confirmedContactPhone || !sessionListing) return;
+    dispatch({
+      type: "UPDATE_FIELDS",
+      updates: { contactPhone: confirmedContactPhone },
+    });
+    setContactPhoneRefused(false);
+    router.setParams({ confirmedContactPhone: undefined });
+  }, [confirmedContactPhone, sessionListing]);
+
   const ctx = buildMachineContext(machineState);
+
+  const contactSelection = resolveContactPhoneSelection({
+    phone: machineState.payload.contactPhone,
+    accountPhone,
+    currentListingPhone: sessionListing?.contactPhone ?? null,
+    confirmedPhones: contactPhonesData?.items,
+  });
+  // A number that is neither the Listing's own, the sign-in phone, nor inside
+  // its 7 days needs a code before the edit can use it.
+  const contactNeedsCode =
+    contactSelection.kind === "stale" || contactSelection.kind === "none";
 
   const handlePayloadChange = useCallback(
     (updates: Partial<WizardSchemas.WizardDraftPayload>) => {
+      if (updates.contactPhone !== undefined) setContactPhoneRefused(false);
       dispatch({ type: "UPDATE_FIELDS", updates });
     },
     [],
@@ -197,7 +241,10 @@ function EditListingSession({ listingId }: { listingId: string }) {
 
   const handleReturnToReview = useCallback(() => {
     if (saveEdit.isPending) return;
-    if (!ctx.canContinue) {
+    if (
+      (machineState.currentStep === "contact" && contactNeedsCode) ||
+      !ctx.canContinue
+    ) {
       setAttemptedSteps((current) =>
         current[machineState.currentStep]
           ? current
@@ -206,7 +253,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
       return;
     }
     dispatch({ type: "GO_TO_STEP", step: "review" });
-  }, [ctx.canContinue, machineState.currentStep, saveEdit.isPending]);
+  }, [ctx.canContinue, contactNeedsCode, machineState.currentStep, saveEdit.isPending]);
 
   const finishSave = useCallback(
     async (run: () => Promise<boolean>) => {
@@ -219,8 +266,15 @@ function EditListingSession({ listingId }: { listingId: string }) {
         show({ title: t("changesSaved"), variant: "success" });
         // Navigate to public detail; may 404 until downstream route ships
         router.replace(`/(public)/listings/${listingId}`);
-      } catch {
-        // Error state surfaced by saveEdit.error + per-op banner below
+      } catch (err) {
+        // ADR-0081: the changed contact phone needs a confirmation. Nothing
+        // was saved; send the seller to the Contact step to confirm or change it.
+        // `cause` is the API error the failed operation threw (EditSessionError).
+        if (err instanceof Error && isContactPhonePublishError(err.cause)) {
+          setContactPhoneRefused(true);
+          dispatch({ type: "GO_TO_STEP", step: "contact" });
+        }
+        // Any other failure: saveEdit.error and the per-op banner below.
       }
     },
     [show, listingId, stagingKey],
@@ -274,6 +328,15 @@ function EditListingSession({ listingId }: { listingId: string }) {
         ? translateWizardError(t, ctx.stepErrors[0])
         : undefined;
 
+  const contactSelectionError =
+    contactPhoneRefused ||
+    (attemptedSteps.contact && contactSelection.kind === "stale")
+      ? t("confirmAgainOrChoose")
+      : attemptedSteps.contact && contactSelection.kind === "none"
+        ? t("chooseOrConfirmContactPhone")
+        : null;
+  const contactPhoneReturn = `/listings/${listingId}/edit`;
+
   const saveStatus: "idle" | "saving" | "saved" | "error" =
     saveEdit.isPending ? "saving" : saveEdit.status === "failed" ? "error" : "idle";
 
@@ -290,7 +353,10 @@ function EditListingSession({ listingId }: { listingId: string }) {
       onDiscard={handleDiscard}
       mode={machineState.mode}
       editDetourActive={ctx.editDetourActive}
-      canContinue={(ctx.canContinue || currentStep === "specs") && !saveEdit.isPending}
+      canContinue={
+        (ctx.canContinue || currentStep === "specs" || currentStep === "contact") &&
+        !saveEdit.isPending
+      }
       canPublish={uploadQueue.publishGate.canPublish && !saveEdit.isPending}
       canGoBack={ctx.canGoBack}
       isLastStep={ctx.isLastStep}
@@ -355,7 +421,22 @@ function EditListingSession({ listingId }: { listingId: string }) {
         <Step7DescContact
           payload={machineState.payload}
           onChange={handlePayloadChange}
-          defaultPhone={sessionListing.contactPhone ?? ""}
+          accountPhone={accountPhone || null}
+          confirmedPhones={contactPhonesData?.items}
+          currentListingPhone={sessionListing.contactPhone ?? null}
+          onAnotherNumber={() =>
+            router.push({
+              pathname: "/listings/contact-phone",
+              params: { returnPathname: contactPhoneReturn },
+            })
+          }
+          onConfirmExpired={(phone) =>
+            router.push({
+              pathname: "/listings/contact-phone",
+              params: { phone, reconfirm: "1", returnPathname: contactPhoneReturn },
+            })
+          }
+          selectionError={contactSelectionError}
         />
       )}
       {currentStep === "review" && (

@@ -80,7 +80,11 @@ export type WizardMachineAction =
   /** Create flow: Done on a step opened from Check and publish. */
   | { type: "RETURN_TO_REVIEW" }
   | { type: "PUBLISH_START" }
-  /** The save before publishing failed, so nothing was published: back to Check. */
+  /**
+   * Nothing was published and there is no publish failure to word: back to Check.
+   * The save before publishing failed, or the server asked for the contact phone
+   * to be confirmed (#593), which the route follows with CHANGE_FROM_REVIEW.
+   */
   | { type: "PUBLISH_ABORTED" }
   | { type: "PUBLISH_SUCCESS"; listingId: string }
   | { type: "PUBLISH_ERROR"; error: PublishFailure }
@@ -425,7 +429,7 @@ export function wizardMachineReducer(
     }
 
     case "PUBLISH_ABORTED": {
-      // The save's own failure says what went wrong; there is no publish error.
+      // The save status or the Contact step says what went wrong; there is no publish error.
       if (state.status !== "publishing") return state;
       return { ...state, status: "step", publishError: null };
     }
