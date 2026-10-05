@@ -73,7 +73,8 @@ vi.mock("../../src/listings/wizard/useWizardAutosave", () => ({
   }),
 }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
-  photos: [], publishGate: { canPublish: true, blockers: [] },
+  photos: [{ photoId: fixture.id, key: "photo.jpg", sortOrder: 0, state: "uploaded" }],
+  publishGate: { canPublish: true, blockers: [] },
 }) }));
 vi.mock("../../src/listings/uploadStaging/stagingDir", () => ({ deleteDraftDir: vi.fn() }));
 vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => fixture.auth }));
