@@ -554,6 +554,8 @@ async function main(): Promise<void> {
     where: { id: { in: [...Object.values(SELLER_IDS), BUYER_ID] } },
   });
 
+  // The name number and the avatar index are fixed here, not left to the
+  // column's random default, so screenshots of these Users are reproducible.
   await prisma.user.createMany({
     data: [
       {
@@ -561,6 +563,8 @@ async function main(): Promise<void> {
         phone: "+99361000001",
         phoneVerifiedAt: new Date(),
         displayName: "Aýgül Amanowa",
+        nameNumber: 6644,
+        avatarIndex: 5,
         locale: "tk",
         role: UserRole.seller,
       },
@@ -569,6 +573,8 @@ async function main(): Promise<void> {
         phone: "+99361000002",
         phoneVerifiedAt: new Date(),
         displayName: "Merdan Hojaýew",
+        nameNumber: 7310,
+        avatarIndex: 9,
         locale: "ru",
         role: UserRole.seller,
       },
@@ -577,6 +583,8 @@ async function main(): Promise<void> {
         phone: "+99361000003",
         phoneVerifiedAt: new Date(),
         displayName: "Salamat Motors",
+        nameNumber: 2057,
+        avatarIndex: 2,
         locale: "ru",
         role: UserRole.seller,
       },
@@ -585,6 +593,8 @@ async function main(): Promise<void> {
         phone: "+99361000009",
         phoneVerifiedAt: new Date(),
         displayName: "Öwez Berdiýew",
+        nameNumber: 4821,
+        avatarIndex: 7,
         locale: "tk",
         role: UserRole.buyer,
       },
