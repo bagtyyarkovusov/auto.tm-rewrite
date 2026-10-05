@@ -51,8 +51,8 @@ describe("publishFailureMessage (#588)", () => {
     expect(publishFailureMessage(translator("en"), "rateMissing", "AED")).toBe(
       "The AED rate is not available right now. Set the price in TMT or try later.",
     );
-    // Anything the machine holds that is not a known failure reads as a server error.
-    expect(publishFailureMessage(translator("en"), "Exchange rate from USD to TMT is not available", "USD")).toBe(
+    // With no failure recorded it reads as a server error, never as the server's text.
+    expect(publishFailureMessage(translator("en"), null, "USD")).toBe(
       "Could not publish. Your draft is saved. Try again.",
     );
   });

@@ -1,5 +1,7 @@
 import { Enums, WizardSchemas } from "@auto-tm/contracts";
 
+import type { PublishFailure } from "./publishFailure";
+
 const {
   WIZARD_STEPS,
   validateStep,
@@ -32,7 +34,7 @@ export interface WizardMachineState {
   payload: WizardSchemas.WizardDraftPayload;
   validatedSteps: WizardSchemas.WizardStep[];
   saveError: string | null;
-  publishError: string | null;
+  publishError: PublishFailure | null;
   completedListingId: string | null;
 }
 
@@ -81,7 +83,7 @@ export type WizardMachineAction =
   /** The save before publishing failed, so nothing was published: back to Check. */
   | { type: "PUBLISH_ABORTED" }
   | { type: "PUBLISH_SUCCESS"; listingId: string }
-  | { type: "PUBLISH_ERROR"; error: string }
+  | { type: "PUBLISH_ERROR"; error: PublishFailure }
   | { type: "DISCARD" };
 
 // ── Helpers ──

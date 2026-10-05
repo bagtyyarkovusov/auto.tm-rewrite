@@ -499,11 +499,11 @@ describe("PUBLISH lifecycle", () => {
     state = wizardMachineReducer(state, { type: "PUBLISH_START" });
     state = wizardMachineReducer(state, {
       type: "PUBLISH_ERROR",
-      error: "Publish failed",
+      error: "server",
     });
 
     expect(state.status).toBe("publishError");
-    expect(state.publishError).toBe("Publish failed");
+    expect(state.publishError).toBe("server");
   });
 });
 

@@ -23,7 +23,7 @@ export function publishFailureOf(error: unknown): PublishFailure {
 }
 
 /** The line shown above Publish. `currency` is the draft's, for the missing-rate message. */
-export function publishFailureMessage(t: TFunction, failure: string | null, currency = "USD"): string {
+export function publishFailureMessage(t: TFunction, failure: PublishFailure | null, currency = "USD"): string {
   if (failure === "offline") return t("publishErrorOffline");
   if (failure === "rateMissing") return t("publishErrorRateMissing", { currency });
   return t("publishErrorServer");
