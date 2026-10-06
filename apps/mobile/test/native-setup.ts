@@ -113,6 +113,13 @@ vi.mock("@rn-primitives/avatar", async () => {
 // A spec that exercises one of them mocks it itself and wins over these stubs.
 vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => false), openURL: vi.fn(async () => {}) }));
 vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn(async () => true) }));
+vi.mock("expo-haptics", () => ({
+  selectionAsync: vi.fn(async () => {}),
+  impactAsync: vi.fn(async () => {}),
+  performAndroidHapticsAsync: vi.fn(async () => {}),
+  ImpactFeedbackStyle: { Light: "light" },
+  AndroidHaptics: { Clock_Tick: "clock-tick", Context_Click: "context-click" },
+}));
 vi.mock("expo-secure-store", () => ({
   getItemAsync: vi.fn(async () => null),
   setItemAsync: vi.fn(async () => {}),
@@ -223,6 +230,12 @@ vi.mock("expo-glass-effect", async () => {
     isLiquidGlassAvailable: () => false,
     isGlassEffectAPIAvailable: () => false,
   };
+});
+// expo-blur ships JSX in its build output too, and blurs through a native
+// view. A spec renders both of its views as a plain View.
+vi.mock("expo-blur", async () => {
+  const { View } = await import("react-native");
+  return { BlurView: View, BlurTargetView: View };
 });
 // The portal package ships JSX in its `.mjs`, which Node cannot load. Portal
 // content renders where it is declared, so a toast or sheet stays queryable.

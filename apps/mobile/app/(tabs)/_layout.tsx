@@ -2,12 +2,17 @@ import { Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 import { AutoTmTabBar } from "../../components/navigation/AutoTmTabBar";
+import { TabBlurTarget, TabBlurTargets } from "../../components/navigation/TabBlurTargets";
 
 export default function TabLayout() {
   const { t } = useTranslation();
   return (
+    <TabBlurTargets>
     <Tabs
       tabBar={(props) => <AutoTmTabBar {...props} />}
+      screenLayout={({ route, children }) => (
+        <TabBlurTarget routeKey={route.key}>{children}</TabBlurTarget>
+      )}
       screenOptions={{
         headerShown: false,
       }}
@@ -43,5 +48,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </TabBlurTargets>
   );
 }
