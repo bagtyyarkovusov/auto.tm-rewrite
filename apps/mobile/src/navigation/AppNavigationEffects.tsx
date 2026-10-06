@@ -27,11 +27,11 @@ export function AppNavigationEffects() {
     [queryClient],
   );
 
+  // A 401 on any request, query or mutation, ends the session and offers
+  // sign-in, so an account edit with an expired token cannot strand the User.
   useEffect(() => {
     let redirecting = false;
-    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      if (event.type !== "updated" || event.action?.type !== "error") return;
-      const error = event.query.state.error;
+    const onError = (error: unknown) => {
       if (!redirecting && error instanceof ApiError && error.code === "UNAUTHENTICATED") {
         void clearAuthSession();
         // This screen offers sign-in and preserves its Conversation return intent.
@@ -39,8 +39,17 @@ export function AppNavigationEffects() {
         redirecting = true;
         queueMicrotask(() => router.replace("/(auth)/phone"));
       }
+    };
+    const unsubscribeQueries = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === "updated" && event.action?.type === "error") onError(event.query.state.error);
     });
-    return unsubscribe;
+    const unsubscribeMutations = queryClient.getMutationCache().subscribe((event) => {
+      if (event.type === "updated" && event.action.type === "error") onError(event.mutation.state.error);
+    });
+    return () => {
+      unsubscribeQueries();
+      unsubscribeMutations();
+    };
   }, [queryClient]);
   return null;
 }
