@@ -11,7 +11,7 @@ Five tabs. Center button is the visual "do something" CTA.
 | 1 | Поиск | Gözle | Search | Home (new listings + "Brand, model" entry) |
 | 2 | Избранное | Saýlanan | Favorites | Favorites list (saved listings; S8a) |
 | 3 | + | + | + | Sell entry point |
-| 4 | Сообщения | Habarlar | Messages | Simple contact threads |
+| 4 | Сообщения | Çat | Messages | Simple contact threads |
 | 5 | Кабинет | Kabinet | Cabinet | Cabinet menu (see [Tab 5](#tab-5--cabinet-menu)) |
 
 ### Mobile route map
