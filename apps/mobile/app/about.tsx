@@ -22,9 +22,9 @@ export default function AboutScreen() {
         leading={<BackButton onPress={goBack} accessibilityLabel={t("common:back")} />}
       />
 
-      <View className="items-center px-4 py-[60px]">
-        <Text accessibilityLabel="AutoTM" className="text-title font-extrabold text-foreground">
-          Auto<Text className="text-title font-extrabold text-primary">TM</Text>
+      <View className="items-center px-4 py-16">
+        <Text accessibilityLabel="AutoTM" className="text-title font-bold text-foreground">
+          Auto<Text className="text-title font-bold text-primary">TM</Text>
         </Text>
         {version ? (
           <Text className="mt-2 text-muted-foreground">{t("appVersion", { version })}</Text>

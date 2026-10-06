@@ -5,10 +5,9 @@ import { useTranslation } from "react-i18next";
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useNotificationPermissionState } from "../src/notifications/useNotificationPermissionState";
 
-import { MenuRow } from "@/components/account/MenuRow";
+import { MenuDivider, MenuFooter, MenuGroup, MenuRow } from "@/components/account/MenuRow";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
-import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 
 /**
@@ -34,29 +33,34 @@ export default function NotificationsScreen() {
         leading={<BackButton onPress={goBack} accessibilityLabel={t("common:back")} />}
       />
 
-      <ScrollView className="flex-1" contentContainerClassName="pb-6">
-        <View
-          accessible
-          accessibilityLabel={
-            value ? `${t("messageNotifications")}, ${value}` : t("messageNotifications")
-          }
-          className="min-h-14 flex-row items-center gap-3 px-4 py-2"
-        >
-          <Text className="flex-1 text-body text-foreground">
-            {t("messageNotifications")}
-          </Text>
-          <Text className="text-body text-muted-foreground">{value}</Text>
-        </View>
-        <Separator className="bg-border ml-4" />
-        <MenuRow
-          label={t("openSystemSettings")}
-          chevron
-          onPress={() => void Linking.openSettings()}
-        />
+      <ScrollView className="flex-1" contentContainerClassName="pb-6 pt-1">
+        {/* One card: the state as a plain row, then the way to change it. */}
+        <MenuGroup>
+          <View
+            accessible
+            accessibilityLabel={
+              value ? `${t("messageNotifications")}, ${value}` : t("messageNotifications")
+            }
+            className="min-h-14 flex-row items-center gap-3 px-4 py-2"
+          >
+            <Text className="min-w-0 flex-1 text-body text-foreground">
+              {t("messageNotifications")}
+            </Text>
+            <Text className="text-body text-muted-foreground">{value}</Text>
+          </View>
+          <MenuDivider inset="text" />
+          <MenuRow
+            label={t("openSystemSettings")}
+            external
+            onPress={() => void Linking.openSettings()}
+          />
+        </MenuGroup>
 
-        <Text className="px-4 py-2.5 text-callout text-muted-foreground">
-          {t("notificationsMuteHint")}
-        </Text>
+        <MenuFooter>
+          <Text className="text-footnote text-muted-foreground">
+            {t("notificationsMuteHint")}
+          </Text>
+        </MenuFooter>
       </ScrollView>
     </SafeScreen>
   );

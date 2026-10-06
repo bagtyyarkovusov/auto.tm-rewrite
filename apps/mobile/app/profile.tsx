@@ -20,7 +20,13 @@ import { maskTmPhone } from "../src/auth/phone";
 import { profileNoticeStore } from "../src/identity/profileNotice";
 
 import { ChangeSignInMethodSheet } from "@/components/account/ChangeSignInMethodSheet";
-import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
+import {
+  MenuDivider,
+  MenuFooter,
+  MenuGroup,
+  MenuRow,
+  MenuSectionLabel,
+} from "@/components/account/MenuRow";
 import { UserAvatar } from "@/components/identity/UserAvatar";
 import {
   AlertDialog,
@@ -39,15 +45,21 @@ import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { ErrorState } from "@/components/ErrorState";
 
+/** Profile's avatar, larger than Cabinet's 48 pt row avatar. */
+const AVATAR_SIZE = 72;
+
 function LoadingState() {
   return (
-    <View className="flex-1 px-4 pt-4 gap-4">
-      <View className="items-center gap-3 py-6">
-        <Skeleton className="size-24 rounded-full" />
-        <Skeleton className="h-6 w-48 rounded" />
-        <Skeleton className="h-4 w-32 rounded" />
+    <View className="flex-1 gap-6 px-4 pt-2">
+      <View className="items-center gap-3 pb-1">
+        <Skeleton
+          className="rounded-full"
+          style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}
+        />
+        <Skeleton className="h-5 w-40 rounded-full" />
       </View>
-      <Skeleton className="h-24 w-full rounded-xl" />
+      {/* The size of the Sign-in methods card: two 56 pt rows and a hairline. */}
+      <Skeleton className="h-28 w-full rounded-2xl" />
     </View>
   );
 }
@@ -80,27 +92,27 @@ function SignInMethods({ phone, email }: { phone: string | null; email: string |
   }
 
   return (
-    <>
-      <Text className="px-4 pb-1 pt-2.5 text-footnote text-muted-foreground">
-        {t("signInMethods")}
-      </Text>
-      <MenuRow
-        icon={Phone}
-        label={t("phone")}
-        value={phone ? maskTmPhone(phone) : t("add")}
-        valueTone={phone ? "default" : "link"}
-        chevron
-        onPress={() => open("phone", Boolean(phone))}
-      />
-      <MenuDivider />
-      <MenuRow
-        icon={Mail}
-        label={t("email")}
-        value={email ? maskEmail(email) : t("add")}
-        valueTone={email ? "default" : "link"}
-        chevron
-        onPress={() => open("email", Boolean(email))}
-      />
+    <View>
+      <MenuSectionLabel>{t("signInMethods")}</MenuSectionLabel>
+      <MenuGroup>
+        <MenuRow
+          icon={Phone}
+          label={t("phone")}
+          value={phone ? maskTmPhone(phone) : t("add")}
+          valueTone={phone ? "default" : "link"}
+          chevron
+          onPress={() => open("phone", Boolean(phone))}
+        />
+        <MenuDivider />
+        <MenuRow
+          icon={Mail}
+          label={t("email")}
+          value={email ? maskEmail(email) : t("add")}
+          valueTone={email ? "default" : "link"}
+          chevron
+          onPress={() => open("email", Boolean(email))}
+        />
+      </MenuGroup>
       <ProfileNoticeLine />
 
       <ChangeSignInMethodSheet
@@ -114,7 +126,7 @@ function SignInMethods({ phone, email }: { phone: string | null; email: string |
           router.push(ENTRY_HREF[sheetMethod]);
         }}
       />
-    </>
+    </View>
   );
 }
 
@@ -135,9 +147,10 @@ function ProfileNoticeLine() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  // The line keeps its height when empty, so the rows below never jump.
+  // The line keeps its height when empty, so the rows below never jump. It
+  // also spaces the Sign-in methods card from the account actions below.
   return (
-    <View className="min-h-7 justify-center px-4">
+    <MenuFooter className="min-h-7 justify-center">
       {notice ? (
         <Text
           accessibilityLiveRegion="polite"
@@ -150,7 +163,7 @@ function ProfileNoticeLine() {
             : t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })}
         </Text>
       ) : null}
-    </View>
+    </MenuFooter>
   );
 }
 
@@ -158,7 +171,7 @@ function ProfileNoticeLine() {
  * Log out and Delete account, at the bottom of Profile for signed-in Users.
  * Log out asks first; Delete account opens its own screen.
  */
-function AccountActions() {
+function AccountActions({ className }: { className?: string }) {
   const { t } = useTranslation("account");
   const { isAuthenticated } = useAuth();
   const logout = useLogout();
@@ -168,19 +181,21 @@ function AccountActions() {
 
   return (
     <>
-      <MenuGap />
-      <MenuRow
-        icon={LogOut}
-        label={t("logout")}
-        onPress={() => setConfirmOpen(true)}
-      />
-      <MenuDivider />
-      <MenuRow
-        icon={Trash2}
-        label={t("deleteAccount")}
-        variant="danger"
-        onPress={() => router.push("/account/delete")}
-      />
+      {/* Delete account draws in the destructive token, never brand red. */}
+      <MenuGroup className={className}>
+        <MenuRow
+          icon={LogOut}
+          label={t("logout")}
+          onPress={() => setConfirmOpen(true)}
+        />
+        <MenuDivider />
+        <MenuRow
+          icon={Trash2}
+          label={t("deleteAccount")}
+          variant="danger"
+          onPress={() => router.push("/account/delete")}
+        />
+      </MenuGroup>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
@@ -224,7 +239,7 @@ function SignedInProfile() {
     return (
       <>
         <ErrorState error={error} onRetry={() => refetch()} />
-        <AccountActions />
+        <AccountActions className="mb-6" />
       </>
     );
   }
@@ -235,13 +250,14 @@ function SignedInProfile() {
     <ScrollView
       className="flex-1"
       contentContainerClassName="pb-6"
+      showsVerticalScrollIndicator={false}
     >
       {/* The avatar and the name, set or generated. The name, with its
           pencil, opens the name editor; a screen reader hears "Edit
           name" and the name as its value. The photo editor attaches here later. */}
-      <View className="items-center gap-1 px-4 pb-5 pt-2">
+      <View className="items-center gap-1 px-4 pb-6 pt-2">
         <UserAvatar
-          size={72}
+          size={AVATAR_SIZE}
           avatarIndex={data.avatarIndex}
           avatarKey={data.avatarKey}
           avatarUrl={data.avatarUrl}
@@ -259,7 +275,7 @@ function SignedInProfile() {
           >
             {displayNameOf(data)}
           </Text>
-          <Icon as={Pencil} className="size-[17px] text-muted-foreground" />
+          <Icon as={Pencil} className="size-4 text-muted-foreground" />
         </Pressable>
       </View>
 

@@ -158,3 +158,4 @@ Reduced motion: the sheet follows the system setting.
 - Legal rows open the localized web page for the current language; they do not deep-link into the app.
 - Help is the release's only support entry. The code screen links to it only at the daily Sign-in Code limit ([mobile OTP login flow](mobile-otp-login-flow.md)).
 - Log out and a finished account deletion land on Cabinet, signed out.
+- The screens Cabinet opens share its grouped look: Profile puts the Sign-in methods under a quiet tracked label (`MenuSectionLabel`, `text-footnote font-medium tracking-wide text-muted-foreground`) on one card and Log out with Delete account on another, Delete account in the `destructive` token; Notifications, Help and Delete account set their rows on cards with notes under them aligned to the row text (`MenuFooter`, `px-8`).
