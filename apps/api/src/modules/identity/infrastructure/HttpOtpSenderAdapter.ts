@@ -10,6 +10,15 @@ export interface GatewaySmsRequest {
   requestId: string;
 }
 
+/**
+ * The hosting log outlives the 30 days the privacy policy gives sign-in code
+ * records, so a log line carries only the last four digits: enough to pick
+ * one request out of the log, not enough to identify a person.
+ */
+function maskedPhone(phone: string): string {
+  return `***${phone.slice(-4)}`;
+}
+
 @Injectable()
 export class HttpOtpSenderAdapter implements OtpSenderPort {
   private readonly logger = new Logger(HttpOtpSenderAdapter.name);
@@ -29,13 +38,13 @@ export class HttpOtpSenderAdapter implements OtpSenderPort {
 
   async send(sms: OtpSms): Promise<void> {
     if (this.driver === "mock") {
-      this.logger.log(`[mock] OTP for ${sms.phone}: ${sms.code}`);
+      this.logger.log(`[mock] OTP for ${maskedPhone(sms.phone)}: ${sms.code}`);
       return;
     }
 
     // gateway mode — the request below is what the SMS gateway takes. Posting
     // it waits for real-phone staging (ADR-0006), so this still only logs.
     const request = this.gatewayRequest(sms);
-    this.logger.log(`[gateway] OTP for ${request.phone} dispatched`);
+    this.logger.log(`[gateway] OTP for ${maskedPhone(request.phone)} dispatched`);
   }
 }
