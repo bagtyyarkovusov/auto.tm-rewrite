@@ -155,7 +155,7 @@ export function BrandPicker({ actions, filters, leading, bottomSpace = 0 }: Bran
                   onPress={picker.clearRecent}
                   accessibilityLabel={t("clearRecent")}
                 >
-                  <Text className="text-callout font-medium text-primary">{t("clear")}</Text>
+                  <Text className="text-callout font-medium text-foreground">{t("clear")}</Text>
                 </Button>
               ) : null}
             </View>

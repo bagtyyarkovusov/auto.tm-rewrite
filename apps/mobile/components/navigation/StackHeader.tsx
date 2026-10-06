@@ -140,7 +140,8 @@ export function StackHeader({
 
 /**
  * A short text action at the trailing edge of a header, such as Reset. It
- * keeps a 44 dp target and reads as an action through the brand colour.
+ * keeps a 44 dp target and reads as an action through its medium weight, in
+ * the text colour: brand red belongs to the screen's primary action.
  */
 export function HeaderTextAction({
   label,
@@ -149,7 +150,7 @@ export function HeaderTextAction({
 }: Omit<ButtonProps, "children" | "size" | "variant"> & { label: string }) {
   return (
     <Button variant="ghost" className={cn("h-11 px-3 py-0", className)} {...props}>
-      <Text className="text-body font-medium text-primary">{label}</Text>
+      <Text className="text-body font-medium text-foreground">{label}</Text>
     </Button>
   );
 }

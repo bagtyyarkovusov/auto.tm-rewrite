@@ -79,7 +79,7 @@ export default function HomeScreen() {
     router.push(`/(public)/listings/${id}`);
   }, []);
 
-  // The first cards rise in one after another, once; a card that scrolls
+  // The first cards fade in from their skeletons, once; a card that scrolls
   // back into the window, or a next page, is simply there.
   const enterOrder = useListEntrance(items.length > 0);
 

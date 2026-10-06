@@ -13,6 +13,7 @@ import { ListingPhoto, PhotoChip, PhotoFavoriteButton } from "./ListingPhoto";
 import { EnterOnce, MotionView, usePressScale } from "@/components/ui/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { tabularFigures } from "@/lib/font";
 
 interface ListingGridCardProps {
   listing: ListingsSchemas.ListingSummary;
@@ -96,6 +97,7 @@ export const ListingGridCard = memo(function ListingGridCard({
           <View className="gap-0.5 px-3 pb-3 pt-2.5">
             <Text
               className="font-heading text-subhead font-bold text-foreground"
+              style={tabularFigures}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.8}
@@ -110,7 +112,7 @@ export const ListingGridCard = memo(function ListingGridCard({
               <Skeleton className="my-1 h-3 w-4/5" />
             ) : null}
             {text.meta ? (
-              <Text className="text-footnote text-muted-foreground" numberOfLines={1}>
+              <Text className="text-footnote text-muted-foreground" style={tabularFigures} numberOfLines={1}>
                 {text.meta}
               </Text>
             ) : null}

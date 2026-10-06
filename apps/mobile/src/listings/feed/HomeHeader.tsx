@@ -12,6 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import { PressableScale } from "@/components/ui/pressable-scale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { tabularFigures } from "@/lib/font";
 import { localeTag } from "@/src/i18n/resources";
 
 /**
@@ -20,8 +21,11 @@ import { localeTag } from "@/src/i18n/resources";
  * the Brand picker), and the New listings heading with See all (opens Results).
  *
  * The "Brand, model" card is the way into discovery, so it is the largest
- * thing on the screen after the photos: a hero card with a solid ink mark, its
- * name in the heading face and an arrow that says it leads somewhere.
+ * thing on the screen after the photos: a hero card with the car mark on a
+ * tonal disc, its name in the heading face and an arrow that says it leads
+ * somewhere. It stays in the app's neutrals so the photos below carry the
+ * colour. See all is a quiet text action: brand red is kept for the primary
+ * action and the wordmark.
  */
 export function HomeHeader() {
   const { t, i18n } = useTranslation();
@@ -51,8 +55,8 @@ export function HomeHeader() {
         accessibilityRole="button"
         accessibilityLabel={t("brandModel")}
       >
-        <View className="size-14 items-center justify-center rounded-full bg-foreground">
-          <Icon as={Car} className="size-7 text-background" strokeWidth={1.8} />
+        <View className="size-14 items-center justify-center rounded-full bg-secondary group-active:bg-accent">
+          <Icon as={Car} className="size-7 text-foreground" strokeWidth={1.8} />
         </View>
         <View className="min-w-0 flex-1 gap-0.5">
           <Text
@@ -64,7 +68,7 @@ export function HomeHeader() {
             {t("brandModel")}
           </Text>
           {count.data ? (
-            <Text className="text-callout text-muted-foreground" numberOfLines={1}>
+            <Text className="text-callout text-muted-foreground" style={tabularFigures} numberOfLines={1}>
               {t("listingsCount", {
                 total: count.data.totalMatching.toLocaleString(
                   localeTag(i18n.language),
@@ -89,7 +93,7 @@ export function HomeHeader() {
             className="h-11 px-3"
             onPress={() => router.push("/(tabs)/(search)/results")}
           >
-            <Text className="text-body font-medium text-primary">{t("seeAll")}</Text>
+            <Text className="text-body font-medium text-foreground">{t("seeAll")}</Text>
           </Button>
         }
       />

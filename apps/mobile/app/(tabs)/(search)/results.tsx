@@ -85,7 +85,7 @@ export default function ResultsScreen() {
   // The form is its own screen: it opens with what Results shows, and its Show N updates this screen in place.
   const openParameters = () => router.push({ pathname: PARAMETERS_PATH, params: { ...writeResultsRouteState(applied), returnToResults: "1" } });
   const chipsProps = { filters: applied, cityName: filters.active.cityId ? catalog.cityName(filters.active.cityId) : undefined, onOpen: openParameters, onRemove: remove };
-  // The first cards rise in one after another, once; later cards are simply there.
+  // The first cards fade in from their skeletons, once; later cards are simply there.
   const enterOrder = useListEntrance(items.length > 0, 3);
   const header = <View className="pb-2 pt-1">
     <View className="gap-3 px-4 pb-1">

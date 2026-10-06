@@ -104,3 +104,16 @@ export function withFontFace(className: string): string {
   const face = fontFaceClass(className);
   return face ? `${className} ${face}` : className;
 }
+
+/**
+ * Figures of equal width, for numbers that should line up like a catalogue:
+ * prices, mileage, years, counts. Pass it as a `Text` style; NativeWind 4 has
+ * no working utility for `font-variant-numeric`.
+ *
+ * The bundled Uber Move faces carry no `tnum` feature today, so the request is
+ * ignored and the figures stay proportional; a face that adds the feature
+ * takes effect wherever this is applied, with no change at call sites.
+ */
+export const tabularFigures: { fontVariant: "tabular-nums"[] } = {
+  fontVariant: ["tabular-nums"],
+};

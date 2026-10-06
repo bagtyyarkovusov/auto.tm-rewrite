@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * The six sort orders as one radio list. The chosen order sits on a tonal row
- * with a brand check and a heavier label; the others are plain rows that take
+ * with a check in the text colour and a heavier label; the others are plain rows that take
  * the same tone under a finger. Rows run a little past the sheet's text edge,
  * so the highlight has room around the label.
  */
@@ -36,7 +36,7 @@ export function SortSheet({ open, onOpenChange, value, onChange }: {
             className={cn("min-h-control-md flex-row items-center justify-between gap-3 rounded-lg px-3 active:bg-secondary", checked && "bg-secondary")}
             onPress={() => { onChange(sort); onOpenChange(false); }}>
             <Text className={cn("min-w-0 flex-1 text-body text-foreground", checked && "font-semibold")} numberOfLines={1}>{t(`resultsSort_${sort}`)}</Text>
-            {checked ? <Icon as={Check} className="size-5 text-primary" strokeWidth={2.4} /> : null}
+            {checked ? <Icon as={Check} className="size-5 text-foreground" strokeWidth={2.4} /> : null}
           </Pressable>;
         })}
       </View>

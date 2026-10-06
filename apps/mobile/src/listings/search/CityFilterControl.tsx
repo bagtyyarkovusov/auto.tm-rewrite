@@ -148,7 +148,7 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
                 onPress={handleClearCity}
                 accessibilityLabel={t("clear")}
               >
-                <Text className="text-callout font-medium text-primary">{t("clear")}</Text>
+                <Text className="text-callout font-medium text-foreground">{t("clear")}</Text>
               </Button>
             )}
           </>

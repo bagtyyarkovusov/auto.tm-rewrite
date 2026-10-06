@@ -28,27 +28,37 @@ type MotionViewProps = ViewProps & {
  * only. With Reduce Motion on, each renders its end state at once.
  */
 
+/** How a screen's content arrives (`Enter`): its rise in dp and the stagger between siblings in ms. */
+const ENTER = {
+  /** A screen or a section: an empty state, a first paint. */
+  section: { rise: 8, step: 40 },
+  /** Cells of a list replacing their skeletons: barely a rise, a short stagger. */
+  cell: { rise: 4, step: 24 },
+} as const;
+
 /**
- * A screen's content arriving: a short fade and an 8 dp rise, once, on mount.
- * `order` staggers siblings by 40 ms each. Use it for the first paint of a
- * screen or a section, not for every row of a scrolling list.
+ * A screen's content arriving: a short ease-out fade and a small rise, once,
+ * on mount. `order` staggers siblings. Use it for the first paint of a screen
+ * or a section, not for every row of a scrolling list.
  */
 function Enter({
   order = 0,
+  kind = "section",
   children,
   style: callerStyle,
   ...props
-}: MotionViewProps & { order?: number }) {
+}: MotionViewProps & { order?: number; kind?: keyof typeof ENTER }) {
   const reduceMotion = useReduceMotion();
   const progress = useSharedValue(reduceMotion ? 1 : 0);
+  const { rise, step } = ENTER[kind];
 
   React.useEffect(() => {
-    progress.value = withDelay(order * 40, withTiming(1, timing("base", "enter")));
-  }, [order, progress]);
+    progress.value = withDelay(order * step, withTiming(1, timing("base", "enter")));
+  }, [order, step, progress]);
 
   const style = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ translateY: (1 - progress.value) * 8 }],
+    transform: [{ translateY: (1 - progress.value) * rise }],
   }));
 
   return (
@@ -259,7 +269,7 @@ function usePressScale(feedback: keyof typeof pressScale = "surface") {
 
 /**
  * Decides, once, which of a list's cells arrive with `Enter`. The first
- * `count` cells of the first page rise in one after another; every cell that
+ * `count` cells of the first page fade in, a beat apart; every cell that
  * mounts later (a cell scrolled back into the window, a next page) is simply
  * there. `ready` is true once the list has its first content.
  *
@@ -284,8 +294,10 @@ function useListEntrance(ready: boolean, count = 6) {
 }
 
 /**
- * A list cell that may arrive with `Enter`. The choice is made when the cell
- * mounts and never changes, so a re-render cannot replay or drop the entrance.
+ * A list cell that may arrive with `Enter`: the skeletons it replaces fade
+ * into content with a 4 dp settle, not a cascade. The choice is made when the
+ * cell mounts and never changes, so a re-render cannot replay or drop the
+ * entrance.
  */
 function EnterOnce({
   order,
@@ -297,7 +309,7 @@ function EnterOnce({
     return <View {...props}>{children}</View>;
   }
   return (
-    <Enter order={initialOrder} {...props}>
+    <Enter order={initialOrder} kind="cell" {...props}>
       {children}
     </Enter>
   );

@@ -184,7 +184,7 @@ export function ModelPicker({
               disabled={!ready}
               onPress={() => actions.moreFilters?.(picker.choice())}
             >
-              <Text className="text-body font-medium text-primary">{t("moreFilters")}</Text>
+              <Text className="text-body font-medium text-foreground">{t("moreFilters")}</Text>
             </Button>
           ) : null}
         </StickyActionBar>
