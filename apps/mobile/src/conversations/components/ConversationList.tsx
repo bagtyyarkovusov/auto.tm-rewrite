@@ -40,7 +40,7 @@ function EmptyState() {
   const router = useRouter();
   return (
     <EmptyStateView illustration="messages" title={t("noConversationsYet")} hint={t("startByMessaging")}>
-      <Button variant="secondary" size="lg" onPress={() => router.navigate(HOME_HREF)}>
+      <Button variant="secondary" size="pill" onPress={() => router.navigate(HOME_HREF)}>
         <Text>{t("browseListings")}</Text>
       </Button>
     </EmptyStateView>

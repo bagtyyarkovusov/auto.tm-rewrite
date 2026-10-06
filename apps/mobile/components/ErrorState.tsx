@@ -50,7 +50,7 @@ export function ErrorState({ error, onRetry, compact = false }: ErrorStateProps)
         {copy.description}
       </Text>
       {copy.retryable && onRetry && (
-        <Button variant="secondary" size="lg" className="mt-7 self-stretch" onPress={onRetry}>
+        <Button variant="secondary" size="pill" className="mt-7 self-stretch" onPress={onRetry}>
           <Text>{t("retry")}</Text>
         </Button>
       )}

@@ -12,7 +12,7 @@ export function FilteredEmpty({ onReset }: FilteredEmptyProps) {
   const { t } = useTranslation();
   return (
     <EmptyState illustration="search" title={t("noListingsMatch")} hint={t("tryAdjustingFilters")}>
-      <Button variant="brand" size="lg" onPress={onReset}>
+      <Button variant="brand" size="pill" onPress={onReset}>
         <Text className="text-primary-foreground">{t("resetFilters")}</Text>
       </Button>
     </EmptyState>

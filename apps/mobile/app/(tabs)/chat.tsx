@@ -25,7 +25,7 @@ function AnonymousChatEntry() {
 
   return (
     <EmptyState illustration="messages" title={t("messagesSignedOutTitle")}>
-      <Button variant="brand" size="lg" onPress={handleSignIn}>
+      <Button variant="brand" size="pill" onPress={handleSignIn}>
         <Text>{t("signIn")}</Text>
       </Button>
     </EmptyState>

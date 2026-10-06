@@ -105,7 +105,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
   );
 
   const closePicker = (
-    <Button variant="ghost" size="icon" className="h-11 w-11" onPress={() => setStep(null)} accessibilityLabel={t("close")}>
+    <Button variant="secondary" size="icon" className="h-11 w-11" onPress={() => setStep(null)} accessibilityLabel={t("close")}>
       <Icon as={X} className="size-5 text-foreground" />
     </Button>
   );
@@ -113,11 +113,11 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
   return (
     <TabScreen>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
+        <View className="flex-row items-center gap-3 px-4 pt-1 pb-3">
           <Button variant="secondary" size="icon" className="h-11 w-11" onPress={onBack} accessibilityLabel={t("back")}>
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
-          <Text className="min-w-0 flex-1 font-heading text-headline text-foreground" numberOfLines={1}>
+          <Text className="min-w-0 flex-1 font-heading text-headline font-semibold text-foreground" numberOfLines={1}>
             {t("searchParameters")}
           </Text>
           <Button variant="ghost" className="h-11 px-3 py-0" onPress={() => {
@@ -130,7 +130,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
 
         <ScrollView
           className="min-h-0 flex-1"
-          contentContainerClassName="gap-4 px-4 pb-4"
+          contentContainerClassName="gap-5 px-4 pb-4 pt-1"
           keyboardShouldPersistTaps="handled"
         >
           <ConditionFilterControl value={draft.condition} onChange={(value) => setField("condition", value)} />
@@ -160,7 +160,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
           />
         </ScrollView>
 
-        <View className="gap-2 border-t border-border px-4 pt-3 pb-4">
+        <View className="gap-2 px-4 pb-2 pt-3">
           {!countEnabled ? (
             <Text className="text-center text-callout text-destructive">{t("checkFilterValues")}</Text>
           ) : null}

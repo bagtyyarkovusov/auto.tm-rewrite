@@ -11,6 +11,7 @@ import { useBrandPicker, type RecentRow } from "./useBrandPicker";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
+import { GroupedItem } from "@/components/ui/grouped-list";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -96,7 +97,7 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
     body = (
       <View className="gap-3 px-4 py-2" accessibilityLabel={t("loadingEllipsis")}>
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-12" />
+          <Skeleton key={i} className="h-14 rounded-lg" />
         ))}
       </View>
     );
@@ -131,21 +132,27 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
         className="min-h-0 flex-1"
         contentContainerClassName="pb-6"
         renderSectionHeader={({ section }) => (
-          <View className="bg-background px-4 pt-4 pb-1">
+          <View className="px-5 pb-2 pt-6">
             {section.intro ? (
-              <Text className="pb-2 text-body font-semibold text-foreground">
+              <Text className="pb-4 font-heading text-subhead font-semibold text-foreground">
                 {section.intro}
               </Text>
             ) : null}
-            <View className="flex-row items-center justify-between">
-              <Text className="text-callout font-medium text-muted-foreground">
+            <View className="min-h-6 flex-row items-center justify-between">
+              <Text
+                className={
+                  section.key.startsWith("letter-")
+                    ? "text-footnote font-semibold text-muted-foreground"
+                    : "font-heading text-subhead font-semibold text-foreground"
+                }
+              >
                 {section.title}
               </Text>
               {section.clearable ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-9 px-2"
+                  className="-mr-2 h-9 px-2"
                   onPress={picker.clearRecent}
                   accessibilityLabel={t("clearRecent")}
                 >
@@ -155,18 +162,20 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
             </View>
           </View>
         )}
-        renderItem={({ item }) =>
-          item.type === "recent" ? (
-            <RecentItem
-              row={item.row}
-              onPress={() => actions.pickRecent?.(item.row.choice)}
-            />
-          ) : (
-            <BrandItem row={item.row} onPress={() => pick(item.row)} />
-          )
-        }
+        renderItem={({ item, index, section }) => (
+          <GroupedItem index={index} count={section?.data.length}>
+            {item.type === "recent" ? (
+              <RecentItem
+                row={item.row}
+                onPress={() => actions.pickRecent?.(item.row.choice)}
+              />
+            ) : (
+              <BrandItem row={item.row} onPress={() => pick(item.row)} />
+            )}
+          </GroupedItem>
+        )}
         ListFooterComponent={
-          <Text className="px-4 pt-6 text-caption text-muted-foreground">
+          <Text className="px-5 pt-6 text-caption text-muted-foreground">
             {t("brandLogosNotice")}
           </Text>
         }
@@ -176,11 +185,11 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
 
   return (
     <View className="min-h-0 flex-1">
-      <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
+      <View className="flex-row items-center gap-3 px-4 pt-1 pb-3">
         {leading}
         <Text className="text-headline font-heading font-semibold text-foreground">{t("brand")}</Text>
       </View>
-      <View className="px-4 pb-2">
+      <View className="px-4 pb-1">
         <Input
           value={picker.query}
           onChangeText={picker.setQuery}
@@ -202,10 +211,10 @@ function BrandItem({ row, onPress }: { row: BrandRow; onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-muted/60"
+      className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-secondary"
     >
       <CarBrandLogo name={row.name} logoUrl={row.logoUrl} />
-      <Text className="flex-1 text-body text-foreground" numberOfLines={1}>
+      <Text className="flex-1 text-body font-medium text-foreground" numberOfLines={1}>
         {row.name}
       </Text>
       {row.count !== undefined && row.count > 0 ? (
@@ -227,10 +236,10 @@ function RecentItem({ row, onPress }: { row: RecentRow; onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-muted/60"
+      className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-secondary"
     >
       <CarBrandLogo name={row.brandName} logoUrl={row.logoUrl} />
-      <Text className="flex-1 text-body text-foreground" numberOfLines={1}>
+      <Text className="flex-1 text-body font-medium text-foreground" numberOfLines={1}>
         {label}
       </Text>
       <Icon as={History} className="size-4 text-muted-foreground" />

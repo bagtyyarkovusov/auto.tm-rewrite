@@ -24,13 +24,13 @@ export function FilterChipsRow({ filters, cityName, onOpen, onRemove }: {
   if (filters.yearMin != null || filters.yearMax != null) chips.push({ group: "year", label: range(filters.yearMin, filters.yearMax) });
   return <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="items-center gap-2 px-4 py-2" keyboardShouldPersistTaps="handled">
     <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={t("resultsFilterCount", { count: chips.length })}
-      className="min-h-11 flex-row items-center gap-2 rounded-full bg-foreground px-4">
+      className="min-h-11 flex-row items-center gap-2 rounded-full bg-foreground px-4 shadow-raised active:opacity-90">
       <Icon as={SlidersHorizontal} className="size-4 text-background" /><Text className="text-callout font-semibold text-background">{t("filters")}</Text>
       {chips.length > 0 ? <View className="min-w-5 items-center rounded-full bg-primary px-1.5 py-0.5"><Text className="text-caption font-semibold text-primary-foreground">{chips.length}</Text></View> : null}
     </Pressable>
     {chips.map((chip) => <Pressable key={chip.group} onPress={() => onRemove(chip.group)} accessibilityRole="button" accessibilityLabel={t(`resultsRemove_${chip.group}`)}
-      className="min-h-11 flex-row items-center gap-2 rounded-full border border-border bg-card px-3">
-      <Text className="text-callout text-foreground">{chip.label}</Text><Icon as={X} className="size-4 text-muted-foreground" />
+      className="min-h-11 flex-row items-center gap-1.5 rounded-full bg-card pl-4 pr-3 shadow-raised active:bg-secondary">
+      <Text className="text-callout font-medium text-foreground">{chip.label}</Text><Icon as={X} className="size-4 text-muted-foreground" />
     </Pressable>)}
   </ScrollView>;
 }

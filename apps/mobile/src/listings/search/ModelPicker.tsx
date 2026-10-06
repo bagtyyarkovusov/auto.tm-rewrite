@@ -11,7 +11,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { GroupedItem } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 
@@ -77,7 +77,7 @@ export function ModelPicker({
     body = (
       <View className="gap-3 px-4 py-2" accessibilityLabel={t("loadingEllipsis")}>
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-12" />
+          <Skeleton key={i} className="h-14 rounded-lg" />
         ))}
       </View>
     );
@@ -95,11 +95,13 @@ export function ModelPicker({
         contentContainerClassName="pb-4"
         ListHeaderComponent={
           picker.query.trim() ? null : (
-            <ModelCheckRow
-              name={t("allModels")}
-              checked={selected.length === 0}
-              onPress={picker.selectAll}
-            />
+            <GroupedItem inset="check">
+              <ModelCheckRow
+                name={t("allModels")}
+                checked={selected.length === 0}
+                onPress={picker.selectAll}
+              />
+            </GroupedItem>
           )
         }
         ListEmptyComponent={
@@ -108,17 +110,19 @@ export function ModelPicker({
           </Text>
         }
         renderSectionHeader={({ section }) => (
-          <Text className="bg-background px-4 pt-4 pb-1 text-callout font-medium text-muted-foreground">
+          <Text className="px-5 pb-2 pt-6 font-heading text-subhead font-semibold text-foreground">
             {section.title}
           </Text>
         )}
-        renderItem={({ item }) => (
-          <ModelCheckRow
-            name={item.name}
-            count={item.count}
-            checked={selected.includes(item.id)}
-            onPress={() => picker.toggle(item.id)}
-          />
+        renderItem={({ item, index, section }) => (
+          <GroupedItem index={index} count={section?.data.length} inset="check">
+            <ModelCheckRow
+              name={item.name}
+              count={item.count}
+              checked={selected.includes(item.id)}
+              onPress={() => picker.toggle(item.id)}
+            />
+          </GroupedItem>
         )}
       />
     );
@@ -126,7 +130,7 @@ export function ModelPicker({
 
   return (
     <View className="min-h-0 flex-1">
-      <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
+      <View className="flex-row items-center gap-3 px-4 pt-1 pb-3">
         {leading}
         <Text className="min-w-0 flex-1 text-headline font-heading font-semibold text-foreground" numberOfLines={1}>
           {picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
@@ -135,7 +139,7 @@ export function ModelPicker({
           <Text className="text-body font-medium text-primary">{t("changeBrand")}</Text>
         </Button>
       </View>
-      <View className="px-4 pb-2">
+      <View className="px-4 pb-3">
         <Input
           value={picker.query}
           onChangeText={picker.setQuery}
@@ -147,7 +151,7 @@ export function ModelPicker({
         />
       </View>
       {body}
-      <View className="gap-2 border-t border-border px-4 pt-3 pb-4">
+      <View className="gap-2 px-4 pb-2 pt-3">
         {actions.mode === "show" && selected.length === 0 && picker.brandName ? (
           <Text className="text-center text-callout text-muted-foreground">
             {t("noModelPickedHint", { brand: picker.brandName })}
@@ -202,7 +206,7 @@ function ModelCheckRow({
         onPress={onPress}
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
-        className="min-h-12 flex-row items-center gap-3 px-4 py-3 active:bg-muted/60"
+        className="min-h-14 flex-row items-center gap-4 px-4 py-3 active:bg-secondary"
       >
         <Checkbox checked={checked} pointerEvents="none" />
         <Text className="flex-1 text-body text-foreground" numberOfLines={1}>
@@ -212,7 +216,6 @@ function ModelCheckRow({
           <Text className="text-callout text-muted-foreground">{count}</Text>
         ) : null}
       </Pressable>
-      <Separator className="ml-4" />
     </>
   );
 }

@@ -767,7 +767,7 @@ export default function SellScreen() {
         />
       ) : (
         <EmptyState illustration="sell" title={t("sellYourCar")} hint={t("listYourVehicle")}>
-          <Button variant="brand" size="lg" onPress={handleStartListing}>
+          <Button variant="brand" size="pill" onPress={handleStartListing}>
             <Text>{t("startListing")}</Text>
           </Button>
         </EmptyState>

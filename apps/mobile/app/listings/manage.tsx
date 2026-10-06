@@ -121,7 +121,7 @@ function EmptyState({
   return (
     <EmptyStateView className="flex-none py-10" illustration="listings" title={current.title} hint={current.body}>
       {current.cta && onCreate ? (
-        <Button variant="brand" size="lg" onPress={onCreate}>
+        <Button variant="brand" size="pill" onPress={onCreate}>
           <Text>{current.cta}</Text>
         </Button>
       ) : null}

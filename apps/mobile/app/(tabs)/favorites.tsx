@@ -33,7 +33,7 @@ function BrowseListingsButton() {
   const router = useRouter();
   const { t } = useTranslation();
   return (
-    <Button variant="secondary" size="lg" onPress={() => router.navigate(HOME_HREF)}>
+    <Button variant="secondary" size="pill" onPress={() => router.navigate(HOME_HREF)}>
       <Text>{t("browseListings")}</Text>
     </Button>
   );
@@ -51,7 +51,7 @@ function AnonymousFavoritesEntry() {
 
   return (
     <CenteredMessage title={t("favoritesSignedOutTitle")} hint={t("favoritesSignedOutHint")}>
-      <Button variant="brand" size="lg" onPress={handleSignIn}>
+      <Button variant="brand" size="pill" onPress={handleSignIn}>
         <Text>{t("signIn")}</Text>
       </Button>
     </CenteredMessage>

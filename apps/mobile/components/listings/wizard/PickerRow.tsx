@@ -36,7 +36,7 @@ export function PickerRow({
   const shownDetail = value ? detail : undefined;
 
   return (
-    <View className="gap-1.5">
+    <View className="gap-2">
       <Text className="text-callout font-medium text-foreground">
         {label}
         {required ? " *" : ""}
@@ -47,7 +47,7 @@ export function PickerRow({
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled }}
         accessibilityLabel={`${label}: ${value ?? placeholder}${shownDetail ? `, ${shownDetail}` : ""}`}
-        className={`flex-row items-center justify-between border border-border rounded-lg bg-card px-4 h-[52px] active:bg-muted/60 ${isDisabled ? " opacity-50" : ""}`}
+        className={`flex-row items-center justify-between rounded-lg bg-card px-4 h-control-md active:bg-secondary ${isDisabled ? " opacity-50" : ""}`}
       >
         <View className="flex-1 flex-row items-baseline gap-2 pr-2">
           <Text
@@ -80,7 +80,7 @@ export function PickerRow({
         <Text className="text-callout text-muted-foreground">{helper}</Text>
       )}
       {error && (
-        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-footnote text-destructive" accessibilityLiveRegion="polite">
           {error}
         </Text>
       )}

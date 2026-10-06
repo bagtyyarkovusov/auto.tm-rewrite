@@ -33,9 +33,9 @@ describe("FilteredEmpty", () => {
     expect(source).toContain("onPress={onReset}");
   });
 
-  it("uses the brand button at the large size for the primary action", () => {
+  it("uses the brand pill button for the primary action", () => {
     expect(source).toContain('variant="brand"');
-    expect(source).toContain('size="lg"');
+    expect(source).toContain('size="pill"');
   });
 
   it("is built on the shared empty state with the search composition, like FeedEmpty", () => {

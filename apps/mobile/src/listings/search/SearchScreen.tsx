@@ -23,6 +23,7 @@ import { useRecentChoicesStore, type BrandModelChoice } from "./recentSearches";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
+import { GroupedList } from "@/components/ui/grouped-list";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
@@ -88,7 +89,7 @@ export function SearchScreen() {
 
   return (
     <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
+      <View className="flex-row items-center gap-3 px-4 pt-1 pb-3">
         <Button variant="secondary" size="icon" className="h-11 w-11" accessibilityLabel={t("back")}
           onPress={() => { Keyboard.dismiss(); goBack(); }}>
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
@@ -98,44 +99,44 @@ export function SearchScreen() {
             placeholder={t("searchBrandOrModel")} accessibilityLabel={t("searchBrandOrModel")}
             autoCorrect={false} autoCapitalize="none" returnKeyType="search" maxLength={100} />
         </View>
-        {query ? <Button variant="ghost" size="icon" className="h-11 w-11"
+        {query ? <Button variant="secondary" size="icon" className="h-11 w-11"
           accessibilityLabel={t("clearSearch")} onPress={() => { setQuery(""); input.current?.focus(); }}>
-          <Icon as={X} className="size-5 text-muted-foreground" />
-        </Button> : <View className="w-3" />}
+          <Icon as={X} className="size-5 text-foreground" />
+        </Button> : null}
       </View>
       <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerClassName="pb-6">
         {empty ? <>
           {recent.length > 0 ? <>
-            <View className="flex-row items-center justify-between px-4 pt-2">
-              <Text className="text-callout font-medium text-muted-foreground">{t("recentChoices")}</Text>
-              <Button variant="ghost" size="sm" accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
-                <Text className="text-callout text-primary">{t("clear")}</Text>
+            <View className="flex-row items-center justify-between px-5 pb-2 pt-3">
+              <Text className="font-heading text-subhead font-semibold text-foreground">{t("recentChoices")}</Text>
+              <Button variant="ghost" size="sm" className="-mr-2 px-2" accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
+                <Text className="text-callout font-medium text-primary">{t("clear")}</Text>
               </Button>
             </View>
-            {recent.map((choice) => <SearchRow key={`${choice.brandId}-${choice.modelIds.join(",")}`}
+            <GroupedList>{recent.map((choice) => <SearchRow key={`${choice.brandId}-${choice.modelIds.join(",")}`}
               label={choice.modelNames.length ? `${choice.brandName} ${choice.modelNames.join(", ")}` : t("brandAllModels", { brand: choice.brandName })}
               leading={<CarBrandLogo name={choice.brandName} logoUrl={brandMap.get(choice.brandId)?.logoUrl} />}
               trailing={<Icon as={History} className="size-4 text-muted-foreground" />}
-              onPress={() => openResults(choice)} />)}
+              onPress={() => openResults(choice)} />)}</GroupedList>
           </> : null}
-          <Text className="px-4 pt-4 pb-2 text-callout font-medium text-muted-foreground">{t("popularBrands")}</Text>
-          {browseError ? <ErrorState error={browseError} onRetry={retryBrowse} /> : browseLoading ? <Loading /> : popular.map((brand) =>
+          <Text className="px-5 pb-2 pt-6 font-heading text-subhead font-semibold text-foreground">{t("popularBrands")}</Text>
+          {browseError ? <ErrorState error={browseError} onRetry={retryBrowse} /> : browseLoading ? <Loading /> : <GroupedList>{popular.map((brand) =>
             <SearchRow key={brand.id} label={brand.name}
               leading={<CarBrandLogo name={brand.name} logoUrl={brand.logoUrl} />}
               detail={brand.count ? String(brand.count) : undefined}
-              onPress={() => openResults({ brandId: brand.id, brandName: brand.name, modelIds: [], modelNames: [] })} />)}
+              onPress={() => openResults({ brandId: brand.id, brandName: brand.name, modelIds: [], modelNames: [] })} />)}</GroupedList>}
         </> : search.isPaused && enoughText ? <ErrorState error={pausedError} onRetry={() => void search.refetch()} /> : waiting ? <Loading /> : search.isError && enoughText ?
-          <ErrorState error={search.error} onRetry={() => void search.refetch()} /> : current?.results.length ? <>
+          <ErrorState error={search.error} onRetry={() => void search.refetch()} /> : current?.results.length ? <GroupedList className="mt-1">
             {current.results.map((match) => <SearchRow key={`${match.kind}-${match.brandId}-${match.modelId ?? ""}`}
               label={match.kind === "model" ? `${match.brandLabel ?? brandMap.get(match.brandId)?.name ?? match.brandId} ${match.label}` : match.label}
               leading={match.kind === "brand" ? <CarBrandLogo name={match.label} logoUrl={brandMap.get(match.brandId)?.logoUrl} /> : <View className="size-8" />}
               detail={years ?? (match.kind === "brand" ? t("brand") : undefined)} onPress={() => pickMatch(match)} />)}
-          </> : years && /^[\d\s–—-]+$/u.test(query.trim()) ? <SearchRow label={t("allCarsYear", { years })}
-            leading={<Icon as={Calendar} className="size-8 text-muted-foreground" />} onPress={() => openResults(undefined, true)} /> :
+          </GroupedList> : years && /^[\d\s–—-]+$/u.test(query.trim()) ? <GroupedList className="mt-1"><SearchRow label={t("allCarsYear", { years })}
+            leading={<View className="size-8 items-center justify-center rounded-full bg-secondary"><Icon as={Calendar} className="size-4 text-foreground" /></View>} onPress={() => openResults(undefined, true)} /></GroupedList> :
           <Text className="px-6 py-8 text-center text-body text-muted-foreground">{t("noCatalogMatch", { query: query.trim() })}</Text>}
       </ScrollView>
-      <View className="border-t border-border px-4 py-3">
-        <Button variant="outline" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
+      <View className="px-4 pb-2 pt-3">
+        <Button variant="secondary" size="pill" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
           <Icon as={SlidersHorizontal} className="size-5 text-foreground" /><Text>{t("allFilters")}</Text>
         </Button>
       </View>
@@ -152,8 +153,8 @@ function SearchRow({ label, leading, trailing, detail, onPress }: {
   label: string; leading: React.ReactNode; trailing?: React.ReactNode; detail?: string; onPress: () => void;
 }) {
   return <Pressable onPress={onPress} accessibilityRole="button"
-    className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-muted/60">
-    {leading}<Text className="flex-1 text-body text-foreground" numberOfLines={1}>{label}</Text>
+    className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-secondary">
+    {leading}<Text className="flex-1 text-body font-medium text-foreground" numberOfLines={1}>{label}</Text>
     {detail ? <Text className="text-callout text-muted-foreground">{detail}</Text> : null}
     {trailing ?? <Icon as={ChevronRight} className="size-4 text-muted-foreground" />}
   </Pressable>;

@@ -9,7 +9,7 @@ export function FeedEmpty() {
   const { t } = useTranslation();
   return (
     <EmptyState illustration="listings" title={t("noListings")} hint={t("beFirstToSell")}>
-      <Button variant="brand" size="lg" onPress={() => router.push("/(tabs)/sell")}>
+      <Button variant="brand" size="pill" onPress={() => router.push("/(tabs)/sell")}>
         <Text className="text-primary-foreground">{t("sellCar")}</Text>
       </Button>
     </EmptyState>

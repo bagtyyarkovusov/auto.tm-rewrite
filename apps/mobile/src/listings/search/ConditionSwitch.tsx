@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 export function ConditionSwitch({ value, onChange }: { value?: Enums.ListingCondition; onChange: (value?: Enums.ListingCondition) => void }) {
   const { t } = useTranslation();
   const choices = [{ value: undefined, label: t("resultsAll") }, { value: "new" as const, label: t("new") }, { value: "used" as const, label: t("used") }];
-  return <View className="flex-row rounded-xl bg-muted p-1">
+  return <View className="flex-row rounded-lg bg-secondary p-1">
     {choices.map((choice) => <Pressable key={choice.label} onPress={() => onChange(choice.value)} accessibilityRole="button"
       accessibilityLabel={`${choice.label} ${t("condition")}`} accessibilityState={{ selected: choice.value === value }}
-      className={cn("min-h-11 flex-1 items-center justify-center rounded-lg", choice.value === value && "bg-card")}>
-      <Text className={cn("text-callout font-semibold", choice.value === value ? "text-foreground" : "text-muted-foreground")}>{choice.label}</Text>
+      className={cn("min-h-11 flex-1 items-center justify-center rounded-md", choice.value === value && "bg-card shadow-raised")}>
+      <Text className={cn("text-callout", choice.value === value ? "font-semibold text-foreground" : "font-medium text-muted-foreground")}>{choice.label}</Text>
     </Pressable>)}
   </View>;
 }
