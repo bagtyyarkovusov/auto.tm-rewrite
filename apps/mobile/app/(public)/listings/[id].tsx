@@ -29,6 +29,7 @@ import { useConfig } from "../../../src/api/admin/useConfig";
 import { ReportSheet } from "../../../src/admin/components/ReportSheet";
 
 import { ErrorState } from "@/components/ErrorState";
+import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 
@@ -69,6 +70,8 @@ export default function ListingDetailScreen() {
   const { isAuthenticated } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [photoHeight, setPhotoHeight] = useState(260);
+  // The screen reaches the bottom edge, so the bar clears the system inset itself.
+  const bar = useStickyActionBar("screen");
 
   const { maps } = useCatalogMaps(data?.brandId, data?.modelId, data?.regionId);
 
@@ -126,6 +129,9 @@ export default function ListingDetailScreen() {
     );
   }
 
+  const showContactBar = !isOwner && !isClosedForContact(data.status);
+  const hasBar = showContactBar || isOwner;
+
   return (
     <View className="flex-1 bg-background">
       <CollapsingHeader
@@ -148,9 +154,11 @@ export default function ListingDetailScreen() {
         }
       />
 
-      {/* Main content — bottom safe area only; photo goes full-bleed to top */}
-      <View className="flex-1" style={{ paddingBottom: insets.bottom }}>
+      {/* Main content: the photo goes full-bleed to the top, and the page runs
+          under the floating action bar and ends clear of it. */}
+      <View className="flex-1" style={hasBar ? undefined : { paddingBottom: insets.bottom }}>
         <ListingDetailView
+          bottomSpace={hasBar ? bar.space : 0}
           listing={data}
           maps={maps}
           isOwner={isOwner}
@@ -166,28 +174,24 @@ export default function ListingDetailScreen() {
       </View>
 
       {/* Buyer CTAs only for non-owners on Listings still open for contact */}
-      {!isOwner && !isClosedForContact(data.status) && (
-        <View
-          className="border-t border-border"
-          style={{ paddingBottom: insets.bottom }}
-        >
+      {showContactBar && (
+        <StickyActionBar {...bar.barProps}>
           <ContactCtaBar
+            variant="floating"
             listingId={data.id}
             contactPhone={data.contactPhone}
             allowCalls={data.allowCalls}
             allowChat={data.allowChat}
             status={data.status}
           />
-        </View>
+        </StickyActionBar>
       )}
 
       {isOwner && (
-        <View
-          className="border-t border-border"
-          style={{ paddingBottom: insets.bottom }}
-        >
+        // The owner's row brings its own padding.
+        <StickyActionBar {...bar.barProps} className="p-0">
           <OwnerActions listingId={data.id} status={data.status} mode="bar" />
-        </View>
+        </StickyActionBar>
       )}
 
       <ReportSheet

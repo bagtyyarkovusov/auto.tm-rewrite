@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { AlertCircle, ChevronLeft } from "lucide-react-native";
+import { AlertCircle } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,7 @@ import { HELP_HREF } from "../../src/navigation/helpHref";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -229,17 +230,9 @@ export default function ContactPhoneCodeScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <View className="flex-row items-center px-4 pb-3">
-          <Button
-            accessibilityLabel={t("back")}
-            variant="secondary"
-            size="icon"
-            className="h-11 w-11"
-            onPress={goBack}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-        </View>
+        <StackHeader
+          leading={<BackButton accessibilityLabel={t("back")} onPress={goBack} />}
+        />
 
         <ScrollView
           className="flex-1"

@@ -5,7 +5,7 @@ import {
   ScrollView, View,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { Calendar, ChevronLeft, ChevronRight, History, SlidersHorizontal, X } from "lucide-react-native";
+import { Calendar, ChevronRight, History, SlidersHorizontal, X } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { CatalogSchemas } from "@auto-tm/contracts";
 
@@ -22,6 +22,8 @@ import { PARAMETERS_PATH } from "./pickerActions";
 import { useRecentChoicesStore, type BrandModelChoice } from "./recentSearches";
 
 import { ErrorState } from "@/components/ErrorState";
+import { BackButton, HeaderButton, StackHeader } from "@/components/navigation/StackHeader";
+import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import { GroupedList } from "@/components/ui/grouped-list";
 import { Icon } from "@/components/ui/icon";
@@ -32,6 +34,7 @@ import { Text } from "@/components/ui/text";
 export function SearchScreen() {
   const { t } = useTranslation();
   const goBack = useSafeBack(HOME_HREF);
+  const bar = useStickyActionBar();
   const [query, setQuery] = useState("");
   const input = useRef<TextInput>(null);
   const brands = useBrands();
@@ -89,22 +92,20 @@ export function SearchScreen() {
 
   return (
     <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View className="flex-row items-center gap-3 px-4 pt-1 pb-3">
-        <Button variant="secondary" size="icon" className="h-11 w-11" accessibilityLabel={t("back")}
-          onPress={() => { Keyboard.dismiss(); goBack(); }}>
-          <Icon as={ChevronLeft} className="size-6 text-foreground" />
-        </Button>
+      <StackHeader
+        leading={<BackButton accessibilityLabel={t("back")} onPress={() => { Keyboard.dismiss(); goBack(); }} />}
+        trailing={query ? <HeaderButton icon={X}
+          accessibilityLabel={t("clearSearch")} onPress={() => { setQuery(""); input.current?.focus(); }} /> : null}
+      >
         <View className="min-w-0 flex-1">
           <Input ref={input} value={query} onChangeText={setQuery} autoFocus
             placeholder={t("searchBrandOrModel")} accessibilityLabel={t("searchBrandOrModel")}
             autoCorrect={false} autoCapitalize="none" returnKeyType="search" maxLength={100} />
         </View>
-        {query ? <Button variant="secondary" size="icon" className="h-11 w-11"
-          accessibilityLabel={t("clearSearch")} onPress={() => { setQuery(""); input.current?.focus(); }}>
-          <Icon as={X} className="size-5 text-foreground" />
-        </Button> : null}
-      </View>
-      <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerClassName="pb-6">
+      </StackHeader>
+      {/* The list runs under the bar; the bar rides up with the keyboard. */}
+      <View className="min-h-0 flex-1">
+      <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: bar.space + 8 }}>
         {empty ? <>
           {recent.length > 0 ? <>
             <View className="flex-row items-center justify-between px-5 pb-2 pt-3">
@@ -135,10 +136,11 @@ export function SearchScreen() {
             leading={<View className="size-8 items-center justify-center rounded-full bg-secondary"><Icon as={Calendar} className="size-4 text-foreground" /></View>} onPress={() => openResults(undefined, true)} /></GroupedList> :
           <Text className="px-6 py-8 text-center text-body text-muted-foreground">{t("noCatalogMatch", { query: query.trim() })}</Text>}
       </ScrollView>
-      <View className="px-4 pb-2 pt-3">
-        <Button variant="secondary" size="pill" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
+      <StickyActionBar {...bar.barProps}>
+        <Button variant="secondary" size="lg" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
           <Icon as={SlidersHorizontal} className="size-5 text-foreground" /><Text>{t("allFilters")}</Text>
         </Button>
+      </StickyActionBar>
       </View>
     </KeyboardAvoidingView>
   );

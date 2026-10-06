@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, X } from "lucide-react-native";
 import { KeyboardAvoidingView, Platform, ScrollView, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -26,9 +25,10 @@ import { pickerRouter } from "./useRoutePickerActions";
 
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
+import { BackButton, HeaderTextAction, StackHeader } from "@/components/navigation/StackHeader";
+import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { TabScreen } from "@/components/navigation/TabScreen";
 
 interface SearchParametersFormProps {
@@ -55,6 +55,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
   const [cityResetVersion, setCityResetVersion] = useState(0);
   const [step, setStep] = useState<DonePickerStep | null>(null);
   const record = useRecentChoicesStore((s) => s.record);
+  const bar = useStickyActionBar();
 
   const countEnabled = isValid && priceRangeValid;
   const count = useListingCount({ filters: draft, enabled: countEnabled });
@@ -105,32 +106,33 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
   );
 
   const closePicker = (
-    <Button variant="secondary" size="icon" className="h-11 w-11" onPress={() => setStep(null)} accessibilityLabel={t("close")}>
-      <Icon as={X} className="size-5 text-foreground" />
-    </Button>
+    <BackButton kind="close" onPress={() => setStep(null)} accessibilityLabel={t("close")} />
   );
 
   return (
     <TabScreen>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View className="flex-row items-center gap-3 px-4 pt-1 pb-3">
-          <Button variant="secondary" size="icon" className="h-11 w-11" onPress={onBack} accessibilityLabel={t("back")}>
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-          <Text className="min-w-0 flex-1 font-heading text-headline font-semibold text-foreground" numberOfLines={1}>
-            {t("searchParameters")}
-          </Text>
-          <Button variant="ghost" className="h-11 px-3 py-0" onPress={() => {
-            reset();
-            setCityResetVersion((version) => version + 1);
-          }} accessibilityLabel={t("reset")}>
-            <Text className="text-body font-medium text-primary">{t("reset")}</Text>
-          </Button>
-        </View>
+        <StackHeader
+          title={t("searchParameters")}
+          leading={<BackButton onPress={onBack} accessibilityLabel={t("back")} />}
+          trailing={
+            <HeaderTextAction
+              label={t("reset")}
+              accessibilityLabel={t("reset")}
+              onPress={() => {
+                reset();
+                setCityResetVersion((version) => version + 1);
+              }}
+            />
+          }
+        />
 
+        {/* The form runs under the bar; the bar rides up with the keyboard. */}
+        <View className="min-h-0 flex-1">
         <ScrollView
           className="min-h-0 flex-1"
-          contentContainerClassName="gap-5 px-4 pb-4 pt-1"
+          contentContainerClassName="gap-5 px-4 pt-1"
+          contentContainerStyle={{ paddingBottom: bar.space + 8 }}
           keyboardShouldPersistTaps="handled"
         >
           <ConditionFilterControl value={draft.condition} onChange={(value) => setField("condition", value)} />
@@ -160,13 +162,13 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
           />
         </ScrollView>
 
-        <View className="gap-2 px-4 pb-2 pt-3">
+        <StickyActionBar {...bar.barProps}>
           {!countEnabled ? (
-            <Text className="text-center text-callout text-destructive">{t("checkFilterValues")}</Text>
+            <Text className="px-2 pt-1 text-center text-callout text-destructive">{t("checkFilterValues")}</Text>
           ) : null}
           {showCountError ? (
             <View accessibilityRole="alert" className="gap-1">
-              <Text className="text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
+              <Text className="px-2 pt-1 text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
               <Button variant="ghost" onPress={() => void count.refetch()}>
                 <Text>{t("retry")}</Text>
               </Button>
@@ -174,13 +176,14 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
           ) : null}
           <Button
             variant="brand"
-            size="pill"
+            size="lg"
             disabled={!countEnabled}
             onPress={show}
             accessibilityLabel={showLabel}
           >
             <Text numberOfLines={1}>{showLabel}</Text>
           </Button>
+        </StickyActionBar>
         </View>
       </KeyboardAvoidingView>
 
@@ -197,6 +200,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
               initialModelIds={step.brand.id === draft.brandId ? draft.modelIds : []}
               filters={draft}
               leading={closePicker}
+              barContainer="screen"
             />
           ) : null}
         </SheetContent>

@@ -34,6 +34,8 @@ interface ListingDetailProps {
   onSeeSimilar?: () => void;
   onScroll?: ScrollViewProps["onScroll"];
   onPhotoHeight?: (height: number) => void;
+  /** Room kept at the end of the scroll for a bar that floats over it. */
+  bottomSpace?: number;
 }
 interface SpecItemProps {
   label: string;
@@ -65,6 +67,7 @@ export function ListingDetailView({
   onSeeSimilar,
   onScroll,
   onPhotoHeight,
+  bottomSpace = 0,
 }: ListingDetailProps) {
   const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -133,7 +136,12 @@ export function ListingDetailView({
     { label: t("vin"), value: listing.vin || undefined },
   ];
   return (
-    <ScrollView className="flex-1" onScroll={onScroll} scrollEventThrottle={16}>
+    <ScrollView
+      className="flex-1"
+      contentContainerStyle={{ paddingBottom: bottomSpace }}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+    >
       <View
         onLayout={(event) => onPhotoHeight?.(event.nativeEvent.layout.height)}
       >

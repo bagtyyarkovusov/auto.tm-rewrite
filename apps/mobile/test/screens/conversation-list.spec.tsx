@@ -27,11 +27,11 @@ describe("ConversationsListScreen", () => {
   it("has a back button in header", () => {
     expect(source).toContain("goBack");
     expect(source).toContain('accessibilityLabel={t("goBack")}');
-    expect(source).toContain("ArrowLeft");
+    expect(source).toContain("BackButton");
   });
 
   it("shows Messages header title", () => {
     expect(source).toContain('t("messages")');
-    expect(source).toContain("text-subhead font-semibold");
+    expect(source).toContain("StackHeader");
   });
 });

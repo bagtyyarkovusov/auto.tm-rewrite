@@ -10,6 +10,7 @@ import type { PickerActions } from "./pickerActions";
 import { useBrandPicker, type RecentRow } from "./useBrandPicker";
 
 import { ErrorState } from "@/components/ErrorState";
+import { StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
 import { GroupedItem } from "@/components/ui/grouped-list";
 import { Icon } from "@/components/ui/icon";
@@ -185,11 +186,8 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
 
   return (
     <View className="min-h-0 flex-1">
-      <View className="flex-row items-center gap-3 px-4 pt-1 pb-3">
-        {leading}
-        <Text className="text-headline font-heading font-semibold text-foreground">{t("brand")}</Text>
-      </View>
-      <View className="px-4 pb-1">
+      <StackHeader large title={t("brand")} leading={leading} />
+      <View className="px-4 pb-1 pt-1">
         <Input
           value={picker.query}
           onChangeText={picker.setQuery}

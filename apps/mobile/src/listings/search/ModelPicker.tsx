@@ -8,6 +8,9 @@ import type { PickerActions } from "./pickerActions";
 import { useModelPicker } from "./useModelPicker";
 
 import { ErrorState } from "@/components/ErrorState";
+import { HeaderTextAction, StackHeader } from "@/components/navigation/StackHeader";
+import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
+import type { StickyBarContainer } from "@/components/navigation/tabBarHeight";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -25,6 +28,11 @@ interface ModelPickerProps {
   filters?: ListingsSchemas.ListingFilter;
   /** Back (a pushed screen) or Close (inside Search parameters). */
   leading: ReactNode;
+  /**
+   * What the picker's parent keeps clear below the action bar: a tab screen
+   * ends above the tab bar (`inset`); a sheet reaches the screen's edge (`screen`).
+   */
+  barContainer?: StickyBarContainer;
 }
 
 interface Section {
@@ -45,11 +53,13 @@ export function ModelPicker({
   initialModelIds,
   filters,
   leading,
+  barContainer = "inset",
 }: ModelPickerProps) {
   const { t } = useTranslation();
   const picker = useModelPicker({ brandId, brandName, initialModelIds, filters });
   const { content, selected } = picker;
   const ready = content.kind === "ready";
+  const bar = useStickyActionBar(barContainer);
 
   const sections = useMemo<Section[]>(() => {
     if (content.kind !== "ready") return [];
@@ -92,7 +102,7 @@ export function ModelPicker({
         keyboardDismissMode="on-drag"
         stickySectionHeadersEnabled={false}
         className="min-h-0 flex-1"
-        contentContainerClassName="pb-4"
+        contentContainerStyle={{ paddingBottom: bar.space + 8 }}
         ListHeaderComponent={
           picker.query.trim() ? null : (
             <GroupedItem inset="check">
@@ -130,16 +140,13 @@ export function ModelPicker({
 
   return (
     <View className="min-h-0 flex-1">
-      <View className="flex-row items-center gap-3 px-4 pt-1 pb-3">
-        {leading}
-        <Text className="min-w-0 flex-1 text-headline font-heading font-semibold text-foreground" numberOfLines={1}>
-          {picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
-        </Text>
-        <Button variant="ghost" className="h-11 px-3 py-0" onPress={actions.changeBrand}>
-          <Text className="text-body font-medium text-primary">{t("changeBrand")}</Text>
-        </Button>
-      </View>
-      <View className="px-4 pb-3">
+      <StackHeader
+        large
+        title={picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
+        leading={leading}
+        trailing={<HeaderTextAction label={t("changeBrand")} onPress={actions.changeBrand} />}
+      />
+      <View className="px-4 pb-3 pt-1">
         <Input
           value={picker.query}
           onChangeText={picker.setQuery}
@@ -150,40 +157,43 @@ export function ModelPicker({
           clearButtonMode="while-editing"
         />
       </View>
-      {body}
-      <View className="gap-2 px-4 pb-2 pt-3">
-        {actions.mode === "show" && selected.length === 0 && picker.brandName ? (
-          <Text className="text-center text-callout text-muted-foreground">
-            {t("noModelPickedHint", { brand: picker.brandName })}
-          </Text>
-        ) : null}
-        {picker.countError ? (
-          <View accessibilityRole="alert" className="gap-1">
-            <Text className="text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
-            <Button variant="ghost" onPress={picker.retry}>
-              <Text>{t("retry")}</Text>
-            </Button>
-          </View>
-        ) : null}
-        <Button
-          variant="brand"
-          size="pill"
-          disabled={!ready}
-          onPress={() => actions.confirm(picker.choice())}
-          accessibilityLabel={countLabel}
-        >
-          <Text numberOfLines={1}>{countLabel}</Text>
-        </Button>
-        {actions.moreFilters ? (
+      {/* The list runs under the bar; the bar floats at the bottom of this view. */}
+      <View className="min-h-0 flex-1">
+        {body}
+        <StickyActionBar {...bar.barProps}>
+          {actions.mode === "show" && selected.length === 0 && picker.brandName ? (
+            <Text className="px-2 pt-1 text-center text-footnote text-muted-foreground">
+              {t("noModelPickedHint", { brand: picker.brandName })}
+            </Text>
+          ) : null}
+          {picker.countError ? (
+            <View accessibilityRole="alert" className="gap-1">
+              <Text className="px-2 pt-1 text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
+              <Button variant="ghost" onPress={picker.retry}>
+                <Text>{t("retry")}</Text>
+              </Button>
+            </View>
+          ) : null}
           <Button
-            variant="ghost"
-            className="h-11 py-0"
+            variant="brand"
+            size="lg"
             disabled={!ready}
-            onPress={() => actions.moreFilters?.(picker.choice())}
+            onPress={() => actions.confirm(picker.choice())}
+            accessibilityLabel={countLabel}
           >
-            <Text className="text-body font-medium text-primary">{t("moreFilters")}</Text>
+            <Text numberOfLines={1}>{countLabel}</Text>
           </Button>
-        ) : null}
+          {actions.moreFilters ? (
+            <Button
+              variant="ghost"
+              className="h-11 py-0"
+              disabled={!ready}
+              onPress={() => actions.moreFilters?.(picker.choice())}
+            >
+              <Text className="text-body font-medium text-primary">{t("moreFilters")}</Text>
+            </Button>
+          ) : null}
+        </StickyActionBar>
       </View>
     </View>
   );

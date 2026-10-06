@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 import * as Linking from "expo-linking";
-import { ArrowLeft, BellOff, MoreHorizontal, Phone } from "lucide-react-native";
+import { BellOff, MoreHorizontal, Phone } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import type { ConversationDetail } from "../../api/conversations/useConversation";
@@ -11,7 +11,7 @@ import { ConversationMenuSheet } from "./ConversationMenuSheet";
 import { PeerPresenceLabel, type PeerPresence } from "./PeerPresenceLabel";
 
 import { PublicUserAvatar } from "@/components/identity/PublicUserAvatar";
-import { Button } from "@/components/ui/button";
+import { BackButton, HeaderButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -66,19 +66,42 @@ export function ConversationHeader({
   };
 
   return (
-    <View
+    <StackHeader
       onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}
-      className="flex-row items-center gap-2 px-2 py-2 border-b border-border bg-background">
-      <Button
-        variant="secondary"
-        className="h-11 w-11"
-        size="icon"
-        onPress={onBack}
-        accessibilityLabel={t("goBack")}
-      >
-        <Icon as={ArrowLeft} className="size-5 text-foreground" />
-      </Button>
+      className="bg-background pt-2"
+      leading={<BackButton onPress={onBack} accessibilityLabel={t("goBack")} />}
+      trailing={
+        <View className="flex-row items-center gap-2">
+          {callPhone && (
+            <HeaderButton
+              icon={Phone}
+              onPress={handleCall}
+              accessibilityLabel={tConv("callSeller")}
+            />
+          )}
 
+          {conversation && (
+            <HeaderButton
+              icon={MoreHorizontal}
+              onPress={() => setMenuOpen(true)}
+              accessibilityLabel={tConv("conversationMenu")}
+            />
+          )}
+
+          <ConversationMenuSheet
+            open={menuOpen}
+            onOpenChange={setMenuOpen}
+            isMuted={isMuted}
+            isBlocked={isBlocked}
+            muteDisabled={muteDisabled}
+            onToggleMute={onToggleMute}
+            onReport={onReport}
+            onBlock={onBlock}
+            onUnblock={onUnblock}
+          />
+        </View>
+      }
+    >
       {conversation && peerName ? (
         <>
           <PublicUserAvatar size={36} user={conversation.peer} />
@@ -111,42 +134,6 @@ export function ConversationHeader({
       ) : (
         <View className="flex-1" />
       )}
-
-      {callPhone && (
-        <Button
-          variant="ghost"
-          className="h-11 w-11"
-          size="icon"
-          onPress={handleCall}
-          accessibilityLabel={tConv("callSeller")}
-        >
-          <Icon as={Phone} className="size-5 text-foreground" />
-        </Button>
-      )}
-
-      {conversation && (
-        <Button
-          variant="ghost"
-          className="h-11 w-11"
-          size="icon"
-          onPress={() => setMenuOpen(true)}
-          accessibilityLabel={tConv("conversationMenu")}
-        >
-          <Icon as={MoreHorizontal} className="size-5 text-foreground" />
-        </Button>
-      )}
-
-      <ConversationMenuSheet
-        open={menuOpen}
-        onOpenChange={setMenuOpen}
-        isMuted={isMuted}
-        isBlocked={isBlocked}
-        muteDisabled={muteDisabled}
-        onToggleMute={onToggleMute}
-        onReport={onReport}
-        onBlock={onBlock}
-        onUnblock={onUnblock}
-      />
-    </View>
+    </StackHeader>
   );
 }

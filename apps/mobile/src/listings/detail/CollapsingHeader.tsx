@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { ArrowLeft, Heart, MoreHorizontal } from "lucide-react-native";
+import { Heart, MoreHorizontal } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
@@ -12,6 +12,7 @@ import { isClosedForContact } from "./closedListing";
 import { listingTitle } from "./presentation";
 import type { CatalogMaps } from "./useCatalogMaps";
 
+import { BackButton } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
@@ -56,20 +57,16 @@ export function CollapsingHeader({
     <View
       className={cn(
         "absolute top-0 left-0 right-0 z-20",
-        collapsed && "bg-background border-b border-border",
+        collapsed && "bg-background",
       )}
       style={{ paddingTop: topInset }}
     >
       <View className="flex-row items-center gap-1 px-3 py-2">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="rounded-full bg-background/90"
+        <BackButton
+          className="bg-background/90"
           accessibilityLabel={t("back")}
           onPress={onBack}
-        >
-          <Icon as={ArrowLeft} className="size-5 text-foreground" />
-        </Button>
+        />
         <View className="min-w-0 flex-1 px-1">
           {collapsed && (
             <>

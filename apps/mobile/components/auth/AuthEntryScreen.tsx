@@ -1,6 +1,5 @@
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
-import { X } from "lucide-react-native";
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -19,8 +18,8 @@ import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import { type SignInMethod, SignInMethodTabs } from "./SignInMethodTabs";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { THEME } from "@/lib/theme";
 
@@ -58,18 +57,17 @@ export function AuthEntryScreen({
         className="flex-1"
       >
         <View className="flex-1 px-4">
-          <View className="flex-row items-center justify-between py-4">
-            <Button
-              accessibilityLabel={t("close")}
-              className="h-11 w-11"
-              size="icon"
-              variant="ghost"
-              onPress={() => closeAuth(router)}
-            >
-              <Icon as={X} className="size-5 text-foreground" />
-            </Button>
-            <LocaleSwitcher />
-          </View>
+          <StackHeader
+            className="px-0"
+            leading={
+              <BackButton
+                kind="close"
+                accessibilityLabel={t("close")}
+                onPress={() => closeAuth(router)}
+              />
+            }
+            trailing={<LocaleSwitcher />}
+          />
 
           <View className="flex-1">
             <View className="mt-8 gap-8">

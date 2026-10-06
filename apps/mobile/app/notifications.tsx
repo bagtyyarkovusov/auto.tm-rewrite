@@ -1,5 +1,4 @@
 import * as Linking from "expo-linking";
-import { ChevronLeft } from "lucide-react-native";
 import { ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -8,8 +7,7 @@ import { useNotificationPermissionState } from "../src/notifications/useNotifica
 
 import { MenuRow } from "@/components/account/MenuRow";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 
@@ -30,20 +28,11 @@ export default function NotificationsScreen() {
 
   return (
     <SafeScreen>
-      <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
-        <Button
-          variant="secondary"
-          className="h-11 w-11"
-          size="icon"
-          onPress={goBack}
-          accessibilityLabel={t("common:back")}
-        >
-          <Icon as={ChevronLeft} className="size-6 text-foreground" />
-        </Button>
-        <Text className="text-headline font-heading font-semibold text-foreground">
-          {t("notifications")}
-        </Text>
-      </View>
+      <StackHeader
+        large
+        title={t("notifications")}
+        leading={<BackButton onPress={goBack} accessibilityLabel={t("common:back")} />}
+      />
 
       <ScrollView className="flex-1" contentContainerClassName="pb-6">
         <View

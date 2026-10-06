@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import {
-  ChevronLeft,
   LogOut,
   Mail,
   Pencil,
@@ -33,11 +32,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { ErrorState } from "@/components/ErrorState";
 
 function LoadingState() {
@@ -279,14 +278,11 @@ export default function ProfileScreen() {
   return (
     <SafeScreen>
       {/* Header */}
-      <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
-        <Button variant="secondary" size="icon" className="h-11 w-11" onPress={goBack}>
-          <Icon as={ChevronLeft} className="size-6 text-foreground" />
-        </Button>
-        <Text className="text-headline font-heading font-semibold text-foreground">
-          {t("account:profile")}
-        </Text>
-      </View>
+      <StackHeader
+        large
+        title={t("account:profile")}
+        leading={<BackButton onPress={goBack} />}
+      />
 
       {/* A signed-out visitor sees the header only. */}
       {isAuthenticated === null ? (

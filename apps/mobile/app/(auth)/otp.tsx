@@ -1,5 +1,4 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -21,8 +20,8 @@ import { useOtpAuthNavigation } from "../../src/auth/useOtpAuthNavigation";
 import { HELP_HREF } from "../../src/navigation/helpHref";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Text } from "@/components/ui/text";
-import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -188,18 +187,11 @@ export default function OtpScreen() {
           className="flex-1"
         >
           <View className="flex-1 px-4">
-            <View className="flex-row items-center justify-between py-4">
-              <Button
-                accessibilityLabel={t("back")}
-                size="icon"
-                variant="secondary"
-                className="h-11 w-11"
-                onPress={cancelAuth}
-              >
-                <Icon as={ChevronLeft} className="size-5 text-foreground" />
-              </Button>
-              <LocaleSwitcher />
-            </View>
+            <StackHeader
+              className="px-0"
+              leading={<BackButton accessibilityLabel={t("back")} onPress={cancelAuth} />}
+              trailing={<LocaleSwitcher />}
+            />
 
             <ScrollView
               className="flex-1"

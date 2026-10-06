@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import type { LucideIcon } from "lucide-react-native";
-import { ChevronLeft, Mail, Phone } from "lucide-react-native";
+import { Mail, Phone } from "lucide-react-native";
 import * as Linking from "expo-linking";
 import { useTranslation } from "react-i18next";
 
@@ -9,7 +9,7 @@ import { supportContacts } from "../src/config/supportContacts";
 import { useSafeBack } from "../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
-import { Button } from "@/components/ui/button";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
@@ -57,18 +57,11 @@ export default function HelpScreen() {
 
   return (
     <SafeScreen>
-      <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
-        <Button
-          variant="secondary"
-          className="h-11 w-11"
-          size="icon"
-          onPress={goBack}
-          accessibilityLabel={t("common:back")}
-        >
-          <Icon as={ChevronLeft} className="size-6 text-foreground" />
-        </Button>
-        <Text className="text-headline font-heading font-semibold text-foreground">{t("help")}</Text>
-      </View>
+      <StackHeader
+        large
+        title={t("help")}
+        leading={<BackButton onPress={goBack} accessibilityLabel={t("common:back")} />}
+      />
 
       <ScrollView className="flex-1" contentContainerClassName="pb-6">
         <ContactRow

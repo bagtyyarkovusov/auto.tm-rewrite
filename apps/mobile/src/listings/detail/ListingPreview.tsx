@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { ScrollView, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
-import { ArrowLeft } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,8 +18,8 @@ import { closedListingBannerKey, isClosedForContact } from "./closedListing";
 import { DetailSkeletonBody } from "./DetailSkeleton";
 import { detailDate } from "./presentation";
 
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { BackButton } from "@/components/navigation/StackHeader";
+import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { Text } from "@/components/ui/text";
 
 export interface ListingPreviewProps {
@@ -41,6 +40,7 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
   const { t, i18n } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const bar = useStickyActionBar("screen");
   const [useOriginalImage, setUseOriginalImage] = useState(false);
   const listings = useMemo(() => [summary], [summary]);
   const names = useFeedCatalogMaps(listings);
@@ -92,18 +92,14 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
         className="absolute left-0 right-0 top-0 z-20 px-3 py-2"
         style={{ paddingTop: insets.top + 8 }}
       >
-        <Button
-          variant="secondary"
-          size="icon"
-          className="rounded-full bg-background/90"
+        <BackButton
+          className="bg-background/90"
           accessibilityLabel={t("back")}
           onPress={onBack}
-        >
-          <Icon as={ArrowLeft} className="size-5 text-foreground" />
-        </Button>
+        />
       </View>
 
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bar.space }}>
         {imageUri ? (
           <View style={{ width, height: width * 0.65 }}>
             <Image
@@ -156,8 +152,9 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
       </ScrollView>
 
       {!isOwner && !closed && (
-        <View className="border-t border-border" style={{ paddingBottom: insets.bottom }}>
+        <StickyActionBar {...bar.barProps}>
           <ContactCtaBar
+            variant="floating"
             listingId={summary.id}
             allowCalls={false}
             allowChat={false}
@@ -165,7 +162,7 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
             pending
             replayAuth={false}
           />
-        </View>
+        </StickyActionBar>
       )}
     </View>
   );

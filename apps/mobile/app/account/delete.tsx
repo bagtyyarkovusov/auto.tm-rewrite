@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
-import { ChevronLeft, Trash2 } from "lucide-react-native";
+import { Trash2 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 
 export default function DeleteAccountScreen() {
   const { t, i18n } = useTranslation("account");
@@ -70,20 +71,15 @@ export default function DeleteAccountScreen() {
   return (
     <SafeScreen>
       {/* Header */}
-      <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
-        <Button
-          variant="secondary"
-          className="h-11 w-11"
-          size="icon"
-          onPress={goBack}
-          accessibilityLabel={t("common:back", { defaultValue: "Back" })}
-        >
-          <Icon as={ChevronLeft} className="size-6 text-foreground" />
-        </Button>
-        <Text className="text-headline font-heading font-semibold text-foreground">
-          {t("deleteAccount")}
-        </Text>
-      </View>
+      <StackHeader
+        title={t("deleteAccount")}
+        leading={
+          <BackButton
+            onPress={goBack}
+            accessibilityLabel={t("common:back", { defaultValue: "Back" })}
+          />
+        }
+      />
 
       <ScrollView className="flex-1 px-4">
         <View className="gap-4 py-4">
