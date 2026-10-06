@@ -77,8 +77,9 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition }: ListingP
 
   if (tiles.length < 2) {
     const only = tiles[0];
-    // Without a photo the frame drops to the 2:1 band: the placeholder needs no hero's height.
-    return <View testID="listing-photos" style={only ? { height } : undefined} className={only ? undefined : "aspect-photo-wide"}>
+    // Every card keeps the strip's height, so a card without a photo lines up with its neighbours
+    // and the list does not change rhythm; the frame's tone and the quiet mark say there is no picture.
+    return <View testID="listing-photos" style={{ height }}>
       <View testID="listing-photo" className="h-full w-full overflow-hidden bg-secondary">
         <ListingPhoto mediaKey={only?.kind === "photo" ? only.key : undefined} emptyLabel={t("noPhotos")} variant="detail" />
       </View>
