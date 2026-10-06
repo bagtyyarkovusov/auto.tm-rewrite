@@ -82,7 +82,7 @@ export class ListFeed {
     });
 
     const listingIds = rankResult.items.map((listing) => listing.id);
-    const sellerIds = [...new Set(rankResult.items.map((listing) => listing.sellerId))];
+    const sellerIds = rankResult.items.map((listing) => listing.sellerId);
     const rateMap = await this.buildRateMap();
     // Batched per page, never per Listing: one media read, one seller read,
     // one favorites read.

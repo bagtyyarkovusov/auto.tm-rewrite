@@ -16,24 +16,37 @@ export interface CardPhotos {
   photoCount: number;
 }
 
+type CardMedia = ReadonlyArray<{ key: string; kind: MediaKind }>;
+
 /**
- * Derives the card photo fields from a Listing's media.
- * `media` must already be ordered by `sortOrder` ascending. It may be only the
- * first media item plus the first `CARD_GALLERY_KEY_LIMIT` photos, as a
- * bounded read returns; then pass the Listing's total `photoCount`, which
- * otherwise is the number of photos in `media`.
+ * Derives the card photo fields from ALL of a Listing's media, ordered by
+ * `sortOrder` ascending. `photoCount` is the number of photos in `media`, so
+ * a truncated list belongs to `toCardPhotosFromFirstMedia`.
  */
-export function toCardPhotos(
-  media: ReadonlyArray<{ key: string; kind: MediaKind }>,
-  photoCount?: number,
+export function toCardPhotos(media: CardMedia): CardPhotos {
+  return toCardPhotosFromFirstMedia(
+    media,
+    media.filter((m) => m.kind === "image").length,
+  );
+}
+
+/**
+ * Derives the card photo fields from the start of a Listing's media, as a
+ * bounded read returns it: the first media item and at least the first
+ * `CARD_GALLERY_KEY_LIMIT` photos, ordered by `sortOrder` ascending.
+ * `photoCount` is the Listing's photo total, which the list cannot show.
+ */
+export function toCardPhotosFromFirstMedia(
+  firstMedia: CardMedia,
+  photoCount: number,
 ): CardPhotos {
-  const photoKeys = media.filter((m) => m.kind === "image").map((m) => m.key);
-  const cover = media[0]?.key;
+  const photoKeys = firstMedia.filter((m) => m.kind === "image").map((m) => m.key);
+  const cover = firstMedia[0]?.key;
 
   return {
     ...(cover ? { coverMediaKey: cover } : {}),
     photoKeys: photoKeys.slice(0, CARD_PHOTO_KEY_LIMIT),
     galleryKeys: photoKeys.slice(0, CARD_GALLERY_KEY_LIMIT),
-    photoCount: photoCount ?? photoKeys.length,
+    photoCount,
   };
 }

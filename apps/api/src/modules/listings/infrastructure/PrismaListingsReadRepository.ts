@@ -4,6 +4,7 @@ import { PrismaService } from "@auto-tm/db";
 import {
   CARD_GALLERY_KEY_LIMIT,
   toCardPhotos,
+  toCardPhotosFromFirstMedia,
   type CardPhotos,
 } from "../domain/CardPhotos";
 import { VISIBLE_LISTING_STATUSES } from "../domain/ListingStatus";
@@ -98,7 +99,10 @@ export class PrismaListingsReadRepository
   /**
    * One bounded read for the whole page: per Listing only its first media
    * item (the cover), its first `CARD_GALLERY_KEY_LIMIT` photos and its photo
-   * total, so the rows sent back stay small whatever a Listing holds.
+   * total, so the rows sent back stay small whatever a Listing holds. The
+   * photo total needs every media row of the page's Listings (at most 21
+   * each), and the plan reads exactly those, once, through the
+   * `(listingId, sortOrder)` index.
    */
   async getCardPhotos(listingIds: string[]): Promise<Map<string, CardPhotos>> {
     if (listingIds.length === 0) return new Map();
@@ -140,7 +144,7 @@ export class PrismaListingsReadRepository
     return new Map(
       [...byListing].map(([listingId, { media, photoCount }]) => [
         listingId,
-        toCardPhotos(media, photoCount),
+        toCardPhotosFromFirstMedia(media, photoCount),
       ]),
     );
   }

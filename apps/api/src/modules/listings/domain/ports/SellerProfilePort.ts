@@ -25,7 +25,8 @@ export interface CardSeller {
 export interface SellerProfilePort {
   getSellerProfile(userId: string): Promise<SellerProfile | null>;
   /**
-   * Card sellers for a page of Listings in one read, keyed by User id. Ids
+   * Card sellers for a page of Listings in one read, keyed by User id. An id
+   * may repeat, as one seller can own several Listings on a page. Ids
    * with no User are absent from the map.
    */
   getCardSellers(userIds: string[]): Promise<Map<string, CardSeller>>;

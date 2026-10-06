@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { CARD_GALLERY_KEY_LIMIT, CARD_PHOTO_KEY_LIMIT, toCardPhotos } from "./CardPhotos";
+import {
+  CARD_GALLERY_KEY_LIMIT,
+  CARD_PHOTO_KEY_LIMIT,
+  toCardPhotos,
+  toCardPhotosFromFirstMedia,
+} from "./CardPhotos";
 
 describe("toCardPhotos", () => {
   it("returns an empty array and 0 when the Listing has no media", () => {
@@ -50,16 +55,28 @@ describe("toCardPhotos", () => {
     expect(result.galleryKeys).toEqual(["p1", "p2"]);
   });
 
-  it("counts every photo when given only the first photos and the Listing's total", () => {
+});
+
+describe("toCardPhotosFromFirstMedia", () => {
+  it("reports the Listing's photo total, not the number of photos it was given", () => {
     const firstEight = Array.from({ length: 8 }, (_, i) => ({ key: `p${i}`, kind: "image" as const }));
 
-    const result = toCardPhotos([{ key: "clip", kind: "video" }, ...firstEight], 20);
+    const result = toCardPhotosFromFirstMedia([{ key: "clip", kind: "video" }, ...firstEight], 20);
 
     expect(result).toEqual({
       coverMediaKey: "clip",
       photoKeys: ["p0", "p1"],
       galleryKeys: ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"],
       photoCount: 20,
+    });
+  });
+
+  it("reports no photos for a Listing whose only media is a video", () => {
+    expect(toCardPhotosFromFirstMedia([{ key: "clip", kind: "video" }], 0)).toEqual({
+      coverMediaKey: "clip",
+      photoKeys: [],
+      galleryKeys: [],
+      photoCount: 0,
     });
   });
 });
