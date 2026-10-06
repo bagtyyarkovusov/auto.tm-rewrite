@@ -1,6 +1,10 @@
 import * as React from "react";
-import type { ViewProps } from "react-native";
+import { View, type ViewProps } from "react-native";
 import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  ReduceMotion,
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
@@ -11,7 +15,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { duration, spring, timing, useReduceMotion } from "@/lib/motion";
+import { duration, pressScale, spring, timing, useReduceMotion } from "@/lib/motion";
 
 type MotionViewProps = ViewProps & {
   className?: string;
@@ -220,4 +224,116 @@ function CrossFade({
   );
 }
 
-export { CrossFade, Enter, Pop, Pulse, SlideIndicator };
+/**
+ * Press feedback for a surface whose pressable is only a part of it: a
+ * Listing card gives as a whole under a finger, while its heart and its
+ * contact buttons stay controls of their own beside the pressable area.
+ * Spread `handlers` on the pressable and put `style` on a `MotionView`
+ * around the whole surface. `PressableScale` covers the common case where the
+ * pressable is the surface.
+ *
+ * The scale runs on the UI thread; Reduce Motion makes it an instant change.
+ */
+function usePressScale(feedback: keyof typeof pressScale = "surface") {
+  const pressed = useSharedValue(0);
+  const target = pressScale[feedback];
+
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - pressed.value * (1 - target) }],
+  }));
+
+  const handlers = React.useMemo(
+    () => ({
+      onPressIn: () => {
+        pressed.value = withTiming(1, timing("press"));
+      },
+      onPressOut: () => {
+        pressed.value = withTiming(0, timing("fast"));
+      },
+    }),
+    [pressed],
+  );
+
+  return { style, handlers };
+}
+
+/**
+ * Decides, once, which of a list's cells arrive with `Enter`. The first
+ * `count` cells of the first page rise in one after another; every cell that
+ * mounts later (a cell scrolled back into the window, a next page) is simply
+ * there. `ready` is true once the list has its first content.
+ *
+ * Returns the stagger order for an index, or `undefined` for no entrance.
+ */
+function useListEntrance(ready: boolean, count = 6) {
+  const settled = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!ready || settled.current) return;
+    // Long enough for the first cells to mount; after it nothing enters again.
+    const id = setTimeout(() => {
+      settled.current = true;
+    }, duration.slow);
+    return () => clearTimeout(id);
+  }, [ready]);
+
+  return React.useCallback(
+    (index: number) => (settled.current || index >= count ? undefined : index),
+    [count],
+  );
+}
+
+/**
+ * A list cell that may arrive with `Enter`. The choice is made when the cell
+ * mounts and never changes, so a re-render cannot replay or drop the entrance.
+ */
+function EnterOnce({
+  order,
+  children,
+  ...props
+}: MotionViewProps & { order?: number }) {
+  const [initialOrder] = React.useState(order);
+  if (initialOrder === undefined) {
+    return <View {...props}>{children}</View>;
+  }
+  return (
+    <Enter order={initialOrder} {...props}>
+      {children}
+    </Enter>
+  );
+}
+
+/** A view that takes an animated style, for `usePressScale`. */
+const MotionView = Animated.View;
+
+/**
+ * One of a row of items that come and go, such as an active filter chip. It
+ * fades in when it is added and out when it is removed, and its neighbours
+ * slide to close the gap instead of jumping. The slide is a transform on the
+ * UI thread. Reduce Motion drops all three.
+ */
+function Presence({ children, ...props }: MotionViewProps) {
+  return (
+    <Animated.View
+      entering={FadeIn.duration(duration.fast).reduceMotion(ReduceMotion.System)}
+      exiting={FadeOut.duration(duration.fast).reduceMotion(ReduceMotion.System)}
+      layout={LinearTransition.duration(duration.base).reduceMotion(ReduceMotion.System)}
+      {...props}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+export {
+  CrossFade,
+  Enter,
+  EnterOnce,
+  MotionView,
+  Pop,
+  Presence,
+  Pulse,
+  SlideIndicator,
+  useListEntrance,
+  usePressScale,
+};

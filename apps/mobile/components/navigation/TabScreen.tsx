@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import type { ViewProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ScrollEdgeFade } from "./ScrollEdgeFade";
 import { useTabBarSpace } from "./tabBarHeight";
 
 import { cn } from "@/lib/utils";
@@ -14,6 +16,17 @@ type TabScreenProps = ViewProps & {
    * bar, which is right for a screen with a button pinned to its bottom.
    */
   underTabBar?: boolean;
+  /**
+   * Draws the soft edge above the tab bar, where scrolling content fades
+   * into the page. Turn it off on a screen that pins its own bar there
+   * (`StickyActionBar` brings its own fade, drawn under the bar).
+   */
+  edgeFade?: boolean;
+  /**
+   * Controls that float over the scrolling content just above the tab bar,
+   * such as the Results filter chips. They are drawn above the edge fade.
+   */
+  overlay?: ReactNode;
 };
 
 /**
@@ -22,8 +35,11 @@ type TabScreenProps = ViewProps & {
  */
 export function TabScreen({
   underTabBar = false,
+  edgeFade = true,
+  overlay,
   className,
   style,
+  children,
   ...props
 }: TabScreenProps) {
   const space = useTabBarSpace();
@@ -33,6 +49,10 @@ export function TabScreen({
       edges={["top", "left", "right"]}
       style={[underTabBar ? null : { paddingBottom: space }, style]}
       {...props}
-    />
+    >
+      {children}
+      {edgeFade ? <ScrollEdgeFade height={space} /> : null}
+      {overlay}
+    </SafeAreaView>
   );
 }

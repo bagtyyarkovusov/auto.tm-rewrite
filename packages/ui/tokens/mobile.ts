@@ -60,6 +60,26 @@ export const mobileGlassOpacity = {
   reduced: 1,
 } as const;
 
+/**
+ * Opacity of the scrim behind a control or a chip that sits on a photo
+ * (`bg-media-scrim/on-photo`). At 60% white text on it keeps 4.5:1 over a
+ * pure white photo, so a caption-size count stays readable on any picture.
+ */
+export const mobileMediaOpacity = {
+  "on-photo": 0.6,
+} as const;
+
+/**
+ * Photo frames as width / height, so a photo keeps its shape at any card
+ * width instead of taking a fixed height.
+ */
+export const mobileAspect = {
+  /** A Listing photo in a grid card, a row card or a thumbnail. */
+  photo: "3 / 2",
+  /** The photo band of a full-width Listing card. */
+  "photo-wide": "2 / 1",
+} as const;
+
 /** Corner radii in dp. Larger surfaces take larger radii. */
 export const mobileRadius = {
   none: 0,

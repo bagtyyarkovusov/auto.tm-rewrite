@@ -196,7 +196,11 @@ vi.mock("@/components/ui/motion", async () => {
   // Renders the drawing that is showing, so a spec sees one icon, not both.
   const CrossFade = ({ active, on, off, ...props }: Record<string, unknown>) =>
     React.createElement(View, props as never, (active ? on : off) as never);
-  return { CrossFade, Enter: Plain, Pop: Plain, Pulse: Plain, SlideIndicator: Plain };
+  return {
+    CrossFade, Enter: Plain, EnterOnce: Plain, MotionView: Plain, Pop: Plain, Presence: Plain, Pulse: Plain, SlideIndicator: Plain,
+    useListEntrance: () => () => undefined,
+    usePressScale: () => ({ style: undefined, handlers: {} }),
+  };
 });
 // Empty-state compositions are decoration built from icons. They are replaced
 // whole, so a spec with its own narrow icon stub still renders the state.

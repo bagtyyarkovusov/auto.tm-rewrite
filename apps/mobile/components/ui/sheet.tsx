@@ -5,6 +5,7 @@ import { Platform, Pressable, View, type ViewProps } from 'react-native';
 import { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
 
+import { withFontFace } from '@/lib/font';
 import { cn } from '@/lib/utils';
 import { NativeOnlyAnimatedView } from '@/components/ui/native-only-animated-view';
 
@@ -124,7 +125,9 @@ function SheetTitle({
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn('font-heading text-headline font-semibold text-foreground', className)}
+      // The primitive draws its own Text, so the face is picked here: without
+      // it the weight class selects no bundled face and the title draws medium.
+      className={withFontFace(cn('font-heading text-headline font-semibold text-foreground', className))}
       {...props}
     />
   );

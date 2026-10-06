@@ -110,7 +110,11 @@ type ButtonProps = PressableScaleProps & VariantProps<typeof buttonVariants>;
 
 function Button({ className, variant, size, ...props }: ButtonProps) {
   return (
-    <TextClassContext.Provider value={buttonTextVariants({ variant, size })}>
+    // A label is a Text, which is never itself disabled, so the quiet
+    // disabled tone is handed down here instead of through `disabled:`.
+    <TextClassContext.Provider
+      value={cn(buttonTextVariants({ variant, size }), props.disabled && 'text-muted-foreground')}
+    >
       <PressableScale
         className={cn(buttonVariants({ variant, size }), className)}
         role="button"

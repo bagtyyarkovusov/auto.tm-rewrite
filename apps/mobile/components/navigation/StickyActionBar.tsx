@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { View, type LayoutChangeEvent, type ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ScrollEdgeFade } from "./ScrollEdgeFade";
 import {
   TAB_BAR_SIDE_MARGIN,
   stickyBarBottomOffset,
@@ -35,7 +36,14 @@ export function useStickyActionBar(container: StickyBarContainer = "inset") {
 type StickyActionBarProps = ViewProps & {
   /** What the bar's parent already keeps clear. See `StickyBarContainer`. */
   container?: StickyBarContainer;
+  /**
+   * Draws the soft edge under the bar, where the scrolling content fades into
+   * the page tone instead of ending in a hard line below the bar. For a bar
+   * over content on the page surface; leave it off inside a sheet.
+   */
+  edgeFade?: boolean;
   className?: string;
+  children?: ReactNode;
 };
 
 /**
@@ -51,6 +59,7 @@ type StickyActionBarProps = ViewProps & {
  */
 export function StickyActionBar({
   container = "inset",
+  edgeFade = false,
   className,
   style,
   children,
@@ -58,13 +67,25 @@ export function StickyActionBar({
   ...props
 }: StickyActionBarProps) {
   const insets = useSafeAreaInsets();
+  const [height, setHeight] = useState(0);
+  const measure = useCallback(
+    (event: LayoutChangeEvent) => {
+      setHeight(Math.ceil(event.nativeEvent.layout.height));
+      onLayout?.(event);
+    },
+    [onLayout],
+  );
   // A parent that reaches the screen's edges has not applied the side insets.
   const sideInset = container === "screen" ? Math.max(insets.left, insets.right) : 0;
 
   return (
-    <View
+    <>
+      {edgeFade && height > 0 ? (
+        <ScrollEdgeFade height={stickyBarSpace(height, insets.bottom, container)} />
+      ) : null}
+      <View
       pointerEvents="box-none"
-      onLayout={onLayout}
+      onLayout={measure}
       style={[
         {
           position: "absolute",
@@ -79,6 +100,7 @@ export function StickyActionBar({
       <GlassSurface className={cn("gap-2 rounded-3xl p-2", className)}>
         {children}
       </GlassSurface>
-    </View>
+      </View>
+    </>
   );
 }

@@ -1,9 +1,11 @@
 import {
+  mobileAspect,
   mobileControl,
   mobileDuration,
   mobileElevation,
   mobileFontFaces,
   mobileGlassOpacity,
+  mobileMediaOpacity,
   mobilePressScale,
   mobileRadius,
   mobileType,
@@ -77,7 +79,11 @@ export const mobileTailwindTheme = {
   opacity: {
     glass: String(mobileGlassOpacity.fallback),
     "glass-tint": String(mobileGlassOpacity.tint),
+    // `bg-media-scrim/on-photo`: the scrim behind a control on a photo.
+    "on-photo": String(mobileMediaOpacity["on-photo"]),
   },
+  // `aspect-photo`, `aspect-photo-wide`.
+  aspectRatio: { ...mobileAspect },
   // `active:scale-press-control`, `active:scale-press-surface`.
   scale: Object.fromEntries(
     Object.entries(mobilePressScale).map(([k, v]) => [`press-${k}`, String(v)]),

@@ -24,10 +24,8 @@ import {
   TAB_BAR_SIDE_MARGIN,
   TAB_CONTENT_TOP,
   tabBarBottomOffset,
-  tabBarSpace,
   tabSlotWidth,
 } from "./tabBarHeight";
-import { ScrollEdgeFade } from "./ScrollEdgeFade";
 
 import { GlassSurface } from "@/components/ui/glass-surface";
 import { Icon } from "@/components/ui/icon";
@@ -141,7 +139,6 @@ export function AutoTmTabBar({
 
   return (
     <>
-      <ScrollEdgeFade height={tabBarSpace(insets.bottom)} />
       {/* Absolute, so tab screens run underneath; they keep `useTabBarSpace()` clear. */}
       <View
         pointerEvents="box-none"
