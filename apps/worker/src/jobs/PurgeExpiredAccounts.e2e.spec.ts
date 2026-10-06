@@ -98,7 +98,9 @@ describeWithDatabase("PurgeExpiredAccounts — Postgres", () => {
 
     const result = await new PurgeExpiredAccounts(prisma).execute({ now });
 
-    expect(result.purgedCount).toBe(1);
+    // The CI database is shared with other suites, which may leave their own
+    // due Users behind: this suite answers only for the rows it created.
+    expect(result.purgedCount).toBeGreaterThanOrEqual(1);
     const remaining = await prisma.otpRequest.findMany({
       where: {
         id: {

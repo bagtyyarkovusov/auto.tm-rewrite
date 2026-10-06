@@ -19,7 +19,7 @@ const noSuchBucket = () =>
 /** An in-memory stand-in for the bucket the cleaner reads and writes. */
 function fakeBucket(
   initial: Record<string, Buffer>,
-  options: { headError?: Error; headContentLength?: number } = {},
+  options: { headError?: Error; headContentLength?: number; getContentLength?: number } = {},
 ) {
   const objects = new Map(Object.entries(initial));
   const puts: PutObjectCommand[] = [];
@@ -42,7 +42,7 @@ function fakeBucket(
       const body = objects.get(command.input.Key!);
       if (!body) throw noSuchKey();
       return {
-        ContentLength: body.length,
+        ContentLength: options.getContentLength ?? body.length,
         Body: {
           transformToByteArray: async () => {
             reads.push(command.input.Key!);
@@ -185,26 +185,31 @@ describe("SharpChatAttachmentCleaner", () => {
     await expect(cleanerWith(bucket).clean(KEY)).rejects.toThrow("NoSuchBucket");
   });
 
-/** A valid JPEG larger than the 5 MB cap: noise compresses poorly even at quality 95. */
-async function noisyOverCapJpeg(): Promise<Buffer> {
-  const width = 2500;
-  const height = 2500;
-  const pixels = Buffer.alloc(width * height * 3);
-  let seed = 7;
-  for (let i = 0; i < pixels.length; i += 1) {
-    seed = (seed * 1103515245 + 12345) % 2147483648;
-    pixels[i] = seed % 256;
+  /** A valid JPEG larger than the 5 MB cap: noise compresses poorly even at quality 95. */
+  async function noisyOverCapJpeg(): Promise<Buffer> {
+    const width = 2500;
+    const height = 2500;
+    const pixels = Buffer.alloc(width * height * 3);
+    let seed = 7;
+    for (let i = 0; i < pixels.length; i += 1) {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      pixels[i] = seed % 256;
+    }
+    const overCap = await sharp(pixels, { raw: { width, height, channels: 3 } })
+      .jpeg({ quality: 95 })
+      .toBuffer();
+    expect(overCap.length).toBeGreaterThan(5 * 1024 * 1024);
+    return overCap;
   }
-  const overCap = await sharp(pixels, { raw: { width, height, channels: 3 } })
-    .jpeg({ quality: 95 })
-    .toBuffer();
-  expect(overCap.length).toBeGreaterThan(5 * 1024 * 1024);
-  return overCap;
-}
 
   it("rejects an object that grows past the cap between its HEAD and its body", async () => {
     const overCap = await noisyOverCapJpeg();
-    const bucket = fakeBucket({ [KEY]: overCap }, { headContentLength: 100 });
+    // Both reported sizes understate the body, so only the guard after the
+    // read can reject it.
+    const bucket = fakeBucket(
+      { [KEY]: overCap },
+      { headContentLength: 100, getContentLength: 100 },
+    );
 
     await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
     expect(bucket.puts).toHaveLength(0);

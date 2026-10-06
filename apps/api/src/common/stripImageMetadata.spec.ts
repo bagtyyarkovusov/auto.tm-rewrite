@@ -28,7 +28,8 @@ async function encodedSize(input: Buffer, quality: number): Promise<number> {
 }
 
 describe("stripImageMetadata", () => {
-  it("returns null for an image that carries no metadata", async () => {    const clean = await sharp({
+  it("returns null for an image that carries no metadata", async () => {
+    const clean = await sharp({
       create: { width: 40, height: 30, channels: 3, background: { r: 1, g: 2, b: 3 } },
     })
       .jpeg()
@@ -80,6 +81,31 @@ describe("stripImageMetadata", () => {
     expect(meta.format).toBe("webp");
     expect(meta.pages).toBe(2);
     expect(meta.exif).toBeUndefined();
+  });
+
+  it("cleans an animated WebP stored rotated a quarter turn without losing a frame", async () => {
+    const frame = (background: { r: number; g: number; b: number }) =>
+      sharp({ create: { width: 60, height: 40, channels: 3 as const, background } })
+        .png()
+        .toBuffer();
+    const input = await sharp(
+      [await frame({ r: 220, g: 10, b: 10 }), await frame({ r: 10, g: 10, b: 220 })],
+      { join: { animated: true } },
+    )
+      .webp()
+      .withMetadata({ orientation: 6 })
+      .toBuffer();
+    const before = await sharp(input).metadata();
+    expect(before.pages).toBe(2);
+    expect(before.orientation).toBe(6);
+
+    const cleaned = await stripImageMetadata(input, "webp", 5_000_000);
+
+    expect(cleaned).not.toBeNull();
+    const meta = await sharp(cleaned!).metadata();
+    expect(meta.pages).toBe(2);
+    expect(meta.exif).toBeUndefined();
+    expect(meta.orientation ?? 1).toBe(1);
   });
 
   it("steps the quality down until the cleaned image fits the limit", async () => {
