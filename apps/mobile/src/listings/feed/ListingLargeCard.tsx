@@ -1,23 +1,23 @@
-import { Image } from "expo-image";
 import * as Linking from "expo-linking";
 import { Enums, type ListingsSchemas } from "@auto-tm/contracts";
-import { Camera, Heart, MessageCircle, Phone } from "lucide-react-native";
-import { memo, useState } from "react";
+import { Camera, MessageCircle, Phone } from "lucide-react-native";
+import { memo } from "react";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import type { AuthHref } from "../../auth/intentStore";
 import { useOpenListingConversation } from "../../conversations/useOpenListingConversation";
 import { localeTag } from "../../i18n/resources";
-import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { formatPrice } from "../formatPrice";
 import { useListingFavorite } from "../useListingFavorite";
 
+import { ListingPhoto, PhotoChip, PhotoFavoriteButton } from "./ListingPhoto";
 import { listingSpecLine } from "./listingSpecLine";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { EnterOnce, MotionView, usePressScale } from "@/components/ui/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,8 @@ export function formatListingDate(publishedAt: string, locale: string, t: (key: 
 interface CardBaseProps {
   onPress: (id: string) => void;
   brandName?: string; modelName?: string; cityName?: string; transmissionName?: string; engineTypeName?: string;
+  /** The card's place in the first page's staggered arrival; leave it out for a card that should simply be there. */
+  enterOrder?: number;
 }
 /** Results: ♡ toggles the Favorite, and sign-in is asked for when needed. */
 interface ResultsCardProps extends CardBaseProps {
@@ -54,29 +56,22 @@ type ListingLargeCardProps = ResultsCardProps | FavoritesCardProps;
 /** A photo frame. `flex` is its share of the row: one wide frame, or 62 and 38 for the two-photo grid. */
 function Photo({ mediaKey, flex }: { mediaKey?: string; flex: number }) {
   const { t } = useTranslation();
-  const [original, setOriginal] = useState(false);
-  return <View testID="listing-photo" style={{ flex }} className="h-[170px] min-w-0 overflow-hidden bg-muted">
-    {mediaKey ? <Image source={{ uri: original ? buildOriginalUrl(mediaKey) : buildVariantUrl(mediaKey, "list") }}
-      className="h-full w-full" contentFit="cover" cachePolicy="memory-disk" onError={() => setOriginal(true)} />
-      : <View className="h-full items-center justify-center"><Text className="text-caption text-muted-foreground">{t("noPhotos")}</Text></View>}
+  return <View testID="listing-photo" style={{ flex }} className="h-full min-w-0 overflow-hidden bg-secondary">
+    <ListingPhoto mediaKey={mediaKey} emptyLabel={t("noPhotos")} />
   </View>;
 }
 
 function FeedFavoriteButton({ listingId, isFavorited, isAuthenticated, returnTo }: { listingId: string; isFavorited: boolean; isAuthenticated: boolean | null; returnTo: AuthHref }) {
   const { t } = useTranslation();
   const { favorited, pending, toggle } = useListingFavorite({ listingId, isFavorited, isAuthenticated, returnTo });
-  return <Pressable onPress={toggle} disabled={pending} accessibilityRole="button" accessibilityLabel={t("favorite")} accessibilityState={{ selected: favorited, disabled: pending }}
-    className="h-11 w-11 items-center justify-center rounded-full active:bg-muted">
-    <Icon as={Heart} className={favorited ? "size-6 text-brand-500 fill-brand-500" : "size-6 text-muted-foreground"} />
-  </Pressable>;
+  return <PhotoFavoriteButton favorited={favorited} onPress={toggle} disabled={pending}
+    accessibilityLabel={t("favorite")} accessibilityState={{ selected: favorited, disabled: pending }} />;
 }
 
 function RemoveFavoriteButton({ onPress }: { onPress: () => void }) {
   const { t } = useTranslation();
-  return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={t("removeFromFavorites")} accessibilityState={{ selected: true }}
-    className="h-11 w-11 items-center justify-center rounded-full active:bg-muted">
-    <Icon as={Heart} className="size-6 text-brand-500 fill-brand-500" />
-  </Pressable>;
+  return <PhotoFavoriteButton favorited onPress={onPress}
+    accessibilityLabel={t("removeFromFavorites")} accessibilityState={{ selected: true }} />;
 }
 
 /** Call opens the dialer with the Listing contact phone; Message opens the Conversation about the Listing. */
@@ -89,7 +84,7 @@ function ContactActions({ listing }: { listing: ListingsSchemas.FavoriteListingS
     const url = `tel:${phone}`;
     if (await Linking.canOpenURL(url)) await Linking.openURL(url);
   };
-  return <View className="gap-2 px-4 pt-3">
+  return <View className="gap-2 px-4 pb-4">
     <View className="flex-row gap-2">
       {phone ? <Button variant="brand" className="flex-1 rounded-full" onPress={() => void call()} accessibilityLabel={t("call")}>
         <Icon as={Phone} className="size-5" /><Text numberOfLines={1}>{t("call")}</Text>
@@ -104,13 +99,19 @@ function ContactActions({ listing }: { listing: ListingsSchemas.FavoriteListingS
 }
 
 /**
- * The approved large card. Results shows it with ♡; Favorites adds Call and
- * Message, a filled ♥ that removes the Favorite, and dims a sold or archived
- * Listing with its label and no contact buttons.
+ * The approved large card, one raised object like the grid card. The photo
+ * band fills its top edge to edge, with ♡ on it, the photo count and, on a
+ * closed Listing, its state. Below: the price loudest, "Brand Model, year" a
+ * step quieter, then the spec line and the city and date, both quiet.
+ * Results shows it with ♡; Favorites adds Call and Message, a filled ♥ that
+ * removes the Favorite, and dims a sold or archived Listing with its label
+ * and no contact buttons. The whole card gives under a finger; the heart and
+ * the contact buttons are controls of their own beside the pressable area.
  */
 export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLargeCardProps) {
-  const { listing, onPress, brandName, modelName, cityName, transmissionName, engineTypeName } = props;
+  const { listing, onPress, brandName, modelName, cityName, transmissionName, engineTypeName, enterOrder } = props;
   const { t, i18n } = useTranslation();
+  const press = usePressScale("surface");
   const photoKeys = listing.photoKeys.length ? listing.photoKeys : listing.coverMediaKey ? [listing.coverMediaKey] : [];
   const price = formatPrice(listing.displayPriceTmt, i18n.language);
   const identity = [brandName, modelName].filter(Boolean).join(" ");
@@ -119,48 +120,48 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
   const location = [cityName, formatListingDate(listing.publishedAt, i18n.language, t)].filter(Boolean).join(" · ");
   const favoriteCard = props.onRemoveFavorite ? props : undefined;
   const resultsCard = props.onRemoveFavorite ? undefined : props;
-  const closedLabel = listing.status === Enums.ListingStatus.Sold ? t("sold") : listing.status === Enums.ListingStatus.Archived ? t("removedFromSale") : null;
-  return <View className="bg-card pb-2">
-    <Pressable onPress={() => onPress(listing.id)} accessibilityRole="button" accessibilityLabel={[title, price, closedLabel].filter(Boolean).join(", ")} className="active:opacity-90">
-      <View>
-        <View testID="listing-photos" className={cn("flex-row gap-0.5", closedLabel && "opacity-50")}>
-          {photoKeys.length > 1 ? <>
-            <Photo mediaKey={photoKeys[0]} flex={62} />
-            <Photo mediaKey={photoKeys[1]} flex={38} />
-          </> : <Photo mediaKey={photoKeys[0]} flex={1} />}
+  const sold = listing.status === Enums.ListingStatus.Sold;
+  const closedLabel = sold ? t("sold") : listing.status === Enums.ListingStatus.Archived ? t("removedFromSale") : null;
+  return <EnterOnce order={enterOrder} className="mx-4">
+    <MotionView style={press.style} className="overflow-hidden rounded-2xl bg-card">
+      <Pressable onPress={() => onPress(listing.id)} {...press.handlers} accessibilityRole="button" accessibilityLabel={[title, price, closedLabel].filter(Boolean).join(", ")}>
+        <View>
+          <View testID="listing-photos" className={cn("aspect-photo-wide flex-row gap-0.5", closedLabel && "opacity-50")}>
+            {photoKeys.length > 1 ? <>
+              <Photo mediaKey={photoKeys[0]} flex={62} />
+              <Photo mediaKey={photoKeys[1]} flex={38} />
+            </> : <Photo mediaKey={photoKeys[0]} flex={1} />}
+          </View>
+          {listing.photoCount > 1 ? <PhotoChip icon={Camera} label={String(listing.photoCount)} className="bottom-2 left-2"
+            accessibilityLabel={t("resultsPhotoCount", { count: listing.photoCount })} /> : null}
+          {closedLabel ? <PhotoChip label={closedLabel} tone={sold ? "solid" : "quiet"} className="left-3 top-3" /> : null}
         </View>
-        {listing.photoCount > 1 ? <View accessibilityLabel={t("resultsPhotoCount", { count: listing.photoCount })} className="absolute bottom-2 left-2 flex-row items-center gap-1 rounded-md bg-black/60 px-2 py-1">
-          <Icon as={Camera} className="size-3 text-white" /><Text className="text-caption text-white">{listing.photoCount}</Text>
-        </View> : null}
-        {closedLabel ? <View className={cn("absolute left-2 top-2 rounded-full border px-2 py-0.5",
-          listing.status === Enums.ListingStatus.Sold ? "border-foreground bg-foreground" : "border-border bg-background")}>
-          <Text className={cn("text-caption font-medium", listing.status === Enums.ListingStatus.Sold ? "text-background" : "text-foreground")}>{closedLabel}</Text>
-        </View> : null}
-      </View>
-      <View className="gap-0.5 px-4 pt-3">
-        <Text className={cn("text-headline font-heading", closedLabel ? "text-muted-foreground" : "text-foreground")} numberOfLines={1}>{price}</Text>
-        {specs ? <Text className="text-callout text-foreground" numberOfLines={1}>{specs}</Text> : null}
-        {title ? <Text className="text-callout text-muted-foreground" numberOfLines={1}>{title}</Text> : null}
-      </View>
-    </Pressable>
-    {favoriteCard && !closedLabel && !favoriteCard.isOwn ? <ContactActions listing={favoriteCard.listing} /> : null}
-    <View className="min-h-11 flex-row items-center gap-2 px-4">
-      <Text className="min-w-0 flex-1 text-caption text-muted-foreground" numberOfLines={1}>{location}</Text>
+        <View className="gap-0.5 px-4 pb-4 pt-3">
+          <Text className={cn("font-heading text-headline font-bold", closedLabel ? "text-muted-foreground" : "text-foreground")} numberOfLines={1}>{price}</Text>
+          {title ? <Text className="text-body font-medium text-foreground" numberOfLines={1}>{title}</Text> : null}
+          {specs ? <Text className="text-callout text-muted-foreground" numberOfLines={1}>{specs}</Text> : null}
+          <Text className="pt-2 text-footnote text-muted-foreground" numberOfLines={1}>{location}</Text>
+        </View>
+      </Pressable>
+      {favoriteCard && !closedLabel && !favoriteCard.isOwn ? <ContactActions listing={favoriteCard.listing} /> : null}
       {favoriteCard ? <RemoveFavoriteButton onPress={() => favoriteCard.onRemoveFavorite(favoriteCard.listing)} /> : null}
       {resultsCard ? <FeedFavoriteButton listingId={listing.id} isFavorited={listing.isFavorited ?? false}
         isAuthenticated={resultsCard.isAuthenticated} returnTo={resultsCard.returnTo} /> : null}
-    </View>
-  </View>;
+    </MotionView>
+  </EnterOnce>;
 });
 
 /** Skeleton in the card's shape; `withActions` adds the Favorites Call and Message buttons. */
 export function ListingLargeCardSkeleton({ withActions = false }: { withActions?: boolean }) {
-  return <View className="bg-card pb-2">
-    <View testID="listing-photo-skeleton" className="h-[170px]"><Skeleton className="h-full w-full rounded-none" /></View>
-    <View className="gap-0.5 px-4 pt-3"><Skeleton className="my-1 h-5 w-1/2" /><Skeleton className="my-1 h-3 w-3/4" /><Skeleton className="my-1 h-3 w-2/3" /></View>
-    {withActions ? <View testID="listing-actions-skeleton" className="flex-row gap-2 px-4 pt-3">
-      <Skeleton testID="skeleton-button" className="h-12 flex-1 rounded-full" /><Skeleton testID="skeleton-button" className="h-12 flex-1 rounded-full" />
+  return <View className="mx-4 overflow-hidden rounded-2xl bg-card">
+    <View testID="listing-photo-skeleton" className="aspect-photo-wide"><Skeleton className="h-full w-full rounded-none" /></View>
+    {/* Each bar fills its text line (28, 22, 20 and 18 dp), so the list does not jump when the cards arrive. */}
+    <View className="gap-0.5 px-4 pb-4 pt-3">
+      <Skeleton className="my-1.5 h-4 w-2/5" /><Skeleton className="my-1 h-3.5 w-3/5" /><Skeleton className="my-1 h-3 w-4/5" />
+      <Skeleton className="mb-1 mt-3 h-2.5 w-1/3" />
+    </View>
+    {withActions ? <View testID="listing-actions-skeleton" className="flex-row gap-2 px-4 pb-4">
+      <Skeleton testID="skeleton-button" className="h-control-md flex-1 rounded-full" /><Skeleton testID="skeleton-button" className="h-control-md flex-1 rounded-full" />
     </View> : null}
-    <View className="min-h-11 flex-row items-center justify-between px-4"><Skeleton className="h-3 w-1/3" /><Skeleton className="h-6 w-6 rounded-full" /></View>
   </View>;
 }

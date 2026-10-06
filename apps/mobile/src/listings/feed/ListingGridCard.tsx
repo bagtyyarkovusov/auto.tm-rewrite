@@ -1,17 +1,16 @@
-import { Image } from "expo-image";
 import type { ListingsSchemas } from "@auto-tm/contracts";
-import { Heart } from "lucide-react-native";
-import { memo, useState } from "react";
+import { Camera } from "lucide-react-native";
+import { memo } from "react";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import type { AuthHref } from "../../auth/intentStore";
-import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { useListingFavorite } from "../useListingFavorite";
 
 import { listingGridCardText } from "./listingGridCardText";
+import { ListingPhoto, PhotoChip, PhotoFavoriteButton } from "./ListingPhoto";
 
-import { Icon } from "@/components/ui/icon";
+import { EnterOnce, MotionView, usePressScale } from "@/components/ui/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 
@@ -24,12 +23,20 @@ interface ListingGridCardProps {
   returnTo: AuthHref;
   /** Brand and model names are still loading; show a title placeholder. */
   titlePending?: boolean;
+  /**
+   * The card's place in the first page's staggered arrival; leave it out for
+   * a card that should simply be there (see `useListEntrance`).
+   */
+  enterOrder?: number;
 }
 
 /**
- * Home "New listings" card (32 — Listings, Cards; Auto.ru AR-01-002): a
- * rounded 3:2 photo with ♡ on it, the price, "Brand Model" on one line, and
- * "year, km" or "year, New". Two sit side by side.
+ * Home "New listings" card (32 — Listings, Cards; Auto.ru AR-01-002): one
+ * raised object. A 3:2 photo fills its top edge to edge with ♡ on it and the
+ * photo count when there is more than one; below, the price is the loudest
+ * line, "Brand Model" a step quieter, and "year, km" or "year, New" quietest.
+ * Two sit side by side. The whole card gives under a finger; the heart is a
+ * control of its own beside the pressable area.
  */
 export const ListingGridCard = memo(function ListingGridCard({
   listing,
@@ -39,10 +46,11 @@ export const ListingGridCard = memo(function ListingGridCard({
   isAuthenticated,
   returnTo,
   titlePending = false,
+  enterOrder,
 }: ListingGridCardProps) {
   const { t, i18n } = useTranslation();
   const coverKey = listing.photoKeys[0] ?? listing.coverMediaKey;
-  const [useOriginalImage, setUseOriginalImage] = useState(false);
+  const press = usePressScale("surface");
   const { favorited, pending, toggle } = useListingFavorite({
     listingId: listing.id,
     isFavorited: listing.isFavorited ?? false,
@@ -59,93 +67,83 @@ export const ListingGridCard = memo(function ListingGridCard({
     kmLabel: t("km"),
   });
 
-  const imageUrl = coverKey
-    ? useOriginalImage
-      ? buildOriginalUrl(coverKey)
-      : buildVariantUrl(coverKey, "list")
-    : null;
-
   return (
-    <Pressable
-      className="min-w-0 flex-1 active:opacity-90"
-      onPress={() => onPress(listing.id)}
-      accessibilityRole="button"
-      accessibilityLabel={[text.title, text.price, text.meta]
-        .filter(Boolean)
-        .join(", ")}
-    >
-      <View className="aspect-[3/2] w-full overflow-hidden rounded-xl bg-muted">
-        {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            className="h-full w-full"
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            onError={() => setUseOriginalImage(true)}
-          />
-        ) : (
-          <View className="h-full w-full items-center justify-center">
-            <Text className="text-caption text-muted-foreground">{t("noPhoto")}</Text>
-          </View>
-        )}
-
-        {/* The dark disc keeps the ♡ legible on any photo, in either theme. */}
+    <EnterOnce order={enterOrder} className="min-w-0 flex-1">
+      <MotionView
+        style={press.style}
+        className="flex-1 overflow-hidden rounded-2xl bg-card"
+      >
         <Pressable
-          className="absolute right-1 top-1 h-9 w-9 items-center justify-center rounded-full bg-black/40 active:opacity-70"
-          hitSlop={6}
+          className="flex-1"
+          onPress={() => onPress(listing.id)}
+          {...press.handlers}
+          accessibilityRole="button"
+          accessibilityLabel={[text.title, text.price, text.meta]
+            .filter(Boolean)
+            .join(", ")}
+        >
+          <View className="aspect-photo w-full bg-secondary">
+            <ListingPhoto mediaKey={coverKey} emptyLabel={t("noPhoto")} />
+            {listing.photoCount > 1 ? (
+              <PhotoChip
+                icon={Camera}
+                label={String(listing.photoCount)}
+                className="bottom-2 left-2"
+              />
+            ) : null}
+          </View>
+
+          <View className="gap-0.5 px-3 pb-3 pt-2.5">
+            <Text
+              className="font-heading text-subhead font-bold text-foreground"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {text.price}
+            </Text>
+            {text.title ? (
+              <Text className="text-callout font-medium text-foreground" numberOfLines={1}>
+                {text.title}
+              </Text>
+            ) : titlePending ? (
+              <Skeleton className="my-1 h-3 w-4/5" />
+            ) : null}
+            {text.meta ? (
+              <Text className="text-footnote text-muted-foreground" numberOfLines={1}>
+                {text.meta}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
+
+        <PhotoFavoriteButton
+          favorited={favorited}
           onPress={toggle}
           disabled={pending}
-          accessibilityRole="button"
           accessibilityLabel={t("favorite")}
           accessibilityState={{ selected: favorited, disabled: pending }}
-        >
-          <Icon
-            as={Heart}
-            className={
-              favorited
-                ? "size-5 text-brand-500 fill-brand-500"
-                : "size-5 text-white"
-            }
-          />
-        </Pressable>
-      </View>
-
-      <View className="mt-2 gap-0.5">
-        <Text className="text-body font-semibold leading-5 text-foreground" numberOfLines={1}>
-          {text.price}
-        </Text>
-        {text.title ? (
-          <Text className="text-callout leading-5 text-foreground" numberOfLines={1}>
-            {text.title}
-          </Text>
-        ) : titlePending ? (
-          <Skeleton className="my-1 h-3 w-3/4" />
-        ) : null}
-        {text.meta ? (
-          <Text className="text-callout leading-5 text-muted-foreground" numberOfLines={1}>
-            {text.meta}
-          </Text>
-        ) : null}
-      </View>
-    </Pressable>
+        />
+      </MotionView>
+    </EnterOnce>
   );
 });
 
 /** Same shape as `ListingGridCard`, for the first load. */
 export function ListingGridCardSkeleton() {
   return (
-    <View className="min-w-0 flex-1">
+    <View className="min-w-0 flex-1 overflow-hidden rounded-2xl bg-card">
       {/* aspect-ratio does not reach the animated Skeleton, so a plain View
           owns the 3:2 frame. */}
-      <View className="aspect-[3/2] w-full">
-        <Skeleton className="h-full w-full rounded-xl" />
+      <View className="aspect-photo w-full">
+        <Skeleton className="h-full w-full rounded-none" />
       </View>
-      {/* Each bar fills one 20dp text line, so the grid does not jump when
-          the first page replaces the skeletons. */}
-      <View className="mt-2 gap-0.5">
-        <Skeleton className="my-0.5 h-4 w-1/2" />
-        <Skeleton className="my-1 h-3 w-3/4" />
-        <Skeleton className="my-1 h-3 w-1/3" />
+      {/* Each bar fills its text line (24, 20 and 18 dp), so the grid does not
+          jump when the first page replaces the skeletons. */}
+      <View className="gap-0.5 px-3 pb-3 pt-2.5">
+        <Skeleton className="my-1 h-4 w-3/5" />
+        <Skeleton className="my-1 h-3 w-4/5" />
+        <Skeleton className="my-1 h-2.5 w-2/5" />
       </View>
     </View>
   );

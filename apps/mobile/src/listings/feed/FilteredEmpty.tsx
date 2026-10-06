@@ -11,7 +11,7 @@ interface FilteredEmptyProps {
 export function FilteredEmpty({ onReset }: FilteredEmptyProps) {
   const { t } = useTranslation();
   return (
-    <EmptyState illustration="search" title={t("noListingsMatch")} hint={t("tryAdjustingFilters")}>
+    <EmptyState className="pb-6 pt-2" illustration="search" title={t("noListingsMatch")} hint={t("tryAdjustingFilters")}>
       <Button variant="brand" size="pill" onPress={onReset}>
         <Text className="text-primary-foreground">{t("resetFilters")}</Text>
       </Button>

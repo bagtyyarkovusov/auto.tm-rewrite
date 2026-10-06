@@ -8,7 +8,7 @@ import { Text } from "@/components/ui/text";
 export function FeedEmpty() {
   const { t } = useTranslation();
   return (
-    <EmptyState illustration="listings" title={t("noListings")} hint={t("beFirstToSell")}>
+    <EmptyState className="pb-6 pt-2" illustration="listings" title={t("noListings")} hint={t("beFirstToSell")}>
       <Button variant="brand" size="pill" onPress={() => router.push("/(tabs)/sell")}>
         <Text className="text-primary-foreground">{t("sellCar")}</Text>
       </Button>
