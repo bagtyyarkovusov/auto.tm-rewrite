@@ -67,7 +67,9 @@ describe("HttpOtpSenderAdapter", () => {
 
     await new HttpOtpSenderAdapter().send(sms);
 
-    expect(lines).toEqual(["[mock] OTP for ***3456: 709814"]);
+    // The fingerprint is sha256("+99365123456")'s first six hex digits: two
+    // phones that share their last four no longer produce the same line.
+    expect(lines).toEqual(["[mock] OTP for ***3456 (fp 50d3ac): 709814"]);
   });
 
   it("never writes the code to the log in gateway mode", async () => {
