@@ -3,7 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { router, usePathname } from "expo-router";
 
 import { ApiError } from "../api/client";
-import { clearAuthSession, subscribeAuthUserChange } from "../auth/session";
+import {
+  clearAuthSession,
+  loadAuthSession,
+  subscribeAuthSession,
+  subscribeAuthUserChange,
+} from "../auth/session";
 import { isConversationPath } from "../conversations/conversationRoutes";
 import { useDirectMessagePushRouting } from "../notifications/useDirectMessagePushRouting";
 
@@ -46,9 +51,18 @@ export function AppNavigationEffects() {
     const unsubscribeMutations = queryClient.getMutationCache().subscribe((event) => {
       if (event.type === "updated" && event.action.type === "error") onError(event.mutation.state.error);
     });
+    // A new sign-in re-arms the redirect, so a later expiry offers sign-in again.
+    const unsubscribeSession = subscribeAuthSession(() => {
+      void loadAuthSession()
+        .then((session) => {
+          if (session) redirecting = false;
+        })
+        .catch(() => {});
+    });
     return () => {
       unsubscribeQueries();
       unsubscribeMutations();
+      unsubscribeSession();
     };
   }, [queryClient]);
   return null;
