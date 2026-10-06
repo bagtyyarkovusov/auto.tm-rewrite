@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 const textVariants = cva(
   cn(
-    'font-sans text-base leading-normal text-foreground',
+    'font-sans text-body text-foreground',
     Platform.select({
       web: 'select-text',
     })
@@ -18,26 +18,26 @@ const textVariants = cva(
       variant: {
         default: '',
         h1: cn(
-          'font-heading text-3xl font-bold leading-tight',
+          'font-heading text-display font-bold',
           Platform.select({ web: 'scroll-m-20 text-balance' })
         ),
         h2: cn(
-          'font-heading text-2xl font-semibold leading-snug',
+          'font-heading text-title font-semibold',
           Platform.select({ web: 'scroll-m-20 first:mt-0' })
         ),
-        h3: cn('font-heading text-xl font-semibold leading-snug', Platform.select({ web: 'scroll-m-20' })),
-        h4: cn('font-heading text-lg font-semibold leading-snug', Platform.select({ web: 'scroll-m-20' })),
+        h3: cn('font-heading text-headline font-semibold', Platform.select({ web: 'scroll-m-20' })),
+        h4: cn('font-heading text-subhead font-semibold', Platform.select({ web: 'scroll-m-20' })),
         p: 'leading-relaxed',
         blockquote: 'border-l-2 border-border pl-3 italic text-muted-foreground',
         code: cn(
-          'relative rounded-md bg-muted px-1.5 py-1 font-mono text-sm font-medium'
+          'relative rounded-sm bg-secondary px-1.5 py-1 font-mono text-footnote font-medium'
         ),
-        lead: 'text-lg leading-relaxed text-muted-foreground',
-        large: 'text-lg font-semibold',
-        small: 'text-sm font-medium leading-snug',
-        muted: 'text-muted-foreground text-sm',
-        label: 'text-sm font-medium leading-snug text-foreground',
-        caption: 'text-xs font-medium leading-snug text-muted-foreground',
+        lead: 'text-subhead text-muted-foreground',
+        large: 'text-subhead font-semibold',
+        small: 'text-callout font-medium',
+        muted: 'text-muted-foreground text-callout',
+        label: 'text-callout font-medium text-foreground',
+        caption: 'text-caption font-medium text-muted-foreground',
       },
     },
     defaultVariants: {
