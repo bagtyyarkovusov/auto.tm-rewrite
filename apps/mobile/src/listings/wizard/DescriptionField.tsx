@@ -27,10 +27,10 @@ export function DescriptionField({
   return (
     <View className="gap-1.5">
       <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-medium text-foreground">
+        <Text className="text-callout font-medium text-foreground">
           {t("description")} *
         </Text>
-        <Text className="text-xs text-muted-foreground">
+        <Text className="text-caption text-muted-foreground">
           {descriptionLength}/2000
         </Text>
       </View>
@@ -51,7 +51,7 @@ export function DescriptionField({
         />
       </View>
       {error ? (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
           {error}
         </Text>
       ) : null}

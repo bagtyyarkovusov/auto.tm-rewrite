@@ -44,7 +44,7 @@ function UnavailableState({
       className="flex-1 bg-background items-center justify-center px-6 gap-4"
       style={{ paddingBottom: insets.bottom }}
     >
-      <Text className="text-lg font-semibold text-foreground">
+      <Text className="text-subhead font-semibold text-foreground">
         {t("notAvailable")}
       </Text>
       <Button size="pill" onPress={() => router.navigate(HOME_HREF)}>

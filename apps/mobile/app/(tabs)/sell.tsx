@@ -3,7 +3,6 @@ import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { NavigationContext } from "@react-navigation/native";
 import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useRef } from "react";
 import { BackHandler, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { ListingsSchemas, type WizardSchemas } from "@auto-tm/contracts";
 
@@ -46,7 +45,7 @@ import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
 import CheckAndPublish from "../../src/listings/wizard/CheckAndPublish";
 import { publishBlockerLines } from "../../src/listings/wizard/publishBlockers";
 import { publishFailureMessage, publishFailureOf } from "../../src/listings/wizard/publishFailure";
-
+import { TabScreen } from "../../components/navigation/TabScreen";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
@@ -748,9 +747,9 @@ export default function SellScreen() {
 
   // ── Entry screen ──
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <TabScreen>
       <View className="px-5 pt-3">
-        <Text className="text-3xl font-heading leading-tight tracking-tight text-foreground">
+        <Text className="text-title font-heading leading-tight tracking-tight text-foreground">
           {t("sell")}
         </Text>
       </View>
@@ -773,10 +772,10 @@ export default function SellScreen() {
       ) : (
         <View className="flex-1 items-center justify-center px-9">
           <Icon as={PlusCircle} className="size-8 text-muted-foreground" />
-          <Text className="mt-4 text-lg font-semibold text-foreground">
+          <Text className="mt-4 text-subhead font-semibold text-foreground">
             {t("sellYourCar")}
           </Text>
-          <Text className="mt-1 text-center text-sm text-muted-foreground">
+          <Text className="mt-1 text-center text-callout text-muted-foreground">
             {t("listYourVehicle")}
           </Text>
           <Button
@@ -797,6 +796,6 @@ export default function SellScreen() {
         title={t("signInToSellTitle")}
         onOpenChange={setShowSignIn}
       />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

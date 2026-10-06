@@ -16,11 +16,11 @@ export function ResultsHeader({ count, sort, onSort, onBack }: {
   const range = count?.priceMinTmt != null && count.priceMaxTmt != null
     ? formatPriceRange(count.priceMinTmt, count.priceMaxTmt, i18n.language) : null;
   return <View className="flex-row items-center gap-1 px-1 py-2">
-    <Button variant="ghost" size="icon" className="h-11 w-11" onPress={onBack} accessibilityLabel={t("back")}><Icon as={ChevronLeft} className="size-6 text-foreground" /></Button>
+    <Button variant="secondary" size="icon" className="h-11 w-11" onPress={onBack} accessibilityLabel={t("back")}><Icon as={ChevronLeft} className="size-6 text-foreground" /></Button>
     <View className="min-w-0 flex-1 gap-0.5">
-      <Text className="text-xl font-heading text-foreground" numberOfLines={1}>{count ? t("listingsCount", { total: count.totalMatching }) : t("carsBrowseTitle")}</Text>
-      {range ? <Text className="text-xs text-muted-foreground" numberOfLines={1}>{range}</Text> : null}
-      <Text className="text-xs text-muted-foreground" numberOfLines={1}>{t(`resultsSort_${sort}`)}</Text>
+      <Text className="text-headline font-heading text-foreground" numberOfLines={1}>{count ? t("listingsCount", { total: count.totalMatching }) : t("carsBrowseTitle")}</Text>
+      {range ? <Text className="text-caption text-muted-foreground" numberOfLines={1}>{range}</Text> : null}
+      <Text className="text-caption text-muted-foreground" numberOfLines={1}>{t(`resultsSort_${sort}`)}</Text>
     </View>
     <Button variant="ghost" className="gap-1" onPress={onSort} accessibilityLabel={t("resultsSort")}><Icon as={ArrowDownUp} className="size-5 text-foreground" /><Text>{t("resultsSort")}</Text></Button>
   </View>;

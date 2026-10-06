@@ -26,7 +26,7 @@ export function ConditionFilterControl({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("condition")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("condition")}</Text>
       <View className="flex-row rounded-lg bg-muted p-1">
         {segments.map((segment) => {
           const selected = value === segment.value;
@@ -44,7 +44,7 @@ export function ConditionFilterControl({
             >
               <Text
                 className={cn(
-                  "text-sm font-medium",
+                  "text-callout font-medium",
                   selected ? "text-foreground" : "text-muted-foreground",
                 )}
               >

@@ -121,20 +121,20 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
                     : "absolute right-4 bottom-3 rounded-full bg-black/60 px-3 py-1"
                 }
               >
-                <Text className="text-sm text-white">{`1 / ${summary.photoCount}`}</Text>
+                <Text className="text-callout text-white">{`1 / ${summary.photoCount}`}</Text>
               </View>
             )}
             {bannerKey && <GalleryBanner label={t(bannerKey)} />}
           </View>
         ) : (
           <View className="h-[240px] w-full items-center justify-center bg-muted">
-            <Text className="text-sm text-muted-foreground">{t("noPhotos")}</Text>
+            <Text className="text-callout text-muted-foreground">{t("noPhotos")}</Text>
             {bannerKey && <GalleryBanner label={t(bannerKey)} />}
           </View>
         )}
 
         <View className="gap-4 px-5 py-5">
-          <Text className="text-2xl font-heading text-foreground" numberOfLines={2}>
+          <Text className="text-headline font-heading text-foreground" numberOfLines={2}>
             {title || t("listing")}
           </Text>
           <PriceDisplay
@@ -146,10 +146,10 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
             muted={closed}
           />
           {specLine.length > 0 && (
-            <Text className="text-sm text-foreground">{specLine}</Text>
+            <Text className="text-callout text-foreground">{specLine}</Text>
           )}
           {dateAndCity.length > 0 && (
-            <Text className="text-sm text-muted-foreground">{dateAndCity}</Text>
+            <Text className="text-callout text-muted-foreground">{dateAndCity}</Text>
           )}
           <DetailSkeletonBody />
         </View>

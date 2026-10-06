@@ -38,7 +38,7 @@ export function OptionPickerSheet<T extends string>({ open, onOpenChange, title,
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent closeOnBackdropPress style={{ height: sheetHeight }}>
         <SheetHeader className="flex-row items-center justify-between">
-          <SheetTitle className="text-xl font-bold">{title}</SheetTitle>
+          <SheetTitle className="text-headline font-bold">{title}</SheetTitle>
           <Button variant="ghost" size="icon" onPress={() => onOpenChange(false)} accessibilityLabel={t("close")}>
             <Icon as={X} className="size-5 text-foreground" />
           </Button>
@@ -58,7 +58,7 @@ export function OptionPickerSheet<T extends string>({ open, onOpenChange, title,
                   onOpenChange(false);
                 }}
               >
-                <Text className="text-base text-foreground">{option.label}</Text>
+                <Text className="text-body text-foreground">{option.label}</Text>
                 <View
                   className={cn(
                     "size-[22px] items-center justify-center rounded-full border-[1.5px]",

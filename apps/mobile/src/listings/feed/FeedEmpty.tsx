@@ -15,10 +15,10 @@ export function FeedEmpty() {
         <Icon as={Search} className="size-8 text-muted-foreground" />
       </View>
       <View className="items-center gap-1">
-        <Text className="text-lg font-semibold text-foreground">
+        <Text className="text-subhead font-semibold text-foreground">
           {t("noListings")}
         </Text>
-        <Text className="text-center text-sm text-muted-foreground">
+        <Text className="text-center text-callout text-muted-foreground">
           {t("beFirstToSell")}
         </Text>
       </View>

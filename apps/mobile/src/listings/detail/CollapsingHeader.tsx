@@ -75,14 +75,14 @@ export function CollapsingHeader({
             <>
               <Text
                 className={cn(
-                  "text-sm font-bold",
+                  "text-callout font-bold",
                   closed ? "text-muted-foreground" : "text-foreground",
                 )}
                 numberOfLines={1}
               >
                 {formatPrice(listing.displayPriceTmt, i18n.language)}
               </Text>
-              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              <Text className="text-caption text-muted-foreground" numberOfLines={1}>
                 {listingTitle(listing, maps, false)}
               </Text>
             </>

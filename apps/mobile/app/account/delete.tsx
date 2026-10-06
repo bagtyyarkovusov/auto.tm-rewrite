@@ -72,7 +72,7 @@ export default function DeleteAccountScreen() {
       {/* Header */}
       <View className="px-4 pb-3 flex-row items-center gap-2">
         <Button
-          variant="ghost"
+          variant="secondary"
           className="h-11 w-11"
           size="icon"
           onPress={goBack}
@@ -80,24 +80,24 @@ export default function DeleteAccountScreen() {
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-2xl font-heading text-foreground">
+        <Text className="text-headline font-heading text-foreground">
           {t("deleteAccount")}
         </Text>
       </View>
 
       <ScrollView className="flex-1 px-4">
         <View className="gap-4 py-4">
-          <Text className="text-base text-foreground">
+          <Text className="text-body text-foreground">
             {t("deleteAccountDescription")}
           </Text>
           <View className="gap-2">
-            <Text className="text-base font-semibold text-foreground">
+            <Text className="text-body font-semibold text-foreground">
               {t("deleteAccountWhatHappens")}
             </Text>
             {consequences.map((line) => (
               <View key={line} className="flex-row gap-2 pl-1">
-                <Text className="text-sm text-muted-foreground">{"•"}</Text>
-                <Text className="flex-1 text-sm text-muted-foreground">{line}</Text>
+                <Text className="text-callout text-muted-foreground">{"•"}</Text>
+                <Text className="flex-1 text-callout text-muted-foreground">{line}</Text>
               </View>
             ))}
           </View>
@@ -111,7 +111,7 @@ export default function DeleteAccountScreen() {
           className="min-h-11 flex-row items-center gap-3 rounded-md active:bg-muted/60"
         >
           <Checkbox checked={understood} pointerEvents="none" accessible={false} />
-          <Text className="flex-1 text-base text-foreground">
+          <Text className="flex-1 text-body text-foreground">
             {t("deleteAccountUnderstand")}
           </Text>
         </Pressable>
@@ -134,7 +134,7 @@ export default function DeleteAccountScreen() {
             <Text
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
-              className="text-sm text-destructive text-center"
+              className="text-callout text-destructive text-center"
             >
               {t("deleteAccountFailed", { defaultValue: "Could not delete account. Please try again." })}
             </Text>

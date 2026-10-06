@@ -13,7 +13,7 @@ export function TypingIndicator({ visible }: TypingIndicatorProps) {
   return (
     <View className="h-6 justify-center px-4">
       {visible && (
-        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+        <Text className="text-caption text-muted-foreground" numberOfLines={1}>
           {t("peerTyping")}
         </Text>
       )}

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -30,6 +29,7 @@ import { PARAMETERS_PATH } from "../../../src/listings/search/pickerActions";
 import { readResultsRouteState, writeResultsRouteState, type ResultsRouteState } from "../../../src/listings/search/resultsRouteState";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
+import { TabScreen } from "../../../components/navigation/TabScreen";
 
 import { Text } from "@/components/ui/text";
 
@@ -97,7 +97,7 @@ export default function ResultsScreen() {
   const empty = offline ? <FeedError error={new ApiError("NETWORK_ERROR", 0)} onRetry={retry} /> : feed.isPending ? <View accessibilityLabel={t("resultsLoading")} className="gap-2">{[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} />)}</View>
     : feed.isError ? <FeedError error={feed.error} onRetry={retry} />
       : filters.count ? <FilteredEmpty onReset={reset} /> : <FeedEmpty />;
-  return <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+  return <TabScreen>
     <ResultsHeader count={count.data} sort={sort} onSort={() => setSortOpen(true)} onBack={goBack} />
     <FlatList testID="results-list" data={feed.isPending || feed.isError ? [] : items} keyExtractor={(item) => item.id} ListHeaderComponent={header} ListEmptyComponent={empty}
       contentContainerClassName="grow pb-[76px]" onScroll={onScroll} scrollEventThrottle={16}
@@ -109,8 +109,8 @@ export default function ResultsScreen() {
       ItemSeparatorComponent={() => <View className="h-2 bg-background" />}
       refreshControl={<RefreshControl refreshing={feed.isRefetching} onRefresh={() => void feed.refetch()} />}
       onEndReached={() => { if (feed.hasNextPage && !feed.isFetchingNextPage && !feed.isRefetching) void feed.fetchNextPage(); }} onEndReachedThreshold={0.5}
-      ListFooterComponent={items.length && !feed.isPending && !feed.isError ? <View className="items-center py-4">{feed.isFetchingNextPage ? <ActivityIndicator /> : !feed.hasNextPage ? <Text className="text-xs text-muted-foreground">{t("noMore")}</Text> : null}</View> : null} />
+      ListFooterComponent={items.length && !feed.isPending && !feed.isError ? <View className="items-center py-4">{feed.isFetchingNextPage ? <ActivityIndicator /> : !feed.hasNextPage ? <Text className="text-caption text-muted-foreground">{t("noMore")}</Text> : null}</View> : null} />
     {floating ? <Animated.View style={floatingStyle} className="absolute bottom-0 left-0 right-0 border-t border-border bg-background">{chips}</Animated.View> : null}
     <SortSheet open={sortOpen} onOpenChange={setSortOpen} value={sort} onChange={(value) => commit({ sort: value })} />
-  </SafeAreaView>;
+  </TabScreen>;
 }

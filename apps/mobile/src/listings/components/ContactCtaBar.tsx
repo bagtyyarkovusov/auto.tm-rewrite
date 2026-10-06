@@ -145,7 +145,7 @@ export function ContactCtaBar({
         </Button>
       </View>
       {canCall && !onDark && (
-        <Text className="px-4 pb-2 text-center text-xs text-muted-foreground">
+        <Text className="px-4 pb-2 text-center text-caption text-muted-foreground">
           {t("contactSmsCaption")}
         </Text>
       )}

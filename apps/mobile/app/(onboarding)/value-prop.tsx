@@ -48,8 +48,8 @@ export default function ValuePropScreen() {
               <Icon as={ShieldCheck} className="size-7 text-primary" />
             </View>
           )}
-          <Text className="text-3xl font-heading text-foreground">{title}</Text>
-          <Text className="text-base leading-relaxed text-muted-foreground">
+          <Text className="text-title font-heading text-foreground">{title}</Text>
+          <Text className="text-body leading-relaxed text-muted-foreground">
             {body}
           </Text>
         </View>
@@ -88,7 +88,7 @@ export default function ValuePropScreen() {
           accessibilityLabel={t("common:skip", { defaultValue: "Skip" })}
           className="min-h-12 items-center justify-center active:opacity-70"
         >
-          <Text className="text-sm text-muted-foreground">
+          <Text className="text-callout text-muted-foreground">
             {t("common:skip", { defaultValue: "Skip" })}
           </Text>
         </Pressable>

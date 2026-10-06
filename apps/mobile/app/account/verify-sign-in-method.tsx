@@ -116,7 +116,7 @@ export default function VerifySignInMethodScreen() {
         <View className="px-4 pb-3 flex-row items-center">
           <Button
             accessibilityLabel={t("common:back")}
-            variant="ghost"
+            variant="secondary"
             size="icon"
             className="h-11 w-11"
             onPress={goBack}

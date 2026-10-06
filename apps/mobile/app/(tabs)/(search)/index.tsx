@@ -1,7 +1,6 @@
 import { router } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
@@ -19,6 +18,7 @@ import {
 import { useFeedCatalogMaps } from "../../../src/listings/feed/useFeedCatalogMaps";
 import { useFeedFavoriteReplay } from "../../../src/listings/feed/useFeedFavoriteReplay";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
+import { TabScreen } from "../../../components/navigation/TabScreen";
 
 import { Text } from "@/components/ui/text";
 
@@ -99,24 +99,24 @@ export default function HomeScreen() {
 
   if (isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+      <TabScreen>
         {header}
         <ListingGridSkeleton />
-      </SafeAreaView>
+      </TabScreen>
     );
   }
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+      <TabScreen>
         {header}
         <FeedError error={error} onRetry={() => refetch()} />
-      </SafeAreaView>
+      </TabScreen>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <TabScreen>
       <FlatList
         data={cells}
         keyExtractor={(item) => item.id}
@@ -142,11 +142,11 @@ export default function HomeScreen() {
             </View>
           ) : !hasNextPage && items.length > 0 ? (
             <View className="items-center py-4">
-              <Text className="text-xs text-muted-foreground">{t("noMore")}</Text>
+              <Text className="text-caption text-muted-foreground">{t("noMore")}</Text>
             </View>
           ) : null
         }
       />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

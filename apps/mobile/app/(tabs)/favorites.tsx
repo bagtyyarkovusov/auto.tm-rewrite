@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Heart } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
@@ -15,6 +14,7 @@ import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
 import { HideSoldToggle } from "../../src/listings/favorites/HideSoldToggle";
 import { useFavoritesView } from "../../src/listings/favorites/useFavoritesView";
 import { HOME_HREF } from "../../src/navigation/homeHref";
+import { TabScreen } from "../../components/navigation/TabScreen";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,8 @@ function CenteredMessage({ title, hint, children, icon = true }: { title: string
           <Icon as={Heart} className="size-8 text-muted-foreground" />
         </View>
       ) : null}
-      <Text className="text-center text-lg font-semibold text-foreground">{title}</Text>
-      <Text className="text-center text-sm text-muted-foreground">{hint}</Text>
+      <Text className="text-center text-subhead font-semibold text-foreground">{title}</Text>
+      <Text className="text-center text-callout text-muted-foreground">{hint}</Text>
       {children}
     </View>
   );
@@ -192,9 +192,9 @@ function Title({ count }: { count?: number }) {
   const { t } = useTranslation();
   return (
     <View className="flex-row items-baseline gap-2 px-4 pt-6 pb-3">
-      <Text className="text-2xl font-heading text-foreground">{t("favorites")}</Text>
+      <Text className="text-headline font-heading text-foreground">{t("favorites")}</Text>
       {count ? (
-        <Text testID="favorites-count" className="text-base text-muted-foreground">
+        <Text testID="favorites-count" className="text-body text-muted-foreground">
           {count}
         </Text>
       ) : null}
@@ -207,7 +207,7 @@ export default function FavoritesScreen() {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <TabScreen>
       {isAuthenticated === true ? (
         <SignedInFavorites />
       ) : (
@@ -218,11 +218,11 @@ export default function FavoritesScreen() {
           ) : (
             <View className="flex-1 items-center justify-center gap-3">
               <ActivityIndicator />
-              <Text className="text-sm text-muted-foreground">{t("loading")}</Text>
+              <Text className="text-callout text-muted-foreground">{t("loading")}</Text>
             </View>
           )}
         </>
       )}
-    </SafeAreaView>
+    </TabScreen>
   );
 }

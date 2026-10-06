@@ -58,7 +58,7 @@ function Photo({ mediaKey, flex }: { mediaKey?: string; flex: number }) {
   return <View testID="listing-photo" style={{ flex }} className="h-[170px] min-w-0 overflow-hidden bg-muted">
     {mediaKey ? <Image source={{ uri: original ? buildOriginalUrl(mediaKey) : buildVariantUrl(mediaKey, "list") }}
       className="h-full w-full" contentFit="cover" cachePolicy="memory-disk" onError={() => setOriginal(true)} />
-      : <View className="h-full items-center justify-center"><Text className="text-xs text-muted-foreground">{t("noPhotos")}</Text></View>}
+      : <View className="h-full items-center justify-center"><Text className="text-caption text-muted-foreground">{t("noPhotos")}</Text></View>}
   </View>;
 }
 
@@ -130,22 +130,22 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
           </> : <Photo mediaKey={photoKeys[0]} flex={1} />}
         </View>
         {listing.photoCount > 1 ? <View accessibilityLabel={t("resultsPhotoCount", { count: listing.photoCount })} className="absolute bottom-2 left-2 flex-row items-center gap-1 rounded-md bg-black/60 px-2 py-1">
-          <Icon as={Camera} className="size-3 text-white" /><Text className="text-xs text-white">{listing.photoCount}</Text>
+          <Icon as={Camera} className="size-3 text-white" /><Text className="text-caption text-white">{listing.photoCount}</Text>
         </View> : null}
         {closedLabel ? <View className={cn("absolute left-2 top-2 rounded-full border px-2 py-0.5",
           listing.status === Enums.ListingStatus.Sold ? "border-foreground bg-foreground" : "border-border bg-background")}>
-          <Text className={cn("text-xs font-medium", listing.status === Enums.ListingStatus.Sold ? "text-background" : "text-foreground")}>{closedLabel}</Text>
+          <Text className={cn("text-caption font-medium", listing.status === Enums.ListingStatus.Sold ? "text-background" : "text-foreground")}>{closedLabel}</Text>
         </View> : null}
       </View>
       <View className="gap-0.5 px-4 pt-3">
-        <Text className={cn("text-xl font-heading", closedLabel ? "text-muted-foreground" : "text-foreground")} numberOfLines={1}>{price}</Text>
-        {specs ? <Text className="text-sm text-foreground" numberOfLines={1}>{specs}</Text> : null}
-        {title ? <Text className="text-sm text-muted-foreground" numberOfLines={1}>{title}</Text> : null}
+        <Text className={cn("text-headline font-heading", closedLabel ? "text-muted-foreground" : "text-foreground")} numberOfLines={1}>{price}</Text>
+        {specs ? <Text className="text-callout text-foreground" numberOfLines={1}>{specs}</Text> : null}
+        {title ? <Text className="text-callout text-muted-foreground" numberOfLines={1}>{title}</Text> : null}
       </View>
     </Pressable>
     {favoriteCard && !closedLabel && !favoriteCard.isOwn ? <ContactActions listing={favoriteCard.listing} /> : null}
     <View className="min-h-11 flex-row items-center gap-2 px-4">
-      <Text className="min-w-0 flex-1 text-xs text-muted-foreground" numberOfLines={1}>{location}</Text>
+      <Text className="min-w-0 flex-1 text-caption text-muted-foreground" numberOfLines={1}>{location}</Text>
       {favoriteCard ? <RemoveFavoriteButton onPress={() => favoriteCard.onRemoveFavorite(favoriteCard.listing)} /> : null}
       {resultsCard ? <FeedFavoriteButton listingId={listing.id} isFavorited={listing.isFavorited ?? false}
         isAuthenticated={resultsCard.isAuthenticated} returnTo={resultsCard.returnTo} /> : null}

@@ -89,7 +89,7 @@ export function SearchScreen() {
   return (
     <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
-        <Button variant="ghost" size="icon" className="h-11 w-11" accessibilityLabel={t("back")}
+        <Button variant="secondary" size="icon" className="h-11 w-11" accessibilityLabel={t("back")}
           onPress={() => { Keyboard.dismiss(); goBack(); }}>
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
@@ -107,9 +107,9 @@ export function SearchScreen() {
         {empty ? <>
           {recent.length > 0 ? <>
             <View className="flex-row items-center justify-between px-4 pt-2">
-              <Text className="text-sm font-medium text-muted-foreground">{t("recentChoices")}</Text>
+              <Text className="text-callout font-medium text-muted-foreground">{t("recentChoices")}</Text>
               <Button variant="ghost" size="sm" accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
-                <Text className="text-sm text-primary">{t("clear")}</Text>
+                <Text className="text-callout text-primary">{t("clear")}</Text>
               </Button>
             </View>
             {recent.map((choice) => <SearchRow key={`${choice.brandId}-${choice.modelIds.join(",")}`}
@@ -118,7 +118,7 @@ export function SearchScreen() {
               trailing={<Icon as={History} className="size-4 text-muted-foreground" />}
               onPress={() => openResults(choice)} />)}
           </> : null}
-          <Text className="px-4 pt-4 pb-2 text-sm font-medium text-muted-foreground">{t("popularBrands")}</Text>
+          <Text className="px-4 pt-4 pb-2 text-callout font-medium text-muted-foreground">{t("popularBrands")}</Text>
           {browseError ? <ErrorState error={browseError} onRetry={retryBrowse} /> : browseLoading ? <Loading /> : popular.map((brand) =>
             <SearchRow key={brand.id} label={brand.name}
               leading={<CarBrandLogo name={brand.name} logoUrl={brand.logoUrl} />}
@@ -132,7 +132,7 @@ export function SearchScreen() {
               detail={years ?? (match.kind === "brand" ? t("brand") : undefined)} onPress={() => pickMatch(match)} />)}
           </> : years && /^[\d\s–—-]+$/u.test(query.trim()) ? <SearchRow label={t("allCarsYear", { years })}
             leading={<Icon as={Calendar} className="size-8 text-muted-foreground" />} onPress={() => openResults(undefined, true)} /> :
-          <Text className="px-6 py-8 text-center text-base text-muted-foreground">{t("noCatalogMatch", { query: query.trim() })}</Text>}
+          <Text className="px-6 py-8 text-center text-body text-muted-foreground">{t("noCatalogMatch", { query: query.trim() })}</Text>}
       </ScrollView>
       <View className="border-t border-border px-4 py-3">
         <Button variant="outline" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
@@ -153,8 +153,8 @@ function SearchRow({ label, leading, trailing, detail, onPress }: {
 }) {
   return <Pressable onPress={onPress} accessibilityRole="button"
     className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-muted/60">
-    {leading}<Text className="flex-1 text-base text-foreground" numberOfLines={1}>{label}</Text>
-    {detail ? <Text className="text-sm text-muted-foreground">{detail}</Text> : null}
+    {leading}<Text className="flex-1 text-body text-foreground" numberOfLines={1}>{label}</Text>
+    {detail ? <Text className="text-callout text-muted-foreground">{detail}</Text> : null}
     {trailing ?? <Icon as={ChevronRight} className="size-4 text-muted-foreground" />}
   </Pressable>;
 }

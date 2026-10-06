@@ -127,7 +127,7 @@ export default function ContactPhoneScreen() {
         <View className="flex-row items-center px-4 pb-3">
           <Button
             accessibilityLabel={t("back")}
-            variant="ghost"
+            variant="secondary"
             size="icon"
             className="h-11 w-11"
             onPress={goBack}
@@ -144,13 +144,13 @@ export default function ContactPhoneScreen() {
           <View className="gap-2">
             <Text
               accessibilityRole="header"
-              className="text-2xl font-semibold leading-snug text-foreground"
+              className="text-headline font-semibold leading-snug text-foreground"
             >
               {reconfirm
                 ? t("confirmNumberAgainTitle")
                 : t("anotherContactNumberTitle")}
             </Text>
-            <Text className="text-base leading-normal text-muted-foreground">
+            <Text className="text-body leading-normal text-muted-foreground">
               {t("contactPhoneCodeInfo")}
             </Text>
           </View>
@@ -172,8 +172,8 @@ export default function ContactPhoneScreen() {
             <Text
               className={
                 phone.showError
-                  ? "text-sm leading-snug text-destructive"
-                  : "text-sm leading-snug text-muted-foreground"
+                  ? "text-callout leading-snug text-destructive"
+                  : "text-callout leading-snug text-muted-foreground"
               }
               accessibilityLiveRegion="polite"
             >

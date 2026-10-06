@@ -87,10 +87,10 @@ export function AuthEntryScreen({
               />
 
               <View className="gap-2">
-                <Text className="text-2xl font-semibold leading-snug text-foreground">
+                <Text className="text-headline font-semibold leading-snug text-foreground">
                   {title}
                 </Text>
-                <Text className="text-base leading-normal text-muted-foreground">
+                <Text className="text-body leading-normal text-muted-foreground">
                   {helper}
                 </Text>
               </View>
@@ -113,7 +113,7 @@ export function AuthEntryScreen({
               </Button>
             </View>
 
-            <Text className="mt-auto pb-6 text-xs leading-normal text-muted-foreground">
+            <Text className="mt-auto pb-6 text-caption leading-normal text-muted-foreground">
               {t("legalPrefix")} {" "}
               <Text
                 className="font-medium text-info-500 underline"

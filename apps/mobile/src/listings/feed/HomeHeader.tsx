@@ -23,7 +23,7 @@ export function HomeHeader() {
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between pl-4 pr-1">
-        <Text className="text-2xl font-heading text-foreground">AutoTM</Text>
+        <Text className="text-headline font-heading text-foreground">AutoTM</Text>
         <Button
           variant="ghost"
           size="icon"
@@ -43,11 +43,11 @@ export function HomeHeader() {
       >
         <Icon as={Car} className="size-6 text-foreground" />
         <View className="min-w-0 flex-1 gap-0.5">
-          <Text className="text-base font-semibold text-foreground">
+          <Text className="text-body font-semibold text-foreground">
             {t("brandModel")}
           </Text>
           {count.data ? (
-            <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+            <Text className="text-callout text-muted-foreground" numberOfLines={1}>
               {t("listingsCount", {
                 total: count.data.totalMatching.toLocaleString(
                   localeTag(i18n.language),
@@ -63,7 +63,7 @@ export function HomeHeader() {
       </Pressable>
 
       <View className="flex-row items-center justify-between pl-4 pr-1">
-        <Text className="text-lg font-semibold text-foreground">
+        <Text className="text-subhead font-semibold text-foreground">
           {t("newListings")}
         </Text>
         <Button
@@ -71,7 +71,7 @@ export function HomeHeader() {
           className="h-11 px-3"
           onPress={() => router.push("/(tabs)/(search)/results")}
         >
-          <Text className="text-base font-medium text-primary">{t("seeAll")}</Text>
+          <Text className="text-body font-medium text-primary">{t("seeAll")}</Text>
         </Button>
       </View>
     </View>

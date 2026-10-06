@@ -124,7 +124,7 @@ export default function DisplayNameScreen() {
         <View className="px-4 pb-3 flex-row items-center gap-2">
           <Button
             accessibilityLabel={t("common:back")}
-            variant="ghost"
+            variant="secondary"
             size="icon"
             className="h-11 w-11"
             onPress={goBack}
@@ -132,7 +132,7 @@ export default function DisplayNameScreen() {
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
           <Text
-            className="flex-1 text-2xl font-heading text-foreground"
+            className="flex-1 text-headline font-heading text-foreground"
             numberOfLines={1}
           >
             {t("nameTitle")}
@@ -140,7 +140,7 @@ export default function DisplayNameScreen() {
         </View>
 
         <View className="flex-1 px-4 pt-4 gap-4">
-          <Text className="text-base leading-normal text-muted-foreground">
+          <Text className="text-body leading-normal text-muted-foreground">
             {t("nameHelper")}
           </Text>
 
@@ -170,18 +170,18 @@ export default function DisplayNameScreen() {
                 <Text
                   accessibilityLiveRegion="polite"
                   accessibilityRole="alert"
-                  className="flex-1 text-[13px] leading-snug text-destructive"
+                  className="flex-1 text-footnote leading-snug text-destructive"
                 >
                   {message}
                 </Text>
               ) : (
-                <Text className="flex-1 text-[13px] leading-snug text-muted-foreground">
+                <Text className="flex-1 text-footnote leading-snug text-muted-foreground">
                   {t("nameRule")}
                 </Text>
               )}
               <Text
                 className={cn(
-                  "text-[13px] leading-snug",
+                  "text-footnote leading-snug",
                   field.count > IdentitySchemas.DISPLAY_NAME_MAX ? "text-destructive" : "text-muted-foreground",
                 )}
               >

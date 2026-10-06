@@ -112,7 +112,7 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
         <ErrorState error={content.error} onRetry={picker.retry} compact />
       </View>
     ) : (
-      <Text className="px-4 py-8 text-center text-base text-muted-foreground">
+      <Text className="px-4 py-8 text-center text-body text-muted-foreground">
         {t("noBrandsMatch")}
       </Text>
     );
@@ -133,12 +133,12 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
         renderSectionHeader={({ section }) => (
           <View className="bg-background px-4 pt-4 pb-1">
             {section.intro ? (
-              <Text className="pb-2 text-base font-semibold text-foreground">
+              <Text className="pb-2 text-body font-semibold text-foreground">
                 {section.intro}
               </Text>
             ) : null}
             <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-medium text-muted-foreground">
+              <Text className="text-callout font-medium text-muted-foreground">
                 {section.title}
               </Text>
               {section.clearable ? (
@@ -149,7 +149,7 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
                   onPress={picker.clearRecent}
                   accessibilityLabel={t("clearRecent")}
                 >
-                  <Text className="text-sm font-medium text-primary">{t("clear")}</Text>
+                  <Text className="text-callout font-medium text-primary">{t("clear")}</Text>
                 </Button>
               ) : null}
             </View>
@@ -166,7 +166,7 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
           )
         }
         ListFooterComponent={
-          <Text className="px-4 pt-6 text-xs text-muted-foreground">
+          <Text className="px-4 pt-6 text-caption text-muted-foreground">
             {t("brandLogosNotice")}
           </Text>
         }
@@ -178,7 +178,7 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
     <View className="min-h-0 flex-1">
       <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
         {leading}
-        <Text className="text-2xl font-heading text-foreground">{t("brand")}</Text>
+        <Text className="text-headline font-heading text-foreground">{t("brand")}</Text>
       </View>
       <View className="px-4 pb-2">
         <Input
@@ -205,11 +205,11 @@ function BrandItem({ row, onPress }: { row: BrandRow; onPress: () => void }) {
       className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-muted/60"
     >
       <CarBrandLogo name={row.name} logoUrl={row.logoUrl} />
-      <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+      <Text className="flex-1 text-body text-foreground" numberOfLines={1}>
         {row.name}
       </Text>
       {row.count !== undefined && row.count > 0 ? (
-        <Text className="text-sm text-muted-foreground">{row.count}</Text>
+        <Text className="text-callout text-muted-foreground">{row.count}</Text>
       ) : null}
       <Icon as={ChevronRight} className="size-4 text-muted-foreground" />
     </Pressable>
@@ -230,7 +230,7 @@ function RecentItem({ row, onPress }: { row: RecentRow; onPress: () => void }) {
       className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-muted/60"
     >
       <CarBrandLogo name={row.brandName} logoUrl={row.logoUrl} />
-      <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+      <Text className="flex-1 text-body text-foreground" numberOfLines={1}>
         {label}
       </Text>
       <Icon as={History} className="size-4 text-muted-foreground" />

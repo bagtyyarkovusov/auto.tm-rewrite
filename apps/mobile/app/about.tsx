@@ -20,7 +20,7 @@ export default function AboutScreen() {
     <SafeScreen>
       <View className="px-4 pb-3 flex-row items-center gap-2">
         <Button
-          variant="ghost"
+          variant="secondary"
           className="h-11 w-11"
           size="icon"
           onPress={goBack}
@@ -28,12 +28,12 @@ export default function AboutScreen() {
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-2xl font-heading text-foreground">{t("about")}</Text>
+        <Text className="text-headline font-heading text-foreground">{t("about")}</Text>
       </View>
 
       <View className="items-center px-4 py-[60px]">
-        <Text accessibilityLabel="AutoTM" className="text-[28px] font-extrabold text-foreground">
-          Auto<Text className="text-[28px] font-extrabold text-primary">TM</Text>
+        <Text accessibilityLabel="AutoTM" className="text-title font-extrabold text-foreground">
+          Auto<Text className="text-title font-extrabold text-primary">TM</Text>
         </Text>
         {version ? (
           <Text className="mt-2 text-muted-foreground">{t("appVersion", { version })}</Text>

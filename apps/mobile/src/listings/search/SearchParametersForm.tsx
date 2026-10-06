@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, X } from "lucide-react-native";
 import { KeyboardAvoidingView, Platform, ScrollView, View, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
@@ -30,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
+import { TabScreen } from "@/components/navigation/TabScreen";
 
 interface SearchParametersFormProps {
   /** The filters the form opens with: what Results is showing, the Model picker's choice, or none from Search's All filters. */
@@ -111,20 +111,20 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <TabScreen>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
-          <Button variant="ghost" size="icon" className="h-11 w-11" onPress={onBack} accessibilityLabel={t("back")}>
+          <Button variant="secondary" size="icon" className="h-11 w-11" onPress={onBack} accessibilityLabel={t("back")}>
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
-          <Text className="min-w-0 flex-1 font-heading text-2xl text-foreground" numberOfLines={1}>
+          <Text className="min-w-0 flex-1 font-heading text-headline text-foreground" numberOfLines={1}>
             {t("searchParameters")}
           </Text>
           <Button variant="ghost" className="h-11 px-3 py-0" onPress={() => {
             reset();
             setCityResetVersion((version) => version + 1);
           }} accessibilityLabel={t("reset")}>
-            <Text className="text-base font-medium text-primary">{t("reset")}</Text>
+            <Text className="text-body font-medium text-primary">{t("reset")}</Text>
           </Button>
         </View>
 
@@ -162,11 +162,11 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
 
         <View className="gap-2 border-t border-border px-4 pt-3 pb-4">
           {!countEnabled ? (
-            <Text className="text-center text-sm text-destructive">{t("checkFilterValues")}</Text>
+            <Text className="text-center text-callout text-destructive">{t("checkFilterValues")}</Text>
           ) : null}
           {showCountError ? (
             <View accessibilityRole="alert" className="gap-1">
-              <Text className="text-center text-sm text-destructive">{t("failedToLoadListingCount")}</Text>
+              <Text className="text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
               <Button variant="ghost" onPress={() => void count.refetch()}>
                 <Text>{t("retry")}</Text>
               </Button>
@@ -201,6 +201,6 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
           ) : null}
         </SheetContent>
       </Sheet>
-    </SafeAreaView>
+    </TabScreen>
   );
 }

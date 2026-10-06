@@ -85,7 +85,7 @@ export const ListingGridCard = memo(function ListingGridCard({
           />
         ) : (
           <View className="h-full w-full items-center justify-center">
-            <Text className="text-xs text-muted-foreground">{t("noPhoto")}</Text>
+            <Text className="text-caption text-muted-foreground">{t("noPhoto")}</Text>
           </View>
         )}
 
@@ -111,18 +111,18 @@ export const ListingGridCard = memo(function ListingGridCard({
       </View>
 
       <View className="mt-2 gap-0.5">
-        <Text className="text-base font-semibold leading-5 text-foreground" numberOfLines={1}>
+        <Text className="text-body font-semibold leading-5 text-foreground" numberOfLines={1}>
           {text.price}
         </Text>
         {text.title ? (
-          <Text className="text-sm leading-5 text-foreground" numberOfLines={1}>
+          <Text className="text-callout leading-5 text-foreground" numberOfLines={1}>
             {text.title}
           </Text>
         ) : titlePending ? (
           <Skeleton className="my-1 h-3 w-3/4" />
         ) : null}
         {text.meta ? (
-          <Text className="text-sm leading-5 text-muted-foreground" numberOfLines={1}>
+          <Text className="text-callout leading-5 text-muted-foreground" numberOfLines={1}>
             {text.meta}
           </Text>
         ) : null}

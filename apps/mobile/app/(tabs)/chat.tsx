@@ -1,6 +1,5 @@
 import { MessageSquare } from "lucide-react-native";
 import { ActivityIndicator, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 
@@ -8,6 +7,7 @@ import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { ConversationList } from "../../src/conversations/components/ConversationList";
 import { useChatPushTokenRegistration } from "../../src/notifications/useChatPushTokenRegistration";
+import { TabScreen } from "../../components/navigation/TabScreen";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -28,7 +28,7 @@ function AnonymousChatEntry() {
       <View className="size-16 items-center justify-center rounded-full bg-muted">
         <Icon as={MessageSquare} className="size-8 text-muted-foreground" />
       </View>
-      <Text className="text-center text-lg font-semibold text-foreground">
+      <Text className="text-center text-subhead font-semibold text-foreground">
         {t("messagesSignedOutTitle")}
       </Text>
       <Button variant="brand" size="pill" onPress={handleSignIn}>
@@ -54,7 +54,7 @@ function ChatContent({ isAuthenticated }: { isAuthenticated: boolean | null }) {
   return (
     <View className="flex-1 items-center justify-center gap-3">
       <ActivityIndicator />
-      <Text className="text-sm text-muted-foreground">{t("loading")}</Text>
+      <Text className="text-callout text-muted-foreground">{t("loading")}</Text>
     </View>
   );
 }
@@ -64,12 +64,12 @@ export default function ChatScreen() {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <TabScreen>
       <View className="px-4 pt-6 pb-3">
-        <Text className="text-2xl font-heading text-foreground">{t("messages")}</Text>
+        <Text className="text-headline font-heading text-foreground">{t("messages")}</Text>
       </View>
 
       <ChatContent isAuthenticated={isAuthenticated} />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

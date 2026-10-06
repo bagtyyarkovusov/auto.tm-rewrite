@@ -33,8 +33,8 @@ function ContactRow({ icon, label, value, onPress }: ContactRowProps) {
     >
       <Icon as={icon} className="size-6 text-muted-foreground" />
       <View className="min-w-0 flex-1">
-        <Text className="text-base text-foreground">{label}</Text>
-        <Text className="text-[13px] text-muted-foreground">{value}</Text>
+        <Text className="text-body text-foreground">{label}</Text>
+        <Text className="text-footnote text-muted-foreground">{value}</Text>
       </View>
     </Pressable>
   );
@@ -59,7 +59,7 @@ export default function HelpScreen() {
     <SafeScreen>
       <View className="px-4 pb-3 flex-row items-center gap-2">
         <Button
-          variant="ghost"
+          variant="secondary"
           className="h-11 w-11"
           size="icon"
           onPress={goBack}
@@ -67,7 +67,7 @@ export default function HelpScreen() {
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-2xl font-heading text-foreground">{t("help")}</Text>
+        <Text className="text-headline font-heading text-foreground">{t("help")}</Text>
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="pb-6">
@@ -91,17 +91,17 @@ export default function HelpScreen() {
             <Text
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
-              className="text-sm text-destructive"
+              className="text-callout text-destructive"
             >
               {t(failed === "email" ? "noMailApp" : "noDialer")}
             </Text>
-            <Text selectable className="text-base text-foreground">
+            <Text selectable className="text-body text-foreground">
               {failed === "email" ? supportContacts.email : supportContacts.phoneShown}
             </Text>
           </View>
         ) : null}
 
-        <Text className="px-4 py-2.5 text-[13px] text-muted-foreground">{t("includeV")}</Text>
+        <Text className="px-4 py-2.5 text-footnote text-muted-foreground">{t("includeV")}</Text>
       </ScrollView>
     </SafeScreen>
   );

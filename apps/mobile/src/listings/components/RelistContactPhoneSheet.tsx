@@ -120,7 +120,7 @@ export function RelistContactPhoneSheet({
         <SheetHeader>
           <SheetTitle>{t("relistPhoneConfirmTitle")}</SheetTitle>
         </SheetHeader>
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-callout text-muted-foreground">
           {phone
             ? t("relistPhoneConfirmDescription", { phone })
             : t("loading")}
@@ -128,7 +128,7 @@ export function RelistContactPhoneSheet({
         {error ? (
           <Text
             accessibilityLiveRegion="polite"
-            className="text-sm leading-snug text-destructive"
+            className="text-callout leading-snug text-destructive"
           >
             {error}
           </Text>

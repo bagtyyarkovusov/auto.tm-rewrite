@@ -87,7 +87,7 @@ export function PostRefCard({
     return (
       <View className="flex-row items-center gap-2 px-1 py-2">
         <Icon as={AlertCircle} className="size-5 text-destructive shrink-0" />
-        <Text className="text-sm text-destructive flex-1" numberOfLines={2}>
+        <Text className="text-callout text-destructive flex-1" numberOfLines={2}>
           {error}
         </Text>
       </View>
@@ -111,23 +111,23 @@ export function PostRefCard({
           />
         ) : (
           <View className="w-full h-full items-center justify-center">
-            <Text className="text-xs text-muted-foreground">{t("noImage")}</Text>
+            <Text className="text-caption text-muted-foreground">{t("noImage")}</Text>
           </View>
         )}
       </View>
 
       <View className="flex-1 gap-1 min-w-0">
-        <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+        <Text className="text-callout font-medium text-foreground" numberOfLines={1}>
           {title}
         </Text>
-        <Text className="text-sm text-muted-foreground">{priceText}</Text>
+        <Text className="text-callout text-muted-foreground">{priceText}</Text>
         <View className="flex-row items-center gap-2">
           <Badge
             variant={isUnavailable ? "secondary" : "outline"}
             className="px-1.5 py-0"
           >
             <Text
-              className={`text-xs ${
+              className={`text-caption ${
                 isUnavailable
                   ? "text-secondary-foreground"
                   : "text-foreground"

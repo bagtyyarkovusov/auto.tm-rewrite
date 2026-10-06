@@ -18,7 +18,7 @@ export function BrandModelCard({ brandName, brandLogoUrl, modelNames, hasBrand, 
     <Pressable className="min-h-16 min-w-0 flex-1 flex-row items-center gap-3 py-3" onPress={onEdit}
       accessibilityRole="button" accessibilityLabel={`${title}, ${hint}`}>
       {hasBrand && brandName ? <CarBrandLogo name={brandName} logoUrl={brandLogoUrl} /> : <Icon as={Car} className="size-6 text-primary" />}
-      <View className="min-w-0 flex-1 gap-0.5"><Text className="text-base font-semibold text-foreground" numberOfLines={1}>{title}</Text><Text className="text-xs text-muted-foreground">{hint}</Text></View>
+      <View className="min-w-0 flex-1 gap-0.5"><Text className="text-body font-semibold text-foreground" numberOfLines={1}>{title}</Text><Text className="text-caption text-muted-foreground">{hint}</Text></View>
       {!hasBrand ? <Icon as={ChevronRight} className="size-5 text-muted-foreground" /> : null}
     </Pressable>
     {hasBrand ? <Button variant="ghost" size="icon" className="h-11 w-11" onPress={onClear} accessibilityLabel={t("resultsClearModels")}><Icon as={X} className="size-5 text-muted-foreground" /></Button> : null}

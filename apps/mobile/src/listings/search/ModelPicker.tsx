@@ -103,12 +103,12 @@ export function ModelPicker({
           )
         }
         ListEmptyComponent={
-          <Text className="px-4 py-8 text-center text-base text-muted-foreground">
+          <Text className="px-4 py-8 text-center text-body text-muted-foreground">
             {t("noModelsMatch")}
           </Text>
         }
         renderSectionHeader={({ section }) => (
-          <Text className="bg-background px-4 pt-4 pb-1 text-sm font-medium text-muted-foreground">
+          <Text className="bg-background px-4 pt-4 pb-1 text-callout font-medium text-muted-foreground">
             {section.title}
           </Text>
         )}
@@ -128,11 +128,11 @@ export function ModelPicker({
     <View className="min-h-0 flex-1">
       <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
         {leading}
-        <Text className="min-w-0 flex-1 text-2xl font-heading text-foreground" numberOfLines={1}>
+        <Text className="min-w-0 flex-1 text-headline font-heading text-foreground" numberOfLines={1}>
           {picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
         </Text>
         <Button variant="ghost" className="h-11 px-3 py-0" onPress={actions.changeBrand}>
-          <Text className="text-base font-medium text-primary">{t("changeBrand")}</Text>
+          <Text className="text-body font-medium text-primary">{t("changeBrand")}</Text>
         </Button>
       </View>
       <View className="px-4 pb-2">
@@ -149,13 +149,13 @@ export function ModelPicker({
       {body}
       <View className="gap-2 border-t border-border px-4 pt-3 pb-4">
         {actions.mode === "show" && selected.length === 0 && picker.brandName ? (
-          <Text className="text-center text-sm text-muted-foreground">
+          <Text className="text-center text-callout text-muted-foreground">
             {t("noModelPickedHint", { brand: picker.brandName })}
           </Text>
         ) : null}
         {picker.countError ? (
           <View accessibilityRole="alert" className="gap-1">
-            <Text className="text-center text-sm text-destructive">{t("failedToLoadListingCount")}</Text>
+            <Text className="text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
             <Button variant="ghost" onPress={picker.retry}>
               <Text>{t("retry")}</Text>
             </Button>
@@ -177,7 +177,7 @@ export function ModelPicker({
             disabled={!ready}
             onPress={() => actions.moreFilters?.(picker.choice())}
           >
-            <Text className="text-base font-medium text-primary">{t("moreFilters")}</Text>
+            <Text className="text-body font-medium text-primary">{t("moreFilters")}</Text>
           </Button>
         ) : null}
       </View>
@@ -205,11 +205,11 @@ function ModelCheckRow({
         className="min-h-12 flex-row items-center gap-3 px-4 py-3 active:bg-muted/60"
       >
         <Checkbox checked={checked} pointerEvents="none" />
-        <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+        <Text className="flex-1 text-body text-foreground" numberOfLines={1}>
           {name}
         </Text>
         {count !== undefined && count > 0 ? (
-          <Text className="text-sm text-muted-foreground">{count}</Text>
+          <Text className="text-callout text-muted-foreground">{count}</Text>
         ) : null}
       </Pressable>
       <Separator className="ml-4" />

@@ -77,7 +77,7 @@ export default function AddPhoneScreen() {
       onSubmit={handleSubmit}
     >
       <View className="gap-2">
-        <Text className="text-sm font-medium text-foreground">
+        <Text className="text-callout font-medium text-foreground">
           {tAuth("phoneLabel")}
         </Text>
         <PhoneInput
@@ -94,8 +94,8 @@ export default function AddPhoneScreen() {
         <Text
           className={
             phone.showError
-              ? "text-sm leading-snug text-destructive"
-              : "text-sm leading-snug text-muted-foreground"
+              ? "text-callout leading-snug text-destructive"
+              : "text-callout leading-snug text-muted-foreground"
           }
         >
           {phone.helperText}

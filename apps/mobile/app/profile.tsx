@@ -82,7 +82,7 @@ function SignInMethods({ phone, email }: { phone: string | null; email: string |
 
   return (
     <>
-      <Text className="px-4 pb-1 pt-2.5 text-[13px] text-muted-foreground">
+      <Text className="px-4 pb-1 pt-2.5 text-footnote text-muted-foreground">
         {t("signInMethods")}
       </Text>
       <MenuRow
@@ -143,7 +143,7 @@ function ProfileNoticeLine() {
         <Text
           accessibilityLiveRegion="polite"
           accessibilityRole="alert"
-          className="text-[13px] text-muted-foreground"
+          className="text-footnote text-muted-foreground"
           numberOfLines={1}
         >
           {notice.kind === "nameSaved"
@@ -255,7 +255,7 @@ function SignedInProfile() {
           onPress={() => router.push("/account/display-name")}
         >
           <Text
-            className="shrink text-xl font-semibold text-foreground"
+            className="shrink text-headline font-semibold text-foreground"
             numberOfLines={1}
           >
             {displayNameOf(data)}
@@ -280,10 +280,10 @@ export default function ProfileScreen() {
     <SafeScreen>
       {/* Header */}
       <View className="px-4 pb-3 flex-row items-center gap-2">
-        <Button variant="ghost" size="icon" className="h-11 w-11" onPress={goBack}>
+        <Button variant="secondary" size="icon" className="h-11 w-11" onPress={goBack}>
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-2xl font-heading text-foreground">
+        <Text className="text-headline font-heading text-foreground">
           {t("account:profile")}
         </Text>
       </View>

@@ -26,7 +26,7 @@ export function SortSheet({ open, onOpenChange, value, onChange }: {
           accessibilityRole="radio" accessibilityLabel={t(`resultsSort_${sort}`)} accessibilityState={{ checked: value === sort }}
           className="min-h-12 flex-row items-center justify-between py-3"
           onPress={() => { onChange(sort); onOpenChange(false); }}>
-          <Text className="text-base text-foreground">{t(`resultsSort_${sort}`)}</Text>
+          <Text className="text-body text-foreground">{t(`resultsSort_${sort}`)}</Text>
           {value === sort ? <Icon as={Check} className="size-5 text-primary" /> : null}
         </Pressable>)}
       </View>

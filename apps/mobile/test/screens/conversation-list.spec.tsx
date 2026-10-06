@@ -32,6 +32,6 @@ describe("ConversationsListScreen", () => {
 
   it("shows Messages header title", () => {
     expect(source).toContain('t("messages")');
-    expect(source).toContain("text-lg font-semibold");
+    expect(source).toContain("text-subhead font-semibold");
   });
 });

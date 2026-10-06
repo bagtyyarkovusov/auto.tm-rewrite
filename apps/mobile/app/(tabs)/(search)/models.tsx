@@ -1,7 +1,6 @@
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import { useMemo } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { readPickerResultsFilters } from "../../../src/listings/search/resultsRouteState";
@@ -9,6 +8,7 @@ import { ModelPicker } from "../../../src/listings/search/ModelPicker";
 import { BRANDS_PATH } from "../../../src/listings/search/pickerActions";
 import { useRoutePickerActions } from "../../../src/listings/search/useRoutePickerActions";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
+import { TabScreen } from "../../../components/navigation/TabScreen";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -34,7 +34,7 @@ export default function ModelPickerScreen() {
   if (!brandId) return <Redirect href={BRANDS_PATH} />;
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <TabScreen>
       <ModelPicker
         key={brandId}
         actions={actions}
@@ -43,7 +43,7 @@ export default function ModelPickerScreen() {
         filters={readPickerResultsFilters(params)}
         leading={
           <Button
-            variant="ghost"
+            variant="secondary"
             size="icon"
             className="h-11 w-11"
             onPress={goBack}
@@ -53,6 +53,6 @@ export default function ModelPickerScreen() {
           </Button>
         }
       />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

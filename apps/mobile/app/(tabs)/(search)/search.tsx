@@ -1,11 +1,11 @@
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { SearchScreen } from "../../../src/listings/search/SearchScreen";
+import { TabScreen } from "../../../components/navigation/TabScreen";
 
 export default function SearchRoute() {
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <TabScreen>
       <SearchScreen />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

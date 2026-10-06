@@ -86,7 +86,7 @@ export function PhotoGallery({
   if (media.length === 0) {
     return (
       <View className="h-[240px] w-full items-center justify-center bg-muted">
-        <Text className="text-sm text-muted-foreground">{t("noPhotos")}</Text>
+        <Text className="text-callout text-muted-foreground">{t("noPhotos")}</Text>
         {banner && <GalleryBanner label={banner} />}
       </View>
     );
@@ -113,7 +113,7 @@ export function PhotoGallery({
             : "absolute right-4 bottom-3 rounded-full bg-black/60 px-3 py-1"
         }
       >
-        <Text className="text-sm text-white">{`${activeIndex + 1} / ${media.length}`}</Text>
+        <Text className="text-callout text-white">{`${activeIndex + 1} / ${media.length}`}</Text>
       </View>
 
       {banner && <GalleryBanner label={banner} />}

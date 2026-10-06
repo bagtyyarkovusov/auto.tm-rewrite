@@ -70,7 +70,7 @@ export function ConversationHeader({
       onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}
       className="flex-row items-center gap-2 px-2 py-2 border-b border-border bg-background">
       <Button
-        variant="ghost"
+        variant="secondary"
         className="h-11 w-11"
         size="icon"
         onPress={onBack}
@@ -85,7 +85,7 @@ export function ConversationHeader({
           <View className="flex-1 min-w-0">
             <View className="flex-row items-center gap-1.5">
               <Text
-                className="shrink text-base font-semibold text-foreground"
+                className="shrink text-body font-semibold text-foreground"
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >

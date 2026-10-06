@@ -143,10 +143,10 @@ export function InspectionInterestCta({
             <Icon as={ClipboardCheck} className="size-5 text-info-500" />
           </View>
           <View className="flex-1">
-            <Text className={cn("text-base font-medium", disabled ? "text-muted-foreground" : "text-foreground")}>
+            <Text className={cn("text-body font-medium", disabled ? "text-muted-foreground" : "text-foreground")}>
               {t("requestInspection")}
             </Text>
-            <Text className="text-sm text-muted-foreground">
+            <Text className="text-callout text-muted-foreground">
               {disabled ? t("inspectionInterestUnavailable") : t("inspectionInterestHint")}
             </Text>
           </View>
@@ -175,7 +175,7 @@ export function InspectionInterestCta({
               <View className="h-12 w-12 items-center justify-center rounded-full bg-success-500/10">
                 <Icon as={Check} className="size-6 text-success-500" />
               </View>
-              <Text className="text-center text-base text-foreground">
+              <Text className="text-center text-body text-foreground">
                 {t("inspectionInterestReceived")}
               </Text>
               <Button variant="default" className="w-full" onPress={handleClose}>
@@ -185,7 +185,7 @@ export function InspectionInterestCta({
           ) : (
             <View className="gap-4">
               <View className="gap-2">
-                <Text className="text-sm font-medium text-foreground">
+                <Text className="text-callout font-medium text-foreground">
                   {t("willingnessToPayPrompt")}
                 </Text>
                 <Input
@@ -196,13 +196,13 @@ export function InspectionInterestCta({
                   maxLength={5}
                   editable={!createInterest.isPending}
                 />
-                <Text className="text-xs text-muted-foreground">
+                <Text className="text-caption text-muted-foreground">
                   {t("willingnessToPayOptional")}
                 </Text>
                 {(hasInputError || isInvalidWtp) && (
                   <View className="flex-row items-center gap-1.5">
                     <Icon as={CircleAlert} className="size-4 text-destructive" />
-                    <Text className="text-sm text-destructive">
+                    <Text className="text-callout text-destructive">
                       {validationError ?? t("willingnessToPayInvalid")}
                     </Text>
                   </View>
@@ -211,10 +211,10 @@ export function InspectionInterestCta({
 
               {errorCopy && (
                 <View className="rounded-lg bg-destructive/10 p-3">
-                  <Text className="text-sm font-medium text-destructive">
+                  <Text className="text-callout font-medium text-destructive">
                     {errorCopy.title}
                   </Text>
-                  <Text className="text-sm text-destructive/80">
+                  <Text className="text-callout text-destructive/80">
                     {errorCopy.description}
                   </Text>
                 </View>

@@ -24,7 +24,7 @@ export function SignInMethodTakenState({ method }: { method: "phone" | "email" }
       <View className="px-4 pb-3 flex-row items-center">
         <Button
           accessibilityLabel={t("common:back")}
-          variant="ghost"
+          variant="secondary"
           size="icon"
           className="h-11 w-11"
           onPress={goBack}
@@ -35,10 +35,10 @@ export function SignInMethodTakenState({ method }: { method: "phone" | "email" }
 
       <View className="px-4 pt-3.5 gap-5">
         <View className="gap-2">
-          <Text className="text-xl font-semibold leading-snug text-foreground">
+          <Text className="text-headline font-semibold leading-snug text-foreground">
             {t(method === "email" ? "auth:emailTaken" : "auth:phoneTaken")}
           </Text>
-          <Text className="text-[13px] text-muted-foreground">
+          <Text className="text-footnote text-muted-foreground">
             {t("accountsNeverMerged")}
           </Text>
         </View>

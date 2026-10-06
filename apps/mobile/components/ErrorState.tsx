@@ -24,12 +24,12 @@ export function ErrorState({ error, onRetry, compact = false }: ErrorStateProps)
         className="flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2"
       >
         <Icon as={AlertTriangle} className="size-4 shrink-0 text-destructive" />
-        <Text className="flex-1 text-sm text-destructive" numberOfLines={2}>
+        <Text className="flex-1 text-callout text-destructive" numberOfLines={2}>
           {copy.title}
         </Text>
         {copy.retryable && onRetry && (
           <Button variant="ghost" size="sm" onPress={onRetry}>
-            <Text className="text-sm text-destructive">{t("retry")}</Text>
+            <Text className="text-callout text-destructive">{t("retry")}</Text>
           </Button>
         )}
       </View>
@@ -45,10 +45,10 @@ export function ErrorState({ error, onRetry, compact = false }: ErrorStateProps)
         <Icon as={AlertTriangle} className="size-8 text-destructive" />
       </View>
       <View className="items-center gap-1">
-        <Text className="text-center text-base font-semibold text-foreground" numberOfLines={2}>
+        <Text className="text-center text-body font-semibold text-foreground" numberOfLines={2}>
           {copy.title}
         </Text>
-        <Text className="text-center text-sm text-muted-foreground" numberOfLines={3}>
+        <Text className="text-center text-callout text-muted-foreground" numberOfLines={3}>
           {copy.description}
         </Text>
       </View>

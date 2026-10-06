@@ -25,10 +25,10 @@ export default function DeletionScheduledScreen() {
     <SafeScreen>
       <View className="flex-1 items-center justify-center gap-3 px-6">
         <Icon as={CalendarClock} className="size-10 text-muted-foreground" />
-        <Text accessibilityRole="header" className="text-xl font-heading text-foreground text-center">
+        <Text accessibilityRole="header" className="text-headline font-heading text-foreground text-center">
           {t("deleteAccountScheduledTitle")}
         </Text>
-        <Text className="text-base text-muted-foreground text-center">
+        <Text className="text-body text-muted-foreground text-center">
           {t("deleteAccountScheduledMessage", { date: deletionDate })}
         </Text>
         <Button

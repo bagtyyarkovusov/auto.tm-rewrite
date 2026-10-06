@@ -19,7 +19,7 @@ export function BrandLogo({ width = 136, height = 24 }: BrandLogoProps) {
       {Logo ? (
         <Logo width={width} height={height} />
       ) : (
-        <Text className="text-2xl font-bold text-brand-500">AutoTM</Text>
+        <Text className="text-headline font-bold text-brand-500">AutoTM</Text>
       )}
     </View>
   );

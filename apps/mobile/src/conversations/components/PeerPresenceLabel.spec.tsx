@@ -56,7 +56,7 @@ describe("PeerPresenceLabel", () => {
   });
 
   it("styles the label as muted secondary text", () => {
-    expect(source).toContain('className="text-xs text-muted-foreground"');
+    expect(source).toContain('className="text-caption text-muted-foreground"');
   });
 
   it("truncates long presence labels to one line", () => {

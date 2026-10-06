@@ -113,12 +113,12 @@ function SaveStatusLine({
           className="self-start"
           onPress={onRetrySave}
         >
-          <Text className="text-xs text-destructive">{text}</Text>
+          <Text className="text-caption text-destructive">{text}</Text>
         </Pressable>
       ) : text ? (
         <Text
           className={cn(
-            "text-xs",
+            "text-caption",
             saveStatus === "saved" ? "text-success-500" : "text-muted-foreground",
           )}
         >
@@ -197,7 +197,7 @@ function WizardHeader({
           closeButton
         ) : canGoBack ? (
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             className="h-10 px-0 -ml-1"
             onPress={onBack}
@@ -205,7 +205,7 @@ function WizardHeader({
           >
             <View className="flex-row items-center gap-0.5">
               <Icon as={ChevronLeft} className="size-5 text-foreground" />
-              <Text className="text-sm font-medium text-foreground">{t("back")}</Text>
+              <Text className="text-callout font-medium text-foreground">{t("back")}</Text>
             </View>
           </Button>
         ) : (
@@ -216,15 +216,15 @@ function WizardHeader({
           {/* The heading below already reads the position, so this row reads only the route. */}
           {sectionList ? null : isEdit ? (
             <View className="items-center">
-              <Text className="text-xs font-medium text-foreground">{routeTitle}</Text>
+              <Text className="text-caption font-medium text-foreground">{routeTitle}</Text>
               {subtitle ? (
-                <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                <Text className="text-caption text-muted-foreground" numberOfLines={1}>
                   {subtitle}
                 </Text>
               ) : null}
             </View>
           ) : (
-            <Text className="text-xs text-muted-foreground" accessibilityLabel={routeTitle}>
+            <Text className="text-caption text-muted-foreground" accessibilityLabel={routeTitle}>
               {routeTitle} · {stepPosition}
             </Text>
           )}
@@ -236,14 +236,14 @@ function WizardHeader({
 
       {/* Row 2: the prominent step title — the ONE title */}
       <Text
-        className="text-2xl font-heading text-foreground"
+        className="text-headline font-heading text-foreground"
         accessibilityRole="header"
         accessibilityLabel={stepAnnouncement}
       >
         {stepTitle}
       </Text>
       {sectionList && subtitle ? (
-        <Text className="-mt-1 text-sm text-muted-foreground">{subtitle}</Text>
+        <Text className="-mt-1 text-callout text-muted-foreground">{subtitle}</Text>
       ) : null}
 
       {/* Row 3: progress, in the create wizard only */}
@@ -286,13 +286,13 @@ function UploadStatusChipRow({
       {uploadStatus.inflight > 0 && (
         <View className="flex-row items-center gap-1.5">
           <ActivityIndicator size="small" />
-          <Text className="text-xs text-muted-foreground">{uploadingText}</Text>
+          <Text className="text-caption text-muted-foreground">{uploadingText}</Text>
         </View>
       )}
       {uploadStatus.failed > 0 && (
         <View className="flex-row items-center gap-1.5">
           <Icon as={AlertCircle} className="size-3.5 text-destructive" />
-          <Text className="text-xs text-destructive">{failedText}</Text>
+          <Text className="text-caption text-destructive">{failedText}</Text>
         </View>
       )}
     </View>
@@ -330,7 +330,7 @@ function SaveErrorBanner({
   return (
     <View className="mx-5 mt-3 flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
       <Icon as={AlertCircle} className="size-4 text-destructive" />
-      <Text className="flex-1 text-sm text-destructive">{saveError}</Text>
+      <Text className="flex-1 text-callout text-destructive">{saveError}</Text>
       <Button variant="ghost" size="sm" onPress={onRetrySave}>
         <Icon as={RefreshCw} className="size-4 text-destructive" />
       </Button>
@@ -356,7 +356,7 @@ function PublishErrorAlert({ message }: { message: string }) {
       className="flex-row items-start gap-2 rounded-lg border border-destructive px-3 py-2"
     >
       <Icon as={AlertCircle} className="mt-0.5 size-4 text-destructive" />
-      <Text className="flex-1 text-sm text-destructive">{message}</Text>
+      <Text className="flex-1 text-callout text-destructive">{message}</Text>
     </View>
   );
 }
@@ -405,7 +405,7 @@ function WizardFooter({
     return (
       <View className="border-t border-border px-5 py-3 gap-2">
         {showDisabledReason && (
-          <Text className="text-xs text-muted-foreground">
+          <Text className="text-caption text-muted-foreground">
             {disabledReason}
           </Text>
         )}
@@ -426,7 +426,7 @@ function WizardFooter({
     return (
       <View className="border-t border-border px-5 py-3 gap-2">
         {showDisabledReason && (
-          <Text className="text-xs text-muted-foreground">
+          <Text className="text-caption text-muted-foreground">
             {disabledReason}
           </Text>
         )}
@@ -446,7 +446,7 @@ function WizardFooter({
   return (
     <View className="border-t border-border px-5 py-3 gap-2">
       {showDisabledReason && (
-        <Text className="text-xs text-muted-foreground">
+        <Text className="text-caption text-muted-foreground">
           {disabledReason}
         </Text>
       )}
@@ -454,7 +454,7 @@ function WizardFooter({
         // One line each, so a screen reader reads them in this order before Publish.
         <View testID="publish-blockers" className="gap-0.5">
           {publishBlockers.map((line) => (
-            <Text key={line} className="text-xs text-destructive">
+            <Text key={line} className="text-caption text-destructive">
               {line}
             </Text>
           ))}
@@ -517,7 +517,7 @@ function WizardFooter({
           onPress={secondaryAction.onPress}
           disabled={secondaryAction.disabled}
         >
-          <Text className="text-sm text-foreground underline">
+          <Text className="text-callout text-foreground underline">
             {secondaryAction.label}
           </Text>
         </Button>

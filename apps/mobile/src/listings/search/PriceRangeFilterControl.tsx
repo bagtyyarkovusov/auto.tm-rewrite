@@ -40,7 +40,7 @@ export function PriceRangeFilterControl({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("priceRange")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("priceRange")}</Text>
       <View className="flex-row gap-3 items-start">
         <View className="flex-1 gap-1.5">
           <Input
@@ -49,7 +49,7 @@ export function PriceRangeFilterControl({
             placeholder={t("min")}
             keyboardType="number-pad"
           />
-          <Text className="text-xs text-muted-foreground">TMT</Text>
+          <Text className="text-caption text-muted-foreground">TMT</Text>
         </View>
         <View className="flex-1 gap-1.5">
           <Input
@@ -58,12 +58,12 @@ export function PriceRangeFilterControl({
             placeholder={t("max")}
             keyboardType="number-pad"
           />
-          <Text className="text-xs text-muted-foreground">TMT</Text>
+          <Text className="text-caption text-muted-foreground">TMT</Text>
         </View>
       </View>
       {isInvalid && (
         <Text
-          className="text-sm text-destructive"
+          className="text-callout text-destructive"
           accessibilityLiveRegion="polite"
         >
           {t("minPriceExceedsMax")}

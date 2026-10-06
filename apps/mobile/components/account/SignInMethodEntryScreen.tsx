@@ -49,7 +49,7 @@ export function SignInMethodEntryScreen({
         <View className="px-4 pb-3 flex-row items-center gap-2">
           <Button
             accessibilityLabel={t("common:back")}
-            variant="ghost"
+            variant="secondary"
             size="icon"
             className="h-11 w-11"
             onPress={goBack}
@@ -57,7 +57,7 @@ export function SignInMethodEntryScreen({
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
           <Text
-            className="flex-1 text-2xl font-heading text-foreground"
+            className="flex-1 text-headline font-heading text-foreground"
             numberOfLines={1}
           >
             {title}
@@ -65,7 +65,7 @@ export function SignInMethodEntryScreen({
         </View>
 
         <View className="flex-1 px-4 pt-4 gap-8">
-          <Text className="text-base leading-normal text-muted-foreground">
+          <Text className="text-body leading-normal text-muted-foreground">
             {helper}
           </Text>
 

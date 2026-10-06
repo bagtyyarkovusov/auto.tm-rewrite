@@ -61,7 +61,7 @@ export function ListingCard({
             />
           ) : (
             <View className="h-full w-full items-center justify-center">
-              <Text className="text-xs text-muted-foreground">{t("noPhoto")}</Text>
+              <Text className="text-caption text-muted-foreground">{t("noPhoto")}</Text>
             </View>
           )}
         </View>
@@ -69,10 +69,10 @@ export function ListingCard({
         {/* Text content */}
         <View className="min-w-0 flex-1 justify-between py-0.5">
           <View className="gap-1">
-            <Text className="text-base font-semibold text-foreground leading-5" numberOfLines={2}>
+            <Text className="text-body font-semibold text-foreground leading-5" numberOfLines={2}>
               {titleParts.join(" ")}
             </Text>
-            <Text className="text-lg font-heading text-primary" numberOfLines={1}>
+            <Text className="text-subhead font-heading text-primary" numberOfLines={1}>
               {formatPrice(listing.displayPriceTmt, i18n.language)}
             </Text>
           </View>
@@ -80,10 +80,10 @@ export function ListingCard({
           <View className="flex-row flex-wrap items-center gap-2">
             {listing.status === Enums.ListingStatus.Sold && (
               <Badge variant="secondary" className="shrink-0 px-2 py-0.5">
-                <Text className="text-xs text-secondary-foreground">{t("sold")}</Text>
+                <Text className="text-caption text-secondary-foreground">{t("sold")}</Text>
               </Badge>
             )}
-            <Text className="min-w-0 flex-1 text-xs text-muted-foreground" numberOfLines={1}>
+            <Text className="min-w-0 flex-1 text-caption text-muted-foreground" numberOfLines={1}>
               {cityName ?? t("loading")}
             </Text>
           </View>

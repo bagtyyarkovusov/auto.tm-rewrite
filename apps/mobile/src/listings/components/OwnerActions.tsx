@@ -202,7 +202,7 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
         republish.isError ||
         deleteListing.isError) && (
         <View className="rounded-md bg-destructive/10 px-3 py-2">
-          <Text className="text-sm text-destructive">
+          <Text className="text-callout text-destructive">
             {relistPhoneRequired ? t("relistPhoneRequired") : t("actionFailed")}
           </Text>
         </View>

@@ -133,7 +133,7 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("city")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("city")}</Text>
 
       <View className="gap-2">
         <PickerRow
@@ -159,7 +159,7 @@ export function CityFilterControl({ draft, setField }: CityFilterControlProps) {
           accessibilityLabel={t("clear")}
           className="self-start py-1"
         >
-          <Text className="text-sm text-destructive">{t("clear")}</Text>
+          <Text className="text-callout text-destructive">{t("clear")}</Text>
         </Pressable>
       )}
 

@@ -50,7 +50,7 @@ export function YearRangeFilterControl({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("yearRange")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("yearRange")}</Text>
       <View className="flex-row gap-3">
         <View className="flex-1">
           <Input
@@ -74,7 +74,7 @@ export function YearRangeFilterControl({
         </View>
       </View>
       {isInvalid && (
-        <Text className="text-sm text-destructive">
+        <Text className="text-callout text-destructive">
           {t("minYearExceedsMax")}
         </Text>
       )}

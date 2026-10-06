@@ -19,7 +19,7 @@ export default function ConversationsListScreen() {
       {/* Header */}
       <View className="flex-row items-center gap-2 px-4 py-3 border-b border-border">
         <Button
-          variant="ghost"
+          variant="secondary"
           className="h-11 w-11"
           size="icon"
           onPress={goBack}
@@ -27,7 +27,7 @@ export default function ConversationsListScreen() {
         >
           <Icon as={ArrowLeft} className="size-5 text-foreground" />
         </Button>
-        <Text className="text-lg font-semibold text-foreground" numberOfLines={1}>
+        <Text className="text-subhead font-semibold text-foreground" numberOfLines={1}>
           {t("messages")}
         </Text>
       </View>

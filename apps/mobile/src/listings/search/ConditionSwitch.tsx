@@ -12,7 +12,7 @@ export function ConditionSwitch({ value, onChange }: { value?: Enums.ListingCond
     {choices.map((choice) => <Pressable key={choice.label} onPress={() => onChange(choice.value)} accessibilityRole="button"
       accessibilityLabel={`${choice.label} ${t("condition")}`} accessibilityState={{ selected: choice.value === value }}
       className={cn("min-h-11 flex-1 items-center justify-center rounded-lg", choice.value === value && "bg-card")}>
-      <Text className={cn("text-sm font-semibold", choice.value === value ? "text-foreground" : "text-muted-foreground")}>{choice.label}</Text>
+      <Text className={cn("text-callout font-semibold", choice.value === value ? "text-foreground" : "text-muted-foreground")}>{choice.label}</Text>
     </Pressable>)}
   </View>;
 }

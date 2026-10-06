@@ -62,14 +62,14 @@ export function MenuRow({
         <Text
           numberOfLines={singleLineLabel ? 1 : undefined}
           className={cn(
-            large ? "text-lg font-semibold" : "text-base",
+            large ? "text-subhead font-semibold" : "text-body",
             variant === "danger" ? "text-destructive" : "text-foreground",
           )}
         >
           {label}
         </Text>
         {sub ? (
-          <Text className="text-[13px] text-muted-foreground" numberOfLines={1}>
+          <Text className="text-footnote text-muted-foreground" numberOfLines={1}>
             {sub}
           </Text>
         ) : null}
@@ -78,7 +78,7 @@ export function MenuRow({
         <Text
           numberOfLines={1}
           className={cn(
-            "shrink text-[15px]",
+            "shrink text-callout",
             valueTone === "link" ? "text-info-600 dark:text-info-400" : "text-muted-foreground",
           )}
         >

@@ -77,7 +77,7 @@ export function AskSellerChips({
 
   return (
     <View className="gap-3">
-      <Text className="text-lg font-semibold">{t("askTheSeller")}</Text>
+      <Text className="text-subhead font-semibold">{t("askTheSeller")}</Text>
       <View className="flex-row flex-wrap gap-2">
         {QUICK_REPLIES.map((reply) => (
           <Button

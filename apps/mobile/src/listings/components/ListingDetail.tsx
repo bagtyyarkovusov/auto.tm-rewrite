@@ -43,8 +43,8 @@ function SpecItem({ label, value }: SpecItemProps) {
   if (!value) return null;
   return (
     <View className="w-1/3 gap-1 py-3 pr-2">
-      <Text className="text-xs text-muted-foreground">{label}</Text>
-      <Text className="text-sm font-semibold text-foreground">{value}</Text>
+      <Text className="text-caption text-muted-foreground">{label}</Text>
+      <Text className="text-callout font-semibold text-foreground">{value}</Text>
     </View>
   );
 }
@@ -52,8 +52,8 @@ function SpecRow({ label, value }: SpecItemProps) {
   if (!value) return null;
   return (
     <View className="flex-row gap-3 py-1.5">
-      <Text className="w-2/5 text-sm text-muted-foreground">{label}</Text>
-      <Text className="flex-1 text-sm text-foreground">{value}</Text>
+      <Text className="w-2/5 text-callout text-muted-foreground">{label}</Text>
+      <Text className="flex-1 text-callout text-foreground">{value}</Text>
     </View>
   );
 }
@@ -172,21 +172,21 @@ export function ListingDetailView({
       <View className="gap-4 px-5 py-5">
         {isOwner && (
           <View className="gap-2 rounded-xl bg-muted p-4">
-            <Text className="text-base font-semibold">
+            <Text className="text-body font-semibold">
               {t("yourListing")} · {t(listing.status)}
             </Text>
             <View className="flex-row gap-4">
-              <Text className="text-sm text-muted-foreground">
+              <Text className="text-callout text-muted-foreground">
                 {t("listingViews", { count: listing.viewCount })}
               </Text>
-              <Text className="text-sm text-muted-foreground">
+              <Text className="text-callout text-muted-foreground">
                 {t("listingSaves", { count: listing.favoriteCount })}
               </Text>
             </View>
           </View>
         )}
         <Text
-          className="text-2xl font-heading text-foreground"
+          className="text-headline font-heading text-foreground"
           numberOfLines={2}
         >
           {listingTitle(listing, maps) || t("listing")}
@@ -200,7 +200,7 @@ export function ListingDetailView({
           isOwner={isOwner}
           muted={closed}
         />
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-callout text-muted-foreground">
           {[
             detailDate(listing.publishedAt, i18n.language),
             maps.cityName(listing.cityId),
@@ -220,7 +220,7 @@ export function ListingDetailView({
           rows.some((row) => row.value)) && (
           <View className="gap-1">
             <Separator className="mb-3" />
-            <Text className="text-lg font-semibold">{t("specifications")}</Text>
+            <Text className="text-subhead font-semibold">{t("specifications")}</Text>
             <View className="flex-row flex-wrap">
               {specs.map((spec) => (
                 <SpecItem key={spec.label} {...spec} />
@@ -234,9 +234,9 @@ export function ListingDetailView({
         {listing.description && (
           <View className="gap-2">
             <Separator className="mb-3" />
-            <Text className="text-lg font-semibold">{t("description")}</Text>
+            <Text className="text-subhead font-semibold">{t("description")}</Text>
             <Text
-              className="text-base leading-6"
+              className="text-body leading-6"
               numberOfLines={expanded ? undefined : 3}
             >
               {listing.description}
@@ -301,22 +301,22 @@ export function ListingDetailView({
         )}
         <Separator />
         <View className="gap-1 pb-5">
-          <Text className="text-xs text-muted-foreground">
+          <Text className="text-caption text-muted-foreground">
             {t("publicListingId", { id: listing.publicNumber })}
           </Text>
           <View className="flex-row gap-2">
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-caption text-muted-foreground">
               {t("detailPublished")}
             </Text>
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-caption text-muted-foreground">
               {detailDate(listing.publishedAt, i18n.language)}
             </Text>
           </View>
           <View className="flex-row gap-2">
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-caption text-muted-foreground">
               {t("updated")}
             </Text>
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-caption text-muted-foreground">
               {detailDate(listing.updatedAt, i18n.language)}
             </Text>
           </View>
@@ -336,7 +336,7 @@ function VinHistorySection({
   const { t } = useTranslation();
   return (
     <View className="gap-1">
-      <Text className="text-lg font-semibold">{t("vinHistory")}</Text>
+      <Text className="text-subhead font-semibold">{t("vinHistory")}</Text>
       {vinHistory.brand && (
         <VinHistoryRow label={t("brand")} value={vinHistory.brand} />
       )}
@@ -352,7 +352,7 @@ function VinHistorySection({
       {vinHistory.engineType && (
         <VinHistoryRow label={t("engineType")} value={vinHistory.engineType} />
       )}
-      <Text className="text-sm text-muted-foreground">
+      <Text className="text-callout text-muted-foreground">
         {t("vinConfidence", { value: Math.round(vinHistory.confidence * 100) })}
       </Text>
     </View>
@@ -361,9 +361,9 @@ function VinHistorySection({
 function VinHistoryRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row items-start gap-2">
-      <Text className="text-base text-foreground">{label}:</Text>
+      <Text className="text-body text-foreground">{label}:</Text>
       <Text
-        className="min-w-0 flex-1 text-base font-medium text-foreground"
+        className="min-w-0 flex-1 text-body font-medium text-foreground"
         numberOfLines={1}
       >
         {value}
@@ -383,14 +383,14 @@ function ConditionDisclosureSection({
 
   return (
     <View className="gap-1">
-      <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+      <Text className="text-callout font-semibold uppercase tracking-wide text-muted-foreground">
         {t("conditionAsStatedBySeller")}
       </Text>
       <View className="flex-row items-start gap-2">
-        <Text className="text-base text-foreground">{t("damaged")}:</Text>
+        <Text className="text-body text-foreground">{t("damaged")}:</Text>
         <Text
           className={cn(
-            "min-w-0 flex-1 text-base font-medium",
+            "min-w-0 flex-1 text-body font-medium",
             disclosure.damaged ? "text-foreground" : "text-muted-foreground",
           )}
         >
@@ -399,10 +399,10 @@ function ConditionDisclosureSection({
       </View>
       {disclosure.knownIssuesText && (
         <View className="gap-0.5">
-          <Text className="text-sm text-muted-foreground">
+          <Text className="text-callout text-muted-foreground">
             {t("knownIssuesText")}
           </Text>
-          <Text className="text-base text-foreground">
+          <Text className="text-body text-foreground">
             {disclosure.knownIssuesText}
           </Text>
         </View>

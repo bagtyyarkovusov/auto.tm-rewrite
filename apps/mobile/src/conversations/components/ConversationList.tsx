@@ -44,8 +44,8 @@ function EmptyState() {
       <View className="size-16 items-center justify-center rounded-full bg-muted">
         <Icon as={MessageSquare} className="size-8 text-muted-foreground" />
       </View>
-      <Text className="text-center text-lg font-semibold text-foreground">{t("noConversationsYet")}</Text>
-      <Text className="text-center text-sm text-muted-foreground">{t("startByMessaging")}</Text>
+      <Text className="text-center text-subhead font-semibold text-foreground">{t("noConversationsYet")}</Text>
+      <Text className="text-center text-callout text-muted-foreground">{t("startByMessaging")}</Text>
       <Button variant="secondary" size="pill" onPress={() => router.navigate(HOME_HREF)}>
         <Text>{t("browseListings")}</Text>
       </Button>

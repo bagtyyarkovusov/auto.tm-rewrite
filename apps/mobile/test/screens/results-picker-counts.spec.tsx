@@ -6,7 +6,7 @@ import { renderMobile, routeParams } from "../render";
 import ModelPickerScreen from "../../app/(tabs)/(search)/models";
 import BrandPickerScreen from "../../app/(tabs)/(search)/brands";
 const counts = vi.hoisted(() => ({ models: vi.fn(), brands: vi.fn(), total: vi.fn() }));
-vi.mock("react-native-safe-area-context", async () => ({ SafeAreaView: (await import("react-native")).View }));
+vi.mock("react-native-safe-area-context", async () => ({ SafeAreaView: (await import("react-native")).View, useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }) }));
 vi.mock("react-native", async (original) => {
   const native = await original<typeof Native>();
   const React = await import("react");

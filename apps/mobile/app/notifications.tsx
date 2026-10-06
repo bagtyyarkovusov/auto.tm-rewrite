@@ -32,7 +32,7 @@ export default function NotificationsScreen() {
     <SafeScreen>
       <View className="px-4 pb-3 flex-row items-center gap-2">
         <Button
-          variant="ghost"
+          variant="secondary"
           className="h-11 w-11"
           size="icon"
           onPress={goBack}
@@ -40,7 +40,7 @@ export default function NotificationsScreen() {
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-2xl font-heading text-foreground">
+        <Text className="text-headline font-heading text-foreground">
           {t("notifications")}
         </Text>
       </View>
@@ -53,10 +53,10 @@ export default function NotificationsScreen() {
           }
           className="min-h-14 flex-row items-center gap-3 px-4 py-2"
         >
-          <Text className="flex-1 text-base text-foreground">
+          <Text className="flex-1 text-body text-foreground">
             {t("messageNotifications")}
           </Text>
-          <Text className="text-base text-muted-foreground">{value}</Text>
+          <Text className="text-body text-muted-foreground">{value}</Text>
         </View>
         <Separator className="bg-border ml-4" />
         <MenuRow
@@ -65,7 +65,7 @@ export default function NotificationsScreen() {
           onPress={() => void Linking.openSettings()}
         />
 
-        <Text className="px-4 py-2.5 text-sm text-muted-foreground">
+        <Text className="px-4 py-2.5 text-callout text-muted-foreground">
           {t("notificationsMuteHint")}
         </Text>
       </ScrollView>

@@ -37,7 +37,7 @@ export function PickerRow({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">
+      <Text className="text-callout font-medium text-foreground">
         {label}
         {required ? " *" : ""}
       </Text>
@@ -52,14 +52,14 @@ export function PickerRow({
         <View className="flex-1 flex-row items-baseline gap-2 pr-2">
           <Text
             className={
-              value ? "shrink text-base text-foreground font-medium" : "shrink text-base text-muted-foreground"
+              value ? "shrink text-body text-foreground font-medium" : "shrink text-body text-muted-foreground"
             }
             numberOfLines={1}
           >
             {value ?? placeholder}
           </Text>
           {shownDetail && (
-            <Text className="shrink text-sm text-muted-foreground" numberOfLines={1}>
+            <Text className="shrink text-callout text-muted-foreground" numberOfLines={1}>
               {shownDetail}
             </Text>
           )}
@@ -72,15 +72,15 @@ export function PickerRow({
         />
       </Pressable>
       {locked && (
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-callout text-muted-foreground">
           {t("thisFieldCannotBeChanged")}
         </Text>
       )}
       {!locked && helper && !error && (
-        <Text className="text-sm text-muted-foreground">{helper}</Text>
+        <Text className="text-callout text-muted-foreground">{helper}</Text>
       )}
       {error && (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
           {error}
         </Text>
       )}

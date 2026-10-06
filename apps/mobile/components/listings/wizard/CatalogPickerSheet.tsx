@@ -109,11 +109,11 @@ export function CatalogPickerSheet({
             ))}
           </View>
         ) : isError ? (
-          <Text className="py-4 text-center text-sm text-destructive">
+          <Text className="py-4 text-center text-callout text-destructive">
             {t("actionFailed")}
           </Text>
         ) : isEmpty ? (
-          <Text className="py-4 text-center text-sm text-muted-foreground">
+          <Text className="py-4 text-center text-callout text-muted-foreground">
             {emptyMessage}
           </Text>
         ) : (
@@ -130,7 +130,7 @@ export function CatalogPickerSheet({
                 return (
                   <Text
                     accessibilityRole="header"
-                    className="px-2 pb-1 pt-4 text-sm font-medium text-muted-foreground"
+                    className="px-2 pb-1 pt-4 text-callout font-medium text-muted-foreground"
                   >
                     {row.title}
                   </Text>
@@ -147,7 +147,7 @@ export function CatalogPickerSheet({
                   }`}
                 >
                   <Text
-                    className={`text-base ${item.id === selectedId ? "font-medium text-foreground" : "text-foreground"}`}
+                    className={`text-body ${item.id === selectedId ? "font-medium text-foreground" : "text-foreground"}`}
                   >
                     {item.name}
                   </Text>

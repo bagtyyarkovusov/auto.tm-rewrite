@@ -192,7 +192,7 @@ export default function OtpScreen() {
               <Button
                 accessibilityLabel={t("back")}
                 size="icon"
-                variant="ghost"
+                variant="secondary"
                 className="h-11 w-11"
                 onPress={cancelAuth}
               >
@@ -240,7 +240,7 @@ export default function OtpScreen() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           {restoreFailed || sessionExpired ? (
-            <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+            <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
               {tAccount(
                 sessionExpired ? "restoreAccountExpired" : "restoreAccountError",
               )}

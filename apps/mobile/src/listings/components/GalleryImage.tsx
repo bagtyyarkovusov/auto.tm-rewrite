@@ -15,7 +15,7 @@ type ExpoImageStyle = ComponentProps<typeof Image>["style"];
 export function GalleryBanner({ label }: { label: string }) {
   return (
     <View className="absolute bottom-0 left-0 right-0 bg-black/70 px-4 py-2">
-      <Text className="text-base font-bold text-white" numberOfLines={1}>
+      <Text className="text-body font-bold text-white" numberOfLines={1}>
         {label}
       </Text>
     </View>

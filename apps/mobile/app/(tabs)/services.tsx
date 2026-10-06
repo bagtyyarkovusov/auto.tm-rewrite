@@ -10,9 +10,9 @@ import {
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { ScrollView, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { TabScreen } from "../../components/navigation/TabScreen";
 import { maskEmail } from "../../src/auth/email";
 import { maskTmPhone } from "../../src/auth/phone";
 import { useAuth } from "../../src/auth/useAuth";
@@ -98,7 +98,7 @@ function ProfileRow() {
         className="min-h-[76px] flex-row items-center gap-3.5 px-4 py-2"
       >
         <PersonAvatar />
-        <Text className="flex-1 text-base text-muted-foreground">
+        <Text className="flex-1 text-body text-muted-foreground">
           {t("somethingWentWrong")}
         </Text>
         <Button
@@ -151,12 +151,9 @@ export default function CabinetScreen() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <SafeAreaView
-      className="flex-1 bg-background"
-      edges={["top", "left", "right"]}
-    >
+    <TabScreen>
       <View className="px-4 pt-6 pb-3">
-        <Text className="text-2xl font-heading text-foreground">
+        <Text className="text-headline font-heading text-foreground">
           {t("common:cabinet")}
         </Text>
       </View>
@@ -219,6 +216,6 @@ export default function CabinetScreen() {
           onPress={() => router.push("/about")}
         />
       </ScrollView>
-    </SafeAreaView>
+    </TabScreen>
   );
 }

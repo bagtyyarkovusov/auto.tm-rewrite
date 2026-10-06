@@ -5,7 +5,7 @@ import { AccessibilityInfo, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp, FadeOutDown, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { TAB_BAR_HEIGHT } from '@/components/navigation/tabBarHeight';
+import { tabBarSpace } from '@/components/navigation/tabBarHeight';
 import { cn } from '@/lib/utils';
 import { Text } from '@/components/ui/text';
 
@@ -102,7 +102,7 @@ function ToastViewport() {
       {aboveTabBar.length > 0 && (
         <View
           testID="toast-viewport-above-tab-bar"
-          style={{ bottom: TAB_BAR_HEIGHT + insets.bottom + 8 }}
+          style={{ bottom: tabBarSpace(insets.bottom) }}
           className="absolute left-0 right-0 z-[100] flex-col items-center gap-2 px-4 pointer-events-none">
           {aboveTabBar.map((toast) => (
             <ToastItem key={toast.id} toast={toast} onDismiss={() => ctx.dismiss(toast.id)} />
