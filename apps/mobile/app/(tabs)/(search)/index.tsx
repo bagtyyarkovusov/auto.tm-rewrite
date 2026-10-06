@@ -21,6 +21,7 @@ import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { TabScreen } from "../../../components/navigation/TabScreen";
 import { useTabBarSpace } from "../../../components/navigation/tabBarHeight";
 
+import { useListEntrance } from "@/components/ui/motion";
 import { Text } from "@/components/ui/text";
 
 /**
@@ -78,8 +79,12 @@ export default function HomeScreen() {
     router.push(`/(public)/listings/${id}`);
   }, []);
 
+  // The first cards rise in one after another, once; a card that scrolls
+  // back into the window, or a next page, is simply there.
+  const enterOrder = useListEntrance(items.length > 0);
+
   const renderItem = useCallback(
-    ({ item }: { item: GridCell }) =>
+    ({ item, index }: { item: GridCell; index: number }) =>
       isSpacer(item) ? (
         <View className="flex-1" />
       ) : (
@@ -91,9 +96,10 @@ export default function HomeScreen() {
           isAuthenticated={isAuthenticated}
           returnTo={HOME_HREF}
           titlePending={catalogMaps.namesPending}
+          enterOrder={enterOrder(index)}
         />
       ),
-    [catalogMaps, isAuthenticated, openListing],
+    [catalogMaps, enterOrder, isAuthenticated, openListing],
   );
 
   const header = <HomeHeader />;
@@ -145,7 +151,7 @@ export default function HomeScreen() {
               <ActivityIndicator />
             </View>
           ) : !hasNextPage && items.length > 0 ? (
-            <View className="items-center py-4">
+            <View className="items-center pb-2 pt-5">
               <Text className="text-footnote text-muted-foreground">{t("noMore")}</Text>
             </View>
           ) : null

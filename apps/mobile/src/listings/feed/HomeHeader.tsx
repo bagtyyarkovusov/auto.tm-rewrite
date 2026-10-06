@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Car, ChevronRight, Search } from "lucide-react-native";
+import { ArrowRight, Car, Search } from "lucide-react-native";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -15,16 +15,20 @@ import { Text } from "@/components/ui/text";
 import { localeTag } from "@/src/i18n/resources";
 
 /**
- * Home's header above the New listings grid: the AutoTM title with 🔍 (opens
- * Search), the "Brand, model" card with the live Listing count (opens the
- * Brand picker), and the New listings heading with See all (opens Results).
+ * Home's header above the New listings grid: the AutoTM wordmark with 🔍
+ * (opens Search), the "Brand, model" card with the live Listing count (opens
+ * the Brand picker), and the New listings heading with See all (opens Results).
+ *
+ * The "Brand, model" card is the way into discovery, so it is the largest
+ * thing on the screen after the photos: a hero card with a solid ink mark, its
+ * name in the heading face and an arrow that says it leads somewhere.
  */
 export function HomeHeader() {
   const { t, i18n } = useTranslation();
   const count = useListingCount({});
 
   return (
-    <View className="gap-4 pb-1">
+    <View className="gap-5 pb-1">
       <View className="flex-row items-center justify-between px-5 pt-2">
         <View className="h-11 justify-center">
           <BrandLogo width={136} height={24} />
@@ -42,16 +46,21 @@ export function HomeHeader() {
 
       <PressableScale
         feedback="surface"
-        className="mx-4 flex-row items-center gap-3.5 rounded-3xl bg-card p-4 active:bg-secondary"
+        className="group mx-4 flex-row items-center gap-4 rounded-3xl bg-card p-4 active:bg-secondary"
         onPress={() => router.push("/(tabs)/(search)/brands")}
         accessibilityRole="button"
         accessibilityLabel={t("brandModel")}
       >
-        <View className="size-12 items-center justify-center rounded-full bg-secondary">
-          <Icon as={Car} className="size-6 text-foreground" />
+        <View className="size-14 items-center justify-center rounded-full bg-foreground">
+          <Icon as={Car} className="size-7 text-background" strokeWidth={1.8} />
         </View>
         <View className="min-w-0 flex-1 gap-0.5">
-          <Text className="font-heading text-subhead font-semibold text-foreground">
+          <Text
+            className="font-heading text-headline font-bold text-foreground"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
             {t("brandModel")}
           </Text>
           {count.data ? (
@@ -66,7 +75,9 @@ export function HomeHeader() {
             <Skeleton className="my-1 h-3 w-24" />
           ) : null}
         </View>
-        <Icon as={ChevronRight} className="size-5 text-muted-foreground" />
+        <View className="size-9 items-center justify-center rounded-full bg-secondary group-active:bg-accent">
+          <Icon as={ArrowRight} className="size-5 text-foreground" />
+        </View>
       </PressableScale>
 
       <SectionHeader
