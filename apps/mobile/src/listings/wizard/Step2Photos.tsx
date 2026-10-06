@@ -15,7 +15,10 @@ import {
 import { useTranslation } from "react-i18next";
 
 import type { StagedPhoto } from "../uploadStaging/types";
+import { NEEDS_ATTENTION_STATES, countUploads } from "../uploadStaging/uploadCounts";
 
+import { PhotoActionSheet } from "./PhotoActionSheet";
+import { canRetryPhoto, photoFailureReason, photoPosition } from "./photoLabels";
 import { PhotoThumbnail } from "./PhotoThumbnail";
 import {
   getDragTargetIndex,
@@ -38,6 +41,13 @@ interface Step2PhotosProps {
   isUploading: boolean;
   disabled?: boolean;
   fieldErrors?: Record<string, string>;
+  /** Show every error, as after the first Continue tap. */
+  showErrors?: boolean;
+  /**
+   * Whether the seller can move on while photos upload (default). Edit passes
+   * false: Done there still waits for an uploaded photo, so it must not say so.
+   */
+  continuesWhileUploading?: boolean;
 }
 
 function usePhotoPicker(onAddPhoto: (uri: string) => Promise<void>) {
@@ -184,21 +194,15 @@ function PhotoActions({
 function PhotoGrid({
   photos,
   disabled,
-  onRetry,
   onRemove,
   onReorderPhotos,
-  onMoveUp,
-  onMoveDown,
-  onSetAsCover,
+  onOpenActions,
 }: {
   photos: StagedPhoto[];
   disabled: boolean;
-  onRetry: (photoId: string) => void;
   onRemove: (photoId: string) => void;
   onReorderPhotos: (photoIds: string[]) => void;
-  onMoveUp: (index: number) => void;
-  onMoveDown: (index: number) => void;
-  onSetAsCover: (index: number) => void;
+  onOpenActions: (photoId: string) => void;
 }) {
   const { width } = useWindowDimensions();
   const tileSize = getPhotoTileSize(width);
@@ -256,18 +260,18 @@ function PhotoGrid({
   }, [onReorderPhotos, photos, tileSize]);
 
   return (
-    <View className={`w-full flex-row flex-wrap gap-2 ${disabled ? "opacity-50" : ""}`}>
+    <View
+      testID="photo-grid"
+      className={`w-full flex-row flex-wrap gap-2 ${disabled ? "opacity-50" : ""}`}
+    >
       {photos.map((photo, index) => (
         <PhotoThumbnail
           key={photo.photoId}
           photo={photo}
           index={index}
           total={photos.length}
-          onRetry={onRetry}
           onRemove={onRemove}
-          onMoveUp={onMoveUp}
-          onMoveDown={onMoveDown}
-          onSetAsCover={onSetAsCover}
+          onOpenActions={onOpenActions}
           onDragStart={handleDragStart}
           onDragMove={handleDragMove}
           onDragEnd={handleDragEnd}
@@ -275,6 +279,55 @@ function PhotoGrid({
           dragOffset={draggingIndex === index ? dragOffset : undefined}
         />
       ))}
+    </View>
+  );
+}
+
+/**
+ * Every failed or lost photo with its number and reason, under the grid. A
+ * retryable failure gets Retry; one that cannot be retried (file missing, lost)
+ * gets Remove only.
+ */
+function FailedPhotoList({
+  photos,
+  onRetry,
+  onRemove,
+}: {
+  photos: StagedPhoto[];
+  onRetry: (photoId: string) => void;
+  onRemove: (photoId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const failed = photos
+    .map((photo, index) => ({ photo, index }))
+    .filter(({ photo }) => NEEDS_ATTENTION_STATES.includes(photo.state));
+  if (failed.length === 0) return null;
+
+  return (
+    <View testID="failed-photos" className="gap-2">
+      {failed.map(({ photo, index }) => {
+        const retry = canRetryPhoto(photo);
+        const position = photoPosition(t, index, photos.length);
+        return (
+          <View
+            key={photo.photoId}
+            className="flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2"
+          >
+            <Icon as={AlertCircle} className="size-4 text-destructive shrink-0" />
+            <Text className="flex-1 text-sm text-destructive">
+              {`#${index + 1} · ${photoFailureReason(t, photo)}`}
+            </Text>
+            <Button
+              variant="outline"
+              size="sm"
+              accessibilityLabel={`${retry ? t("retry") : t("remove")}: ${position}`}
+              onPress={() => (retry ? onRetry(photo.photoId) : onRemove(photo.photoId))}
+            >
+              <Text>{retry ? t("retry") : t("remove")}</Text>
+            </Button>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -336,17 +389,30 @@ export default function Step2Photos({
   isUploading,
   disabled,
   fieldErrors,
+  showErrors = false,
+  continuesWhileUploading = true,
 }: Step2PhotosProps) {
   const { t } = useTranslation();
+  // Like the other steps: the photo error shows once the seller has removed a
+  // photo, or after the first Continue tap, never on arrival.
+  const [removedOne, setRemovedOne] = useState(false);
+  const removePhoto = (photoId: string) => {
+    setRemovedOne(true);
+    onRemovePhoto(photoId);
+  };
   const { pickFromLibrary, takePhoto } = usePhotoPicker(onAddPhoto);
   const { handleMoveUp, handleMoveDown, handleSetAsCover } = usePhotoReorder(
     photos,
     onReorderPhotos,
   );
+  const [actionsPhotoId, setActionsPhotoId] = useState<string | null>(null);
 
   const maxReached = photos.length >= 20;
-  const photosError = fieldErrors?.photos;
+  const photosError = showErrors || removedOne ? fieldErrors?.photos : undefined;
   const hasPhotos = photos.length > 0;
+  const stillUploading = countUploads(photos).inflight > 0;
+  const actionsIndex = photos.findIndex((p) => p.photoId === actionsPhotoId);
+  const actionsPhoto = photos[actionsIndex] ?? null;
 
   return (
     <View className="gap-5 py-5">
@@ -372,19 +438,46 @@ export default function Step2Photos({
       <StatusIndicator isCompressing={isCompressing} isUploading={isUploading} />
 
       {hasPhotos ? (
-        <PhotoGrid
-          photos={photos}
-          disabled={disabled ?? false}
-          onRetry={onRetryPhoto}
-          onRemove={onRemovePhoto}
-          onReorderPhotos={onReorderPhotos}
-          onMoveUp={handleMoveUp}
-          onMoveDown={handleMoveDown}
-          onSetAsCover={handleSetAsCover}
-        />
+        <>
+          <PhotoGrid
+            photos={photos}
+            disabled={disabled ?? false}
+            onRemove={removePhoto}
+            onReorderPhotos={onReorderPhotos}
+            onOpenActions={(photoId) => {
+              if (!disabled) setActionsPhotoId(photoId);
+            }}
+          />
+          <Text className="text-xs text-muted-foreground">{t("photoTip")}</Text>
+          <FailedPhotoList
+            photos={photos}
+            onRetry={onRetryPhoto}
+            onRemove={removePhoto}
+          />
+          {stillUploading && continuesWhileUploading && (
+            <Text className="text-sm text-muted-foreground">
+              {t("photosKeepUploading")}
+            </Text>
+          )}
+        </>
       ) : (
         <EmptyState />
       )}
+
+      <PhotoActionSheet
+        open={actionsPhoto !== null}
+        photo={actionsPhoto}
+        index={actionsIndex}
+        total={photos.length}
+        onOpenChange={(open) => {
+          if (!open) setActionsPhotoId(null);
+        }}
+        onSetAsCover={handleSetAsCover}
+        onMoveEarlier={handleMoveUp}
+        onMoveLater={handleMoveDown}
+        onRemove={removePhoto}
+        onRetry={onRetryPhoto}
+      />
     </View>
   );
 }

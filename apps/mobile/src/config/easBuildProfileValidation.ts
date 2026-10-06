@@ -50,8 +50,12 @@ function isRailwayHost(hostname: string): boolean {
   return hostname === "up.railway.app" || hostname.endsWith(".up.railway.app");
 }
 
+// AutoTM runs on autotm.bagtyyar.dev until it controls auto.tm (#322, #700).
+// The rest of bagtyyar.dev is not AutoTM's.
+const AUTOTM_DOMAINS = ["autotm.bagtyyar.dev", "auto.tm"];
+
 function isAutoTmOwnedHost(hostname: string): boolean {
-  return hostname === "auto.tm" || hostname.endsWith(".auto.tm");
+  return AUTOTM_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
 }
 
 function requireProtocol(name: string, url: ParsedUrl | null, protocols: string[], errors: string[]): void {
@@ -76,7 +80,14 @@ function rejectUnsafeProductionHost(name: string, url: ParsedUrl | null, errors:
   }
 
   if (!isAutoTmOwnedHost(hostname)) {
-    errors.push(`${name} must use auto.tm or a subdomain of auto.tm in production`);
+    errors.push(`${name} must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production`);
+    return;
+  }
+
+  // The URL is compiled into the store build, so it carries no credentials
+  // and no port a custom domain does not serve.
+  if (url.parsed.username || url.parsed.password || url.parsed.port) {
+    errors.push(`${name} must not carry credentials or a custom port in production`);
   }
 }
 
@@ -163,7 +174,33 @@ export function validateEasBuildProfile(input: ValidationInput): string[] {
   return errors;
 }
 
+export const STORE_ANDROID_APPLICATION_ID = "com.auto_tm.ynamly";
+
+/**
+ * The store build updates the existing Play app, so only `production` may set
+ * the package, and only to that app's. A stray value on another profile would
+ * repackage an internal build without anyone noticing.
+ */
+export function validateAndroidApplicationId(
+  profile: string | undefined,
+  applicationId: string | undefined,
+): string[] {
+  if (profile === "production") {
+    return applicationId === STORE_ANDROID_APPLICATION_ID
+      ? []
+      : [`ANDROID_APPLICATION_ID must be ${STORE_ANDROID_APPLICATION_ID} for the production profile`];
+  }
+  return applicationId ? [`ANDROID_APPLICATION_ID must not be set for the ${profile ?? "unknown"} profile`] : [];
+}
+
 export function validateCurrentEasBuildProfile(env: Record<string, string | undefined>): string[] {
+  return [
+    ...validateBuildUrls(env),
+    ...validateAndroidApplicationId(env["EAS_BUILD_PROFILE"], env["ANDROID_APPLICATION_ID"]),
+  ];
+}
+
+function validateBuildUrls(env: Record<string, string | undefined>): string[] {
   return validateEasBuildProfile({
     profile: env["EAS_BUILD_PROFILE"],
     apiUrl: env["EXPO_PUBLIC_API_URL"],

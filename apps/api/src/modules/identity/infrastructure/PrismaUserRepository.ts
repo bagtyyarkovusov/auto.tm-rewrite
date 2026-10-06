@@ -6,6 +6,7 @@ import {
   NO_SIGN_IN_METHODS,
   type SignInMethods,
 } from "../domain/SignInMethods";
+import type { GeneratedIdentity } from "../domain/GeneratedIdentity";
 import type { User } from "../domain/User";
 import type { UserRepository } from "../domain/ports/UserRepository";
 import type { SignInMethodRepository } from "../domain/ports/SignInMethodRepository";
@@ -35,7 +36,7 @@ export class PrismaUserRepository implements UserRepository, SignInMethodReposit
     return row ? this.toDomain(row) : null;
   }
 
-  async create(signInMethods: SignInMethods): Promise<User> {
+  async create(signInMethods: SignInMethods, identity: GeneratedIdentity): Promise<User> {
     assertLiveUserSignInMethods(signInMethods);
     const row = await this.prisma.user.create({
       data: {
@@ -43,6 +44,8 @@ export class PrismaUserRepository implements UserRepository, SignInMethodReposit
         phoneVerifiedAt: signInMethods.phoneVerifiedAt,
         email: signInMethods.email,
         emailVerifiedAt: signInMethods.emailVerifiedAt,
+        nameNumber: identity.nameNumber,
+        avatarIndex: identity.avatarIndex,
       },
     });
     return this.toDomain(row);
@@ -76,22 +79,15 @@ export class PrismaUserRepository implements UserRepository, SignInMethodReposit
     }
   }
 
+  async updateDisplayName(userId: string, displayName: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { displayName },
+    });
+  }
+
   async delete(id: string): Promise<void> {
     await this.prisma.user.delete({ where: { id } });
-  }
-
-  async scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { deletionScheduledAt },
-    });
-  }
-
-  async clearDeletionSchedule(userId: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { deletionScheduledAt: null },
-    });
   }
 
   async findUsersWithExpiredDeletionGrace(now: Date): Promise<User[]> {
@@ -107,6 +103,7 @@ export class PrismaUserRepository implements UserRepository, SignInMethodReposit
       data: {
         ...NO_SIGN_IN_METHODS,
         displayName: null,
+        avatarKey: null,
         avatarUrl: null,
       },
     });
@@ -126,6 +123,9 @@ export class PrismaUserRepository implements UserRepository, SignInMethodReposit
       id: row.id,
       ...signInMethods,
       displayName: row.displayName,
+      nameNumber: row.nameNumber,
+      avatarIndex: row.avatarIndex,
+      avatarKey: row.avatarKey,
       avatarUrl: row.avatarUrl,
       locale: row.locale,
       role: row.role as User["role"],

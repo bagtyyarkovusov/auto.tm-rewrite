@@ -16,6 +16,10 @@ class FakeIdentityRead implements IdentityReadPort {
     const summary: IdentityUserSummary = {
       id,
       displayName: null,
+      nameNumber: 1000,
+      avatarIndex: 0,
+      avatarKey: null,
+      deleted: false,
       role: "buyer",
       suspendedAt: null,
       suspendedById: null,

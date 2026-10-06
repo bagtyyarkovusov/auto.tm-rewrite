@@ -22,6 +22,7 @@ import {
 import { Conversation } from "../domain/Conversation";
 import { CONVERSATION_ERROR_CODES } from "../domain/types";
 import {
+  missingPeer,
   peerIdOf,
   readConversationPeers,
   type ConversationPeer,
@@ -168,7 +169,7 @@ export class OpenConversation {
     return {
       conversation,
       listing,
-      peer: view?.peer ?? { id: peerId, displayName: null },
+      peer: view?.peer ?? missingPeer(peerId),
       blockedByMe: view?.blockedByMe ?? false,
     };
   }

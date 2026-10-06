@@ -144,4 +144,42 @@ describe("PrismaListingDraftRepository — Testcontainers", () => {
     const result = await repo.findByUserId("user-1", { limit: 10 });
     expect(result.items.map((d) => d.id)).toEqual(["d3", "d2", "d1"]);
   });
+
+  describe("saveWithinLimit", () => {
+    it("saves while the User is under the limit", async () => {
+      await seedUser("user-1");
+      await repo.save(ListingDraft.create({ id: "d1", userId: "user-1" }));
+
+      const saved = await repo.saveWithinLimit(ListingDraft.create({ id: "d2", userId: "user-1" }), 2);
+
+      expect(saved?.id).toBe("d2");
+      expect(await prisma.listingDraft.count({ where: { userId: "user-1" } })).toBe(2);
+    });
+
+    it("returns null and saves nothing at the limit", async () => {
+      await seedUser("user-1");
+      await seedUser("user-2");
+      await repo.save(ListingDraft.create({ id: "d1", userId: "user-1" }));
+      await repo.save(ListingDraft.create({ id: "d2", userId: "user-1" }));
+      await repo.save(ListingDraft.create({ id: "other", userId: "user-2" }));
+
+      const saved = await repo.saveWithinLimit(ListingDraft.create({ id: "d3", userId: "user-1" }), 2);
+
+      expect(saved).toBeNull();
+      expect(await repo.findById("d3")).toBeNull();
+    });
+
+    it("serializes concurrent saves for one User", async () => {
+      await seedUser("user-1");
+
+      const results = await Promise.all(
+        Array.from({ length: 8 }, (_, i) =>
+          repo.saveWithinLimit(ListingDraft.create({ id: `c${i}`, userId: "user-1" }), 5),
+        ),
+      );
+
+      expect(results.filter((r) => r !== null)).toHaveLength(5);
+      expect(await prisma.listingDraft.count({ where: { userId: "user-1" } })).toBe(5);
+    });
+  });
 });

@@ -13,6 +13,9 @@ const ME = {
   phoneVerified: true,
   displayName: null,
   role: "buyer",
+  nameNumber: 4821,
+  avatarIndex: 7,
+  avatarKey: null,
   avatarUrl: null,
   locale: "ru",
   createdAt: "2026-05-14T12:00:00.000Z",
@@ -42,6 +45,7 @@ function build() {
     unused as never,
     unused as never,
     recoverAccount as never,
+    unused as never,
   );
   return { calls, controller, getMe, recoverAccount };
 }

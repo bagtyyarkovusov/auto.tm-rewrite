@@ -4,7 +4,7 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import { PrismaClient } from "../generated/prisma/client/client";
+import { Prisma, PrismaClient } from "../generated/prisma/client/client";
 import {
   reviewerScenarioSeedIds,
   runReviewerScenarioSeed,
@@ -13,6 +13,11 @@ import {
 } from "../src/reviewer-scenario-seed";
 
 type PrismaOrTx = PrismaClient;
+
+/** A nullable Json column takes SQL NULL as `Prisma.DbNull`, matching a create that omits it. */
+function jsonOrDbNull(value: Record<string, unknown> | null): Prisma.InputJsonValue | typeof Prisma.DbNull {
+  return value === null ? Prisma.DbNull : (value as Prisma.InputJsonValue);
+}
 
 function parseArgs(argv: string[]): { mode: "seed" | "revoke" | null } {
   let mode: "seed" | "revoke" | null = "seed";
@@ -64,6 +69,12 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
     displayName: string;
     role: "buyer" | "seller";
   }): Promise<ReviewerScenarioUser> {
+    // Fixed per role, not left to the column's random default, so the
+    // reviewer accounts look the same after every run.
+    const identity =
+      input.role === "seller"
+        ? { nameNumber: 2057, avatarIndex: 2 }
+        : { nameNumber: 4821, avatarIndex: 7 };
     return this.prisma.user.upsert({
       where: { id: input.id },
       update: {
@@ -72,6 +83,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         email: input.email,
         emailVerifiedAt: new Date(),
         displayName: input.displayName,
+        ...identity,
         role: input.role,
         deletionScheduledAt: null,
       },
@@ -82,6 +94,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         email: input.email,
         emailVerifiedAt: new Date(),
         displayName: input.displayName,
+        ...identity,
         role: input.role,
       },
       select: { id: true, phone: true, email: true, role: true },
@@ -320,11 +333,11 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         senderId: input.senderId,
         kind: input.kind,
         body: input.body,
-        metadata: input.metadata,
+        metadata: jsonOrDbNull(input.metadata),
         createdAt: input.createdAt,
         deletedAt: null,
       },
-      create: input,
+      create: { ...input, metadata: jsonOrDbNull(input.metadata) },
     });
   }
 
@@ -347,7 +360,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         status: "pending",
         reviewedById: null,
         reviewedAt: null,
-        messageContext: null,
+        messageContext: Prisma.DbNull,
       },
       create: {
         id: input.id,
@@ -373,7 +386,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         action: input.action,
         targetType: input.targetType,
         targetId: input.targetId,
-        details: input.details,
+        details: input.details as Prisma.InputJsonValue,
       },
     });
   }

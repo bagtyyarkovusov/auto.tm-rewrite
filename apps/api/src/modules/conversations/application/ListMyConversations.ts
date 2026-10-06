@@ -16,6 +16,7 @@ import {
   type ConversationRepository,
 } from "../domain/ports/ConversationRepository";
 import {
+  missingPeer,
   peerIdOf,
   readConversationPeers,
   type ConversationPeer,
@@ -104,7 +105,7 @@ export class ListMyConversations {
           peerLastReadAt: peerState?.lastReadAt ?? null,
           peerLastDeliveredAt: peerState?.lastDeliveredAt ?? null,
           mutedAt: ownState?.mutedAt ?? null,
-          peer: peerView?.peer ?? { id: peerId, displayName: null },
+          peer: peerView?.peer ?? missingPeer(peerId),
           blockedByMe: peerView?.blockedByMe ?? false,
         };
       }),

@@ -1,14 +1,15 @@
+import { useEffect } from "react";
 import { View } from "react-native";
 import { Phone, MessageSquare } from "lucide-react-native";
-import type { WizardSchemas } from "@auto-tm/contracts";
+import type { ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
 import { useCities } from "../../api/catalog/useCities";
 
+import { ContactPhonePicker } from "./ContactPhonePicker";
 
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -16,9 +17,16 @@ import { Icon } from "@/components/ui/icon";
 interface Step7DescContactProps {
   payload: WizardSchemas.WizardDraftPayload;
   onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
-  fieldErrors?: Record<string, string>;
   disabled?: boolean;
-  defaultPhone?: string;
+  /** The seller's sign-in phone from `useAuth`; null for an email-only User. */
+  accountPhone?: string | null;
+  confirmedPhones?: ListingsSchemas.VerifiedContactPhone[];
+  /** Edit mode: the Listing's stored number, selectable without a code. */
+  currentListingPhone?: string | null;
+  onAnotherNumber?: () => void;
+  onConfirmExpired?: (phone: string) => void;
+  selectionError?: string | null;
+  publishPhoneError?: boolean;
 }
 
 function useReviewSummary(payload: WizardSchemas.WizardDraftPayload) {
@@ -59,93 +67,6 @@ function ReviewSummary({
           : "—"}
       </Text>
       <Text className="text-sm text-muted-foreground">{cityName}</Text>
-    </View>
-  );
-}
-
-function DescriptionInput({
-  payload,
-  onChange,
-  fieldErrors,
-  disabled,
-}: {
-  payload: WizardSchemas.WizardDraftPayload;
-  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
-  fieldErrors?: Record<string, string>;
-  disabled: boolean;
-}) {
-  const { t } = useTranslation();
-  const descriptionLength = payload.description?.length ?? 0;
-
-  return (
-    <View className="gap-1.5">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-medium text-foreground">
-          {t("description")} *
-        </Text>
-        <Text className="text-xs text-muted-foreground">
-          {descriptionLength}/2000
-        </Text>
-      </View>
-      {wrapDisabled(
-        <Input
-          value={payload.description ?? ""}
-          onChangeText={(text) =>
-            onChange({ description: text || undefined })
-          }
-          placeholder={t("descriptionPlaceholder")}
-          multiline
-          numberOfLines={4}
-          editable={!disabled}
-          className="h-auto min-h-[96px] py-2"
-          maxLength={2000}
-          accessibilityLabel={t("description")}
-        />,
-        disabled,
-      )}
-      {fieldErrors?.description ? (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
-          {fieldErrors.description}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
-function ContactPhoneInput({
-  payload,
-  onChange,
-  disabled,
-  defaultPhone,
-}: {
-  payload: WizardSchemas.WizardDraftPayload;
-  onChange: (updates: Partial<WizardSchemas.WizardDraftPayload>) => void;
-  disabled: boolean;
-  defaultPhone: string;
-}) {
-  const { t } = useTranslation();
-  return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">
-        {t("contactPhone")}
-      </Text>
-      {wrapDisabled(
-        <Input
-          value={payload.contactPhone ?? ""}
-          onChangeText={(text) =>
-            onChange({ contactPhone: text || undefined })
-          }
-          placeholder={
-            defaultPhone
-              ? t("defaultPhone", { phone: defaultPhone })
-              : t("enterPhoneNumber")
-          }
-          editable={!disabled}
-          keyboardType="phone-pad"
-          accessibilityLabel={t("contactPhone")}
-        />,
-        disabled,
-      )}
     </View>
   );
 }
@@ -220,25 +141,42 @@ function ContactMethods({
 export default function Step7DescContact({
   payload,
   onChange,
-  fieldErrors,
   disabled = false,
-  defaultPhone = "",
+  accountPhone,
+  confirmedPhones,
+  currentListingPhone,
+  onAnotherNumber = () => {},
+  onConfirmExpired = () => {},
+  selectionError,
+  publishPhoneError = false,
 }: Step7DescContactProps) {
+  // The sign-in phone is preselected (ADR-0081): it counts as confirmed
+  // without a code, so a fresh draft starts with it chosen. An edit session
+  // already carries the Listing's number, and an email-only User picks one.
+  useEffect(() => {
+    if (!payload.contactPhone && accountPhone) {
+      onChange({ contactPhone: accountPhone });
+    }
+  }, [payload.contactPhone, accountPhone, onChange]);
+
   return (
     <View className="gap-5 py-5">
       <ReviewSummary payload={payload} />
-      <DescriptionInput
-        payload={payload}
-        onChange={onChange}
-        fieldErrors={fieldErrors}
-        disabled={disabled}
-      />
-      <ContactPhoneInput
-        payload={payload}
-        onChange={onChange}
-        disabled={disabled}
-        defaultPhone={defaultPhone}
-      />
+      {wrapDisabled(
+        <ContactPhonePicker
+          selectedPhone={payload.contactPhone}
+          onSelect={(phone) => onChange({ contactPhone: phone })}
+          accountPhone={accountPhone}
+          confirmedPhones={confirmedPhones}
+          currentListingPhone={currentListingPhone}
+          onAnotherNumber={onAnotherNumber}
+          onConfirmExpired={onConfirmExpired}
+          selectionError={selectionError}
+          publishPhoneError={publishPhoneError}
+          disabled={disabled}
+        />,
+        disabled,
+      )}
       <ContactMethods
         payload={payload}
         onChange={onChange}

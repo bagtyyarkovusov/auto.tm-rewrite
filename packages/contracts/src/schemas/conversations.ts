@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { ListingStatus, MessageKind } from "../enums";
 
+import { PublicIdentitySchema } from "./identity";
+
 // ── Shared enums as Zod schemas ──
 
 export const ListingStatusSchema = z.nativeEnum(ListingStatus);
@@ -218,10 +220,9 @@ export type MuteConversationResponse = z.infer<
 export const ParticipantRoleSchema = z.enum(["buyer", "seller"]);
 export type ParticipantRole = z.infer<typeof ParticipantRoleSchema>;
 
-/** The other participant. Id and display name only; no Sign-in Method data. */
-export const ConversationPeerSchema = z.object({
+/** The other participant: id and public identity; no Sign-in Method data. */
+export const ConversationPeerSchema = PublicIdentitySchema.extend({
   id: z.string().uuid(),
-  displayName: z.string().nullable(),
 });
 export type ConversationPeer = z.infer<typeof ConversationPeerSchema>;
 
@@ -288,6 +289,18 @@ export const ListMessagesResponseSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type ListMessagesResponse = z.infer<typeof ListMessagesResponseSchema>;
+
+// ── Total unread Messages ──
+
+/**
+ * Messages from other participants that are not deleted and are newer than
+ * the viewer's read watermark, summed over all the viewer's Conversations.
+ * Muted Conversations count, so the Messages tab and the list rows agree.
+ */
+export const UnreadCountResponseSchema = z.object({
+  count: z.number().int().nonnegative(),
+});
+export type UnreadCountResponse = z.infer<typeof UnreadCountResponseSchema>;
 
 // ── Conversation list response ──
 

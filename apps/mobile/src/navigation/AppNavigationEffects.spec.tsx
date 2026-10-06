@@ -10,7 +10,7 @@ vi.mock("expo-router", async () => ({
   router: (await import("../../test/native-setup")).routerMock,
   usePathname: () => state.pathname,
 }));
-vi.mock("../auth/session", () => ({ clearAuthSession: state.clear }));
+vi.mock("../auth/session", () => ({ clearAuthSession: state.clear, subscribeAuthUserChange: () => () => {} }));
 vi.mock("../notifications/useDirectMessagePushRouting", () => ({ useDirectMessagePushRouting: vi.fn() }));
 
 describe("app auth error navigation", () => {

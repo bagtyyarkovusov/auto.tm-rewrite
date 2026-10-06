@@ -5,6 +5,7 @@ import type {
   SellerProfile,
   SellerProfileReadPort,
 } from "../domain/ports/SellerProfileReadPort";
+import { PUBLIC_IDENTITY_SELECT, toPublicIdentity } from "./publicIdentityRow";
 
 @Injectable()
 export class PrismaSellerProfileReadAdapter implements SellerProfileReadPort {
@@ -13,8 +14,8 @@ export class PrismaSellerProfileReadAdapter implements SellerProfileReadPort {
   async getSellerProfile(userId: string): Promise<SellerProfile | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { displayName: true, createdAt: true },
+      select: { ...PUBLIC_IDENTITY_SELECT, createdAt: true },
     });
-    return user ? { displayName: user.displayName, memberSince: user.createdAt } : null;
+    return user ? { ...toPublicIdentity(user), memberSince: user.createdAt } : null;
   }
 }

@@ -1,7 +1,6 @@
 import {
   View,
   ActivityIndicator,
-  Pressable,
 } from "react-native";
 import { RefreshCw, X, AlertTriangle, WifiOff } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
@@ -13,13 +12,13 @@ import { Icon } from "@/components/ui/icon";
 
 interface PhotoStateOverlayProps {
   photo: StagedPhoto;
-  onRetry: (photoId: string) => void;
 }
 
-export function PhotoStateOverlay({
-  photo,
-  onRetry,
-}: PhotoStateOverlayProps) {
+/**
+ * A tile's upload state, drawn over the photo. It only shows: a tap goes to the
+ * tile underneath, which opens the photo's sheet, where Retry lives.
+ */
+export function PhotoStateOverlay({ photo }: PhotoStateOverlayProps) {
   const { t } = useTranslation();
 
   if (photo.state === "selected") {
@@ -30,10 +29,12 @@ export function PhotoStateOverlay({
     );
   }
 
+  // Queued for upload: centred like an upload, so the corner ✕ never hides it.
   if (photo.state === "compressed") {
     return (
-      <View className="absolute right-1 top-1 rounded-full bg-black/40 p-1">
-        <ActivityIndicator size="small" color="white" />
+      <View className="absolute inset-0 items-center justify-center bg-black/40">
+        <ActivityIndicator color="white" />
+        <Text className="mt-1 text-xs text-white">{t("photoStateQueued")}</Text>
       </View>
     );
   }
@@ -53,14 +54,7 @@ export function PhotoStateOverlay({
 
   if (photo.state === "failed") {
     return (
-      <Pressable
-        className="absolute inset-0 items-center justify-center bg-black/50"
-        onPress={() => {
-          if (photo.error?.retryable !== false) {
-            onRetry(photo.photoId);
-          }
-        }}
-      >
+      <View className="absolute inset-0 items-center justify-center bg-black/50">
         <View className="items-center gap-1">
           {photo.error?.retryable === false ? (
             <>
@@ -79,7 +73,7 @@ export function PhotoStateOverlay({
             </Text>
           )}
         </View>
-      </Pressable>
+      </View>
     );
   }
 

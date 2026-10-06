@@ -65,7 +65,7 @@ Expanded:
 - Favorites: `Heart` Lucide, 24×24
 - Sell: `Plus` (not `PlusCircle`) inside pill, 20×20, stroke 2
 - Chat: `MessageSquare` Lucide, 24×24
-- Services: `LayoutGrid` or `Settings` Lucide, 24×24
+- Services: `LayoutGrid` Lucide, 24×24
 
 ## Component shape
 

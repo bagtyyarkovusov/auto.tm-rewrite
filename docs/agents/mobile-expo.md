@@ -129,8 +129,12 @@ cd apps/mobile/android
    ```
 
    `RCT_jsLocation` chooses Metro; the `EXPO_PUBLIC_*` variables choose the backend. Restart Metro with `--clear` if an old API origin remains in the bundle. Expo Go cannot run this app.
-6. Log in with a fixture phone. Read the mock OTP from this PR API service's logs with `railway logs --project "$PR_PROJECT_ID" --environment "$PR_ENVIRONMENT_ID" --service "$PR_API_SERVICE_ID" --lines 200`, looking for the request's phone and time. Do not put OTPs or access tokens in PR evidence. Capture the loaded feed and a fixture detail/gallery to prove media and API traffic. Record environment ID, successful deployment ID/backend SHA, screenshot paths and the process check showing Docker absent.
+6. Log in with a fixture phone. Read the mock OTP from this PR API service's logs with `railway logs --project "$PR_PROJECT_ID" --environment "$PR_ENVIRONMENT_ID" --service "$PR_API_SERVICE_ID" --lines 200`, looking for the last four digits of the request's phone and its time (the line reads `[mock] OTP for ***0009 (req 1a2b3c4d): <code>`; the tag is the first eight characters of the `requestId` the code request returned). Do not put OTPs or access tokens in PR evidence. Capture the loaded feed and a fixture detail/gallery to prove media and API traffic. Record environment ID, successful deployment ID/backend SHA, screenshot paths and the process check showing Docker absent.
 7. Stop only this session's Metro process. Revoke an environment-scoped disposable token when finished. Keep reusable coordinator credentials outside the repo. Railway automatically deletes the environment on PR merge/close; verify that its exact environment ID disappears. Close disposable proof PRs promptly and record deletion evidence. Do not close an active implementation PR just to collect cleanup evidence.
+
+## Android package per build profile
+
+The EAS `production` profile builds Android package `com.auto_tm.ynamly`, the Play app that already exists ([#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697)); it sets `ANDROID_APPLICATION_ID` in `eas.json`, which `app.config.js` reads. `staging`, `production-smoke`, development clients and local builds stay `tm.auto.app`. Each package needs its own Android app in its Firebase project, so the production `GOOGLE_SERVICES_JSON` must be the file for `com.auto_tm.ynamly`. The iOS bundle identifier is `tm.auto.app` everywhere. `simctl` and `adb` commands in this guide use `tm.auto.app` because they drive development builds.
 
 ## Documentation duty
 

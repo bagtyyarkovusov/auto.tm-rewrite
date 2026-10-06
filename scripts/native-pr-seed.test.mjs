@@ -13,6 +13,8 @@ const { nativePrSeedSteps, parseNativePrSeedArguments } = entry;
 const root = fileURLToPath(new URL('..', import.meta.url));
 const entryPath = path.join(root, 'scripts/native-pr-seed.mjs');
 const fixtureScript = 'packages/db/scripts/ui-fixture.ts';
+// Traces guard calls and client module loads to stderr; see the probe for the line format.
+const loadProbe = path.join(root, 'scripts/native-pr-seed-load-probe.cjs');
 
 // Every value is fake. No test here builds a database, MinIO or Railway client, and the spawned
 // processes below only run inputs that must be refused before any client exists.
@@ -37,6 +39,20 @@ const foreignMediaHosts = ['https://minio-staging-5795.up.railway.app', 'https:/
 function spawnClean(args, env) {
   const result = spawnSync(process.execPath, args, { cwd: root, env, encoding: 'utf8', timeout: 60_000 });
   return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
+}
+
+/** Run the fixture under the load probe, which traces the guard call and every client module load. */
+function spawnFixture(argv, env) {
+  return spawnClean(['--require', loadProbe, '--import', 'tsx', fixtureScript, ...argv], env);
+}
+
+/**
+ * The guard must have run and no database or bucket client module may have loaded. A client cannot
+ * be constructed before its module loads, so this fails if the guard moves after any client.
+ */
+function assertGuardBeforeAnyClient(stderr, label) {
+  assert.match(stderr, /^LOAD-PROBE guard assertFixtureTarget$/m, `${label}: the probe must see the guard run`);
+  assert.doesNotMatch(stderr, /^LOAD-PROBE client /m, `${label}: no client module may load before the guard refuses`);
 }
 
 function assertNoLeak(output) {
@@ -126,10 +142,11 @@ test('the fixture target refuses a connection whose parsed host holds a secret f
 });
 
 test('a spawned localhost-only fixture whose parsed host holds a secret fragment prints it nowhere', () => {
-  const result = spawnClean(['--import', 'tsx', fixtureScript], { DATABASE_URL: secretAsHost, MINIO_ENDPOINT: 'http://localhost:9000' });
+  const result = spawnFixture([], { DATABASE_URL: secretAsHost, MINIO_ENDPOINT: 'http://localhost:9000' });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /non-local DATABASE_URL/);
   assert.doesNotMatch(result.stderr, /Cannot find module/);
+  assertGuardBeforeAnyClient(result.stderr, 'secret fragment host');
   assertNoLeak(result.stdout + result.stderr);
 });
 
@@ -181,11 +198,12 @@ test('a spawned fixture with production, staging, non-mock SMS or a foreign medi
     { MINIO_PUBLIC_URL: 'https://minio-autotm-rewrite-pr-480.up.railway.app' },
   ];
   for (const patch of cases) {
-    const result = spawnClean(['--import', 'tsx', fixtureScript, '--railway-pr'], { ...valid, ...patch });
+    const result = spawnFixture(['--railway-pr'], { ...valid, ...patch });
     assert.notEqual(result.status, 0, JSON.stringify(patch));
     assert.match(result.stderr, /Native seed requires/, JSON.stringify(patch));
     // The refusal must come from the guard, not from a missing generated client or a dependency.
     assert.doesNotMatch(result.stderr, /Cannot find module/, JSON.stringify(patch));
+    assertGuardBeforeAnyClient(result.stderr, JSON.stringify(patch));
     assertNoLeak(result.stdout + result.stderr);
   }
 });
@@ -195,22 +213,24 @@ test('a spawned fixture with a malformed DATABASE_URL is refused without printin
   // ignored now, and kept here so the path that once threw a raw `Invalid URL` stays covered.
   const env = { ...valid, NATIVE_PR_SEED_REMOTE: 'true', DATABASE_URL: `not a url ${SECRET}` };
   for (const argv of [['--railway-pr'], []]) {
-    const result = spawnClean(['--import', 'tsx', fixtureScript, ...argv], env);
+    const result = spawnFixture(argv, env);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /DATABASE_URL/);
     assert.doesNotMatch(result.stderr, /Cannot find module/);
+    assertGuardBeforeAnyClient(result.stderr, `malformed DATABASE_URL ${argv.join(' ')}`);
     assertNoLeak(result.stdout + result.stderr);
   }
 });
 
 test('a spawned localhost-only fixture refuses a literal staging connection without printing it', () => {
-  const result = spawnClean(['--import', 'tsx', fixtureScript], {
+  const result = spawnFixture([], {
     DATABASE_URL: `postgresql://demo:${SECRET}@db.staging.example.com:5432/demo`,
     MINIO_ENDPOINT: 'http://localhost:9000',
   });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /non-local DATABASE_URL/);
   assert.doesNotMatch(result.stderr, /Cannot find module/);
+  assertGuardBeforeAnyClient(result.stderr, 'literal staging connection');
   assertNoLeak(result.stdout + result.stderr);
 });
 
@@ -230,4 +250,17 @@ test('every bare import the seed steps load is declared by the db workspace', ()
   }
   // The packaged image does not hoist undeclared packages, so each must be declared where the steps run.
   assert.deepEqual([...missing], []);
+});
+
+test('the db typecheck covers every TypeScript file the seed scripts directory holds', () => {
+  const db = path.join(root, 'packages/db');
+  const tsc = path.join(db, 'node_modules/typescript/bin/tsc');
+  const result = spawnSync(process.execPath, [tsc, '--noEmit', '-p', 'tsconfig.json', '--listFilesOnly'], { cwd: db, encoding: 'utf8', timeout: 60_000 });
+  assert.equal(result.status, 0, result.stderr);
+  const checked = new Set(result.stdout.split('\n').map(line => path.resolve(db, line.trim())));
+  const scripts = readdirSync(path.join(db, 'scripts'), { recursive: true })
+    .filter(name => /\.(ts|d\.cts)$/.test(name))
+    .map(name => path.join(db, 'scripts', name));
+  assert.ok(scripts.length > 0, 'the scripts directory must hold TypeScript files');
+  assert.deepEqual(scripts.filter(file => !checked.has(file)), []);
 });

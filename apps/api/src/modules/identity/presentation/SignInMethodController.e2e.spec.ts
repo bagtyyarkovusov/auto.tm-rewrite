@@ -282,6 +282,52 @@ describe("MeController e2e - Sign-in Method changes", () => {
     });
   });
 
+  it("returns and keeps the name number and avatar index when a method is added or changed (#638)", async () => {
+    const user = await prisma.user.create({
+      data: {
+        email: "buyer@example.com",
+        emailVerifiedAt: new Date(),
+        nameNumber: 4821,
+        avatarIndex: 7,
+      },
+    });
+    const authorization = bearer(user.id);
+
+    async function confirm(body: { phone: string } | { email: string }) {
+      await prisma.otpRequest.updateMany({
+        data: { createdAt: new Date(Date.now() - 2 * 60_000) },
+      });
+      const codeResponse = await request
+        .post("/api/v1/me/sign-in-methods/request")
+        .set("Authorization", authorization)
+        .send(body)
+        .expect(201);
+      return request
+        .post("/api/v1/me/sign-in-methods/verify")
+        .set("Authorization", authorization)
+        .send({ ...body, code: codeResponse.body.testCode })
+        .expect(201);
+    }
+
+    const added = await confirm({ phone: "+99361234567" });
+    const changed = await confirm({ email: "changed@example.com" });
+
+    for (const response of [added, changed]) {
+      expect(response.body).toMatchObject({
+        id: user.id,
+        displayName: null,
+        nameNumber: 4821,
+        avatarIndex: 7,
+        avatarKey: null,
+      });
+    }
+    await expect(prisma.user.findUnique({ where: { id: user.id } })).resolves.toMatchObject({
+      email: "changed@example.com",
+      nameNumber: 4821,
+      avatarIndex: 7,
+    });
+  });
+
   it("replaces either method and frees both old values immediately", async () => {
     const user = await prisma.user.create({
       data: {

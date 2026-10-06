@@ -10,6 +10,10 @@ import {
   CONVERSATION_REPOSITORY,
   type ConversationRepository,
 } from "../domain/ports/ConversationRepository";
+import {
+  CHAT_ATTACHMENT_MAX_SIZE_BYTES,
+  chatAttachmentKey,
+} from "../domain/ChatAttachment";
 import { CONVERSATION_ERROR_CODES } from "../domain/types";
 
 export interface PresignChatAttachmentUploadInput {
@@ -27,7 +31,7 @@ export interface PresignChatAttachmentUploadResult {
 }
 
 const CHAT_ATTACHMENT_CONSTRAINTS = {
-  maxSizeBytes: 5 * 1024 * 1024, // 5 MB
+  maxSizeBytes: CHAT_ATTACHMENT_MAX_SIZE_BYTES,
   allowedTypes: ["image/jpeg", "image/webp"] as const,
   presignExpirySeconds: 600,
 };
@@ -87,7 +91,7 @@ export class PresignChatAttachmentUpload {
     }
 
     const ext = input.contentType === "image/webp" ? "webp" : "jpg";
-    const key = `chat-attachments/${input.conversationId}/${randomUUID()}/original.${ext}`;
+    const key = chatAttachmentKey(input.conversationId, randomUUID(), ext);
 
     const { url } = await this.storage.presignUpload({
       key,

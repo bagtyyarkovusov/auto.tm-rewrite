@@ -13,7 +13,67 @@ function requireFreshAppConfig() {
   return require(appConfigPath);
 }
 
+/** The app config as EAS resolves it for a build profile: `base` env, then the profile's. */
+function appConfigForProfile(profile: string | null) {
+  const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+  const profileEnv: Record<string, string> = profile
+    ? { ...easJson.build.base.env, ...easJson.build[profile].env }
+    : {};
+  const env = process.env as Record<string, string | undefined>;
+  const keys = ["ANDROID_APPLICATION_ID", ...Object.keys(profileEnv)];
+  const saved = keys.map((key) => [key, env[key]] as const);
+  Reflect.deleteProperty(env, "ANDROID_APPLICATION_ID");
+  Object.assign(env, profileEnv);
+  try {
+    return requireFreshAppConfig().expo;
+  } finally {
+    for (const [key, value] of saved) {
+      if (value === undefined) Reflect.deleteProperty(env, key);
+      else env[key] = value;
+    }
+  }
+}
+
 describe("EAS build configuration", () => {
+  it("builds the store release as the existing Play app's package", () => {
+    // Play can never change an app's package, and the closed test that unlocks
+    // production was completed on com.auto_tm.ynamly (#697).
+    expect(appConfigForProfile("production").android.package).toBe("com.auto_tm.ynamly");
+  });
+
+  it.each(["staging", "production-smoke", null])(
+    "keeps tm.auto.app for the %s build, so internal builds and development clients are unchanged",
+    (profile) => {
+      expect(appConfigForProfile(profile).android.package).toBe("tm.auto.app");
+    },
+  );
+
+  it.each(["production", "staging", "production-smoke", null])(
+    "leaves the iOS bundle identifier alone for the %s build",
+    (profile) => {
+      expect(appConfigForProfile(profile).ios.bundleIdentifier).toBe("tm.auto.app");
+    },
+  );
+
+  it("turns Android backup off, so no session data is restored onto another device", () => {
+    expect(requireFreshAppConfig().expo.android.allowBackup).toBe(false);
+  });
+
+  it("names the rewrite 2.0.0, above the 1.0.0 the existing Play app's testers have", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+
+    expect(requireFreshAppConfig().expo.version).toBe("2.0.0");
+    // The About screen reads the config version; the build env carries the same one.
+    expect(easJson.build.base.env.EXPO_PUBLIC_APP_VERSION).toBe("2.0.0");
+  });
+
+  it("gives every store build a new version code, since Play refuses a repeated one", () => {
+    const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
+
+    expect(easJson.cli.appVersionSource).toBe("remote");
+    expect(easJson.build.production.autoIncrement).toBe(true);
+  });
+
   it("declares internal staging and production-smoke profiles plus store production", () => {
     const easJson = JSON.parse(readFileSync(resolve(mobileRoot, "eas.json"), "utf-8"));
 

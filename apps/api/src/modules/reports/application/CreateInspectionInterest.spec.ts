@@ -4,7 +4,7 @@ import { NotFoundException, ForbiddenException, BadRequestException } from "@nes
 import { InspectionInterest } from "../domain/InspectionInterest";
 import type { InspectionInterestRepository } from "../domain/ports/InspectionInterestRepository";
 import type { ListingsReadPort, ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
-import type { IdentityReadPort } from "../../identity/identity.public";
+import type { IdentityUserSummary, IdentityReadPort } from "../../identity/identity.public";
 
 import { CreateInspectionInterest } from "./CreateInspectionInterest";
 
@@ -67,9 +67,9 @@ class FakeListingsReadPort implements ListingsReadPort {
 }
 
 class FakeIdentityReadPort implements IdentityReadPort {
-  users: Record<string, { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null }> = {};
+  users: Record<string, IdentityUserSummary> = {};
 
-  async findUserById(id: string): Promise<{ id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | null> {
+  async findUserById(id: string): Promise<IdentityUserSummary | null> {
     return this.users[id] ?? null;
   }
 
@@ -89,6 +89,10 @@ class FakeIdentityReadPort implements IdentityReadPort {
     this.users[id] = {
       id,
       displayName: user.displayName ?? null,
+      nameNumber: 1000,
+      avatarIndex: 0,
+      avatarKey: null,
+      deleted: false,
       role: user.role ?? "buyer",
       suspendedAt: user.suspendedAt ?? null,
       suspendedById: null,

@@ -73,7 +73,7 @@ import {
   isWizardErrorKey,
   getStepDependencies,
   getInvalidatedSteps,
-  StepVinSchema,
+  WIZARD_STEPS,
   StepPhotosSchema,
   StepVehicleSchema,
   StepSpecsSchema,
@@ -176,6 +176,9 @@ describe("Sign-in Method change schemas", () => {
       email: "new@example.com",
       phoneVerified: false,
       displayName: null,
+      nameNumber: 4821,
+      avatarIndex: 3,
+      avatarKey: null,
       role: "buyer",
       avatarUrl: null,
       locale: "ru",
@@ -396,6 +399,10 @@ describe("ListingDetailSchema", () => {
     publicNumber: 10482,
     seller: {
       displayName: null,
+      nameNumber: 2057,
+      avatarIndex: 4,
+      avatarKey: null,
+      deleted: false,
       memberSince: "2025-01-01T00:00:00.000Z",
     },
   };
@@ -991,11 +998,28 @@ describe("ExchangeRatesResponseSchema", () => {
 // ── Wizard schemas ──
 
 const validUuid = "550e8400-e29b-41d4-a716-446655440000";
+const otherUuid = "550e8400-e29b-41d4-a716-446655440001";
 const validPhoto = { photoId: validUuid, key: "uploads/abc.jpg", sortOrder: 0 };
 
 describe("WizardStepSchema", () => {
+  it("lists the seven steps in the Sell wizard order", () => {
+    expect(WIZARD_STEPS).toEqual([
+      "vehicle",
+      "specs",
+      "photos",
+      "price",
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("no longer has a VIN step", () => {
+    expect(WizardStepSchema.safeParse("vin").success).toBe(false);
+  });
+
   it("accepts valid steps", () => {
-    expect(WizardStepSchema.safeParse("vin").success).toBe(true);
+    expect(WizardStepSchema.safeParse("vehicle").success).toBe(true);
     expect(WizardStepSchema.safeParse("photos").success).toBe(true);
     expect(WizardStepSchema.safeParse("contact").success).toBe(true);
     expect(WizardStepSchema.safeParse("review").success).toBe(true);
@@ -1007,39 +1031,35 @@ describe("WizardStepSchema", () => {
   });
 });
 
-describe("StepVinSchema", () => {
-  it("accepts empty payload", () => {
-    expect(StepVinSchema.safeParse({}).success).toBe(true);
-  });
-
-  it("accepts valid VIN", () => {
-    expect(StepVinSchema.safeParse({ vin: "WBA1234567890ABCD" }).success).toBe(
-      true,
-    );
-  });
-
-  it("rejects VIN over 17 chars", () => {
-    expect(StepVinSchema.safeParse({ vin: "A".repeat(18) }).success).toBe(
-      false,
-    );
-  });
-});
-
 describe("StepPhotosSchema", () => {
+  // Continue needs one picked photo, not one uploaded photo (#584): uploads keep
+  // running while the seller fills in the later steps, and Publish waits for them.
+  const picked = { photoId: validUuid, sortOrder: 0 };
+
   it("accepts photos with at least one key", () => {
     expect(StepPhotosSchema.safeParse({ photos: [validPhoto] }).success).toBe(
       true,
     );
   });
 
+  it("accepts one picked photo that has no upload key yet", () => {
+    expect(StepPhotosSchema.safeParse({ photos: [picked] }).success).toBe(true);
+  });
+
+  it("accepts a mix of picked and uploaded photos", () => {
+    expect(
+      StepPhotosSchema.safeParse({
+        photos: [validPhoto, { ...picked, photoId: otherUuid, sortOrder: 1 }],
+      }).success,
+    ).toBe(true);
+  });
+
   it("rejects empty photos array", () => {
     expect(StepPhotosSchema.safeParse({ photos: [] }).success).toBe(false);
   });
 
-  it("rejects photos with no uploaded keys", () => {
-    expect(
-      StepPhotosSchema.safeParse({ photos: [{ photoId: validUuid, sortOrder: 0 }] }).success,
-    ).toBe(false);
+  it("rejects a missing photos field", () => {
+    expect(StepPhotosSchema.safeParse({}).success).toBe(false);
   });
 });
 
@@ -1079,6 +1099,25 @@ describe("StepVehicleSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts an optional VIN of up to 17 characters", () => {
+    const car = { brandId: validUuid, modelId: validUuid, year: 2020 };
+    expect(StepVehicleSchema.safeParse(car).success).toBe(true);
+    expect(
+      StepVehicleSchema.safeParse({ ...car, vin: "WBA1234567890ABCD" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a VIN over 17 characters with vinTooLong under the field", () => {
+    const result = validateStep("vehicle", {
+      brandId: validUuid,
+      modelId: validUuid,
+      year: 2020,
+      vin: "A".repeat(18),
+    });
+    expect(result.valid).toBe(false);
+    expect(result.fieldErrors["vin"]).toBe("wizardErrors.vinTooLong");
+  });
 });
 
 describe("StepSpecsSchema", () => {
@@ -1090,9 +1129,10 @@ describe("StepSpecsSchema", () => {
     ).toBe(true);
   });
 
-  it("requires the Damaged answer", () => {
+  it("requires the Damaged answer for a Used car", () => {
     const result = StepSpecsSchema.safeParse({
-      condition: "new",
+      condition: "used",
+      mileageKm: 1000,
       conditionDisclosure: { knownIssuesText: "Rust" },
     });
     expect(result.success).toBe(false);
@@ -1102,12 +1142,45 @@ describe("StepSpecsSchema", () => {
     });
   });
 
-  it("accepts either Damaged answer", () => {
+  it("accepts either Damaged answer for a Used car", () => {
     for (const damaged of [true, false]) {
       expect(
-        StepSpecsSchema.safeParse({ condition: "new", conditionDisclosure: { damaged } }).success,
+        StepSpecsSchema.safeParse({ condition: "used", mileageKm: 1000, conditionDisclosure: { damaged } })
+          .success,
       ).toBe(true);
     }
+  });
+
+  // ADR-0080: a New car is not asked Damaged.
+  it.each([
+    ["no disclosure", undefined],
+    ["Known issues only", { knownIssuesText: "Rust" }],
+    ["Damaged: no", { damaged: false }],
+  ])("accepts a New car with %s", (_name, conditionDisclosure) => {
+    expect(StepSpecsSchema.safeParse({ condition: "new", conditionDisclosure }).success).toBe(true);
+  });
+
+  it("rejects a damaged New car", () => {
+    const result = StepSpecsSchema.safeParse({
+      condition: "new",
+      conditionDisclosure: { damaged: true },
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]).toMatchObject({
+      message: "wizardErrors.damagedNotForNew",
+      path: ["conditionDisclosure", "damaged"],
+    });
+  });
+
+  it("validates the specs step the same way", () => {
+    expect(validateStep("specs", { condition: "new" })).toEqual({
+      valid: true,
+      errors: [],
+      fieldErrors: {},
+    });
+    expect(
+      validateStep("specs", { condition: "new", conditionDisclosure: { damaged: true } }).fieldErrors,
+    ).toEqual({ conditionDisclosure: "wizardErrors.damagedNotForNew" });
   });
 
   it("rejects used vehicle without mileage", () => {
@@ -1158,24 +1231,59 @@ describe("StepPriceSchema", () => {
 });
 
 describe("StepLocationSchema", () => {
-  it("accepts valid location", () => {
+  it("accepts a description with a valid place", () => {
     expect(
       StepLocationSchema.safeParse({
+        description: "Great car",
         regionId: validUuid,
         cityId: validUuid,
       }).success,
     ).toBe(true);
   });
 
+  it("requires the description", () => {
+    const result = validateStep("location", {
+      regionId: validUuid,
+      cityId: validUuid,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.fieldErrors["description"]).toBe(
+      "wizardErrors.descriptionRequired",
+    );
+  });
+
+  it("rejects an empty description", () => {
+    expect(
+      StepLocationSchema.safeParse({
+        description: "",
+        regionId: validUuid,
+        cityId: validUuid,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a description over 2000 chars", () => {
+    const result = validateStep("location", {
+      description: "a".repeat(2001),
+      regionId: validUuid,
+      cityId: validUuid,
+    });
+    expect(result.fieldErrors["description"]).toBe(
+      "wizardErrors.descriptionTooLong",
+    );
+  });
+
   it("rejects missing regionId", () => {
     expect(
-      StepLocationSchema.safeParse({ cityId: validUuid }).success,
+      StepLocationSchema.safeParse({ description: "Great car", cityId: validUuid })
+        .success,
     ).toBe(false);
   });
 
   it("rejects location text over 200 chars", () => {
     expect(
       StepLocationSchema.safeParse({
+        description: "Great car",
         regionId: validUuid,
         cityId: validUuid,
         locationText: "a".repeat(201),
@@ -1185,10 +1293,9 @@ describe("StepLocationSchema", () => {
 });
 
 describe("StepContactSchema", () => {
-  it("accepts valid contact with both methods", () => {
+  it("accepts both contact methods without a description", () => {
     expect(
       StepContactSchema.safeParse({
-        description: "Great car",
         contactPhone: "+99361234567",
         allowCalls: true,
         allowChat: true,
@@ -1196,45 +1303,22 @@ describe("StepContactSchema", () => {
     ).toBe(true);
   });
 
-  it("accepts valid contact with one method", () => {
+  it("accepts one contact method and today's contact phone", () => {
     expect(
       StepContactSchema.safeParse({
-        description: "Great car",
         contactPhone: "+99361234567",
         allowCalls: false,
         allowChat: true,
       }).success,
     ).toBe(true);
-  });
-
-  it("rejects empty description", () => {
-    expect(
-      StepContactSchema.safeParse({
-        description: "",
-        allowCalls: true,
-        allowChat: true,
-      }).success,
-    ).toBe(false);
-  });
-
-  it("rejects description over 2000 chars", () => {
-    expect(
-      StepContactSchema.safeParse({
-        description: "a".repeat(2001),
-        allowCalls: true,
-        allowChat: true,
-      }).success,
-    ).toBe(false);
   });
 
   it("rejects when both contact methods disabled", () => {
-    expect(
-      StepContactSchema.safeParse({
-        description: "Great car",
-        allowCalls: false,
-        allowChat: false,
-      }).success,
-    ).toBe(false);
+    const result = validateStep("contact", { contactPhone: "+99361234567", allowCalls: false, allowChat: false });
+    expect(result.valid).toBe(false);
+    expect(result.fieldErrors["allowCalls"]).toBe(
+      "wizardErrors.contactChannelRequired",
+    );
   });
 });
 
@@ -1270,12 +1354,13 @@ describe("validateStep", () => {
     expect(result.fieldErrors).toEqual({});
   });
 
-  it("returns errors for photos without key", () => {
+  it("returns valid for a picked photo that has no key yet", () => {
     const result = validateStep("photos", {
       photos: [{ photoId: validUuid, sortOrder: 0 }],
     });
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain("wizardErrors.photosUploading");
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.fieldErrors).toEqual({});
   });
 
   it("returns per-field error map for vehicle step", () => {
@@ -1295,7 +1380,7 @@ describe("validateStep", () => {
   // Messages cross the API boundary and land in a Turkmen or Russian UI, so
   // none of them may be English prose — clients translate the keys (ADR-0050).
   it.each([
-    ["vin", { vin: "x".repeat(18) }],
+    ["vehicle", { vin: "x".repeat(18) }],
     ["photos", {}],
     ["vehicle", {}],
     ["specs", { condition: "used" }],
@@ -1304,7 +1389,8 @@ describe("validateStep", () => {
     ["price", { priceAmount: -1, priceCurrency: "TMT" }],
     ["location", {}],
     ["contact", {}],
-    ["contact", { description: "ok", allowCalls: false, allowChat: false }],
+    ["contact", { allowCalls: false, allowChat: false }],
+    ["location", { regionId: "", cityId: "", description: "x".repeat(2001) }],
     // Zod built-ins the schemas never spell out a message for.
     ["vehicle", { brandId: null, modelId: "no", year: 2020 }],
     ["specs", { condition: "used", mileageKm: 12.5, enginePower: 1.5 }],
@@ -1346,20 +1432,19 @@ describe("validateStep", () => {
 });
 
 describe("getStepDependencies", () => {
-  it("vin has no dependencies", () => {
-    expect(getStepDependencies("vin")).toEqual([]);
+  it("Car has no dependencies", () => {
+    expect(getStepDependencies("vehicle")).toEqual([]);
   });
 
-  it("vehicle depends on vin and photos", () => {
-    expect(getStepDependencies("vehicle")).toEqual(["vin", "photos"]);
+  it("photos depends on Car and Details", () => {
+    expect(getStepDependencies("photos")).toEqual(["vehicle", "specs"]);
   });
 
   it("contact depends on all previous steps", () => {
     expect(getStepDependencies("contact")).toEqual([
-      "vin",
-      "photos",
       "vehicle",
       "specs",
+      "photos",
       "price",
       "location",
     ]);
@@ -1367,11 +1452,11 @@ describe("getStepDependencies", () => {
 });
 
 describe("getInvalidatedSteps", () => {
-  it("changing brandId invalidates vehicle and downstream", () => {
-    const result = getInvalidatedSteps(["brandId"]);
-    expect(result).toEqual([
+  it("changing brandId invalidates Car and every later step", () => {
+    expect(getInvalidatedSteps(["brandId"])).toEqual([
       "vehicle",
       "specs",
+      "photos",
       "price",
       "location",
       "contact",
@@ -1379,22 +1464,11 @@ describe("getInvalidatedSteps", () => {
     ]);
   });
 
-  it("changing condition invalidates specs and downstream", () => {
-    const result = getInvalidatedSteps(["condition"]);
-    expect(result).toEqual([
-      "specs",
-      "price",
-      "location",
-      "contact",
-      "review",
-    ]);
-  });
-
-  it("changing multiple fields invalidates union of affected steps", () => {
-    const result = getInvalidatedSteps(["brandId", "priceAmount"]);
-    expect(result).toEqual([
+  it("changing the VIN invalidates Car, which now owns it", () => {
+    expect(getInvalidatedSteps(["vin"])).toEqual([
       "vehicle",
       "specs",
+      "photos",
       "price",
       "location",
       "contact",
@@ -1402,14 +1476,30 @@ describe("getInvalidatedSteps", () => {
     ]);
   });
 
-  it("changing description only invalidates contact and review", () => {
-    const result = getInvalidatedSteps(["description"]);
-    expect(result).toEqual(["contact", "review"]);
+  it("changing photos invalidates photos and the steps after it", () => {
+    expect(getInvalidatedSteps(["photos"])).toEqual([
+      "photos",
+      "price",
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("changing description invalidates Description and place and the steps after it", () => {
+    expect(getInvalidatedSteps(["description"])).toEqual([
+      "location",
+      "contact",
+      "review",
+    ]);
+  });
+
+  it("changing a contact switch only invalidates contact and review", () => {
+    expect(getInvalidatedSteps(["allowChat"])).toEqual(["contact", "review"]);
   });
 
   it("unknown fields are ignored", () => {
-    const result = getInvalidatedSteps(["unknownField"]);
-    expect(result).toEqual([]);
+    expect(getInvalidatedSteps(["unknownField"])).toEqual([]);
   });
 });
 
@@ -1623,6 +1713,10 @@ const validConversationSummary = {
   peer: {
     id: "550e8400-e29b-41d4-a716-446655440006",
     displayName: "Aman",
+    nameNumber: 4821,
+    avatarIndex: 0,
+    avatarKey: null,
+    deleted: false,
   },
   blockedByMe: false,
   lastMessage: validMessageSummary,
@@ -1799,6 +1893,13 @@ describe("ListConversationsResponseSchema", () => {
 describe("Listings error codes", () => {
   it("publishes the required Damaged answer code returned by edit", () => {
     expect(ListingsErrorCode).toHaveProperty("DamagedRequired", "DAMAGED_REQUIRED");
+  });
+
+  it("publishes the code for a damaged New Listing", () => {
+    expect(ListingsErrorCode).toHaveProperty(
+      "DamagedNotAllowedForNew",
+      "DAMAGED_NOT_ALLOWED_FOR_NEW",
+    );
   });
 });
 

@@ -10,6 +10,7 @@ import {
   SendMessageRequestSchema,
   PresignChatAttachmentRequestSchema,
   PresignChatAttachmentResponseSchema,
+  UnreadCountResponseSchema,
 } from "./conversations";
 
 describe("PostRefMessageMetadataSchema", () => {
@@ -179,6 +180,10 @@ describe("ConversationSummarySchema", () => {
     peer: {
       id: "550e8400-e29b-41d4-a716-4466554400b2",
       displayName: "Aman",
+      nameNumber: 2057,
+      avatarIndex: 3,
+      avatarKey: null,
+      deleted: false,
     },
     blockedByMe: false,
   };
@@ -202,13 +207,39 @@ describe("ConversationSummarySchema", () => {
     ).toBe("2026-07-10T08:00:00.000Z");
   });
 
-  it("keeps the other participant's id and display name", () => {
+  it("keeps the other participant's id and public identity", () => {
     const parsed = ConversationSummarySchema.parse(baseSummary);
 
     expect(parsed.peer).toEqual({
       id: "550e8400-e29b-41d4-a716-4466554400b2",
       displayName: "Aman",
+      nameNumber: 2057,
+      avatarIndex: 3,
+      avatarKey: null,
+      deleted: false,
     });
+  });
+
+  it("requires the peer's name number, avatar index, photo key and deleted flag", () => {
+    for (const field of ["nameNumber", "avatarIndex", "avatarKey", "deleted"]) {
+      expect(
+        ConversationSummarySchema.safeParse({
+          ...baseSummary,
+          peer: { ...baseSummary.peer, [field]: undefined },
+        }).success,
+        field,
+      ).toBe(false);
+    }
+  });
+
+  it("marks a deleted participant, who keeps a number but no name", () => {
+    const parsed = ConversationSummarySchema.parse({
+      ...baseSummary,
+      peer: { ...baseSummary.peer, displayName: null, deleted: true },
+    });
+
+    expect(parsed.peer.deleted).toBe(true);
+    expect(parsed.peer.nameNumber).toBe(2057);
   });
 
   it("accepts a null display name for the other participant", () => {
@@ -236,7 +267,13 @@ describe("ConversationSummarySchema", () => {
   it("keeps contact data off the peer even when a server sends it", () => {
     const parsed = ConversationSummarySchema.parse({
       ...baseSummary,
-      peer: { ...baseSummary.peer, phone: "+99365000000", email: "a@b.tm" },
+      peer: {
+        ...baseSummary.peer,
+        phone: "+99365000000",
+        email: "a@b.tm",
+        role: "seller",
+        uploadId: "550e8400-e29b-41d4-a716-446655440009",
+      },
     });
 
     expect(parsed.peer).toEqual(baseSummary.peer);
@@ -265,6 +302,10 @@ describe("GetConversationResponseSchema", () => {
     peer: {
       id: "550e8400-e29b-41d4-a716-4466554400b2",
       displayName: "Aman",
+      nameNumber: 2057,
+      avatarIndex: 3,
+      avatarKey: null,
+      deleted: false,
     },
     blockedByMe: false,
   };
@@ -319,4 +360,20 @@ describe("ConversationIdParamSchema", () => {
       false,
     );
   });
+});
+
+describe("UnreadCountResponseSchema", () => {
+  it("accepts a whole, non-negative count", () => {
+    expect(UnreadCountResponseSchema.parse({ count: 0 })).toEqual({ count: 0 });
+    expect(UnreadCountResponseSchema.parse({ count: 120 })).toEqual({
+      count: 120,
+    });
+  });
+
+  it.each([{ count: -1 }, { count: 1.5 }, { count: "3" }, {}])(
+    "rejects %j",
+    (body) => {
+      expect(UnreadCountResponseSchema.safeParse(body).success).toBe(false);
+    },
+  );
 });

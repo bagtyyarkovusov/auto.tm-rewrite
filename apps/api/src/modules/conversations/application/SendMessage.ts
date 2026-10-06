@@ -2,8 +2,12 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import type { ListingSummary } from "../../listings/domain/ports/ListingsReadPort";
 import type { Message } from "../domain/Message";
+import {
+  CHAT_ATTACHMENT_CLEANER,
+  type ChatAttachmentCleaner,
+} from "../domain/ports/ChatAttachmentCleaner";
 
-import { createRichMessage, type RichMessageInput } from "./RichMessageFactory";
+import { createCleanRichMessage, type RichMessageInput } from "./RichMessageFactory";
 import { SendConversationMessage } from "./SendConversationMessage";
 
 export type SendMessageInput = RichMessageInput & {
@@ -21,6 +25,8 @@ export class SendMessage {
   constructor(
     @Inject(SendConversationMessage)
     private readonly sendConversationMessage: SendConversationMessage,
+    @Inject(CHAT_ATTACHMENT_CLEANER)
+    private readonly attachmentCleaner: ChatAttachmentCleaner,
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
@@ -29,7 +35,7 @@ export class SendMessage {
       conversationId: input.conversationId,
       clientMessageId: input.clientMessageId,
       createMessage: ({ id, conversationId, senderId }) =>
-        createRichMessage({
+        createCleanRichMessage(this.attachmentCleaner, {
           id,
           conversationId,
           senderId,

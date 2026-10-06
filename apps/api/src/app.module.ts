@@ -22,6 +22,7 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { ReportsModule } from "./modules/reports/reports.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
+import { requestLoggingOptions } from "./common/requestLogging";
 
 @Module({
   imports: [
@@ -30,9 +31,7 @@ import { RealtimeModule } from "./modules/realtime/realtime.module";
       validate: parseEnv,
     }),
     LoggerModule.forRoot({
-      pinoHttp: {
-        level: process.env["LOG_LEVEL"] ?? "info",
-      },
+      pinoHttp: requestLoggingOptions(process.env["LOG_LEVEL"] ?? "info"),
     }),
     EventEmitterModule.forRoot(),
     JwtModule.register({

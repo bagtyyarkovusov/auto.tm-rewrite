@@ -31,6 +31,9 @@ function makeUser(input: {
     email: input.email,
     emailVerifiedAt: input.email ? NOW : null,
     displayName: null,
+    nameNumber: 4821,
+    avatarIndex: 7,
+    avatarKey: null,
     avatarUrl: null,
     locale: "ru",
     role: "buyer",
@@ -296,7 +299,8 @@ describe("ConfirmSignInMethodChange", () => {
   );
 
   it("refuses a reviewer's fixed sign-in code (ADR-0030)", async () => {
-    const reviewer = makeUser({ id: "user-1", phone: null, email: "reviewer@review.auto.tm" });
+    // The reviewer adds an email it does not hold yet, so an accepted code would change the User.
+    const reviewer = makeUser({ id: "user-1", phone: "+99361234567", email: null });
     const { useCase, users, otpRepo } = harnessFor("sign-in", reviewer, "reviewer@review.auto.tm");
     otpRepo.request = {
       ...otpRepo.request,

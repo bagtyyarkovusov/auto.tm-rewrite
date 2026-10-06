@@ -6,7 +6,10 @@ import type { OtpRequest, SignInCodePurpose } from "../domain/OtpRequest";
 import type { SignInMethods } from "../domain/SignInMethods";
 import type { User } from "../domain/User";
 import type { SignInCodeChannel } from "../domain/types";
-import type { AccountDeletionListingsPort } from "../domain/ports/AccountDeletionListingsPort";
+import type {
+  AccountDeletionUnitOfWork,
+  AccountDeletionWrites,
+} from "../domain/ports/AccountDeletionUnitOfWork";
 import type { ClockPort } from "../domain/ports/ClockPort";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
 import type { SessionRepository } from "../domain/ports/SessionRepository";
@@ -29,6 +32,9 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: null,
     emailVerifiedAt: null,
     displayName: null,
+    nameNumber: 4821,
+    avatarIndex: 7,
+    avatarKey: null,
     avatarUrl: null,
     locale: "ru",
     role: "seller",
@@ -138,13 +144,10 @@ class FakeUsers implements UserRepository, SignInMethodRepository {
     return this.users.find((user) => user.id === id) ?? null;
   }
 
-  async scheduleDeletion(userId: string, deletionScheduledAt: Date): Promise<void> {
-    this.scheduled.set(userId, deletionScheduledAt);
-  }
+  async updateDisplayName(): Promise<void> {}
 
   async create(_methods: SignInMethods): Promise<User> { throw new Error("unused"); }
   async delete(): Promise<void> { throw new Error("unused"); }
-  async clearDeletionSchedule(): Promise<void> { throw new Error("unused"); }
   async findUsersWithExpiredDeletionGrace(): Promise<User[]> { return []; }
   async purgePersonalData(): Promise<void> { throw new Error("unused"); }
   async replaceSignInMethod(): Promise<User> { throw new Error("unused"); }
@@ -164,15 +167,21 @@ class FakeSessions implements Pick<SessionRepository, "deleteAllByUserId"> {
   }
 }
 
-class FakeListings implements AccountDeletionListingsPort {
+/** Records the deletion writes; the transaction itself is covered by `DeleteMe.spec.ts`. */
+class FakeDeletionUnitOfWork implements AccountDeletionUnitOfWork {
   archivedFor: string[] = [];
 
-  async archiveActiveListingsBySeller(sellerId: string): Promise<void> {
-    this.archivedFor.push(sellerId);
-  }
+  constructor(private readonly users: FakeUsers) {}
 
-  async republishArchivedByDeletionListingsBySeller(): Promise<void> {
-    throw new Error("unused");
+  run<T>(work: (writes: AccountDeletionWrites) => Promise<T>): Promise<T> {
+    return work({
+      scheduleDeletion: async (userId, deletionScheduledAt) => {
+        this.users.scheduled.set(userId, deletionScheduledAt);
+      },
+      archiveActiveListings: async (sellerId) => {
+        this.archivedFor.push(sellerId);
+      },
+    });
   }
 }
 
@@ -180,7 +189,7 @@ function setup(users: User[] = []) {
   const otpRepo = new FakeOtpRepo();
   const userRepo = new FakeUsers(users);
   const sessions = new FakeSessions();
-  const listings = new FakeListings();
+  const listings = new FakeDeletionUnitOfWork(userRepo);
   const clock: ClockPort = { now: () => NOW };
   const deleteMe = new DeleteMe(
     userRepo,
@@ -315,7 +324,7 @@ describe("ConfirmAccountDeletion", () => {
     expect(sessions.revokedFor).toEqual(["user-1"]);
   });
 
-  it("completes every DELETE /me effect when a new code is confirmed after a partial failure", async () => {
+  it("completes every DELETE /me effect when a new code is confirmed after a failed revocation", async () => {
     const { useCase, otpRepo, userRepo, sessions, listings } = setup([makeUser()]);
     otpRepo.add({ destination: "+99361234567", userId: "user-1" });
     sessions.failNext = true;
@@ -323,14 +332,13 @@ describe("ConfirmAccountDeletion", () => {
     await expect(
       useCase.execute({ phone: "+99361234567", code: CODE }),
     ).rejects.toThrow("database unavailable");
-    expect(userRepo.scheduled.get("user-1")).toEqual(GRACE_END);
+    expect(userRepo.scheduled.size).toBe(0);
     expect(listings.archivedFor).toEqual([]);
 
-    const inGrace = await userRepo.findById("user-1");
-    Object.assign(inGrace as User, { deletionScheduledAt: GRACE_END });
     otpRepo.add({ destination: "+99361234567", userId: "user-1", code: "222222" });
     await useCase.execute({ phone: "+99361234567", code: "222222" });
 
+    expect(userRepo.scheduled.get("user-1")).toEqual(GRACE_END);
     expect(sessions.revokedFor).toEqual(["user-1"]);
     expect(listings.archivedFor).toEqual(["user-1"]);
   });

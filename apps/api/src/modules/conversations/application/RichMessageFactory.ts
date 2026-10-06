@@ -1,4 +1,6 @@
+import { isChatAttachmentKeyOf } from "../domain/ChatAttachment";
 import { Message } from "../domain/Message";
+import type { ChatAttachmentCleaner } from "../domain/ports/ChatAttachmentCleaner";
 import type { ImageMessageMetadata } from "../domain/types";
 import {
   CONVERSATION_ERROR_CODES,
@@ -44,4 +46,35 @@ export function createRichMessage(data: {
         "Message kind not supported",
       );
   }
+}
+
+/**
+ * An image message hands its key to the other participant, who loads the
+ * stored image as it is. So the image is cleaned of metadata first, and a key
+ * that is not this Conversation's own attachment, or has no usable image
+ * behind it, is refused.
+ */
+export async function createCleanRichMessage(
+  cleaner: ChatAttachmentCleaner,
+  data: Parameters<typeof createRichMessage>[0],
+): Promise<Message> {
+  if (data.input.kind === "image") {
+    const { key } = data.input.metadata;
+    if (!isChatAttachmentKeyOf(data.conversationId, key)) {
+      throw new ConversationDomainError(
+        CONVERSATION_ERROR_CODES.IMAGE_ATTACHMENT_NOT_USABLE,
+        "Image key is not an attachment of this conversation",
+      );
+    }
+    const result = await cleaner.clean(key);
+    if (result !== "clean") {
+      throw new ConversationDomainError(
+        CONVERSATION_ERROR_CODES.IMAGE_ATTACHMENT_NOT_USABLE,
+        result === "missing"
+          ? "Image has not been uploaded"
+          : "Uploaded file is not a usable image",
+      );
+    }
+  }
+  return createRichMessage(data);
 }

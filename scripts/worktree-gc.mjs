@@ -84,8 +84,8 @@ export function parseClaudeSessions(text) {
   return { sessions: found, withoutCwd };
 }
 
-// Resolves symlinks so a path from `lsof`, a Claude session or $HOME compares
-// equal to the path git lists. A path that does not exist (a deleted worktree)
+// Resolves symlinks so a path from `lsof` or a Claude session compares equal
+// to the path git lists. A path that does not exist (a deleted worktree)
 // keeps its missing tail and resolves only the part that does exist; a path
 // with no existing ancestor comes back unchanged.
 export function realpathOrSelf(path) {
@@ -507,8 +507,8 @@ export function main(argv = process.argv.slice(2), cwd = process.cwd(), io = {})
     return 2;
   }
 
-  // Compare real paths on both sides: `lsof`, Claude sessions, $HOME and
-  // git's own listing can each spell the same directory differently.
+  // Compare real paths on both sides: `lsof`, Claude sessions and git's own
+  // listing can each spell the same directory differently.
   const entries = parseWorktreePorcelain(run(["git", "worktree", "list", "--porcelain"], cwd)).map((entry) => ({
     ...entry,
     listedPath: entry.path,

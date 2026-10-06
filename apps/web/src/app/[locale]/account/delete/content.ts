@@ -141,8 +141,8 @@ export const accountDeletionCopy: Record<Locale, AccountDeletionCopy> = {
     },
   },
   tk: {
-    metaDescription: "AutoTM hasabyny telefon belgisi ýa-da e-poçta salgysy bilen pozmagy soramak",
-    title: "AutoTM hasabyny pozmak",
+    metaDescription: "AutoTM akkauntyny telefon belgisi ýa-da e-poçta salgysy bilen pozmagy soramak",
+    title: "AutoTM akkauntyny pozmak",
     intro:
       "AutoTM-e girýän telefon belgiňizi ýa-da e-poçta salgyňyzy giriziň. Haýyşy tassyklamak üçin oňa kod ibereris.",
     consequencesTitle: "Soňra näme bolar",
@@ -163,18 +163,18 @@ export const accountDeletionCopy: Record<Locale, AccountDeletionCopy> = {
     sendCode: "Kody almak",
     sending: "Iberilýär…",
     codeTitle: "Kody giriziň",
-    codeSent: (destination) => `6 sanly kod ${destination} salgysyna iberildi.`,
+    codeSent: (destination) => `6 sanly kod iberildi: ${destination}.`,
     codeLabel: "Kod",
-    confirm: "Hasaby poz",
+    confirm: "Akkaunty poz",
     confirming: "Pozulýar…",
     resendIn: (seconds) => `Kody ${seconds} s soň täzeden iber`,
     resend: "Kody täzeden iber",
     changeValue: "Başga belgi ýa-da e-poçta görkez",
     doneTitle: "Pozmak haýyşy kabul edildi",
     doneBody: (destination) =>
-      `Eger ${destination} bir AutoTM hasabynda ulanylýan bolsa, ol hasap pozmak üçin meýilnamalaşdyryldy we 30 günden soň pozular.`,
+      `Eger ${destination} bir AutoTM akkauntynda ulanylýan bolsa, ol akkaunt pozmak üçin meýilnamalaşdyryldy we 30 günden soň pozular.`,
     doneRecover:
-      "Hasaby saklamak üçin 30 günüň dowamynda AutoTM programmasyna şu telefon belgisi ýa-da e-poçta salgysy bilen giriň.",
+      "Akkaunty saklamak üçin 30 günüň dowamynda AutoTM programmasyna şu telefon belgisi ýa-da e-poçta salgysy bilen giriň.",
     privacyPrefix: "Maglumatlaryňyzy nähili işleýäris: ",
     privacyLink: "Gizlinlik syýasaty",
     backHome: "Baş sahypa gaýdym",

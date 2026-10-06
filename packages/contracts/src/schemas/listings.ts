@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Currency, ListingCondition, ListingStatus } from "../enums";
 
 import { PhoneTm } from "./auth";
+import { PublicIdentitySchema } from "./identity";
 
 // ── Shared enums as Zod schemas ──
 
@@ -111,8 +112,7 @@ export const ListingDetailSchema = z.object({
   id: z.string().uuid(),
   publicNumber: z.number().int().positive(),
   sellerId: z.string().uuid(),
-  seller: z.object({
-    displayName: z.string().nullable(),
+  seller: PublicIdentitySchema.extend({
     memberSince: z.string().datetime(),
   }),
   status: ListingStatusSchema,
@@ -323,7 +323,7 @@ export function decodeCursor(token: string): {
 } {
   const json = Buffer.from(token, "base64url").toString("utf8");
   return z
-    .object({ timestamp: z.string(), id: z.string().uuid() })
+    .object({ timestamp: z.string().datetime(), id: z.string().uuid() })
     .parse(JSON.parse(json));
 }
 
@@ -534,6 +534,9 @@ export const MyListingCountsResponseSchema = z.object({
 });
 export type MyListingCountsResponse = z.infer<typeof MyListingCountsResponseSchema>;
 
+/** A User may keep this many ListingDrafts at once. Drafts never expire. */
+export const MAX_DRAFTS_PER_USER = 5;
+
 export const MyDraftsResponseSchema = z.object({
   items: z.array(ListingDraftSchema),
   nextCursor: z.string().nullable(),
@@ -653,9 +656,13 @@ export const ListingsErrorCode = {
   /** Neither the seller's account phone nor confirmed in the last 7 days. */
   ContactPhoneNotConfirmed: "CONTACT_PHONE_NOT_CONFIRMED",
   DamagedRequired: "DAMAGED_REQUIRED",
+  /** A New Listing cannot be damaged (ADR-0080). */
+  DamagedNotAllowedForNew: "DAMAGED_NOT_ALLOWED_FOR_NEW",
   ListingDeleted: "LISTING_DELETED",
   ListingNotFound: "LISTING_NOT_FOUND",
   MediaLimitExceeded: "MEDIA_LIMIT_EXCEEDED",
+  /** The User already has `MAX_DRAFTS_PER_USER` drafts; creating another is refused with 409. */
+  DraftLimitReached: "DRAFT_LIMIT_REACHED",
   /** The media key was not presigned for this User, or its kind does not match. */
   UploadNotAvailable: "UPLOAD_NOT_AVAILABLE",
   /** The upload already belongs to a Listing. Retrying the same attach is not an error. */

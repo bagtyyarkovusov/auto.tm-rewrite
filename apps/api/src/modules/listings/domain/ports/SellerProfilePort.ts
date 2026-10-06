@@ -1,5 +1,14 @@
+/**
+ * What a buyer may see of a Listing's seller: their public identity and join
+ * date. `deleted` marks a seller purged after account deletion. No Sign-in
+ * Method data.
+ */
 export interface SellerProfile {
   displayName: string | null;
+  nameNumber: number;
+  avatarIndex: number;
+  avatarKey: string | null;
+  deleted: boolean;
   memberSince: Date;
 }
 
