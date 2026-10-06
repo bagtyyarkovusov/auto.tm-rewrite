@@ -11,7 +11,7 @@ const config = {
     slug: "auto-tm",
     owner: "tkmdevelopers",
     scheme: "autotm",
-    version: "0.1.0",
+    version: "2.0.0",
     icon: "./assets/images/icon.png",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
