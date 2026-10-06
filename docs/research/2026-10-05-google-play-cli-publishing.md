@@ -7,6 +7,12 @@
 - **Feeds**: [#320](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/320) (reviewer-only Android release map), [#327](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/327) (Console listing, declarations, reviewer access), [#329](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/329) (signed AAB freeze), [#391](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/391) (Data safety).
 - **Status**: research only. No account was signed in, nothing was installed, and no Google API was called. Config and script snippets below are untested sketches.
 
+> **Changed since this was written (2026-10-06).** The note below is kept as researched; these repo facts it relied on have moved:
+>
+> - The store release updates the existing Play app `com.auto_tm.ynamly` instead of creating `tm.auto.app` ([#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697), PR 698). Read every `tm.auto.app` in the snippets as `com.auto_tm.ynamly`, and skip "Create the app": it exists and has completed its closed-test requirements.
+> - The `production` profile in `apps/mobile/eas.json` now has `autoIncrement: true` with `appVersionSource: remote`, and the remote versionCode is set to 4, so the first new build is 5 (PR 698). The "No `autoIncrement`" row and its risk are resolved; there is still no `submit` block.
+> - The upload key for `com.auto_tm.ynamly` is being reset to a key EAS generated; no `production` build runs before Play shows the new certificate. The current steps live in [88 — Play Console submission pack](../prd/ops/88-play-console-submission.md).
+
 ## Short answer
 
 1. **The Play Console UI cannot be removed.** Creating the app, the first upload, the App content declarations (except Data safety), the content rating, target audience, countries, free/paid, the closed-testing production-access application and the final send-for-review all have no method in the Google Play Developer API reference. Every CLI is a wrapper over that API, so none of them can do these either.
