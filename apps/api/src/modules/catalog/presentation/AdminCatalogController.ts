@@ -46,7 +46,7 @@ export class AdminCatalogController {
     @Body() body: unknown,
     @Req() req: FastifyRequest & { user?: { sub: string } },
   ) {
-    const parsed = CatalogSchemas.CreateBrandRequestSchema.parse(body);
+    const parsed = parseOrThrow(CatalogSchemas.CreateBrandRequestSchema, body);
     const actorUserId = (req.user as { sub: string }).sub;
     return this.createBrandUC.execute(parsed, actorUserId);
   }
@@ -57,7 +57,7 @@ export class AdminCatalogController {
     @Body() body: unknown,
     @Req() req: FastifyRequest & { user?: { sub: string } },
   ) {
-    const parsed = CatalogSchemas.UpdateBrandRequestSchema.parse(body);
+    const parsed = parseOrThrow(CatalogSchemas.UpdateBrandRequestSchema, body);
     const actorUserId = (req.user as { sub: string }).sub;
     return this.updateBrandUC.execute({ id, ...parsed }, actorUserId);
   }
@@ -108,7 +108,7 @@ export class AdminCatalogController {
     @Body() body: unknown,
     @Req() req: FastifyRequest & { user?: { sub: string } },
   ) {
-    const parsed = CatalogSchemas.CreateModelRequestSchema.parse({
+    const parsed = parseOrThrow(CatalogSchemas.CreateModelRequestSchema, {
       ...(typeof body === "object" && body !== null ? body : {}),
       brandId,
     });
@@ -122,7 +122,7 @@ export class AdminCatalogController {
     @Body() body: unknown,
     @Req() req: FastifyRequest & { user?: { sub: string } },
   ) {
-    const parsed = CatalogSchemas.UpdateModelRequestSchema.parse(body);
+    const parsed = parseOrThrow(CatalogSchemas.UpdateModelRequestSchema, body);
     const actorUserId = (req.user as { sub: string }).sub;
     return this.updateModelUC.execute({ id, ...parsed }, actorUserId);
   }
@@ -143,7 +143,7 @@ function parseOrThrow<T>(schema: { safeParse: (data: unknown) => SafeParse<T> },
   if (!result.success) {
     throw new BadRequestException({
       code: "VALIDATION_FAILED",
-      message: "Invalid logo request",
+      message: "Invalid request",
       details: result.error.flatten(),
     });
   }
