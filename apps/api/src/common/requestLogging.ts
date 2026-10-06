@@ -1,5 +1,7 @@
 import type { Options } from "pino-http";
 
+import { readClientIpPolicy } from "./client-ip";
+
 /**
  * Request headers that carry credentials. pino-http logs every request
  * header by default, so without this a bearer token, a refresh cookie or a
@@ -28,8 +30,18 @@ const SIGN_IN_CODE_PATHS = new Set([
 
 const FORWARDING_HEADERS = ["x-real-ip", "x-forwarded-for", "forwarded"];
 
-/** Options for the API's HTTP request logger (`LoggerModule.forRoot`). */
-export function requestLoggingOptions(level: string): Options {
+/**
+ * Options for the API's HTTP request logger (`LoggerModule.forRoot`).
+ * `clientIpHeader` is the header the deployment reads the client IP from
+ * (`CLIENT_IP_HEADER`), so a sign-in code line drops it even when it is not
+ * one of the usual forwarding headers.
+ */
+export function requestLoggingOptions(
+  level: string,
+  clientIpHeader: string | null = readClientIpPolicy().header,
+): Options {
+  const ipHeaders = new Set(FORWARDING_HEADERS);
+  if (clientIpHeader) ipHeaders.add(clientIpHeader.toLowerCase());
   return {
     level,
     redact: { paths: SECRET_HEADER_PATHS, censor: "[Redacted]" },
@@ -52,7 +64,7 @@ export function requestLoggingOptions(level: string): Options {
           delete req.remotePort;
           if (req.headers) {
             req.headers = Object.fromEntries(
-              Object.entries(req.headers).filter(([name]) => !FORWARDING_HEADERS.includes(name)),
+              Object.entries(req.headers).filter(([name]) => !ipHeaders.has(name.toLowerCase())),
             );
           }
         }

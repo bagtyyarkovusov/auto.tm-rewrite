@@ -89,8 +89,9 @@ export class SharpChatAttachmentCleaner implements ChatAttachmentCleaner {
 
   /**
    * The HEAD keeps an over-cap object from being fetched when the store
-   * reports ContentLength; the length guard after the read covers a store
-   * that understates it.
+   * reports ContentLength. When only the download reports it, the body is
+   * dropped unread; the length guard after the read covers a store that
+   * understates both.
    */
   private async read(key: string): Promise<Buffer | "too-large" | null> {
     try {
@@ -102,6 +103,10 @@ export class SharpChatAttachmentCleaner implements ChatAttachmentCleaner {
         new GetObjectCommand({ Bucket: BUCKET, Key: key }),
       );
       if (!object.Body) return null;
+      if ((object.ContentLength ?? 0) > CHAT_ATTACHMENT_MAX_SIZE_BYTES) {
+        (object.Body as { destroy?: () => void }).destroy?.();
+        return "too-large";
+      }
       const bytes = Buffer.from(await object.Body.transformToByteArray());
       return bytes.length > CHAT_ATTACHMENT_MAX_SIZE_BYTES ? "too-large" : bytes;
     } catch (err) {
