@@ -5,12 +5,25 @@ import { ApiError } from "../api/client";
 
 import { AppNavigationEffects } from "./AppNavigationEffects";
 
-const state = vi.hoisted(() => ({ pathname: "/conversations/conv-a", clear: vi.fn() }));
+const state = vi.hoisted(() => ({
+  pathname: "/conversations/conv-a",
+  clear: vi.fn(),
+  session: null as object | null,
+  sessionListeners: new Set<() => void>(),
+}));
 vi.mock("expo-router", async () => ({
   router: (await import("../../test/native-setup")).routerMock,
   usePathname: () => state.pathname,
 }));
-vi.mock("../auth/session", () => ({ clearAuthSession: state.clear, subscribeAuthUserChange: () => () => {} }));
+vi.mock("../auth/session", () => ({
+  clearAuthSession: state.clear,
+  loadAuthSession: async () => state.session,
+  subscribeAuthSession: (listener: () => void) => {
+    state.sessionListeners.add(listener);
+    return () => state.sessionListeners.delete(listener);
+  },
+  subscribeAuthUserChange: () => () => {},
+}));
 vi.mock("../notifications/useDirectMessagePushRouting", () => ({ useDirectMessagePushRouting: vi.fn() }));
 
 describe("app auth error navigation", () => {
@@ -61,5 +74,27 @@ describe("app auth error navigation", () => {
     });
     expect(state.clear).toHaveBeenCalled();
     expect(routerMock.replace).not.toHaveBeenCalled();
+  });
+
+  it("redirects again when a later session expires after a new sign-in", async () => {
+    state.pathname = "/favorites";
+    const screen = renderMobile(<AppNavigationEffects />);
+    const expire = (key: string) =>
+      act(async () => {
+        await screen.queryClient.fetchQuery({ queryKey: [key], queryFn: () => Promise.reject(new ApiError("UNAUTHENTICATED", 401, "Expired")) }).catch(() => {});
+      });
+    await expire("first");
+    expect(routerMock.replace).toHaveBeenCalledTimes(1);
+
+    // The session ending notifies the listeners too; only a stored session re-arms the redirect.
+    await act(async () => state.sessionListeners.forEach((listener) => listener()));
+    await expire("burst");
+    expect(routerMock.replace).toHaveBeenCalledTimes(1);
+
+    state.session = { user: { id: "user-1" } };
+    await act(async () => state.sessionListeners.forEach((listener) => listener()));
+    state.session = null;
+    await expire("second");
+    expect(routerMock.replace).toHaveBeenCalledTimes(2);
   });
 });
