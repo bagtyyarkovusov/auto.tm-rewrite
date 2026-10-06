@@ -37,7 +37,7 @@ A pull request gets one review round and one fix round ([ADR-0085](../adr/0085-o
 
 [ADR-0065](../adr/0065-small-changes-skip-the-issue-ceremony.md) governs these exceptions.
 
-- An accepted review finding is fixed in that PR, in its one fix round, and is not re-reviewed ([ADR-0085](../adr/0085-one-review-round-one-fix-round-no-re-review.md), [FINALIZATION](../../.claude/skills/run-issue/FINALIZATION.md#independent-review)). A fix that needs a migration, contract change, or product decision goes to the founder or its own issue.
+- An accepted review finding is fixed in that PR, in its one fix round, and is not re-reviewed ([ADR-0085](../adr/0085-one-review-round-one-fix-round-no-re-review.md), [FINALIZATION](../../.claude/skills/run-issue/FINALIZATION.md#independent-review)).
 - A no-issue PR may cover about 50 lines or fewer excluding tests when it makes no migration, API contract, auth, deployment or production-configuration, ADR, agent-workflow policy, product, or architecture change. Use `fix/<slug>` or `chore/<slug>`, one fresh `Standards + Spec` review, and a green required `pr` check.
 - Batch non-blocking follow-ups by area as ADR-0065 specifies. Blocking findings are fixed before merge.
 

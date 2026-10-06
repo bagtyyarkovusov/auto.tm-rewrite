@@ -14,14 +14,16 @@ Keep terms in the PR, reviews, and reconciliation aligned with the canonical [do
 
 ## Independent review
 
-One review round, one fix round, no re-review ([ADR-0085](../../../docs/adr/0085-one-review-round-one-fix-round-no-re-review.md)).
+One review round, one fix round, no re-review ([ADR-0085](../../../docs/adr/0085-one-review-round-one-fix-round-no-re-review.md)). "The orchestrator" below is the `run-queue` orchestrator, or the integration owner in a standalone `run-issue`.
 
-1. **Review once.** Run one Standards and one Spec reviewer as separate, fresh, read-only contexts that did not implement the commit, in parallel, pinned to the final verified SHA. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push. Each returns a report under 400 words: blocking findings first, each with file and line; no restatement of what is sound.
-2. **Post.** The orchestrator posts both reports in one PR comment in the shape below.
+1. **Review once.** Run one Standards and one Spec reviewer as separate, fresh, read-only contexts that did not implement the commit, in parallel, pinned to the final verified SHA. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push. Each returns a report under 400 words: blocking findings first, each with file and line; no restatement of what is sound. The Spec reviewer quotes the criterion or spec line behind each finding and reports three things: criteria that are missing or partial, behaviour the issue did not ask for, and criteria that look implemented but wrong.
+2. **Post.** The orchestrator posts both reports in one PR comment in the shape at the end of this section, keeping each reviewer's provider and client attribution. A reviewer that cannot post returns its report to the orchestrator.
 3. **Fix once.** The orchestrator accepts or rejects each finding and records why. One implementer fixes every accepted finding in one round; an orchestrator that wrote the PR fixes them itself. An unresolved correctness or acceptance-criteria finding blocks merge. A product or architecture dispute returns to the founder. Non-blocking findings may be deferred to one follow-up issue or batch PR per area, as [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065) describes.
-4. **No re-review.** Nothing reviews the fix round, and a fix does not void the verdicts. The orchestrator reads the fix diff, confirms it stays within the findings, reruns the affected local gates, and records each finding in `Execution state` as `fixed in <sha>`, `deferred to <issue>` or `rejected: <reason>`. The founder may ask for another review of any PR; no rule triggers one.
+4. **No re-review.** Nothing reviews the fix round, and a fix does not void the verdicts. The orchestrator reads the fix diff, confirms it stays within the findings, reruns the affected local gates, and records each finding in the PR body's `Execution state` as `fixed in <sha>`, `deferred to <issue>` or `rejected: <reason>`. When the fix goes beyond the findings, or leaves an accepted blocking finding unresolved, the orchestrator leaves the PR a draft, records the state, and reports to the founder; it does not start a second fix or review round on its own. The founder may ask for another review of any PR; no rule triggers one.
 
 Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may each perform either axis, or both, on any pull request, including high-risk changes. There is no provider-diversity requirement or per-PR waiver. See [ADR-0064](../../../docs/adr/0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md).
+
+The review comment:
 
 ```markdown
 ## Review at `<full SHA>`

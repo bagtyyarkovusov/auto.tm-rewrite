@@ -18,12 +18,13 @@ Matt Pocock's `implement-spec` skill ends with one `code-review` and one fix: "c
 
 - **Review.** One Standards and one Spec reviewer, fresh, read-only, in parallel, pinned to the final verified commit. Each returns a report under 400 words: blocking findings first, each with file and line. The orchestrator posts both in one PR comment with their provider and client.
 - **Fix.** The orchestrator accepts or rejects each finding and records why. One implementer fixes every accepted finding in one round; an orchestrator that wrote the PR fixes them itself. A finding that needs a product or architecture decision goes to the founder. Non-blocking findings may be deferred to the area's follow-up batch.
-- **No re-review.** No `Delta` review and no second Standards or Spec review follow the fix round. A fix does not void the verdicts. The orchestrator reads the fix diff, confirms it stays within the findings, reruns the affected local gates, and waits for the hosted `pr` check on the new head.
+- **No re-review.** No `Delta` review and no second Standards or Spec review follow the fix round. A fix does not void the verdicts. The orchestrator reads the fix diff, confirms it stays within the findings, reruns the affected local gates, and waits for the hosted `pr` check on the new head. When a fix goes beyond the findings or leaves an accepted blocking finding unresolved, the orchestrator leaves the PR a draft and reports to the founder.
+- **Where this departs from the source.** `implement-spec` fixes every issue the review raises. Here the orchestrator may reject a finding or defer a non-blocking one, with the reason recorded, because AutoTM's coding standards are advisory until the first store release. An orchestrator that wrote the PR may fix its own findings; its rejections stay visible in the PR body for the founder.
 - **Reviewers do not commit.** The ADR-0083 trial ends and the `queue-review-fixer` agent is removed.
-- **Merge.** The orchestrator records each finding in the PR body as `fixed in <sha>`, `deferred to <issue>` or `rejected: <reason>`, marks the PR ready, and sets auto-merge. The required `pr` check and branch protection are unchanged.
+- **Merge.** The orchestrator records each finding in the PR body's `Execution state` as `fixed in <sha>`, `deferred to <issue>` or `rejected: <reason>`, marks the PR ready, and sets auto-merge. The required `pr` check and branch protection are unchanged.
 - **PR body.** `Closes #<N>`, the `Execution state`, then `Summary`, `Evidence` and `Merge danger`. Acceptance criteria and test runs sit under `Evidence`.
 - **Second look on request.** The founder may ask for another review of any pull request. No rule triggers one.
-- **Stacked and rebased PRs.** A clean rebase needs no review; the orchestrator confirms with `git range-diff` that the PR's own diff is unchanged and records it.
+- **Later commits.** A CI repair and a rebase need no review either. For a clean rebase the orchestrator confirms with `git range-diff` that the PR's own diff is unchanged; for a conflict or a CI repair it reads the change. It records both.
 - **Pull requests already in review** finish under this rule from their current state.
 
 ## Consequences
