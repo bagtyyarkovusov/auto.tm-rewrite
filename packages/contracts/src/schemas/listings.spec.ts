@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 
-import { decodeCursor, encodeCursor, ListingDetailSchema } from "./listings";
+import {
+  decodeCursor,
+  encodeCursor,
+  FavoriteListingSummarySchema,
+  FeedResponseSchema,
+  ListingDetailSchema,
+  ListingSummarySchema,
+} from "./listings";
 
 describe("decodeCursor", () => {
   it("roundtrips an encoded cursor", () => {
@@ -103,5 +110,106 @@ describe("ListingDetailSchema seller", () => {
       "memberSince",
       "nameNumber",
     ]);
+  });
+});
+
+describe("ListingSummarySchema for the Results card", () => {
+  // What an API from before the Results card sends: no gallery, contact
+  // preferences or seller.
+  const olderSummary = {
+    id: "550e8400-e29b-41d4-a716-446655440001",
+    sellerId: "550e8400-e29b-41d4-a716-446655440002",
+    status: "active",
+    brandId: "550e8400-e29b-41d4-a716-446655440003",
+    modelId: "550e8400-e29b-41d4-a716-446655440004",
+    priceAmount: 125000,
+    priceCurrency: "TMT",
+    displayPriceTmt: 125000,
+    photoKeys: ["p1", "p2"],
+    photoCount: 9,
+    cityId: "550e8400-e29b-41d4-a716-446655440005",
+    publishedAt: "2026-10-01T08:00:00.000Z",
+  };
+  const cardSummary = {
+    ...olderSummary,
+    galleryKeys: ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"],
+    allowCalls: true,
+    allowChat: false,
+    seller: { displayName: "Aman", nameNumber: 4821, deleted: false },
+  };
+
+  it("still parses a summary from an API that sends none of the card fields", () => {
+    const parsed = ListingSummarySchema.parse(olderSummary);
+
+    expect(parsed).not.toHaveProperty("galleryKeys");
+    expect(parsed).not.toHaveProperty("allowCalls");
+    expect(parsed).not.toHaveProperty("allowChat");
+    expect(parsed).not.toHaveProperty("seller");
+    expect(FeedResponseSchema.parse({ items: [olderSummary], nextCursor: null }).items).toHaveLength(1);
+  });
+
+  it("carries up to eight gallery keys, the contact preferences and the seller's name", () => {
+    expect(ListingSummarySchema.parse(cardSummary)).toMatchObject({
+      galleryKeys: ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"],
+      allowCalls: true,
+      allowChat: false,
+      seller: { displayName: "Aman", nameNumber: 4821, deleted: false },
+    });
+  });
+
+  it("refuses a ninth gallery key", () => {
+    const nine = [...cardSummary.galleryKeys, "p9"];
+
+    expect(ListingSummarySchema.safeParse({ ...cardSummary, galleryKeys: nine }).success).toBe(false);
+  });
+
+  it("keeps photoKeys at two keys for installed builds", () => {
+    expect(
+      ListingSummarySchema.safeParse({ ...cardSummary, photoKeys: ["p1", "p2", "p3"] }).success,
+    ).toBe(false);
+  });
+
+  it("names a seller with no name set by number, and marks a deleted seller", () => {
+    const parsed = ListingSummarySchema.parse({
+      ...cardSummary,
+      seller: { displayName: null, nameNumber: 2057, deleted: true },
+    });
+
+    expect(parsed.seller).toEqual({ displayName: null, nameNumber: 2057, deleted: true });
+  });
+
+  it("requires the seller's name number and deleted flag", () => {
+    for (const field of ["displayName", "nameNumber", "deleted"]) {
+      expect(
+        ListingSummarySchema.safeParse({
+          ...cardSummary,
+          seller: { ...cardSummary.seller, [field]: undefined },
+        }).success,
+        field,
+      ).toBe(false);
+    }
+  });
+
+  it("drops avatar fields and contact data from the seller and the summary", () => {
+    const parsed = ListingSummarySchema.parse({
+      ...cardSummary,
+      contactPhone: "+99365000000",
+      seller: {
+        ...cardSummary.seller,
+        avatarIndex: 3,
+        avatarKey: "avatars/u1/a.jpg",
+        phone: "+99365000000",
+      },
+    });
+
+    expect(parsed).not.toHaveProperty("contactPhone");
+    expect(Object.keys(parsed.seller ?? {}).sort()).toEqual(["deleted", "displayName", "nameNumber"]);
+  });
+
+  it("still requires the contact preferences on a favorites item", () => {
+    expect(FavoriteListingSummarySchema.safeParse(olderSummary).success).toBe(false);
+    expect(
+      FavoriteListingSummarySchema.parse({ ...olderSummary, allowCalls: false, allowChat: true }),
+    ).toMatchObject({ allowCalls: false, allowChat: true });
   });
 });

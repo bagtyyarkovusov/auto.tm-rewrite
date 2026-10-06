@@ -62,6 +62,12 @@ export const ListingSummarySchema = z.object({
   coverMediaKey: z.string().optional(),
   /** Keys of the first two photos by `sortOrder`; empty when the Listing has no photos. */
   photoKeys: z.array(z.string()).max(2),
+  /**
+   * Keys of the first eight photos by `sortOrder` for the Results photo strip;
+   * empty when the Listing has no photos. Sent by the public feed only; absent
+   * from older APIs, so a client falls back to `photoKeys`.
+   */
+  galleryKeys: z.array(z.string()).max(8).optional(),
   photoCount: z.number().int().nonnegative(),
   mileageKm: z.number().int().nonnegative().optional(),
   condition: ListingConditionSchema.optional(),
@@ -71,6 +77,19 @@ export const ListingSummarySchema = z.object({
   publishedAt: z.string().datetime(),
   /** Present only when the request carries a signed-in viewer. */
   isFavorited: z.boolean().optional(),
+  /**
+   * Whether the seller takes calls and chat messages. Always sent by the
+   * public feed; optional so a client tolerates an older API. The contact
+   * phone itself is never in a summary: a caller reads it from Listing detail.
+   */
+  allowCalls: z.boolean().optional(),
+  allowChat: z.boolean().optional(),
+  /**
+   * What the card needs to name the seller: compose it with
+   * `formatDisplayName`; a `deleted` seller has no name. Sent by the public
+   * feed only, without avatar fields.
+   */
+  seller: PublicIdentitySchema.pick({ displayName: true, nameNumber: true, deleted: true }).optional(),
 });
 export type ListingSummary = z.infer<typeof ListingSummarySchema>;
 

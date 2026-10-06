@@ -34,6 +34,7 @@
               "OTP_LOCKED",
               "OTP_NOT_FOUND",
               "SIGN_IN_METHOD_TAKEN",
+              "INVALID_DISPLAY_NAME",
               "INTERNAL"
             ]
           },
@@ -940,6 +941,13 @@
             },
             "maxItems": 2
           },
+          "galleryKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8
+          },
           "photoCount": {
             "type": "integer",
             "minimum": 0
@@ -973,6 +981,34 @@
           },
           "isFavorited": {
             "type": "boolean"
+          },
+          "allowCalls": {
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          },
+          "seller": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              },
+              "nameNumber": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 9999
+              },
+              "deleted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "displayName",
+              "nameNumber",
+              "deleted"
+            ]
           }
         },
         "required": [
@@ -2302,6 +2338,13 @@
                   },
                   "maxItems": 2
                 },
+                "galleryKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                },
                 "photoCount": {
                   "type": "integer",
                   "minimum": 0
@@ -2335,6 +2378,34 @@
                 },
                 "isFavorited": {
                   "type": "boolean"
+                },
+                "allowCalls": {
+                  "type": "boolean"
+                },
+                "allowChat": {
+                  "type": "boolean"
+                },
+                "seller": {
+                  "type": "object",
+                  "properties": {
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "nameNumber": {
+                      "type": "integer",
+                      "minimum": 1000,
+                      "maximum": 9999
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "displayName",
+                    "nameNumber",
+                    "deleted"
+                  ]
                 }
               },
               "required": [
@@ -2665,6 +2736,13 @@
                   },
                   "maxItems": 2
                 },
+                "galleryKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                },
                 "photoCount": {
                   "type": "integer",
                   "minimum": 0
@@ -2698,6 +2776,34 @@
                 },
                 "isFavorited": {
                   "type": "boolean"
+                },
+                "allowCalls": {
+                  "type": "boolean"
+                },
+                "allowChat": {
+                  "type": "boolean"
+                },
+                "seller": {
+                  "type": "object",
+                  "properties": {
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "nameNumber": {
+                      "type": "integer",
+                      "minimum": 1000,
+                      "maximum": 9999
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "displayName",
+                    "nameNumber",
+                    "deleted"
+                  ]
                 }
               },
               "required": [
@@ -3019,6 +3125,13 @@
             },
             "maxItems": 2
           },
+          "galleryKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8
+          },
           "photoCount": {
             "type": "integer",
             "minimum": 0
@@ -3053,14 +3166,36 @@
           "isFavorited": {
             "type": "boolean"
           },
-          "contactPhone": {
-            "type": "string"
-          },
           "allowCalls": {
             "type": "boolean"
           },
           "allowChat": {
             "type": "boolean"
+          },
+          "seller": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              },
+              "nameNumber": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 9999
+              },
+              "deleted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "displayName",
+              "nameNumber",
+              "deleted"
+            ]
+          },
+          "contactPhone": {
+            "type": "string"
           }
         },
         "required": [
@@ -3147,6 +3282,13 @@
                   },
                   "maxItems": 2
                 },
+                "galleryKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                },
                 "photoCount": {
                   "type": "integer",
                   "minimum": 0
@@ -3181,14 +3323,36 @@
                 "isFavorited": {
                   "type": "boolean"
                 },
-                "contactPhone": {
-                  "type": "string"
-                },
                 "allowCalls": {
                   "type": "boolean"
                 },
                 "allowChat": {
                   "type": "boolean"
+                },
+                "seller": {
+                  "type": "object",
+                  "properties": {
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "nameNumber": {
+                      "type": "integer",
+                      "minimum": 1000,
+                      "maximum": 9999
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "displayName",
+                    "nameNumber",
+                    "deleted"
+                  ]
+                },
+                "contactPhone": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -8114,6 +8278,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -8169,6 +8334,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -8907,6 +9073,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -8962,6 +9129,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -9017,6 +9185,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -9277,6 +9446,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -9519,6 +9689,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -9574,6 +9745,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -9629,6 +9801,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -9757,6 +9930,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -9944,6 +10118,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10048,6 +10223,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10176,6 +10352,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10231,6 +10408,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10286,6 +10464,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10485,6 +10664,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10540,6 +10720,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10595,6 +10776,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10650,6 +10832,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10819,6 +11002,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10874,6 +11058,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -10929,6 +11114,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11063,6 +11249,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11118,6 +11305,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11173,6 +11361,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11289,6 +11478,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11344,6 +11534,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11473,6 +11664,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11589,6 +11781,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11827,6 +12020,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11882,6 +12076,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -11937,6 +12132,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -12106,6 +12302,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -12257,6 +12454,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -12463,6 +12661,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -12635,6 +12834,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
@@ -12798,6 +12998,7 @@
                         "OTP_LOCKED",
                         "OTP_NOT_FOUND",
                         "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
                         "INTERNAL"
                       ]
                     },
