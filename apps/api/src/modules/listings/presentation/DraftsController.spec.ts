@@ -1,3 +1,5 @@
+import { inspect } from "node:util";
+
 import { BadRequestException } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { describe, expect, it, vi } from "vitest";
@@ -44,11 +46,9 @@ describe("DraftsController validate-step", () => {
 
       await expect(call).rejects.toBeInstanceOf(BadRequestException);
 
-      expect(errorSpy).toHaveBeenCalledTimes(1);
-      const logged = errorSpy.mock.calls.map((args) => String(args)).join("\n");
-      expect(logged).toContain("[Zod validation failed]");
-      expect(logged).toContain("step");
-      expect(logged).not.toContain("sentine1-body-value");
+      // The exact arguments: an extra argument carrying the body would also fail here.
+      expect(errorSpy.mock.calls).toEqual([["[Zod validation failed]", ["step"]]]);
+      expect(inspect(errorSpy.mock.calls, { depth: null })).not.toContain("sentine1-body-value");
     } finally {
       errorSpy.mockRestore();
     }
