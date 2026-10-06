@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { act, renderMobile, routerMock } from "../../test/render";
 import { ApiError } from "../api/client";
@@ -27,6 +27,11 @@ vi.mock("../auth/session", () => ({
 vi.mock("../notifications/useDirectMessagePushRouting", () => ({ useDirectMessagePushRouting: vi.fn() }));
 
 describe("app auth error navigation", () => {
+  beforeEach(() => {
+    state.session = null;
+    state.sessionListeners.clear();
+  });
+
   it("clears an expired session on a Conversation without replacing its route", async () => {
     state.pathname = "/conversations/conv-a";
     const screen = renderMobile(<AppNavigationEffects />);

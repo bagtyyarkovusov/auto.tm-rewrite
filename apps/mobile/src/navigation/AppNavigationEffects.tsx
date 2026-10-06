@@ -32,7 +32,7 @@ export function AppNavigationEffects() {
     [queryClient],
   );
 
-  // A 401 on any request, query or mutation, ends the session and offers
+  // A refused session on any request, query or mutation, ends it and offers
   // sign-in, so an account edit with an expired token cannot strand the User.
   useEffect(() => {
     let redirecting = false;
@@ -51,13 +51,15 @@ export function AppNavigationEffects() {
     const unsubscribeMutations = queryClient.getMutationCache().subscribe((event) => {
       if (event.type === "updated" && event.action.type === "error") onError(event.mutation.state.error);
     });
-    // A new sign-in re-arms the redirect, so a later expiry offers sign-in again.
+    // A stored session re-arms the redirect, so a later expiry offers sign-in again.
     const unsubscribeSession = subscribeAuthSession(() => {
       void loadAuthSession()
         .then((session) => {
           if (session) redirecting = false;
         })
-        .catch(() => {});
+        .catch((error: unknown) => {
+          console.error("[AppNavigationEffects] could not read the session", error);
+        });
     });
     return () => {
       unsubscribeQueries();
