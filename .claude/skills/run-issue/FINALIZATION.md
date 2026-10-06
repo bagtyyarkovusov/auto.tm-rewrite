@@ -14,30 +14,31 @@ Keep terms in the PR, reviews, and reconciliation aligned with the canonical [do
 
 ## Independent review
 
-Run separate, fresh, read-only Standards and Spec contexts that did not implement the reviewed commit. They may work concurrently against the same fixed SHA. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push.
+One review round, one fix round, no re-review ([ADR-0085](../../../docs/adr/0085-one-review-round-one-fix-round-no-re-review.md)). "The orchestrator" below is the `run-queue` orchestrator, or the integration owner in a standalone `run-issue`.
 
-Trial exception ([ADR-0083](../../../docs/adr/0083-a-standards-reviewer-may-commit-small-fixes.md), next five queue PRs, on Claude Code hosts only): a Standards reviewer may commit a fix for its own finding when the fix is within the fix-in-place limits below and changes no behaviour an acceptance criterion covers. It starts only after the implementer has stopped and auto-merge is off, commits one fix per finding on top of the pinned SHA in its own worktree, runs focused checks, and pushes fast-forward; if the branch moved past the pinned SHA, it pushes nothing. Its verdict lists each finding as `fixed in <sha>` or `left as finding`. Spec and `Delta` stay read-only, and a fresh `Delta` review of the reviewer's commits carries both verdicts forward; it replaces a full Standards re-review of those commits. When the `Delta` reviewer rejects a reviewer's commit, a fresh implementer reverts or repairs it on the PR branch and the `Delta` review reruns on the new head. An integration PR counts as one of the five. The orchestrator records turnaround, tokens, `Delta` findings on reviewer commits, and reverts in `Execution state`.
+1. **Review once.** Run one Standards and one Spec reviewer as separate, fresh, read-only contexts that did not implement the commit, in parallel, pinned to the final verified SHA. A reviewer may inspect and run non-mutating commands but must not edit, format, commit, or push. Each returns a report under 400 words: blocking findings first, each with file and line; no restatement of what is sound. The Spec reviewer quotes the criterion or spec line behind each finding and reports three things: criteria that are missing or partial, behaviour the issue did not ask for, and criteria that look implemented but wrong.
+2. **Post.** The orchestrator posts both reports in one PR comment in the shape at the end of this section, keeping each reviewer's provider and client attribution. A reviewer that cannot post returns its report to the orchestrator.
+3. **Fix once.** The orchestrator accepts or rejects each finding and records why. One implementer fixes every accepted finding in one round; an orchestrator that wrote the PR fixes them itself. An unresolved correctness or acceptance-criteria finding blocks merge. A product or architecture dispute returns to the founder. Non-blocking findings may be deferred to one follow-up issue or batch PR per area, as [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065) describes.
+4. **No re-review.** Nothing reviews the fix round, and a fix does not void the verdicts. The orchestrator reads the fix diff, confirms it stays within the findings, reruns the affected local gates, and records each finding in the PR body's `Execution state` as `fixed in <sha>`, `deferred to <issue>` or `rejected: <reason>`. When the fix goes beyond the findings, or leaves an accepted blocking finding unresolved, the orchestrator leaves the PR a draft, records the state, and reports to the founder; it does not start a second fix or review round on its own. The founder may ask for another review of any PR; no rule triggers one.
 
 Codex desktop, Claude Code desktop, and the `claude-kimi` CLI may each perform either axis, or both, on any pull request, including high-risk changes. There is no provider-diversity requirement or per-PR waiver. See [ADR-0064](../../../docs/adr/0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md).
 
-Each review produces a PR comment with:
+The review comment:
 
 ```markdown
-## <Standards|Spec> review
+## Review at `<full SHA>`
 
-- **Review axis:** <Standards|Spec>
+### Standards
 - **Reviewer:** <agent/context identifier>
 - **Provider:** <OpenAI|Anthropic|Kimi; actual model provider>
 - **Client:** <Codex desktop|Claude Code desktop|claude-kimi (Claude Code CLI); actual interface>
-- **Commit:** `<full SHA>`
 - **Verdict:** pass | findings
 
-<concrete findings and evidence, or “No findings.”>
+<findings with file and line, or “No findings.”>
+
+### Spec
+<the same fields and findings>
 ```
-
-A fix-in-place delta review ([ADR-0065](../../../docs/adr/0065-small-changes-skip-the-issue-ceremony.md)) uses the same fields with `Review axis: Delta`, `Base commit` and `Commit`, and a `Carries forward` line naming the earlier verdicts it keeps.
-
-If Claude Code desktop cannot post the PR comment, the integration owner transfers its read-only, SHA-pinned verdict and evidence to the PR with the original reviewer, provider, and client attribution. Record the evidence for accepting or rejecting every finding in the PR. Resolve accepted findings, rerun proportionate verification, commit and push the fixes, and pin the new SHA. An unresolved correctness or acceptance-criteria finding blocks merge. Product or architecture disputes return to the founder; other disputed findings receive a fresh read-only review against the code, tests, and governing documents. Any content change invalidates the affected earlier verdict. Exception ([ADR-0065](../../../docs/adr/0065-small-changes-skip-the-issue-ceremony.md)): a fix for a finding of about 50 lines or fewer, within the PR's scope and with no migration, contract change, or product decision, needs only a fresh read-only review of the new commits, recorded with `Review axis: Delta`, the base and new commits, and the verdicts it carries forward; earlier verdicts carry forward unless that reviewer finds the delta changes what they covered, and an axis whose verdict no longer holds gets a full re-review. Non-blocking findings deferred from the PR are batched into one follow-up issue or batch PR per area, as [Small changes](../../../docs/agents/coding-workflow.md#small-changes-adr-0065) describes. Continue only when both axes pass against the latest commit, directly or carried forward by a `Delta` review.
 
 ### Spec evidence checklist
 
@@ -58,20 +59,12 @@ The PR title mirrors the issue. Its body starts with `Closes #<N>` and keeps one
 
 ```markdown
 ## Summary
-- <behavior shipped>
+<the smallest view that makes the change clear: a call tree, component tree, file tree, or diff sketch, with one or two lines of prose>
 
-## Acceptance criteria
-- [x] <criterion + evidence>
-
-## Test plan
+## Evidence
+- [x] <acceptance criterion> — **Before:** <failing run, output, or screenshot> **After:** <passing run, output, or screenshot>
 - `<command>` — pass
-- <manual/host-only gate and result>
-
-## Architecture notes
-- <ADR/CONTEXT/library-doc implications, or omit>
-
-## Design notes
-- <wireframe/hi-fi/UX evidence, or omit>
+- <manual or host-only gate and result; ADR, CONTEXT, or design implications when there are any>
 
 ## Merge danger
 - **Door:** <one-way or two-way; one-way when a revert cannot undo it, such as a migration, published contract, or sent data>
@@ -80,16 +73,16 @@ The PR title mirrors the issue. Its body starts with `Closes #<N>` and keeps one
 
 An integration PR ([ADR-0084](../../../docs/adr/0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md)) has one `Closes #<N>` line and one `Execution state` per issue. [run-queue](../run-queue/SKILL.md#integration-branches) owns its merger and fix-round steps.
 
-Mark the draft ready only after verification passes and both axes pass on its current SHA, directly or carried forward by a `Delta` review.
+Mark the draft ready only after verification passes, the review round is posted, and the fix round, when there is one, is recorded in `Execution state`.
 
 ## Checks and merge
 
 `main` is protected: it requires a pull request and the `pr` check (the `pr` job of the [PR Checks workflow](../../../.github/workflows/pr-checks.yml)), allows only squash merges, requires linear history, and applies to administrators. Nobody can merge a PR with a failing or pending `pr` check or push to `main` directly. GitHub deletes a PR's head branch when it merges and retargets PRs based on that branch to `main`.
 
-- Once both axes pass on the current commit, run `gh pr ready <PR>` and then `gh pr merge <PR> --auto --squash`. GitHub merges the PR when the `pr` check passes.
-- A push does not cancel auto-merge. Before pushing any commit to a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`, then set it again only after the affected reviews pass on the new commit. Otherwise GitHub merges the unreviewed commit as soon as `pr` passes.
+- Once the review round and its fix round are recorded, run `gh pr ready <PR>` and then `gh pr merge <PR> --auto --squash`. GitHub merges the PR when the `pr` check passes.
+- A push does not cancel auto-merge. Before pushing any commit to a PR that has auto-merge on, run `gh pr merge <PR> --disable-auto`, then set it again once the orchestrator has read the new commit. Otherwise GitHub merges it unread as soon as `pr` passes.
 - Wait for the required `pr` check, or, under [run-queue](../run-queue/SKILL.md), continue with the next issue and come back when the check finishes. Read the state with `gh pr view <PR> --json state,mergedAt,autoMergeRequest,statusCheckRollup`. Pending, missing output, or an interrupted run is `unknown`, never `pass`.
-- Repair an in-scope CI defect and push within the same three-attempt cap; repeat affected review axes.
+- Repair an in-scope CI defect and push within the same three-attempt cap. The repair needs no review.
 - On a failed check, conflict, or protection failure, leave the PR open and preserve exact state.
 - Never self-approve.
 - Never bypass protection, merge by hand while a check is pending, or use another merge method.
