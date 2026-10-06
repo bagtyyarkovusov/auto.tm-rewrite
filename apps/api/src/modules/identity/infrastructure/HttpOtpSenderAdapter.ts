@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { Injectable, Logger } from "@nestjs/common";
 
 import { renderCodeSms } from "../domain/codeSms";
@@ -14,15 +12,23 @@ export interface GatewaySmsRequest {
 
 /**
  * The hosting log outlives the 30 days the privacy policy gives sign-in code
- * records, so a log line carries only the last four digits plus a short hash
- * fingerprint: two phones that share their last four still produce different
- * lines, and neither form identifies a person. The mock-SMS runbook greps
- * this line; `staging-reviewer-flow-smoke.mjs signup-probe-request` prints
- * the fingerprint to grep for.
+ * records, so a log line carries only the last four digits of the phone and
+ * nothing else derived from it. A hash would not do: beside the last four
+ * digits, even a short digest picks one number out of the few thousand that
+ * share them.
  */
 function maskedPhone(phone: string): string {
-  const fingerprint = createHash("sha256").update(phone).digest("hex").slice(0, 6);
-  return `***${phone.slice(-4)} (fp ${fingerprint})`;
+  return `***${phone.slice(-4)}`;
+}
+
+/**
+ * Tells two requests apart when their phones share the last four digits. It
+ * is the start of the code request's own id, which the caller receives in the
+ * response as `requestId`, so the mock-SMS runbook and
+ * `staging-reviewer-flow-smoke.mjs signup-probe-request` can find their line.
+ */
+function requestTag(requestId: string): string {
+  return requestId.slice(0, 8);
 }
 
 @Injectable()
@@ -44,7 +50,9 @@ export class HttpOtpSenderAdapter implements OtpSenderPort {
 
   async send(sms: OtpSms): Promise<void> {
     if (this.driver === "mock") {
-      this.logger.log(`[mock] OTP for ${maskedPhone(sms.phone)}: ${sms.code}`);
+      this.logger.log(
+        `[mock] OTP for ${maskedPhone(sms.phone)} (req ${requestTag(sms.requestId)}): ${sms.code}`,
+      );
       return;
     }
 
