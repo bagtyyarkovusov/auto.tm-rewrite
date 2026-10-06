@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { ConfigService } from "@nestjs/config";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
@@ -9,16 +9,37 @@ import { SharpChatAttachmentCleaner } from "./SharpChatAttachmentCleaner";
 const KEY =
   "chat-attachments/7d0c1a52-3b64-4e8f-9a17-5c2e8f1b6d90/0b9f3c1e-2d4a-4c6b-8e1f-3a5b7c9d1e2f/original.jpg";
 
+const noSuchKey = () => Object.assign(new Error("NotFound"), { name: "NotFound" });
+const noSuchBucket = () =>
+  Object.assign(new Error("NoSuchBucket"), {
+    name: "NoSuchBucket",
+    $metadata: { httpStatusCode: 404 },
+  });
+
 /** An in-memory stand-in for the bucket the cleaner reads and writes. */
-function fakeBucket(initial: Record<string, Buffer>) {
+function fakeBucket(
+  initial: Record<string, Buffer>,
+  options: { headError?: Error; headContentLength?: number } = {},
+) {
   const objects = new Map(Object.entries(initial));
   const puts: PutObjectCommand[] = [];
+  const heads: string[] = [];
+  const gets: string[] = [];
   const reads: string[] = [];
   const send = async (command: unknown) => {
+    if (command instanceof HeadObjectCommand) {
+      expect(command.input.Bucket).toBe("chat-attachments");
+      heads.push(command.input.Key!);
+      if (options.headError) throw options.headError;
+      const body = objects.get(command.input.Key!);
+      if (!body) throw noSuchKey();
+      return { ContentLength: options.headContentLength ?? body.length };
+    }
     if (command instanceof GetObjectCommand) {
       expect(command.input.Bucket).toBe("chat-attachments");
+      gets.push(command.input.Key!);
       const body = objects.get(command.input.Key!);
-      if (!body) throw Object.assign(new Error("NoSuchKey"), { name: "NoSuchKey" });
+      if (!body) throw noSuchKey();
       return {
         ContentLength: body.length,
         Body: {
@@ -36,7 +57,7 @@ function fakeBucket(initial: Record<string, Buffer>) {
     }
     throw new Error("unexpected command");
   };
-  return { objects, puts, reads, send };
+  return { objects, puts, heads, gets, reads, send };
 }
 
 function cleanerWith(bucket: ReturnType<typeof fakeBucket>) {
@@ -132,11 +153,56 @@ describe("SharpChatAttachmentCleaner", () => {
     expect(bucket.puts).toHaveLength(0);
   });
 
-  it("reports a stored object over the 5 MB cap as invalid without reading it", async () => {
+  it("reports a stored object over the 5 MB cap as invalid without fetching its body", async () => {
     const bucket = fakeBucket({ [KEY]: Buffer.alloc(5 * 1024 * 1024 + 1) });
 
     await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
+    expect(bucket.gets).toEqual([]);
     expect(bucket.reads).toEqual([]);
+    expect(bucket.puts).toHaveLength(0);
+  });
+
+  it("fails instead of reporting missing when the bucket itself is gone", async () => {
+    const bucket = fakeBucket({}, { headError: noSuchBucket() });
+
+    await expect(cleanerWith(bucket).clean(KEY)).rejects.toThrow("NoSuchBucket");
+  });
+
+/** A valid JPEG larger than the 5 MB cap: noise compresses poorly even at quality 95. */
+async function noisyOverCapJpeg(): Promise<Buffer> {
+  const width = 2500;
+  const height = 2500;
+  const pixels = Buffer.alloc(width * height * 3);
+  let seed = 7;
+  for (let i = 0; i < pixels.length; i += 1) {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    pixels[i] = seed % 256;
+  }
+  const overCap = await sharp(pixels, { raw: { width, height, channels: 3 } })
+    .jpeg({ quality: 95 })
+    .toBuffer();
+  expect(overCap.length).toBeGreaterThan(5 * 1024 * 1024);
+  return overCap;
+}
+
+  it("rejects an object that grows past the cap between its HEAD and its body", async () => {
+    const overCap = await noisyOverCapJpeg();
+    const bucket = fakeBucket({ [KEY]: overCap }, { headContentLength: 100 });
+
+    await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
+    expect(bucket.puts).toHaveLength(0);
+  });
+
+  it("rejects an image with more pixels than the decode bound", async () => {
+    // 8000x7000 = 56 MP, over the 50 MP decode bound, in a small solid JPEG.
+    const huge = await sharp({
+      create: { width: 8000, height: 7000, channels: 3, background: { r: 1, g: 2, b: 3 } },
+    })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+    const bucket = fakeBucket({ [KEY]: huge });
+
+    await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
     expect(bucket.puts).toHaveLength(0);
   });
 });
