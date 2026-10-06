@@ -20,6 +20,9 @@ function controllerWithSpy() {
   return { controller, useCase };
 }
 
+// A valid brand id, so only the body can make the create-model row a 400.
+const BRAND_ID = "00000000-0000-4000-8000-000000000000";
+
 const req = { user: { sub: "admin-1" } } as unknown as FastifyRequest & { user?: { sub: string } };
 
 const routes = [
@@ -33,7 +36,7 @@ const routes = [
   },
   {
     name: "POST /admin/catalog/brands/:brandId/models",
-    call: (c: AdminCatalogController, body: unknown) => c.createModel("brand-1", body, req),
+    call: (c: AdminCatalogController, body: unknown) => c.createModel(BRAND_ID, body, req),
   },
   {
     name: "PATCH /admin/catalog/models/:id",
