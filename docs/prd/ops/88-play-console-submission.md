@@ -17,7 +17,7 @@ The founder accepted every recommendation below on 2026-10-06 (recorded on #685)
 - **Developer contact email:** `bagtyyarkowusow.dev@gmail.com` until AutoTM owns a domain (also the privacy and terms contact, PR 689).
 - **Approximate location:** declared: collected, not shared, optional, App functionality (the seller's region and city).
 - **In-app search history:** not collected. Recent searches stay on the device, and the API request log no longer keeps query strings. Subject to the Railway edge log check in checklist step 9.
-- **Device or other IDs (FCM token):** declared: collected, optional, App functionality.
+- **Device or other IDs (FCM token):** declared: collected, optional, App functionality, conditional on release audit item 4 (if the build fetches a token or installation ID before notification permission, declare it required).
 - **Fraud prevention, security, and compliance:** added as a purpose for Phone number and Other in-app messages (code rate limits, moderation of reported messages).
 - **Sign-in code records:** deleted after 30 days, and at purge; the privacy policy says so.
 - **Contact phone on kept Listings:** removed at purge.
@@ -63,7 +63,7 @@ What the copy is allowed to say, and where the code shows it:
 
 Do not claim: payments or deals in the app, dealers or dealer pages, VIN decoding or vehicle history ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)), inspection reports (the `InspectionInterestCta` component exists but no screen renders it), sharing (no share code exists in `apps/mobile`, [#495](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/495)), saved searches or alerts, a "phone verified" badge (no such string is in the mobile resources), profile photos (`avatarKey` is never set, per `schema.prisma`), or support chat.
 
-**Decided (founder, 2026-10-06):** the store title is `AutoTM – Car Marketplace`. The alternatives were the brand alone, `AutoTM`, and the brand with a descriptor, as drafted below. Google forbids keyword stuffing in titles; a short descriptor is allowed.
+**Decided (founder, 2026-10-06):** the store title is `AutoTM – Car Marketplace`. The alternative was the brand alone, `AutoTM`. Google forbids keyword stuffing in titles; a short descriptor is allowed.
 
 ### English
 
@@ -217,7 +217,7 @@ Deletion: Users can **request deletion**. In the app it is Cabinet > Profile > D
 
 **Decided (founder, 2026-10-06): Approximate location is declared: collected, not shared, optional, App functionality** (the seller's region and city). That matches the privacy policy, which lists "Location: the region and city you select" (`apps/web/src/app/[locale]/legal/content.ts`, line 33), and Google rejects mismatches between the privacy policy and the form. The alternative was not to declare it, treating the city as a fact about the car the seller describes rather than the User's location.
 
-**Founder decides: In-app search history.** Option A is to declare it as collected, optional, for App functionality, because search URLs stay in Railway logs. Option B is to stop logging query strings before submission (a code change on its own issue) and declare nothing. Recommended: B, then not declared. Until B ships, A is the truthful answer. **Decided: B, and B has shipped** (PR 690, completed by PR 692), so nothing is declared, subject to the Railway edge log check above.
+**In-app search history (decided, founder, 2026-10-06: not declared).** Option A is to declare it as collected, optional, for App functionality, because search URLs stay in Railway logs. Option B is to stop logging query strings before submission (a code change on its own issue) and declare nothing. Recommended: B, then not declared. Until B ships, A is the truthful answer. **Decided: B, and B has shipped** (PR 690, completed by PR 692), so nothing is declared, subject to the Railway edge log check above.
 
 **Decided (founder, 2026-10-06): Device or other IDs is optional, conditional on release audit item 4.** AutoTM registers the token only after the User grants notifications. By default, though, Firebase Messaging may fetch a token and installation ID when the app starts, whatever the permission. If the release audit shows a token or installation ID is fetched before the User grants notification permission, the answer must be "required" instead.
 
@@ -252,7 +252,7 @@ Blocked in `app.config.js`: `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `RECORD_AUD
 1. The merged manifest has none of `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_VISUAL_USER_SELECTED`, `RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`, `ACCESS_*_LOCATION`, `ACCESS_MEDIA_LOCATION`, or any `FOREGROUND_SERVICE*`.
 2. `com.google.android.gms.permission.AD_ID` is absent. Then the [advertising ID](https://support.google.com/googleplay/android-developer/answer/6048248) answer is "No". If it is present, find which library adds it and remove it with `tools:node="remove"` on its own issue, or answer truthfully.
 3. Name the library that adds `BIND_GET_INSTALL_REFERRER_SERVICE`.
-4. Record whether Firebase Messaging auto-init sends a token request before notification permission is granted. That settles the Device IDs optional question.
+4. Record whether Firebase Messaging auto-init sends a token request, or the Firebase SDK sends an installation ID, before notification permission is granted. That settles the Device IDs optional question.
 5. `android:allowBackup="true"` was the Expo default (#325, finding 1). It does not change a Data safety answer, because backup goes to the User's own Google account. **Resolved**: `allowBackup` is now `false` (founder decision, 2026-10-06).
 6. `expo-camera` is installed but no app code imports it (#325, finding 2). It adds `CAMERA`, which `expo-image-picker` needs anyway.
 
