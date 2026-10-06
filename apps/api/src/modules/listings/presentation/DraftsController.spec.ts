@@ -32,6 +32,27 @@ describe("DraftsController validate-step", () => {
     });
     expect(validateStep).not.toHaveBeenCalled();
   });
+
+  it("logs only the failing field names, never the request body", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const call = controller().validateStep(
+        "draft-1",
+        { step: "vin", payload: { note: "sentine1-body-value" } },
+        req,
+      );
+
+      await expect(call).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const logged = errorSpy.mock.calls.map((args) => String(args)).join("\n");
+      expect(logged).toContain("[Zod validation failed]");
+      expect(logged).toContain("step");
+      expect(logged).not.toContain("sentine1-body-value");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });
 
 describe("DraftsController listMyDrafts", () => {
