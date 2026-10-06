@@ -22,6 +22,13 @@ const trustFooterEmailPrefix: Record<Locale, string> = {
   en: "Questions? Reach us at ",
 };
 
+// Temporary: comes down with the demo Listings (runbook, "Demo inventory seed and removal").
+const trustDemoCreditsLabel: Record<Locale, string> = {
+  tk: "Synag bildirişleriniň suratlarynyň awtorlary",
+  ru: "Авторы фотографий демонстрационных объявлений",
+  en: "Photo credits for demo listings",
+};
+
 const trustBackHomeLabel: Record<Locale, string> = {
   tk: "Baş sahypa gaýdym",
   ru: "Вернуться на главную",
@@ -105,6 +112,14 @@ export default async function TrustPage({
             bagtyyarkowusow.dev@gmail.com
           </a>
           .
+        </p>
+        <p>
+          <Link
+            href={`/${pageLocale}/demo-credits`}
+            className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-brand-600 hover:decoration-brand-600"
+          >
+            {trustDemoCreditsLabel[pageLocale]}
+          </Link>
         </p>
         <p>
           <Link
