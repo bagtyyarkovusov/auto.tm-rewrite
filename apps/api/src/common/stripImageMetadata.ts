@@ -41,7 +41,9 @@ function jpegHasCommentSegment(input: Buffer): boolean {
 /**
  * Re-encodes an image upright with no metadata (EXIF, GPS, XMP, IPTC, JPEG
  * comment segments), within `maxBytes`. Quality steps down from the mobile
- * app's own 80. An animated WebP keeps all of its frames. Returns null for
+ * app's own 80. An animated WebP keeps all of its frames; sharp cannot rotate
+ * a multi-frame image, so an animation is stored as its pixels are and only
+ * its orientation tag goes. Returns null for
  * an image that carries none, so a second pass neither re-encodes it nor
  * changes its size. Throws when the bytes are not a readable image, or hold
  * more than `maxPixels` pixels when that is given.
@@ -69,7 +71,7 @@ export async function stripImageMetadata(
 
   let sizeBytes = 0;
   for (const quality of [80, 70, 60, 50]) {
-    const upright = open(animated).autoOrient();
+    const upright = animated ? open(true) : open(false).autoOrient();
     const encoded = await (format === "webp"
       ? upright.webp({ quality })
       : upright.jpeg({ quality, progressive: true })
