@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { Logger } from "@nestjs/common";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HttpOtpSenderAdapter } from "./HttpOtpSenderAdapter";
 
@@ -13,6 +14,7 @@ const sms = {
 describe("HttpOtpSenderAdapter", () => {
   const driver = process.env["SMS_DRIVER"];
   afterEach(() => {
+    vi.restoreAllMocks();
     if (driver === undefined) delete process.env["SMS_DRIVER"];
     else process.env["SMS_DRIVER"] = driver;
   });
@@ -34,5 +36,47 @@ describe("HttpOtpSenderAdapter", () => {
   it.each(["mock", "gateway"])("still only logs in %s mode", async (mode) => {
     process.env["SMS_DRIVER"] = mode;
     await expect(new HttpOtpSenderAdapter().send(sms)).resolves.toBeUndefined();
+  });
+
+  it.each(["mock", "gateway"])(
+    "writes only the last four digits of the phone number to the log in %s mode",
+    async (mode) => {
+      process.env["SMS_DRIVER"] = mode;
+      const lines: string[] = [];
+      vi.spyOn(Logger.prototype, "log").mockImplementation((line: unknown) => {
+        lines.push(String(line));
+      });
+
+      await new HttpOtpSenderAdapter().send(sms);
+
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toContain("***3456");
+      expect(lines[0]).not.toContain("+99365123456");
+      expect(lines[0]).not.toContain("65123456");
+    },
+  );
+
+  it("keeps the code in the mock log line, which is how a code is read where no SMS is sent", async () => {
+    process.env["SMS_DRIVER"] = "mock";
+    const lines: string[] = [];
+    vi.spyOn(Logger.prototype, "log").mockImplementation((line: unknown) => {
+      lines.push(String(line));
+    });
+
+    await new HttpOtpSenderAdapter().send(sms);
+
+    expect(lines).toEqual(["[mock] OTP for ***3456: 123456"]);
+  });
+
+  it("never writes the code to the log in gateway mode", async () => {
+    process.env["SMS_DRIVER"] = "gateway";
+    const lines: string[] = [];
+    vi.spyOn(Logger.prototype, "log").mockImplementation((line: unknown) => {
+      lines.push(String(line));
+    });
+
+    await new HttpOtpSenderAdapter().send(sms);
+
+    expect(lines.join("")).not.toContain("123456");
   });
 });
