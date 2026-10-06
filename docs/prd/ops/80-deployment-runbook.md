@@ -233,12 +233,17 @@ Reviewer production starts empty. The demo inventory fills it for store review a
 
 Run the reviewer scenario seed first. The demo inventory adds Listings around it and touches none of its rows. Run it on staging before production.
 
-Before the first run on staging or production, the founder records two decisions on issue #703:
+The founder recorded two decisions on issue #703 on 2026-10-06:
 
-1. **Photo licensing.** 295 of the 297 photographs are CC BY or CC BY-SA and must be credited. Either accept them and link `/<locale>/demo-credits` from the Trust or About page before seeding, or do not seed: the manifest holds only two CC0 photographs.
-2. **Egress.** The seed downloads from `upload.wikimedia.org` inside the API container. ADR-0075 approves fixture downloads for PR environments only, so this run needs the founder's approval as external service egress.
+1. **Photo licensing.** 295 of the 297 photographs are CC BY or CC BY-SA and must be credited. They are accepted with the credits page `/<locale>/demo-credits`, which the Trust page links. Keep both deployed while the demo Listings are public.
+2. **Egress.** The seed downloads from `upload.wikimedia.org` inside the API container. This is approved for the files the manifest lists, in a seed the founder runs or approves for that run. It is not a standing dependency: nothing else may download from Wikimedia.
 
-Both modes run inside the API container, where Postgres and MinIO are reachable on Railway's private network. The script refuses a public database proxy or a public MinIO host. It needs the catalog seeded and the media buckets created.
+Before seeding an environment, confirm:
+
+- The API's `/healthz` reports a commit at or after the merge of #704, so the container holds the script. Redeploy the API if it does not.
+- Web is deployed with `/<locale>/demo-credits`, and `/<locale>/trust` links to it.
+
+Both modes run inside the API container, where Postgres and MinIO are reachable on Railway's private network. The script refuses a public database proxy or a public MinIO host, and a `DATABASE_URL` that sets a `host` or `port` query parameter. It needs the catalog seeded and the media buckets created.
 
 Required environment:
 
@@ -254,9 +259,18 @@ railway ssh --service api --environment <env> -- sh -c \
   'cd /app && DEMO_INVENTORY_AUTHORIZATION=seed-demo-inventory node --import tsx packages/db/scripts/demo-inventory.ts --mode seed'
 ```
 
-The seed downloads each photograph from Wikimedia Commons (`upload.wikimedia.org`), one at a time, so the container needs outbound HTTPS and the first run takes a while. It prints one line per Listing and then the counts. A rerun converges: fixed ids, no duplicates, and it keeps each Listing's publication time and views. If it stops part way, run it again.
+The seed downloads each photograph from Wikimedia Commons (`upload.wikimedia.org`), one at a time, so the container needs outbound HTTPS and the first run takes a while. It prints one line per Listing and then the counts. A rerun converges: fixed ids, no duplicates, and it keeps each Listing's publication time and views. A rerun also makes every demo Listing active again, including one an admin blocked or removed since.
 
-On failure it prints `Demo inventory seed failed:` and a reason. A failed download names the Commons file and the HTTP status. Any other error is named by its class only, because a driver message can quote a connection string; read the service logs for more.
+If it stops part way, run it again: photographs already downloaded are kept and not asked for twice. If Commons keeps refusing (HTTP 429 or 403 on the same file after a second run), stop, run the removal below to clear the partial inventory, and report the printed reason.
+
+After a successful seed, check:
+
+1. The last line reads `Demo inventory converged 10 sellers, 47 Listings, 297 photos and 1485 stored objects`.
+2. The feed shows the Listings, and one Listing's gallery loads through the public media host.
+3. A demo seller shows a Display Name, not "Deleted user".
+4. `/<locale>/demo-credits` opens and lists the photographs.
+
+On failure it prints `Demo inventory seed failed:` and a reason. A failed download names the Commons file and the HTTP status, or says the answer was not an image. Any other error is named by its class only, because a driver message can quote a connection string; read the service logs for more.
 
 Nobody can sign in as a demo seller. Each holds one Sign-in Method, a phone tombstone of the form `demo-inventory:<user id>`, which is not a number and which the API never accepts for a sign-in code. It is stored because a User with no phone and no email is shown to buyers as a deleted User. Their Listings have calls off and chat on and carry no contact phone.
 
@@ -269,7 +283,7 @@ railway ssh --service api --environment <env> -- sh -c \
   'cd /app && DEMO_INVENTORY_AUTHORIZATION=remove-demo-inventory node --import tsx packages/db/scripts/demo-inventory.ts --mode remove'
 ```
 
-Removal deletes the demo sellers, their Listings and media rows, every stored object under `demo-inventory/` in `listing-photos`, and what reviewers and testers left on those Listings: favourites, Conversations with their messages, Inspection Interests, and Content Reports about a demo Listing, a demo seller or a message in one of those Conversations. It prints the counts. It touches nothing else, and a second run reports zeros.
+Removal deletes the demo sellers, their Listings and media rows, every stored object under `demo-inventory/` in `listing-photos`, and what reviewers and testers left on those Listings: favourites, Conversations with their messages and the photos sent in them (under `chat-attachments/<conversation id>/` in `chat-attachments`), Inspection Interests, and Content Reports about a demo Listing, a demo seller or a message in one of those Conversations. It prints the counts. It touches nothing else, and a second run reports zeros. If it fails while deleting stored objects, run it again: it finishes the deletion even when no demo seller is left.
 
 Removal refuses, deleting nothing, if a demo seller holds an email or any phone other than its tombstone. That account may now belong to a person; resolve it by hand before running removal again.
 
@@ -277,7 +291,7 @@ Removal checklist:
 
 1. Run the removal command and keep the printed counts.
 2. Run it again and confirm it reports zeros.
-3. Take the credits page down: delete `apps/web/src/app/[locale]/demo-credits` and any link to it, and deploy web.
+3. Take the credits page down: delete `apps/web/src/app/[locale]/demo-credits` and the Trust page's link to it (`trustDemoCreditsLabel` in `apps/web/src/app/[locale]/trust/page.tsx`, with its test), and deploy web.
 4. Audit rows and notification history that mention a demo Listing stay as history.
 
 ### Step 5 — Railway rollback and restore

@@ -1045,7 +1045,7 @@
           "sourcePage": "https://commons.wikimedia.org/wiki/File:Toyota_Camry_2.5_V_HEV_Hybrid_2025_(1).jpg",
           "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Toyota_Camry_2.5_V_HEV_Hybrid_2025_%281%29.jpg/1920px-Toyota_Camry_2.5_V_HEV_Hybrid_2025_%281%29.jpg",
           "license": "CC0",
-          "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
           "author": "Captainmorlypogi1959"
         },
         {
@@ -1081,7 +1081,7 @@
           "sourcePage": "https://commons.wikimedia.org/wiki/File:Toyota_Camry_2.5_V_HEV_Hybrid_2025_(2).jpg",
           "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Toyota_Camry_2.5_V_HEV_Hybrid_2025_%282%29.jpg/1920px-Toyota_Camry_2.5_V_HEV_Hybrid_2025_%282%29.jpg",
           "license": "CC0",
-          "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+          "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en",
           "author": "Captainmorlypogi1959"
         },
         {
@@ -2775,7 +2775,7 @@
       ]
     },
     "lancer-acg": {
-      "subject": "Beige Sedan gasoline manual CY 2008; Mitsubishi Lancer (2008) – left front view.jpg",
+      "subject": "Beige Sedan gasoline manual CY 2008; Mitsubishi Lancer (2008)",
       "photos": [
         {
           "view": "front-three-quarter",

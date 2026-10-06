@@ -140,8 +140,8 @@ function resolveCars(cars: readonly DemoCar[], catalog: Catalog): { resolved: Re
  *
  * Nobody can sign in as a demo seller: its only Sign-in Method is a phone tombstone the API never
  * accepts (`demoSellerPhone`). Their Listings carry no contact phone and have calls off and chat
- * on: under ADR-0081 a Listing may only show its seller's own verified number, and a demo seller
- * has none.
+ * on: under ADR-0081 a Listing may only show a number its seller proved can receive codes, and
+ * the tombstone is not a number.
  *
  * It writes no audit row, so removal has nothing outside the marker to find.
  */

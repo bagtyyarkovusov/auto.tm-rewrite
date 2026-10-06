@@ -44,11 +44,14 @@ describe("demo photo credits page", () => {
   });
 
   it.each([
-    ["ru", "Авторы фотографий"],
-    ["tk", "Suratlaryň awtorlary"],
-    ["en", "Photo credits"],
-  ])("credits every photo with its author, licence and source in %s", async (locale, title) => {
+    ["ru", "Авторы фотографий", "уменьшены и обрезаны", "той же лицензии"],
+    ["tk", "Suratlaryň awtorlary", "kiçeldildi we kesildi", "asyl suratlaryň ygtyýarnamasynyň"],
+    ["en", "Photo credits", "resized and cropped", "under the same licence"],
+  ])("credits every photo with its author, licence and source in %s", async (locale, title, changes, sameLicence) => {
     const html = await render(locale);
+    // CC BY asks for the changes to be stated; CC BY-SA for the adaptation to keep the licence.
+    expect(html).toContain(changes);
+    expect(html).toContain(sameLicence);
     expect(html).toContain(`<h1`);
     expect(html).toContain(title);
     expect(html).toContain("Wikimedia Commons");
@@ -57,6 +60,8 @@ describe("demo photo credits page", () => {
       expect(html).toContain(`href="${escapeHtml(photo.sourcePage)}"`);
       expect(html).toContain(escapeHtml(photo.author));
       expect(html).toContain(escapeHtml(photo.license));
+      expect(html).toContain(`href="${escapeHtml(photo.licenseUrl)}"`);
+      expect(photo.licenseUrl).toMatch(/^https:\/\/creativecommons\.org\//);
     }
   });
 

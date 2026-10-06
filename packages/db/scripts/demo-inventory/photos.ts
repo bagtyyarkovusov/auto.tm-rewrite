@@ -13,18 +13,37 @@ export interface PhotoSource {
 }
 
 /** Commons asks automated clients to identify themselves and to stay sequential. */
-const USER_AGENT =
-  "AutoTM-demo-inventory/1.0 (https://github.com/bagtyyarkovusov/auto.tm-rewrite; operator seed, one request at a time)";
+const USER_AGENT = "AutoTM-demo-inventory/1.0 (https://autotm.bagtyyar.dev; operator seed, one request at a time)";
 const PAUSE_MS = 500;
 const ATTEMPTS = 4;
+const TIMEOUT_MS = 60_000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** True when the bytes decode as an image. A 200 can still carry an error page or half a file. */
+async function isImage(body: Buffer): Promise<boolean> {
+  try {
+    await sharp(body).stats();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Downloads from Commons one photo at a time and keeps each file in `cacheDir`, so a rerun or a
- * retry after a failed upload asks Commons for nothing it already has.
+ * retry after a failed upload asks Commons for nothing it already has. Only an answer that decodes
+ * as an image is kept, so a rerun never reads a bad download back.
  */
-export function createCommonsPhotoSource(cacheDir: string): PhotoSource {
+export function createCommonsPhotoSource(
+  cacheDir: string,
+  options: {
+    fetch?: (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => Promise<Response>;
+    pauseMs?: number;
+  } = {},
+): PhotoSource {
+  const download = options.fetch ?? fetch;
+  const pauseMs = options.pauseMs ?? PAUSE_MS;
   return {
     async load(photo) {
       const cached = path.join(cacheDir, `${createHash("sha256").update(photo.url).digest("hex")}.jpg`);
@@ -33,25 +52,37 @@ export function createCommonsPhotoSource(cacheDir: string): PhotoSource {
       } catch {
         // Not cached yet.
       }
-      let status = 0;
+      let reason = "no response from Wikimedia Commons";
       for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-        // A network failure counts as status 0 and is retried like a 5xx.
-        const response = await fetch(photo.url, { headers: { "User-Agent": USER_AGENT } }).catch(() => null);
-        status = response?.status ?? 0;
-        if (response?.ok) {
-          const body = Buffer.from(await response.arrayBuffer());
+        // A network failure, a timeout and a body cut short count as status 0 and are retried like a 5xx.
+        let status = 0;
+        let body: Buffer | null = null;
+        try {
+          const response = await download(photo.url, {
+            headers: { "User-Agent": USER_AGENT },
+            signal: AbortSignal.timeout(TIMEOUT_MS),
+          });
+          status = response.status;
+          if (response.ok) body = Buffer.from(await response.arrayBuffer());
+        } catch {
+          status = 0;
+        }
+        if (body) {
+          if (!(await isImage(body))) {
+            reason = "the answer is not an image";
+            break;
+          }
           await mkdir(cacheDir, { recursive: true });
           await writeFile(cached, body);
-          await sleep(PAUSE_MS);
+          await sleep(pauseMs);
           return body;
         }
+        reason = status === 0 ? "no response from Wikimedia Commons" : `HTTP ${status}`;
         // 429 and 5xx are Commons asking for a slower client; anything else will not improve.
         if (status !== 0 && status !== 429 && status < 500) break;
-        await sleep(PAUSE_MS * 4 ** attempt);
+        if (attempt < ATTEMPTS) await sleep(pauseMs * 4 ** attempt);
       }
-      throw new DemoInventoryError(
-        `Failed to download ${photo.sourceFile}: ${status === 0 ? "no response from Wikimedia Commons" : `HTTP ${status}`}`,
-      );
+      throw new DemoInventoryError(`Failed to download ${photo.sourceFile}: ${reason}`);
     },
   };
 }

@@ -432,7 +432,7 @@ export const DEMO_CARS: readonly DemoCar[] = [
     citySlug: "turkmenabat",
     descriptionLocale: "tk",
     description:
-      "Täze Land Cruiser Prado 250, 2.8 dizel, VX. Dubaýdan getirildi, ýöremedik. Kepilnamasy bar. " +
+      "Täze Land Cruiser Prado 250, 2.8 dizel, VXR. Dubaýdan getirildi, ýöremedik. Kepilnamasy bar. " +
       "Bahasy dirhamda görkezildi, töleg manatda hem kabul edilýär.",
   },
   {
@@ -591,8 +591,8 @@ export const DEMO_CARS: readonly DemoCar[] = [
     description:
       "Lexus RX 500h F Sport Performance in Deep Blue Mica. 2.4 turbo hybrid, 371 hp, full-time AWD with rear " +
       "e-axle. Black 21-inch wheels, Mark Levinson sound, head-up display, panoramic roof, heated and ventilated " +
-      "seats. Under nine thousand kilometres, kept indoors. A showroom car that was never registered for road use " +
-      "abroad; full papers for registration here.",
+      "seats. About nine thousand kilometres, kept indoors. A dealer demonstration car, never privately owned; " +
+      "full papers for registration here, both keys and the service book.",
   },
   {
     ...used,

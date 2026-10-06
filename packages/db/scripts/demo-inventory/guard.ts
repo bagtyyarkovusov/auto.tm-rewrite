@@ -10,7 +10,9 @@
  *  - a deployed environment (`APP_ENV` production or staging) reached on Railway's private network,
  *    which is how the founder runs it inside the API container;
  *  - a developer's or test's own database and MinIO on a loopback host.
- * A public database proxy, a public MinIO host and every other origin are refused.
+ * A public database proxy, a public MinIO host and every other origin are refused. So is a database
+ * URL with a `host` or `port` query parameter: the driver lets those override the URL's own host,
+ * which would send a private-looking URL somewhere else.
  */
 export type DemoInventoryMode = "seed" | "remove";
 
@@ -37,10 +39,14 @@ function refuse(mode: DemoInventoryMode, reason: string): never {
   throw new Error(`Demo inventory ${mode} refused: ${reason}`);
 }
 
-function hostOf(mode: DemoInventoryMode, key: string, value: string): { protocol: string; hostname: string } {
+function hostOf(
+  mode: DemoInventoryMode,
+  key: string,
+  value: string,
+): { protocol: string; hostname: string; overridesHost: boolean } {
   try {
-    const { protocol, hostname } = new URL(value);
-    return { protocol, hostname };
+    const { protocol, hostname, searchParams } = new URL(value);
+    return { protocol, hostname, overridesHost: searchParams.has("host") || searchParams.has("port") };
   } catch {
     return refuse(mode, `${key} must be a valid URL`);
   }
@@ -72,6 +78,9 @@ export function assertDemoInventoryTarget(
   const database = hostOf(mode, "DATABASE_URL", databaseUrl);
   if (database.protocol !== "postgres:" && database.protocol !== "postgresql:") {
     refuse(mode, "DATABASE_URL must be a PostgreSQL URL");
+  }
+  if (database.overridesHost) {
+    refuse(mode, "DATABASE_URL must not set a host or port parameter");
   }
   const minio = hostOf(mode, "MINIO_ENDPOINT", minioEndpoint);
   for (const [key, hostname] of [

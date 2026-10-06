@@ -10,28 +10,28 @@ import { defaultLocale, locales } from "@/i18n/locales";
  *
  * The photos are Wikimedia Commons files under CC BY and CC BY-SA, which require naming the author
  * and the licence. `credits.json` is generated from the demo inventory photo manifest by
- * `pnpm --filter @auto-tm/db demo-inventory:credits`. Nothing links here until the founder
- * confirms the page, and it comes down with the demo content.
+ * `pnpm --filter @auto-tm/db demo-inventory:credits`. The Trust page links here, and both the page
+ * and that link come down with the demo content.
  */
 const copy: Record<Locale, { title: string; intro: string; by: string; licence: string }> = {
   ru: {
     title: "Авторы фотографий",
     intro:
-      "Демонстрационные объявления AutoTM показывают фотографии автомобилей из Wikimedia Commons. Ниже указаны автор, лицензия и исходный файл каждой фотографии. Фотографии уменьшены и обрезаны под формат объявления.",
+      "Демонстрационные объявления AutoTM показывают фотографии автомобилей из Wikimedia Commons. Ниже указаны автор, лицензия и исходный файл каждой фотографии. Фотографии уменьшены и обрезаны под формат объявления. Изменённые фотографии доступны на условиях той же лицензии, что и исходные.",
     by: "Автор",
     licence: "Лицензия",
   },
   tk: {
     title: "Suratlaryň awtorlary",
     intro:
-      "AutoTM-iň synag bildirişlerinde Wikimedia Commons-dan alnan awtoulag suratlary görkezilýär. Aşakda her suratyň awtory, ygtyýarnamasy we asyl faýly görkezilen. Suratlar bildirişiň ölçegine görä kiçeldildi we kesildi.",
+      "AutoTM-iň synag bildirişlerinde Wikimedia Commons-dan alnan awtoulag suratlary görkezilýär. Aşakda her suratyň awtory, ygtyýarnamasy we asyl faýly görkezilen. Suratlar bildirişiň ölçegine görä kiçeldildi we kesildi. Üýtgedilen suratlar asyl suratlaryň ygtyýarnamasynyň şertlerinde elýeterlidir.",
     by: "Awtor",
     licence: "Ygtyýarnama",
   },
   en: {
     title: "Photo credits",
     intro:
-      "AutoTM's demo listings show car photographs from Wikimedia Commons. Each photo's author, licence and source file is listed below. The photos were resized and cropped to fit a listing.",
+      "AutoTM's demo listings show car photographs from Wikimedia Commons. Each photo's author, licence and source file is listed below. The photos were resized and cropped to fit a listing. The adapted photos are available under the same licence as their originals.",
     by: "Author",
     licence: "Licence",
   },
