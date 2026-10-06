@@ -50,6 +50,12 @@ export const mobileText = {
 export const mobileGlassOpacity = {
   /** iOS below 26 and Android: no blur behind it, so it stays nearly opaque. */
   fallback: 0.94,
+  /**
+   * The tone laid inside the system Liquid Glass. The glass alone refracts
+   * whatever scrolls behind it straight through a label; this keeps text on
+   * it readable over a photo while the material still shows.
+   */
+  tint: 0.64,
   /** Reduce Transparency: fully opaque. */
   reduced: 1,
 } as const;

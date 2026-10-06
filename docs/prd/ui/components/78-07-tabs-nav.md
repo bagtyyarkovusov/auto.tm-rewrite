@@ -145,13 +145,14 @@ The mobile navigation chrome is four parts. Their geometry lives in `apps/mobile
 ### Tab bar (`AutoTmTabBar`)
 
 - A full capsule on the glass surface: 64 dp high (`mobileControl.tabBar`), full radius, 12 dp from the side edges, 4 dp of inner padding. Content scrolls underneath it.
-- The selected tab sits in a capsule concentric with the bar (4 dp inset on every side, full radius, `bg-foreground/10`). It slides between tabs with the `settle` spring. On Sell it fades out, because Sell carries its own red marker; when another tab is chosen it fades back in already in place.
+- The selected tab's icon sits on a tonal pill, 56 by 32 dp, full radius, `bg-foreground/10`: the same shape as Sell's red pill. The label sits free below it, so no label has to fit inside a container in any language. The pill slides between tabs with the `settle` spring. On Sell it fades out, because Sell carries its own red pill; when another tab is chosen it fades back in already in place.
 - Icons are 24 dp in a 28 dp row, with the label 2 dp below, so all five labels share one baseline. The selected icon cross-fades from outline to filled (heavier stroke for the magnifier, which has no inside) and swells once (`pop` spring). Unselected icons and labels use the secondary text colour.
 - Labels are `micro` (11/14), medium, and semibold when selected. A label keeps 6 dp from the edge of its slot and shrinks to 80% before it is cut, so "Halanlarym", "Избранное" and "Сообщения" stay whole on a 360 dp phone. Labels stop growing at 1.3 times the system font size, because the bar's height is fixed.
-- Sell is a 48 by 28 dp brand-red capsule with a white plus, in the same 28 dp icon row as its neighbours.
+- Sell is a 56 by 32 dp brand-red pill with a white plus, in the same 32 dp icon row as its neighbours.
+- On iOS 26 the system glass carries a tone inside it (`bg-glass/glass-tint`, 64%), so labels stay readable over a photo. Below and behind the bar the content fades into the page tone (`ScrollEdgeFade`), so no line of list text shows through or under the bar.
 - The unread badge on Messages is a 20 dp brand-red disc at the top right of the icon; it never changes the tab's size.
 - Every tab gives under a finger (scale 0.96, `press` duration) and is at least 64 dp tall and 65 dp wide.
-- Reduce Motion: the capsule, the icon and the press change at once, with no slide, fade or swell.
+- Reduce Motion: the pill, the icon and the press change at once, with no slide, fade or swell.
 
 ### Bottom position and safe areas
 

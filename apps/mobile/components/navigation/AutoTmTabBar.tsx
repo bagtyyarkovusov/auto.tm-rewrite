@@ -22,9 +22,12 @@ import {
   TAB_BAR_HEIGHT,
   TAB_BAR_PADDING,
   TAB_BAR_SIDE_MARGIN,
+  TAB_CONTENT_TOP,
   tabBarBottomOffset,
+  tabBarSpace,
   tabSlotWidth,
 } from "./tabBarHeight";
+import { ScrollEdgeFade } from "./ScrollEdgeFade";
 
 import { GlassSurface } from "@/components/ui/glass-surface";
 import { Icon } from "@/components/ui/icon";
@@ -70,11 +73,18 @@ function TabIcon({
   return (
     <CrossFade
       active={selected}
-      off={<Icon as={icon} size={24} strokeWidth={1.8} className="text-muted-foreground" />}
+      off={
+        <Icon
+          as={icon}
+          size={22}
+          strokeWidth={1.8}
+          className="text-muted-foreground"
+        />
+      }
       on={
         <Icon
           as={icon}
-          size={24}
+          size={22}
           strokeWidth={fills ? 1.8 : 2.4}
           className={cn("text-foreground", fills && "fill-foreground")}
         />
@@ -85,9 +95,9 @@ function TabIcon({
 
 /**
  * The five-tab bar (ADR-0051), drawn as a floating capsule on the glass
- * surface. Tab screens run underneath it. The selected tab sits in a capsule
- * that slides between tabs, with a filled icon and a heavier label; Sell is
- * the brand-red action, level with its neighbours.
+ * surface. Tab screens run underneath it. The selected tab's icon sits on a
+ * tonal pill that slides between tabs, with a filled icon and a heavier
+ * label; Sell is the same pill in brand red, level with its neighbours.
  * See docs/prd/ui/hifi/mobile-tabs-_layout.md.
  */
 export function AutoTmTabBar({
@@ -115,9 +125,11 @@ export function AutoTmTabBar({
   }, [messagesFocused, queryClient]);
 
   const currentRoute = state.routes[state.index];
-  const currentDescriptor = currentRoute ? descriptors[currentRoute.key] : undefined;
-  const tabBarStyle = currentDescriptor?.options
-    ?.tabBarStyle as { display?: string } | undefined;
+  const currentDescriptor = currentRoute
+    ? descriptors[currentRoute.key]
+    : undefined;
+  const tabBarStyle = currentDescriptor?.options?.tabBarStyle as
+    { display?: string } | undefined;
 
   if (tabBarStyle?.display === "none") {
     return <View style={{ height: 0 }} />;
@@ -128,146 +140,151 @@ export function AutoTmTabBar({
   const slot = tabSlotWidth(barWidth, TAB_CONFIG.length);
 
   return (
-    // Absolute, so tab screens run underneath; they keep `useTabBarSpace()` clear.
-    <View
-      pointerEvents="box-none"
-      style={{
-        position: "absolute",
-        left: TAB_BAR_SIDE_MARGIN + insets.left,
-        right: TAB_BAR_SIDE_MARGIN + insets.right,
-        bottom: tabBarBottomOffset(insets.bottom),
-      }}
-    >
-      <GlassSurface
-        accessibilityRole="tablist"
-        // items-stretch, not items-center: with align-items:center each tab
-        // Pressable sizes to its own content instead of filling the bar,
-        // leaving every tab target below Android's 48dp minimum.
-        className="flex-row items-stretch rounded-full"
-        style={{ height: TAB_BAR_HEIGHT, paddingHorizontal: TAB_BAR_PADDING }}
-        onLayout={(event: LayoutChangeEvent) =>
-          setBarWidth(event.nativeEvent.layout.width)
-        }
+    <>
+      <ScrollEdgeFade height={tabBarSpace(insets.bottom)} />
+      {/* Absolute, so tab screens run underneath; they keep `useTabBarSpace()` clear. */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          left: TAB_BAR_SIDE_MARGIN + insets.left,
+          right: TAB_BAR_SIDE_MARGIN + insets.right,
+          bottom: tabBarBottomOffset(insets.bottom),
+        }}
       >
-        {slot > 0 && focusedIndex >= 0 ? (
-          // The capsule is concentric with the bar: the same inset on every
-          // side, and a full radius inside a full radius.
-          <SlideIndicator
-            index={focusedIndex}
-            slot={slot}
-            // Sell keeps its own red capsule, so the sliding one steps aside.
-            visible={focusedName !== "sell"}
-            pointerEvents="none"
-            className="absolute"
-            style={{
-              left: TAB_BAR_PADDING,
-              top: TAB_BAR_PADDING,
-              bottom: TAB_BAR_PADDING,
-            }}
-          >
-            <View className="flex-1 rounded-full bg-foreground/10" />
-          </SlideIndicator>
-        ) : null}
-
-        {TAB_CONFIG.map((tab) => {
-          const route = state.routes.find((r) => r.name === tab.name);
-          if (!route) return null;
-
-          const isFocused = focusedName === tab.name;
-          const descriptor = descriptors[route.key];
-
-          const onPress = () => {
-            const event = navigation.emit({
-              type: "tabPress",
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.dispatch({
-                ...CommonActions.navigate(route.name, route.params),
-                target: state.key,
-              });
-            }
-          };
-
-          const onLongPress = () => {
-            navigation.emit({
-              type: "tabLongPress",
-              target: route.key,
-            });
-          };
-
-          const isSell = tab.name === "sell";
-          const badgeCount = tab.name === "chat" ? unreadCount : 0;
-          const accessibilityLabel =
-            badgeCount > 0
-              ? t("messagesTabUnread", { count: badgeCount })
-              : (descriptor?.options.tabBarAccessibilityLabel ?? tab.label);
-
-          return (
-            <PressableScale
-              key={tab.name}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isFocused }}
-              accessibilityLabel={accessibilityLabel}
-              testID={descriptor?.options.tabBarButtonTestID}
-              // The side padding is the room a label keeps from the capsule's edge.
-              className="flex-1 items-center justify-center gap-0.5 px-1.5"
-              onPress={onPress}
-              onLongPress={onLongPress}
+        <GlassSurface
+          accessibilityRole="tablist"
+          // items-stretch, not items-center: with align-items:center each tab
+          // Pressable sizes to its own content instead of filling the bar,
+          // leaving every tab target below Android's 48dp minimum.
+          className="flex-row items-stretch rounded-full"
+          style={{ height: TAB_BAR_HEIGHT, paddingHorizontal: TAB_BAR_PADDING }}
+          onLayout={(event: LayoutChangeEvent) =>
+            setBarWidth(event.nativeEvent.layout.width)
+          }
+        >
+          {slot > 0 && focusedIndex >= 0 ? (
+            // The marker is a pill behind the icon alone, the same shape as
+            // Sell's red one, so no label ever has to fit inside it.
+            <SlideIndicator
+              index={focusedIndex}
+              slot={slot}
+              // Sell keeps its own red pill, so the sliding one steps aside.
+              visible={focusedName !== "sell"}
+              pointerEvents="none"
+              className="absolute items-center"
+              style={{ left: TAB_BAR_PADDING, top: TAB_CONTENT_TOP }}
             >
-              {/* Every tab draws its icon in the same 28 dp row, so the labels share one baseline. */}
-              <View className="h-7 items-center justify-center">
-                {isSell ? (
-                  <View className="h-7 w-12 items-center justify-center rounded-full bg-primary">
-                    <Icon
-                      as={Plus}
-                      className="text-primary-foreground"
-                      size={20}
-                      strokeWidth={2.6}
-                    />
-                  </View>
-                ) : (
-                  <View>
-                    <TabIcon icon={tab.icon} fills={tab.fills} selected={isFocused} />
-                    {badgeCount > 0 ? (
-                      // Absolute, so the badge never changes the tab's size.
-                      <View
-                        testID="messages-tab-badge"
-                        className="absolute -right-3 -top-1.5 h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1"
-                      >
-                        <Text
-                          className="text-micro font-semibold text-primary-foreground"
-                          maxFontSizeMultiplier={LABEL_MAX_FONT_SCALE}
-                        >
-                          {badgeCount > 99 ? "99+" : badgeCount}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                )}
-              </View>
-              <Text
-                numberOfLines={1}
-                // A long label (Russian, Turkmen, a large system font) shrinks
-                // to its slot before it is cut.
-                adjustsFontSizeToFit
-                minimumFontScale={0.8}
-                maxFontSizeMultiplier={LABEL_MAX_FONT_SCALE}
-                className={cn(
-                  "self-stretch text-center text-micro",
-                  isFocused
-                    ? "font-semibold text-foreground"
-                    : "font-medium text-muted-foreground",
-                )}
+              <View className="h-8 w-14 rounded-full bg-foreground/10" />
+            </SlideIndicator>
+          ) : null}
+
+          {TAB_CONFIG.map((tab) => {
+            const route = state.routes.find((r) => r.name === tab.name);
+            if (!route) return null;
+
+            const isFocused = focusedName === tab.name;
+            const descriptor = descriptors[route.key];
+
+            const onPress = () => {
+              const event = navigation.emit({
+                type: "tabPress",
+                target: route.key,
+                canPreventDefault: true,
+              });
+
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.dispatch({
+                  ...CommonActions.navigate(route.name, route.params),
+                  target: state.key,
+                });
+              }
+            };
+
+            const onLongPress = () => {
+              navigation.emit({
+                type: "tabLongPress",
+                target: route.key,
+              });
+            };
+
+            const isSell = tab.name === "sell";
+            const badgeCount = tab.name === "chat" ? unreadCount : 0;
+            const accessibilityLabel =
+              badgeCount > 0
+                ? t("messagesTabUnread", { count: badgeCount })
+                : (descriptor?.options.tabBarAccessibilityLabel ?? tab.label);
+
+            return (
+              <PressableScale
+                key={tab.name}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isFocused }}
+                accessibilityLabel={accessibilityLabel}
+                testID={descriptor?.options.tabBarButtonTestID}
+                // Laid out from the top, so the icon row meets the sliding pill
+                // whatever height the label takes at a larger system font.
+                className="flex-1 items-center gap-1 px-0.5"
+                style={{ paddingTop: TAB_CONTENT_TOP }}
+                onPress={onPress}
+                onLongPress={onLongPress}
               >
-                {tab.label}
-              </Text>
-            </PressableScale>
-          );
-        })}
-      </GlassSurface>
-    </View>
+                {/* Every tab draws its icon in the same 32 dp row, so the labels share one baseline. */}
+                <View className="h-8 items-center justify-center">
+                  {isSell ? (
+                    <View className="h-8 w-14 items-center justify-center rounded-full bg-primary">
+                      <Icon
+                        as={Plus}
+                        className="text-primary-foreground"
+                        size={22}
+                        strokeWidth={2.6}
+                      />
+                    </View>
+                  ) : (
+                    <View>
+                      <TabIcon
+                        icon={tab.icon}
+                        fills={tab.fills}
+                        selected={isFocused}
+                      />
+                      {badgeCount > 0 ? (
+                        // Absolute, so the badge never changes the tab's size.
+                        <View
+                          testID="messages-tab-badge"
+                          className="absolute -right-3 -top-1.5 h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1"
+                        >
+                          <Text
+                            className="text-micro font-semibold text-primary-foreground"
+                            maxFontSizeMultiplier={LABEL_MAX_FONT_SCALE}
+                          >
+                            {badgeCount > 99 ? "99+" : badgeCount}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+                </View>
+                <Text
+                  numberOfLines={1}
+                  // A long label (Russian, Turkmen, a large system font) shrinks
+                  // to its slot before it is cut.
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                  maxFontSizeMultiplier={LABEL_MAX_FONT_SCALE}
+                  className={cn(
+                    "self-stretch text-center text-micro",
+                    isFocused
+                      ? "font-semibold text-foreground"
+                      : "font-medium text-muted-foreground",
+                  )}
+                >
+                  {tab.label}
+                </Text>
+              </PressableScale>
+            );
+          })}
+        </GlassSurface>
+      </View>
+    </>
   );
 }

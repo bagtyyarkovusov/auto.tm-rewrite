@@ -237,5 +237,14 @@ vi.mock("react-native-svg", async () => {
   const host = (name: string) =>
     ({ children, ...props }: { children?: unknown; [key: string]: unknown }) =>
       React.createElement(name, props, children as never);
-  return { default: host("Svg"), Svg: host("Svg"), Path: host("Path"), Circle: host("Circle") };
+  return {
+    default: host("Svg"),
+    Svg: host("Svg"),
+    Path: host("Path"),
+    Circle: host("Circle"),
+    Defs: host("Defs"),
+    LinearGradient: host("LinearGradient"),
+    Stop: host("Stop"),
+    Rect: host("Rect"),
+  };
 });

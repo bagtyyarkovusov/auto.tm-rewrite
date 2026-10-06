@@ -73,7 +73,11 @@ export const mobileTailwindTheme = {
   },
   boxShadow: { ...mobileElevation },
   // `bg-glass/glass`: the glass tone where no blur is drawn behind it.
-  opacity: { glass: String(mobileGlassOpacity.fallback) },
+  // `bg-glass/glass-tint`: the tone inside the system glass.
+  opacity: {
+    glass: String(mobileGlassOpacity.fallback),
+    "glass-tint": String(mobileGlassOpacity.tint),
+  },
   // `active:scale-press-control`, `active:scale-press-surface`.
   scale: Object.fromEntries(
     Object.entries(mobilePressScale).map(([k, v]) => [`press-${k}`, String(v)]),

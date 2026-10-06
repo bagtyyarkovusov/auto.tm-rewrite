@@ -27,7 +27,8 @@ type GlassSurfaceProps = ViewProps & {
  * bars, floating chips, controls on a photo), never on content.
  *
  * Three renderings, each meant to look intended:
- *  - iOS 26 and later: the system Liquid Glass (`expo-glass-effect`).
+ *  - iOS 26 and later: the system Liquid Glass (`expo-glass-effect`), with
+ *    a tone inside it so a label stays readable over whatever scrolls below.
  *  - Android and iOS below 26: a tuned, nearly opaque surface with a light
  *    edge and the floating shadow. There is no blur pass, so it costs nothing
  *    on a mid-range phone and text on it never depends on what scrolls below.
@@ -55,6 +56,7 @@ function GlassSurface({
         className={cn("overflow-hidden", className)}
         {...props}
       >
+        <View pointerEvents="none" className="absolute inset-0 bg-glass/glass-tint" />
         {children}
       </GlassView>
     );

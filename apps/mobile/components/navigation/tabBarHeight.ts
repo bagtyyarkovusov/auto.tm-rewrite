@@ -20,6 +20,12 @@ export const TAB_BAR_TOP_GAP = 8;
 /** Inner padding between the tab bar's edge and its first and last tab. */
 export const TAB_BAR_PADDING = 4;
 
+/**
+ * Where a tab's icon row starts, from the top of the bar. The 32 dp icon row,
+ * a 4 dp gap and the 14 dp label make 50 dp, centred in the 64 dp bar.
+ */
+export const TAB_CONTENT_TOP = 7;
+
 /** The least room a floating bar keeps from the edge below it. */
 export const FLOATING_BAR_MARGIN = 8;
 
