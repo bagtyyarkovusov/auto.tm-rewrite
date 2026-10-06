@@ -26,6 +26,7 @@ function fakeBucket(
   const heads: string[] = [];
   const gets: string[] = [];
   const reads: string[] = [];
+  const destroyed: string[] = [];
   const send = async (command: unknown) => {
     if (command instanceof HeadObjectCommand) {
       expect(command.input.Bucket).toBe("chat-attachments");
@@ -47,6 +48,9 @@ function fakeBucket(
             reads.push(command.input.Key!);
             return new Uint8Array(body);
           },
+          destroy: () => {
+            destroyed.push(command.input.Key!);
+          },
         },
       };
     }
@@ -57,7 +61,7 @@ function fakeBucket(
     }
     throw new Error("unexpected command");
   };
-  return { objects, puts, heads, gets, reads, send };
+  return { objects, puts, heads, gets, reads, destroyed, send };
 }
 
 function cleanerWith(bucket: ReturnType<typeof fakeBucket>) {
@@ -159,6 +163,19 @@ describe("SharpChatAttachmentCleaner", () => {
     await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
     expect(bucket.gets).toEqual([]);
     expect(bucket.reads).toEqual([]);
+    expect(bucket.puts).toHaveLength(0);
+  });
+
+  it("does not buffer an over-cap body when only the download reports its size", async () => {
+    const bucket = fakeBucket(
+      { [KEY]: Buffer.alloc(5 * 1024 * 1024 + 1) },
+      { headContentLength: 0 },
+    );
+
+    await expect(cleanerWith(bucket).clean(KEY)).resolves.toBe("invalid");
+    expect(bucket.gets).toEqual([KEY]);
+    expect(bucket.reads).toEqual([]);
+    expect(bucket.destroyed).toEqual([KEY]);
     expect(bucket.puts).toHaveLength(0);
   });
 

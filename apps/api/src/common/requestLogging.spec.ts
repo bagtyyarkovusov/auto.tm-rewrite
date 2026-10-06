@@ -29,6 +29,21 @@ class ProbeController {
   requestSignInCode() {
     return { ok: true };
   }
+
+  @Post("account-deletion/request")
+  requestDeletionCode() {
+    return { ok: true };
+  }
+
+  @Post("me/sign-in-methods/request")
+  requestSignInMethodCode() {
+    return { ok: true };
+  }
+
+  @Post("me/contact-phones/request")
+  requestContactPhoneCode() {
+    return { ok: true };
+  }
 }
 
 describe("API request logging", () => {
@@ -48,6 +63,7 @@ describe("API request logging", () => {
     headers: Record<string, string>,
     path = "/api/v1/me",
     method: "get" | "post" = "get",
+    clientIpHeader: string | null = "x-real-ip",
   ): Promise<string> {
     const lines: string[] = [];
     const out = new Writable({
@@ -58,7 +74,7 @@ describe("API request logging", () => {
     });
 
     const moduleRef = await Test.createTestingModule({
-      imports: [LoggerModule.forRoot({ pinoHttp: [requestLoggingOptions("info"), out] })],
+      imports: [LoggerModule.forRoot({ pinoHttp: [requestLoggingOptions("info", clientIpHeader), out] })],
       controllers: [ProbeController],
     }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
@@ -93,23 +109,40 @@ describe("API request logging", () => {
     expect(log).not.toContain("secret-refresh-cookie");
   });
 
-  it("keeps the request IP and its forwarding headers out of a sign-in code request's log line", async () => {
+  it.each([
+    "/api/v1/auth/otp/request",
+    "/api/v1/account-deletion/request",
+    "/api/v1/me/sign-in-methods/request",
+    "/api/v1/me/contact-phones/request",
+  ])("keeps the request IP and its forwarding headers out of the log line of %s", async (path) => {
     const log = await logOneRequest(
       {
         "x-real-ip": "sentine1-real-ip",
         "x-forwarded-for": "sentine1-forwarded-for",
         forwarded: "for=sentine1-forwarded",
       },
-      "/api/v1/auth/otp/request",
+      path,
       "post",
     );
 
-    expect(log).toContain("/api/v1/auth/otp/request");
+    expect(log).toContain(path);
     expect(log).not.toContain("sentine1-real-ip");
     expect(log).not.toContain("sentine1-forwarded-for");
     expect(log).not.toContain("sentine1-forwarded");
     expect(log).not.toContain("remoteAddress");
     expect(log).not.toContain("remotePort");
+  });
+
+  it("also drops the header the deployment is configured to read the client IP from", async () => {
+    const log = await logOneRequest(
+      { "cf-connecting-ip": "sentine1-configured-ip" },
+      "/api/v1/auth/otp/request",
+      "post",
+      "cf-connecting-ip",
+    );
+
+    expect(log).toContain("/api/v1/auth/otp/request");
+    expect(log).not.toContain("sentine1-configured-ip");
   });
 
   it("still logs the request IP for requests that issue no sign-in code", async () => {
