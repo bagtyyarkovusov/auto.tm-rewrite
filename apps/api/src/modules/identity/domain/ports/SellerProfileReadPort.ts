@@ -1,5 +1,6 @@
-export interface SellerProfile {
-  displayName: string | null;
+import type { PublicIdentity } from "./PublicIdentity";
+
+export interface SellerProfile extends PublicIdentity {
   memberSince: Date;
 }
 

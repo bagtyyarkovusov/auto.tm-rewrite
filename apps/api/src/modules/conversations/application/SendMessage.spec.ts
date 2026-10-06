@@ -8,6 +8,10 @@ import type { ConversationRepository } from "../domain/ports/ConversationReposit
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import type { IdentityCheckPort, IdentityReadPort } from "../../identity/identity.public";
 import type { MessageEventPublisher, MessageSentEvent } from "../domain/ports/MessageEventPublisher";
+import type {
+  ChatAttachmentCleaner,
+  ChatAttachmentCleanResult,
+} from "../domain/ports/ChatAttachmentCleaner";
 
 import { SendMessage } from "./SendMessage";
 import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
@@ -107,6 +111,10 @@ class FakeConversationRepository implements ConversationRepository {
   async countUnreadMessages(): Promise<number> {
     return 0;
   }
+
+  async countAllUnreadMessages(): Promise<number> {
+    return 0;
+  }
 }
 
 class FakeListingsReadPort implements ListingsReadPort {
@@ -147,6 +155,9 @@ class FakeListingsReadPort implements ListingsReadPort {
 }
 
 class FakeIdentityCheckPort implements IdentityCheckPort {
+  async holdsSignInPhone(): Promise<boolean> {
+    return false;
+  }
   suspendedUsers = new Set<string>();
 
   async isAdmin(): Promise<boolean> {
@@ -194,6 +205,23 @@ class FakeIdentityReadPort implements IdentityReadPort {
   }
 }
 
+const IMAGE_KEY = "chat-attachments/conv-1/0b9f3c1e-2d4a-4c6b-8e1f-3a5b7c9d1e2f/original.jpg";
+
+class FakeChatAttachmentCleaner implements ChatAttachmentCleaner {
+  result: ChatAttachmentCleanResult = "clean";
+  cleaned: string[] = [];
+  /** How many messages were stored when each clean ran. */
+  storedMessagesAtClean: number[] = [];
+
+  constructor(private readonly repo: FakeConversationRepository) {}
+
+  async clean(key: string): Promise<ChatAttachmentCleanResult> {
+    this.cleaned.push(key);
+    this.storedMessagesAtClean.push(this.repo.messages.length);
+    return this.result;
+  }
+}
+
 class FakeMessageEventPublisher implements MessageEventPublisher {
   events: MessageSentEvent[] = [];
 
@@ -208,6 +236,7 @@ function makeUseCase(
   identityCheck?: FakeIdentityCheckPort,
   identityRead?: FakeIdentityReadPort,
   messageEvents?: FakeMessageEventPublisher,
+  cleaner?: FakeChatAttachmentCleaner,
 ) {
   const effectiveIdentityCheck = identityCheck ?? new FakeIdentityCheckPort();
   const effectiveIdentityRead = identityRead ?? new FakeIdentityReadPort();
@@ -227,7 +256,10 @@ function makeUseCase(
     ),
     new ConversationMessageCommitter(effectiveRepo, effectiveEvents),
   );
-  return new SendMessage(workflow);
+  return new SendMessage(
+    workflow,
+    cleaner ?? new FakeChatAttachmentCleaner(effectiveRepo),
+  );
 }
 
 function seedConversation(
@@ -331,12 +363,12 @@ describe("SendMessage", () => {
       senderId: "buyer-1",
       conversationId: "conv-1",
       kind: "image",
-      metadata: { key: "chat/image.jpg", width: 800, height: 600 },
+      metadata: { key: IMAGE_KEY, width: 800, height: 600 },
     });
 
     expect(result.message.kind).toBe("image");
     expect(result.message.metadata).toEqual({
-      key: "chat/image.jpg",
+      key: IMAGE_KEY,
       width: 800,
       height: 600,
     });
@@ -424,6 +456,93 @@ describe("SendMessage", () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it("removes the image's metadata before the message is stored or announced", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const events = new FakeMessageEventPublisher();
+    const cleaner = new FakeChatAttachmentCleaner(repo);
+    const uc = makeUseCase(repo, listings, undefined, undefined, events, cleaner);
+
+    await uc.execute({
+      senderId: "buyer-1",
+      conversationId: "conv-1",
+      kind: "image",
+      metadata: { key: IMAGE_KEY },
+    });
+
+    expect(cleaner.cleaned).toEqual([IMAGE_KEY]);
+    expect(cleaner.storedMessagesAtClean).toEqual([0]);
+    expect(repo.messages).toHaveLength(1);
+    expect(events.events).toHaveLength(1);
+  });
+
+  it.each(["missing", "invalid"] as const)(
+    "refuses an image whose stored file is %s, and stores and announces nothing",
+    async (result) => {
+      seedConversation(repo);
+      seedListing(listings);
+      const events = new FakeMessageEventPublisher();
+      const cleaner = new FakeChatAttachmentCleaner(repo);
+      cleaner.result = result;
+      const uc = makeUseCase(repo, listings, undefined, undefined, events, cleaner);
+
+      const error = await uc
+        .execute({
+          senderId: "buyer-1",
+          conversationId: "conv-1",
+          kind: "image",
+          metadata: { key: IMAGE_KEY },
+        })
+        .then(
+          () => null,
+          (err: unknown) => err,
+        );
+
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getResponse()).toMatchObject({
+        code: "VALIDATION_FAILED",
+        details: { reason: CONVERSATION_ERROR_CODES.IMAGE_ATTACHMENT_NOT_USABLE },
+      });
+      expect(repo.messages).toHaveLength(0);
+      expect(events.events).toHaveLength(0);
+    },
+  );
+
+  it("refuses an image key that is not this conversation's attachment", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const cleaner = new FakeChatAttachmentCleaner(repo);
+    const uc = makeUseCase(repo, listings, undefined, undefined, undefined, cleaner);
+
+    await expect(
+      uc.execute({
+        senderId: "buyer-1",
+        conversationId: "conv-1",
+        kind: "image",
+        metadata: { key: IMAGE_KEY.replace("conv-1", "conv-2") },
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(cleaner.cleaned).toEqual([]);
+    expect(repo.messages).toHaveLength(0);
+  });
+
+  it("does not clean when the sender is not allowed to send", async () => {
+    seedConversation(repo);
+    seedListing(listings);
+    const cleaner = new FakeChatAttachmentCleaner(repo);
+    const uc = makeUseCase(repo, listings, undefined, undefined, undefined, cleaner);
+
+    await expect(
+      uc.execute({
+        senderId: "stranger-1",
+        conversationId: "conv-1",
+        kind: "image",
+        metadata: { key: IMAGE_KEY },
+      }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(cleaner.cleaned).toEqual([]);
+  });
+
   it.each(["sold", "archived"] as const)(
     "accepts a text, an image and a retried send when the listing is %s",
     async (status) => {
@@ -450,7 +569,7 @@ describe("SendMessage", () => {
         senderId: "seller-1",
         conversationId: "conv-1",
         kind: "image",
-        metadata: { key: "chat/image.jpg", width: 800, height: 600 },
+        metadata: { key: IMAGE_KEY, width: 800, height: 600 },
       });
 
       expect(retry.message.id).toBe(text.message.id);

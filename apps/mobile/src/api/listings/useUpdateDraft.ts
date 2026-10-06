@@ -8,6 +8,9 @@ export function useUpdateDraft() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // Offline, fail now instead of pausing: a paused save never settles, and the
+    // Sell wizard's ✕ awaits it. `useWizardAutosave` retries on reconnect itself.
+    networkMode: "always",
     mutationFn: ({
       draftId,
       payload,

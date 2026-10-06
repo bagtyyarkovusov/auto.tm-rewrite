@@ -79,7 +79,13 @@ describe("Account restore e2e", () => {
       extraPhones: [PHONE],
     });
     await prisma.user.create({
-      data: { id: USER_ID, phone: PHONE, phoneVerifiedAt: new Date() },
+      data: {
+        id: USER_ID,
+        phone: PHONE,
+        phoneVerifiedAt: new Date(),
+        nameNumber: 4821,
+        avatarIndex: 7,
+      },
     });
   });
 
@@ -160,9 +166,17 @@ describe("Account restore e2e", () => {
       .set("Authorization", `Bearer ${pending.accessToken}`)
       .expect(200);
 
-    expect(res.body).toMatchObject({ id: USER_ID, deletionScheduledAt: null });
+    expect(res.body).toMatchObject({
+      id: USER_ID,
+      deletionScheduledAt: null,
+      displayName: null,
+      nameNumber: 4821,
+      avatarIndex: 7,
+      avatarKey: null,
+    });
     const user = await prisma.user.findUnique({ where: { id: USER_ID } });
     expect(user!.deletionScheduledAt).toBeNull();
+    expect(user).toMatchObject({ nameNumber: 4821, avatarIndex: 7 });
     const republished = await prisma.listing.findUnique({ where: { id: active.id } });
     expect(republished).toMatchObject({ status: "active", archivedByDeletion: false });
     const untouched = await prisma.listing.findUnique({ where: { id: selfArchived.id } });

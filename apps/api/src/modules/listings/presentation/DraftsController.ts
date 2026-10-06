@@ -14,7 +14,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
-import { ZodError } from "zod";
+import type { ZodType, ZodTypeDef } from "zod";
 import { ListingsSchemas, WizardSchemas, AdminSchemas } from "@auto-tm/contracts";
 
 import { IDENTITY_CHECK_PORT, type IdentityCheckPort } from "../../identity/identity.public";
@@ -23,6 +23,7 @@ import { UpdateDraft } from "../application/UpdateDraft";
 import { DiscardDraft } from "../application/DiscardDraft";
 import { ListMyDrafts } from "../application/ListMyDrafts";
 import { ValidateDraftStep } from "../application/ValidateDraftStep";
+import { decodeListingsCursor } from "../application/decodeListingsCursor";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -49,21 +50,18 @@ export class DraftsController {
     }
   }
 
-  private parseOrThrow<T>(schema: { parse: (data: unknown) => T }, data: unknown): T {
-    try {
-      return schema.parse(data);
-    } catch (err) {
-      if (err instanceof ZodError) {
-        // eslint-disable-next-line no-console
-        console.error("[Zod validation failed]", err.flatten(), "body:", JSON.stringify(data));
-        throw new BadRequestException({
-          code: "VALIDATION_ERROR",
-          message: "Request validation failed",
-          details: err.flatten(),
-        });
-      }
-      throw err;
-    }
+  // safeParse, not `instanceof ZodError`: contract schemas may come from another
+  // zod instance, and a failed instanceof turned bad requests into a 500.
+  private parseOrThrow<T>(schema: ZodType<T, ZodTypeDef, unknown>, data: unknown): T {
+    const result = schema.safeParse(data);
+    if (result.success) return result.data;
+    // eslint-disable-next-line no-console
+    console.error("[Zod validation failed]", Object.keys(result.error.flatten().fieldErrors));
+    throw new BadRequestException({
+      code: "VALIDATION_ERROR",
+      message: "Request validation failed",
+      details: result.error.flatten(),
+    });
   }
 
   private userId(req: FastifyRequest): string {
@@ -162,7 +160,7 @@ export class DraftsController {
     const pagination = this.parseOrThrow(ListingsSchemas.FeedQuerySchema, query);
 
     const cursor = pagination.cursor
-      ? ListingsSchemas.decodeCursor(pagination.cursor)
+      ? decodeListingsCursor(pagination.cursor)
       : undefined;
 
     const result = await this.listMyDraftsUC.execute({

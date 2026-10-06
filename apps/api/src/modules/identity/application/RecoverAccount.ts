@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { UserRepository } from "../domain/ports/UserRepository";
-import type { AccountDeletionListingsPort } from "../domain/ports/AccountDeletionListingsPort";
+import type { AccountRestoreUnitOfWork } from "../domain/ports/AccountRestoreUnitOfWork";
 import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
-import { ACCOUNT_DELETION_LISTINGS_PORT } from "../domain/ports/AccountDeletionListingsPort";
+import { ACCOUNT_RESTORE_UNIT_OF_WORK } from "../domain/ports/AccountRestoreUnitOfWork";
 
 export interface RecoverAccountInput {
   userId: string;
@@ -13,17 +13,16 @@ export class RecoverAccount {
   constructor(
     @Inject(PrismaUserRepository)
     private readonly userRepo: UserRepository,
-    @Inject(ACCOUNT_DELETION_LISTINGS_PORT)
-    private readonly listingsPort: AccountDeletionListingsPort,
+    @Inject(ACCOUNT_RESTORE_UNIT_OF_WORK)
+    private readonly unitOfWork: AccountRestoreUnitOfWork,
   ) {}
 
   /**
-   * Restores a User whose deletion is scheduled. A User with no scheduled
-   * deletion is left as is, so a repeated restore succeeds.
-   *
-   * The two writes are not in one transaction, so the schedule is cleared
-   * last. Republishing is idempotent: if it fails, the schedule is still set
-   * and a retry republishes again; if the clear fails, the retry repeats both.
+   * Restores a User whose deletion is scheduled: republishes the Listings the
+   * deletion archived and clears the schedule in one unit of work, so either
+   * both writes commit or neither does and a retry starts from the same state.
+   * A User with no scheduled deletion is left as is, so a repeated restore
+   * succeeds without writing.
    */
   async execute(input: RecoverAccountInput): Promise<void> {
     const user = await this.userRepo.findById(input.userId);
@@ -34,7 +33,9 @@ export class RecoverAccount {
       return;
     }
 
-    await this.listingsPort.republishArchivedByDeletionListingsBySeller(input.userId);
-    await this.userRepo.clearDeletionSchedule(input.userId);
+    await this.unitOfWork.run(async (writes) => {
+      await writes.republishListingsArchivedByDeletion(input.userId);
+      await writes.clearDeletionSchedule(input.userId);
+    });
   }
 }

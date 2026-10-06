@@ -7,6 +7,8 @@ import {
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 
+import { stripImageMetadata } from "../../../common/stripImageMetadata";
+import { UPLOAD_CAPS } from "../domain/MediaUpload";
 import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerator";
 import type { Env } from "../../../env.schema";
 
@@ -76,7 +78,31 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
       throw new Error(`Empty body for ${originalKey}`);
     }
 
-    const buffer = Buffer.from(await original.Body.transformToByteArray());
+    // The original stays readable at a key derived from every variant URL,
+    // so one that carries metadata (EXIF, GPS, XMP, IPTC) or an orientation
+    // tag is re-encoded upright with none and written back in place. A clean
+    // original is left alone, so a retried publish neither re-encodes it
+    // again nor changes its size.
+    const isWebp = originalKey.endsWith(".webp");
+    const input = Buffer.from(await original.Body.transformToByteArray());
+    // Over the upload cap even at the lowest quality, this throws: the
+    // adoption guard re-checks the stored size on a retried publish.
+    const cleaned = await stripImageMetadata(
+      input,
+      isWebp ? "webp" : "jpeg",
+      UPLOAD_CAPS.image.maxSizeBytes,
+    );
+    const buffer = cleaned ?? input;
+    if (cleaned) {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: originalKey,
+          Body: buffer,
+          ContentType: isWebp ? "image/webp" : "image/jpeg",
+        }),
+      );
+    }
     const base = originalKey.replace(/\/original\.(jpg|webp|jpeg)$/, "");
 
     const variantKeys: Partial<Record<VariantSpec["name"], string>> = {};

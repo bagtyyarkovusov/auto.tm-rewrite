@@ -9,7 +9,7 @@
       "pnpm": "9.12.0",
       "env": {
         "EXPO_PUBLIC_PUSH_TRANSPORT": "fcm",
-        "EXPO_PUBLIC_APP_VERSION": "0.1.0",
+        "EXPO_PUBLIC_APP_VERSION": "2.0.0",
         "EXPO_PUBLIC_CUSTOM_SCHEME": "autotm"
       }
     },
@@ -43,7 +43,9 @@
       "extends": "base",
       "distribution": "store",
       "environment": "production",
+      "autoIncrement": true,
       "env": {
+        "ANDROID_APPLICATION_ID": "com.auto_tm.ynamly",
         "EXPO_PUBLIC_ENV": "production",
         "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm",
         "EXPO_PUBLIC_WEB_URL": "https://autotm.bagtyyar.dev"

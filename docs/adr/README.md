@@ -73,7 +73,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0061](0061-stored-tmt-listing-price-for-feed-sort-and-range.md) | Stored TMT listing price for feed sort and range filtering (amends ADR-0021 stored-column rejection) | Accepted | 2026-09-28 |
 | [0062](0062-the-human-in-the-loop-may-assign-both-review-axes-to-kimi-per-pull-request.md) | The human in the loop may assign both review axes to Kimi per pull request (amends ADR-0059 high-risk review-provider rule) | Superseded by ADR-0064 | 2026-09-28 |
 | [0063](0063-mobile-refreshes-an-expired-access-token-before-sending.md) | Mobile refreshes an expired access token before sending (extends ADR-0015 refresh contract) | Accepted; refresh-failure rule amended by ADR-0077 | 2026-09-28 |
-| [0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md) | Any supported client may review either axis, and issues have no concurrency limit (supersedes ADR-0062 and the review-provider and in-flight rules of ADR-0058/0059) | Accepted | 2026-09-28 |
+| [0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md) | Any supported client may review either axis, and issues have no concurrency limit (supersedes ADR-0062 and the review-provider and in-flight rules of ADR-0058/0059) | Accepted; reviewer eligibility amended by ADR-0082 for sliced issues | 2026-09-28 |
 | [0065](0065-small-changes-skip-the-issue-ceremony.md) | Small changes skip the issue ceremony (amends ADR-0058 re-review and separate-axes rules, ADR-0064's both-verdicts rule, and one-branch-per-issue for batch PRs; extends ADR-0058 with no-issue PRs) | Accepted | 2026-09-28 |
 | [0066](0066-retire-sandcastle-queue-agents-replace-unattended-dispatch.md) | Retire Sandcastle; queue agents replace unattended dispatch (supersedes ADR-0028 and ADR-0033; amends ADR-0041's `.sandcastle/` retention and ADR-0058's Sandcastle boundaries) | Accepted | 2026-09-29 |
 | [0067](0067-targeted-intermediate-reviews-and-final-verification.md) | Target intermediate reviews and verify the final commit (amends ADR-0058's checkpoint and review procedure) | Accepted | 2026-09-29 |
@@ -91,6 +91,9 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0079](0079-server-recorded-upload-provenance-for-listing-media.md) | Server-recorded upload provenance for Listing media (amends ADR-0008's upload path) | Accepted | 2026-10-02 |
 | [0080](0080-a-new-car-skips-the-damaged-question.md) | A New car skips the "Damaged / needs repair" question (amends ADR-0052's required-to-publish rule) | Accepted | 2026-10-02 |
 | [0081](0081-contact-phone-confirmation-api-for-listings.md) | Contact phone confirmation API for Listings (complements ADR-0056 under ADR-0054's code budgets; amends ADR-0056's editing rule) | Accepted | 2026-10-03 |
+| [0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md) | An issue may carry up to three ordered slices (amends ADR-0064 reviewer eligibility for sliced issues; complements ADR-0065, ADR-0067 and ADR-0070) | Accepted | 2026-10-05 |
+| [0083](0083-a-standards-reviewer-may-commit-small-fixes.md) | A Standards reviewer may commit small fixes, trial on Claude Code hosts (amends the read-only reviewer rule of ADR-0058, ADR-0064 and ADR-0069; bounded by ADR-0065 and ADR-0069) | Accepted | 2026-10-05 |
+| [0084](0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md) | Related issues of one parent may ship on one integration branch and pull request (amends the one-PR-per-issue rule of ADR-0058, ADR-0064, ADR-0069 and ADR-0082, and ADR-0069's Branch handoff, for grouped issues) | Accepted | 2026-10-05 |
 
 ## Per-app ADRs
 

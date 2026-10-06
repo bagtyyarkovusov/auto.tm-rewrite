@@ -10,6 +10,7 @@ import { usePeerName } from "../usePeerName";
 import { ConversationMenuSheet } from "./ConversationMenuSheet";
 import { PeerPresenceLabel, type PeerPresence } from "./PeerPresenceLabel";
 
+import { PublicUserAvatar } from "@/components/identity/PublicUserAvatar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +27,8 @@ interface ConversationHeaderProps {
   isMuted: boolean;
   isBlocked: boolean;
   muteDisabled?: boolean;
+  /** Reports the header's measured height, which grows with the text size. */
+  onHeightChange?: (height: number) => void;
   onBack: () => void;
   onToggleMute: () => void;
   /** Omitted when reporting is switched off; the menu then has no Report. */
@@ -42,6 +45,7 @@ export function ConversationHeader({
   isMuted,
   isBlocked,
   muteDisabled = false,
+  onHeightChange,
   onBack,
   onToggleMute,
   onReport,
@@ -62,7 +66,9 @@ export function ConversationHeader({
   };
 
   return (
-    <View className="flex-row items-center gap-2 px-2 py-2 border-b border-border bg-background">
+    <View
+      onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}
+      className="flex-row items-center gap-2 px-2 py-2 border-b border-border bg-background">
       <Button
         variant="ghost"
         className="h-11 w-11"
@@ -75,15 +81,7 @@ export function ConversationHeader({
 
       {conversation && peerName ? (
         <>
-          <View
-            className="h-9 w-9 items-center justify-center rounded-full bg-muted"
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-          >
-            <Text className="text-base font-bold text-foreground">
-              {peerName.charAt(0).toLocaleUpperCase(i18n.language)}
-            </Text>
-          </View>
+          <PublicUserAvatar size={36} user={conversation.peer} />
           <View className="flex-1 min-w-0">
             <View className="flex-row items-center gap-1.5">
               <Text

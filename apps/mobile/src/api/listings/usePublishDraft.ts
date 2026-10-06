@@ -19,6 +19,9 @@ export function usePublishDraft() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // Offline, fail now instead of pausing: a paused publish never settles, and
+    // Check and publish would read "Publishing..." until the network came back.
+    networkMode: "always",
     mutationFn: (draftId: string) =>
       apiClient.post(
         `/listings/drafts/${draftId}/publish`,

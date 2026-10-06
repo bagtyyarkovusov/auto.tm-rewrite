@@ -69,6 +69,12 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
     displayName: string;
     role: "buyer" | "seller";
   }): Promise<ReviewerScenarioUser> {
+    // Fixed per role, not left to the column's random default, so the
+    // reviewer accounts look the same after every run.
+    const identity =
+      input.role === "seller"
+        ? { nameNumber: 2057, avatarIndex: 2 }
+        : { nameNumber: 4821, avatarIndex: 7 };
     return this.prisma.user.upsert({
       where: { id: input.id },
       update: {
@@ -77,6 +83,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         email: input.email,
         emailVerifiedAt: new Date(),
         displayName: input.displayName,
+        ...identity,
         role: input.role,
         deletionScheduledAt: null,
       },
@@ -87,6 +94,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         email: input.email,
         emailVerifiedAt: new Date(),
         displayName: input.displayName,
+        ...identity,
         role: input.role,
       },
       select: { id: true, phone: true, email: true, role: true },

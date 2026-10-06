@@ -44,10 +44,12 @@ describe("useAuth", () => {
     const { result } = renderHook(() => useAuth());
 
     await waitFor(() => expect(result.current.isAuthenticated).toBe(false));
+    expect(result.current.userId).toBeNull();
 
     sessionListener?.();
 
     await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+    expect(result.current.userId).toBe("user-abc");
   });
 
   // The sell tab reads `phone` for the Step 7 contact placeholder. Signing in
@@ -69,13 +71,31 @@ describe("useAuth", () => {
 
     await waitFor(() => expect(result.current.isAuthenticated).toBe(false));
     expect(result.current.phone).toBe("");
+    expect(result.current.userId).toBeNull();
 
     sessionListener?.();
 
     await waitFor(() => expect(result.current.phone).toBe("+99361000000"));
+    expect(result.current.userId).toBe("user-abc");
   });
 
-  it("clears the phone when the session goes away", async () => {
+  it("updates the User identity when an authenticated session changes", async () => {
+    const session = { user: { id: "user-abc", phone: "+99361000000" } };
+    mockLoadAuthSession.mockResolvedValueOnce(session).mockResolvedValueOnce({
+      ...session,
+      user: { ...session.user, id: "user-def" },
+    });
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.userId).toBe("user-abc"));
+
+    sessionListener?.();
+
+    await waitFor(() => expect(result.current.userId).toBe("user-def"));
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.phone).toBe("+99361000000");
+  });
+
+  it("loads the User identity and clears it with the phone when the session goes away", async () => {
     mockLoadAuthSession
       .mockResolvedValueOnce({
         accessToken: "token-123",
@@ -93,10 +113,12 @@ describe("useAuth", () => {
     const { result } = renderHook(() => useAuth());
 
     await waitFor(() => expect(result.current.phone).toBe("+99361000000"));
+    expect(result.current.userId).toBe("user-abc");
 
     sessionListener?.();
 
     await waitFor(() => expect(result.current.phone).toBe(""));
     expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.userId).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ import {
 import { outgoingStatus } from "../outgoingStatus";
 import { usePeerName } from "../usePeerName";
 
+import { PublicUserAvatar } from "@/components/identity/PublicUserAvatar";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
@@ -135,28 +136,37 @@ export function ConversationListItem({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <View
-        testID="conversation-row-thumbnail"
-        className={cn("w-16 h-16 rounded-xl bg-muted overflow-hidden", isClosed && "opacity-60")}
-      >
-        {imageUrl && !imageFailed ? (
-          <Image
-            source={{ uri: imageUrl }}
-            className="w-full h-full"
-            contentFit="cover"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <View testID="conversation-row-placeholder" className="w-full h-full items-center justify-center">
-            <Icon as={Car} className="size-6 text-muted-foreground" />
-          </View>
-        )}
+      <View className="w-16 h-16">
+        <View
+          testID="conversation-row-thumbnail"
+          className={cn("w-16 h-16 rounded-xl bg-muted overflow-hidden", isClosed && "opacity-60")}
+        >
+          {imageUrl && !imageFailed ? (
+            <Image
+              source={{ uri: imageUrl }}
+              className="w-full h-full"
+              contentFit="cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <View testID="conversation-row-placeholder" className="w-full h-full items-center justify-center">
+              <Icon as={Car} className="size-6 text-muted-foreground" />
+            </View>
+          )}
+        </View>
+        {/* Outside the clipped, dimmed thumbnail; the padding is the ring. */}
+        <View
+          testID="conversation-row-peer-avatar"
+          className="absolute -bottom-1 -right-1 rounded-full bg-background p-0.5"
+        >
+          <PublicUserAvatar size={24} user={conversation.peer} />
+        </View>
       </View>
 
       <View className="flex-1 gap-0.5 min-w-0">
         <View className="flex-row items-center gap-2">
           <View className="flex-row items-center gap-1 flex-1 min-w-0">
-            <Text className="text-base font-semibold text-foreground shrink" numberOfLines={1}>
+            <Text className="text-base font-semibold text-foreground shrink" numberOfLines={1} ellipsizeMode="tail">
               {peerName}
             </Text>
             {conversation.mutedAt ? (

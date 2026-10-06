@@ -433,6 +433,7 @@ The user sees a full-screen modal route with the red SVG logo, a direct title, o
 - Wrong OTP: cells shake (Animated `translateX` sequence), clear all digits, refocus first cell.
 - Expired OTP: show expired copy, keep "Change number" available, enable resend when backend allows.
 - Rate-limited phone request: keep phone entry in place, disable CTA, show countdown using `Button` `disabled` state.
+- Daily Sign-in Code limit on Resend: show the daily-limit message, disable the code cells, hide Resend and the dev code, and show one `Button` `variant="link"` labelled Contact support that opens Help. This is the code screen's only support link ([#353 founder answer 1](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/353#issuecomment-5947334041)).
 - Retry behavior: retry in place after countdown or when network returns.
 
 ### Offline
@@ -509,6 +510,8 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 | `auth.otp.codeLabel` | Код из SMS | SMS kody | SMS code |
 | `auth.otp.resendIn` | Отправить код повторно через {seconds} с | Kody {seconds} sekuntdan gaýtadan iber | Resend code in {seconds}s |
 | `auth.otp.resend` | Отправить код повторно | Kody gaýtadan iber | Resend code |
+| `auth.otp.dailyCodeLimit` | За 24 часа запрошено слишком много кодов. Попробуйте позже. | 24 sagatda gaty köp kod soraldy. Soňrak synanyşyň. | Too many codes requested for this destination in 24 hours. Try again later. |
+| `auth.otp.contactSupport` | Связаться с поддержкой | Goldaw bilen habarlaş | Contact support |
 | `auth.otp.devCode` | Код для разработки: {code} | Işläp düzmek üçin kod: {code} | Dev code: {code} |
 | `auth.error.phoneFormat` | Введите номер в формате +993 6X XX-XX-XX. | Belgini +993 6X XX-XX-XX görnüşinde giriziň. | Enter a number in the format +993 6X XX-XX-XX. |
 | `auth.error.rateLimited` | Слишком много попыток. Попробуйте через {minutes} мин. | Synanyşyk köp. {minutes} minutdan soň synanyşyň. | Too many attempts. Try again in {minutes} minutes. |
@@ -574,7 +577,6 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 ## Open questions / decisions deferred to engineer
 
 - Decide during implementation whether the logo is imported through an SVG transformer or wrapped in a small `react-native-svg` component.
-- Decide later, after testing/beta data, whether OTP needs a "Having trouble?" support link. S2 keeps it out.
 - Decide in legal review whether implicit agreement copy is sufficient or explicit recorded acceptance is required.
 
 ## Self-check
@@ -583,7 +585,7 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 - No confirm screen before SMS request.
 - No notification prompt during OTP.
 - No legal checkbox in S2.
-- No support/help clutter in S2.
+- No support link on the code screen except Contact support at the daily Sign-in Code limit, which opens Help.
 - No fake urgency or promotional copy.
 - Error color uses `destructive` semantic token (rose), not the brand red `primary`.
 - Mobile touch targets follow the accessibility minimum.

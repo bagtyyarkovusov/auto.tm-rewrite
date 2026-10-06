@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach } from "vitest";
 import type { IdentityCheckPort } from "../domain/ports/IdentityCheckPort";
 
 class FakeIdentityCheckAdapter implements IdentityCheckPort {
+  async holdsSignInPhone(): Promise<boolean> {
+    return false;
+  }
   private users = new Map<string, string>();
 
   setRole(userId: string, role: string): void {

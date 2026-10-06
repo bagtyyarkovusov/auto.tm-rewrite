@@ -37,18 +37,33 @@ const routerMock = vi.hoisted(() => ({
   dismissTo: vi.fn(), dismissAll: vi.fn(), canDismiss: vi.fn(() => true),
 }));
 const routeParams = vi.hoisted(() => ({} as Record<string, string>));
+// Whether the rendered screen is the focused one; a spec sets `focused` to false
+// for a screen that another screen covers.
+const screenFocus = vi.hoisted(() => ({ focused: true }));
+// The options the rendered screen last gave its own `<Stack.Screen />`, such as
+// `gestureEnabled`; the native stack that applies them is not rendered here.
+const screenOptions = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
 vi.mock("expo-router", () => ({
   router: routerMock, useRouter: () => routerMock,
   useLocalSearchParams: () => routeParams,
   useFocusEffect: vi.fn(),
+  useIsFocused: () => screenFocus.focused,
+  Stack: {
+    Screen: ({ options }: { options?: Record<string, unknown> }) => {
+      screenOptions.current = options ?? {};
+      return null;
+    },
+  },
 }));
 beforeEach(() => {
   scrollRequests.length = 0;
+  screenFocus.focused = true;
+  screenOptions.current = {};
   Object.values(routerMock).forEach((mock) => mock.mockClear());
   Object.keys(routeParams).forEach((key) => Reflect.deleteProperty(routeParams, key));
 });
 
-export { routerMock, routeParams };
+export { routerMock, routeParams, screenFocus, screenOptions };
 
 // The installed Slot distribution retains JSX in .mjs. Its clone behavior is
 // enough for this host adapter; native primitive overlays are mocked per spec.
@@ -97,6 +112,7 @@ vi.mock("@rn-primitives/avatar", async () => {
 // Expo modules that load `expo-modules-core`, which needs the native runtime.
 // A spec that exercises one of them mocks it itself and wins over these stubs.
 vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => false), openURL: vi.fn(async () => {}) }));
+vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn(async () => true) }));
 vi.mock("expo-secure-store", () => ({
   getItemAsync: vi.fn(async () => null),
   setItemAsync: vi.fn(async () => {}),
@@ -141,3 +157,13 @@ vi.mock("@rn-primitives/portal", () => ({
 vi.mock("react-native-worklets", () => ({
   scheduleOnRN: (fn: (...args: unknown[]) => void, ...args: unknown[]) => fn(...args),
 }));
+// react-native-svg draws through native views. The stub keeps each element and
+// its props as a host node (`Svg`, `Path`, `Circle`), so a spec can read the
+// geometry and colours a component supplied. Nothing is drawn.
+vi.mock("react-native-svg", async () => {
+  const React = await import("react");
+  const host = (name: string) =>
+    ({ children, ...props }: { children?: unknown; [key: string]: unknown }) =>
+      React.createElement(name, props, children as never);
+  return { default: host("Svg"), Svg: host("Svg"), Path: host("Path"), Circle: host("Circle") };
+});

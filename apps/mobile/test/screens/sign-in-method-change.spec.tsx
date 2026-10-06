@@ -7,7 +7,7 @@ import SignInMethodTakenScreen from "../../app/account/sign-in-method-taken";
 import VerifySignInMethodScreen from "../../app/account/verify-sign-in-method";
 import type { CodeEntryForm } from "../../components/auth/CodeEntryForm";
 import { ApiError } from "../../src/api/client";
-import { signInMethodNoticeStore } from "../../src/auth/signInMethodNotice";
+import { profileNoticeStore } from "../../src/identity/profileNotice";
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 
 type CodeEntryProps = ComponentProps<typeof CodeEntryForm>;
@@ -16,12 +16,14 @@ type CodeEntryProps = ComponentProps<typeof CodeEntryForm>;
 vi.stubGlobal("__DEV__", false);
 
 const state = vi.hoisted(() => ({
+  isAuthenticated: true as boolean | null,
   me: { phone: "+99365123456" as string | null, email: "aman@example.com" as string | null },
   verify: vi.fn(),
   requestCode: vi.fn(),
   codeEntry: null as CodeEntryProps | null,
 }));
 
+vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: state.isAuthenticated }) }));
 vi.mock("../../src/api/identity/useMe", () => ({ useMe: () => ({ data: state.me }) }));
 vi.mock("../../src/api/identity/useVerifySignInMethodChange", () => ({
   useVerifySignInMethodChange: () => ({ mutateAsync: state.verify }),
@@ -38,11 +40,12 @@ vi.mock("../../components/auth/CodeEntryForm", () => ({
 }));
 
 beforeEach(() => {
+  state.isAuthenticated = true;
   state.me = { phone: "+99365123456", email: "aman@example.com" };
   state.verify.mockReset();
   state.requestCode.mockReset().mockResolvedValue({ resendInSeconds: 60 });
   state.codeEntry = null;
-  signInMethodNoticeStore.setState({ notice: null });
+  profileNoticeStore.setState({ notice: null });
 });
 
 function deferred<T>() {
@@ -68,14 +71,14 @@ describe("Confirming a new Sign-in Method", () => {
     const { verify } = openVerify({ method: "phone", destination: "+99361000000", kind: "change" });
     await act(() => verify("123456"));
     expect(routerMock.dismissTo).toHaveBeenCalledWith("/profile");
-    expect(signInMethodNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
+    expect(profileNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
   });
 
   it("says an email was added", async () => {
     state.verify.mockResolvedValue({});
     const { verify } = openVerify({ method: "email", destination: "new@example.com", kind: "add" });
     await act(() => verify("123456"));
-    expect(signInMethodNoticeStore.getState().notice).toEqual({ kind: "added", value: "n•••@example.com" });
+    expect(profileNoticeStore.getState().notice).toEqual({ kind: "added", value: "n•••@example.com" });
   });
 
   it("opens the refused state on SIGN_IN_METHOD_TAKEN instead of an inline error", async () => {
@@ -85,7 +88,7 @@ describe("Confirming a new Sign-in Method", () => {
     await act(() => verify("123456"));
     expect(routerMock.dismissTo).toHaveBeenCalledWith("/profile");
     expect(routerMock.push).toHaveBeenCalledWith({ pathname: "/account/sign-in-method-taken", params: { method: "email" } });
-    expect(signInMethodNoticeStore.getState().notice).toBeNull();
+    expect(profileNoticeStore.getState().notice).toBeNull();
   });
 
   it("leaves other errors to the code form", async () => {
@@ -117,7 +120,7 @@ describe("Confirming a new Sign-in Method", () => {
     await act(() => result);
     // Not pulled back to Profile; Profile says what changed when they reach it.
     expect(routerMock.dismissTo).not.toHaveBeenCalled();
-    expect(signInMethodNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
+    expect(profileNoticeStore.getState().notice).toEqual({ kind: "changed", value: "+993 61 XX-XX-00" });
   });
 });
 
@@ -190,10 +193,89 @@ describe("Entering the value the User already has", () => {
     }));
   });
 
+  // The previous User's /me can outlive their session in the cache.
+  it("offers a signed-out visitor Add, not Change, and does not compare with the cached phone", async () => {
+    state.isAuthenticated = false;
+    const view = renderMobile(<AddPhoneScreen />);
+    expect(view.getByText(view.i18n.t("account:addPhoneTitle"))).toBeTruthy();
+    expect(view.queryByText(view.i18n.t("account:changePhoneTitle"))).toBeNull();
+    fireEvent.changeText(view.getByLabelText("Phone number"), "65123456");
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Get code" })); });
+    expect(view.queryByText("This is already your number.")).toBeNull();
+  });
+
+  it("offers a signed-out visitor Add, not Change, and does not compare with the cached email", async () => {
+    state.isAuthenticated = false;
+    const view = renderMobile(<AddEmailScreen />);
+    expect(view.getByText(view.i18n.t("account:addEmailTitle"))).toBeTruthy();
+    expect(view.queryByText(view.i18n.t("account:changeEmailTitle"))).toBeNull();
+    fireEvent.changeText(view.getByLabelText("Email"), "aman@example.com");
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Get code" })); });
+    expect(view.queryByText("This is already your email.")).toBeNull();
+  });
+
+  it.each([AddPhoneScreen, AddEmailScreen])("renders nothing until the session is known", (Screen) => {
+    state.isAuthenticated = null;
+    const view = renderMobile(<Screen />);
+    expect(view.toJSON()).toBeNull();
+  });
+
   it.each(["ru", "tk"])("reads the refusal in %s", (locale) => {
     const view = renderMobile(<AddPhoneScreen />, { locale });
     fireEvent.changeText(view.getByLabelText(view.i18n.t("auth:phoneLabel")), "65123456");
     fireEvent.press(view.getByRole("button", { name: view.i18n.t("auth:getCode") }));
     expect(view.getByText(view.i18n.t("account:samePhoneError"))).toBeTruthy();
+  });
+});
+
+describe("Email field feedback", () => {
+  const ERROR = "Enter a valid email address.";
+  const HINT = "Enter your email address.";
+
+  it("keeps the hint under an empty field the User has not typed in, even after leaving it", () => {
+    state.me = { phone: "+99365123456", email: null };
+    const view = renderMobile(<AddEmailScreen />);
+    const field = view.getByLabelText("Email");
+    expect(view.getByText(HINT)).toBeTruthy();
+    // The field opens focused; focus leaving it is not the User's input.
+    fireEvent(field, "blur");
+    expect(view.queryByText(ERROR)).toBeNull();
+    expect(view.getByText(HINT)).toBeTruthy();
+    expect(field.props["aria-invalid"]).toBe(false);
+  });
+
+  it("keeps the hint while the User is still typing", () => {
+    const view = renderMobile(<AddEmailScreen />);
+    fireEvent.changeText(view.getByLabelText("Email"), "aman@");
+    expect(view.queryByText(ERROR)).toBeNull();
+    expect(view.getByText(HINT)).toBeTruthy();
+  });
+
+  it("shows the error once the User leaves an invalid address", () => {
+    const view = renderMobile(<AddEmailScreen />);
+    const field = view.getByLabelText("Email");
+    fireEvent.changeText(field, "aman@");
+    fireEvent(field, "blur");
+    expect(view.getByText(ERROR)).toBeTruthy();
+    expect(view.getByLabelText("Email").props["aria-invalid"]).toBe(true);
+  });
+
+  it("shows the error when the User clears what they typed and leaves", () => {
+    const view = renderMobile(<AddEmailScreen />);
+    const field = view.getByLabelText("Email");
+    fireEvent.changeText(field, "a");
+    fireEvent.changeText(field, "");
+    fireEvent(field, "blur");
+    expect(view.getByText(ERROR)).toBeTruthy();
+  });
+
+  it("returns to the hint once the address is valid", () => {
+    const view = renderMobile(<AddEmailScreen />);
+    const field = view.getByLabelText("Email");
+    fireEvent.changeText(field, "aman@");
+    fireEvent(field, "blur");
+    fireEvent.changeText(field, "new@example.com");
+    expect(view.queryByText(ERROR)).toBeNull();
+    expect(view.getByText(HINT)).toBeTruthy();
   });
 });

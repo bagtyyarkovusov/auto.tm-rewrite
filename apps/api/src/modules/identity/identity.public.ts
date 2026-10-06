@@ -5,8 +5,13 @@
 import { IDENTITY_TOKENS } from "./identity.tokens";
 
 export { accountDeletionPendingException } from "./application/accountDeletionPendingException";
+export { contactPhoneCodeException } from "./presentation/contactPhoneCodeException";
 export type { ClockPort } from "./domain/ports/ClockPort";
 export type { IdentityCheckPort } from "./domain/ports/IdentityCheckPort";
+export type {
+  ContactPhoneCodePort,
+  ContactPhoneCodeSent,
+} from "./domain/ports/ContactPhoneCodePort";
 export type { Session } from "./domain/Session";
 export type { SessionRepository } from "./domain/ports/SessionRepository";
 export {
@@ -18,6 +23,7 @@ export {
   type IdentityReadPort,
   type IdentityUserSummary,
 } from "./domain/ports/IdentityReadPort";
+export type { PublicIdentity } from "./domain/ports/PublicIdentity";
 export {
   SELLER_PROFILE_READ_PORT,
   type SellerProfile,
@@ -25,5 +31,6 @@ export {
 } from "./domain/ports/SellerProfileReadPort";
 
 export const IDENTITY_CHECK_PORT = IDENTITY_TOKENS.IdentityCheckPort;
+export const CONTACT_PHONE_CODE_PORT = IDENTITY_TOKENS.ContactPhoneCodePort;
 export const IDENTITY_SESSION_REPOSITORY = IDENTITY_TOKENS.SessionRepository;
 export const IDENTITY_CLOCK_PORT = IDENTITY_TOKENS.ClockPort;

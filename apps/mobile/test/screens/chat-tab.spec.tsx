@@ -1,5 +1,6 @@
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { Image } from "expo-image";
 import { useFocusEffect } from "expo-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,8 @@ vi.mock("react-native-safe-area-context", async () => ({
 }));
 vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: state.auth, phone: "" }) }));
 vi.mock("../../src/notifications/useChatPushTokenRegistration", () => ({ useChatPushTokenRegistration: vi.fn() }));
+vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => null }));
+vi.mock("expo-notifications", () => ({ addNotificationReceivedListener: () => ({ remove: vi.fn() }) }));
 vi.mock("../../src/conversations/components/useConversationCatalogMaps", () => ({
   useConversationCatalogMaps: () => ({ brandName: () => "Toyota", modelName: () => "Camry" }),
 }));
@@ -33,7 +36,8 @@ const PEER = "00000000-0000-4000-8000-0000000000b2";
 function conversation(id: string, unreadCount: number): ConversationsSchemas.ConversationSummary {
   return {
     id, listing: null, buyerId: ME, sellerId: PEER, myRole: "buyer",
-    peer: { id: PEER, displayName: "Merdan" }, blockedByMe: false,
+    peer: { id: PEER, displayName: "Merdan", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false },
+    blockedByMe: false,
     lastMessage: {
       id: "00000000-0000-4000-8000-0000000000f1", conversationId: id, senderId: PEER,
       kind: "text", text: "Hello", createdAt: "2026-10-01T10:00:00.000Z",
@@ -171,7 +175,7 @@ describe("Messages tab", () => {
   it("loads the next page when the list reaches its end", async () => {
     const second = "00000000-0000-4000-8000-0000000000c2";
     api.get.mockReset().mockImplementation((url: string) => Promise.resolve(
-      url.includes("cursor=") ? page([{ ...conversation(second, 0), peer: { id: PEER, displayName: "Aman" } }])
+      url.includes("cursor=") ? page([{ ...conversation(second, 0), peer: { ...conversation(second, 0).peer, displayName: "Aman" } }])
         : { ...page([conversation(first, 0)]), nextCursor: "next" },
     ));
     const view = await renderScreen();
@@ -182,6 +186,24 @@ describe("Messages tab", () => {
 
     expect(api.get).toHaveBeenLastCalledWith("/conversations?limit=20&cursor=next", expect.anything());
     expect(view.getByText("Aman")).toBeTruthy();
+  });
+
+  it("shows a photo badge on every row from the one list request", async () => {
+    const ids = ["c1", "c2", "c3"].map((tail) => `00000000-0000-4000-8000-0000000000${tail}`);
+    api.get.mockReset().mockResolvedValue(page(ids.map((id, index) => ({
+      ...conversation(id, 0),
+      peer: { ...conversation(id, 0).peer, avatarKey: `avatars/u${index}/original.jpg` },
+    }))));
+    const view = await renderScreen();
+
+    const badges = view.UNSAFE_getAllByType(Image).map((image) => image.props.source.uri);
+    expect(badges).toEqual([
+      "https://media.autotm.tm/listing-photos/avatars/u0/thumbnail.jpg",
+      "https://media.autotm.tm/listing-photos/avatars/u1/thumbnail.jpg",
+      "https://media.autotm.tm/listing-photos/avatars/u2/thumbnail.jpg",
+    ]);
+    expect(api.get).toHaveBeenCalledTimes(1);
+    expect(api.get).toHaveBeenCalledWith("/conversations?limit=20", expect.anything());
   });
 
   it("has no Support row, help link or Help icon", async () => {

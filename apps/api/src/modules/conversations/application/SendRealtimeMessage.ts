@@ -1,8 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import type { Message } from "../domain/Message";
+import {
+  CHAT_ATTACHMENT_CLEANER,
+  type ChatAttachmentCleaner,
+} from "../domain/ports/ChatAttachmentCleaner";
 
-import { createRichMessage, type RichMessageInput } from "./RichMessageFactory";
+import { createCleanRichMessage, type RichMessageInput } from "./RichMessageFactory";
 import { SendConversationMessage } from "./SendConversationMessage";
 
 export type SendRealtimeMessageInput = RichMessageInput & {
@@ -20,6 +24,8 @@ export class SendRealtimeMessage {
   constructor(
     @Inject(SendConversationMessage)
     private readonly sendConversationMessage: SendConversationMessage,
+    @Inject(CHAT_ATTACHMENT_CLEANER)
+    private readonly attachmentCleaner: ChatAttachmentCleaner,
   ) {}
 
   async execute(
@@ -30,7 +36,12 @@ export class SendRealtimeMessage {
       conversationId: input.conversationId,
       clientMessageId: input.clientMessageId,
       createMessage: ({ id, conversationId, senderId }) =>
-        createRichMessage({ id, conversationId, senderId, input }),
+        createCleanRichMessage(this.attachmentCleaner, {
+          id,
+          conversationId,
+          senderId,
+          input,
+        }),
     });
 
     return { message: result.message, created: result.created };

@@ -17,7 +17,7 @@ import {
 } from "../domain/ports/ConversationRepository";
 
 import { ConversationAccessPolicy } from "./ConversationAccessPolicy";
-import type { ConversationPeer } from "./ConversationPeers";
+import { toConversationPeer, type ConversationPeer } from "./ConversationPeers";
 import {
   ConversationSendPolicy,
   type SendRestriction,
@@ -103,7 +103,7 @@ export class GetConversation {
       peerLastReadAt: peerState?.lastReadAt ?? null,
       peerLastDeliveredAt: peerState?.lastDeliveredAt ?? null,
       mutedAt: ownState?.mutedAt ?? null,
-      peer: { id: peerId, displayName: peerUser?.displayName ?? null },
+      peer: toConversationPeer(peerId, peerUser),
       // The viewer's block is read once, inside the restriction, and
       // `blocked_by_me` outranks every other restriction. Deriving the flag
       // from it keeps both fields from one read, so a concurrent block or

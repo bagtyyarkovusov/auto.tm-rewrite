@@ -7,6 +7,8 @@ import type {
   SignInCodePurpose,
 } from "../domain/OtpRequest";
 import type { SignInMethods } from "../domain/SignInMethods";
+import type { GeneratedIdentity } from "../domain/GeneratedIdentity";
+import type { RandomSourcePort } from "../domain/ports/RandomSourcePort";
 import type { User } from "../domain/User";
 import type { Session } from "../domain/Session";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
@@ -62,6 +64,9 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: null,
     emailVerifiedAt: null,
     displayName: null,
+    nameNumber: 4821,
+    avatarIndex: 7,
+    avatarKey: null,
     avatarUrl: null,
     locale: "ru",
     role: "buyer",
@@ -192,11 +197,14 @@ class FakeUserRepository implements UserRepository {
     return this.users.find((u) => u.id === id) ?? null;
   }
 
-  async create(signInMethods: SignInMethods): Promise<User> {
+  async create(signInMethods: SignInMethods, identity: GeneratedIdentity): Promise<User> {
     const user: User = {
       id: randomUUID(),
       ...signInMethods,
       displayName: null,
+      nameNumber: identity.nameNumber,
+      avatarIndex: identity.avatarIndex,
+      avatarKey: null,
       avatarUrl: null,
       locale: "ru",
       role: "buyer",
@@ -209,14 +217,7 @@ class FakeUserRepository implements UserRepository {
   }
 
   async delete(_id: string): Promise<void> {}
-  async scheduleDeletion(_userId: string, _deletionScheduledAt: Date): Promise<void> {}
-  async clearDeletionSchedule(userId: string): Promise<void> {
-    const index = this.users.findIndex((u) => u.id === userId);
-    const user = this.users[index];
-    if (user) {
-      this.users[index] = { ...user, deletionScheduledAt: null };
-    }
-  }
+  async updateDisplayName(): Promise<void> {}
   async findUsersWithExpiredDeletionGrace(_now: Date): Promise<User[]> { return []; }
   async purgePersonalData(_userId: string): Promise<void> {}
 }
@@ -330,6 +331,19 @@ class FakeConstantTimeComparator implements ConstantTimeComparatorPort {
   }
 }
 
+/** Answers the given values in turn, then repeats the last one. */
+class FixedRandomSource implements RandomSourcePort {
+  private call = 0;
+
+  constructor(private readonly values: number[]) {}
+
+  next(): number {
+    const value = this.values[Math.min(this.call, this.values.length - 1)]!;
+    this.call += 1;
+    return value;
+  }
+}
+
 const jwtService = new JwtService({
   secret: "test-secret",
   signOptions: { expiresIn: 15 * 60 },
@@ -344,6 +358,7 @@ interface MakeUseCaseOpts {
   eventBus?: { emit: ReturnType<typeof vi.fn> };
   reviewerBypassConfig?: ReviewerOtpBypassConfig;
   constantTimeComparator?: ConstantTimeComparatorPort;
+  random?: RandomSourcePort;
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
@@ -361,6 +376,7 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     opts.reviewerBypassConfig ?? { enabled: false, accounts: [] },
     opts.constantTimeComparator ?? new FakeConstantTimeComparator(),
     new VerifySignInCode(otpRepo, clock),
+    opts.random ?? new FixedRandomSource([0.5]),
   );
 }
 
@@ -616,6 +632,56 @@ describe("VerifyOtp", () => {
       email: null,
       emailVerifiedAt: null,
     });
+  });
+
+  // --- Generated Name and Assigned Avatar (#638) ---
+
+  it("gives a User created by a first phone sign-in the lowest name number and avatar index for the lowest random value", async () => {
+    otpRepo.addRecord(makeOtpRequest());
+
+    await makeUseCase({ otpRepo, userRepo, sessionRepo, random: new FixedRandomSource([0, 0]) })
+      .execute({ phone: "+99361234567", code: "123456" });
+
+    expect(userRepo.users[0]).toMatchObject({
+      nameNumber: 1000,
+      avatarIndex: 0,
+      displayName: null,
+      avatarKey: null,
+    });
+  });
+
+  it("gives a User created by a first email sign-in the highest name number and avatar index for the highest random value", async () => {
+    otpRepo.addRecord(makeOtpRequest({
+      channel: "email",
+      destination: "new@example.com",
+      expiresAt: new Date(NOW.getTime() + 10 * 60_000),
+    }));
+    const highest = 1 - Number.EPSILON;
+
+    await makeUseCase({
+      otpRepo,
+      userRepo,
+      sessionRepo,
+      random: new FixedRandomSource([highest, highest]),
+    }).execute({ email: "new@example.com", code: "123456" });
+
+    expect(userRepo.users[0]).toMatchObject({
+      nameNumber: 9999,
+      avatarIndex: 11,
+      displayName: null,
+      avatarKey: null,
+    });
+  });
+
+  it("keeps an existing User's name number and avatar index when they sign in again", async () => {
+    userRepo.users.push(makeUser({ nameNumber: 4821, avatarIndex: 7 }));
+    otpRepo.addRecord(makeOtpRequest());
+
+    await makeUseCase({ otpRepo, userRepo, sessionRepo, random: new FixedRandomSource([0, 0]) })
+      .execute({ phone: "+99361234567", code: "123456" });
+
+    expect(userRepo.users).toHaveLength(1);
+    expect(userRepo.users[0]).toMatchObject({ nameNumber: 4821, avatarIndex: 7 });
   });
 
   // --- UserRegistered event ---

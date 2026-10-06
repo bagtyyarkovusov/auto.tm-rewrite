@@ -72,7 +72,7 @@ const privacyPromises: CopyPromise[] = [
     phrases: {
       en: "open Cabinet, tap your profile, then tap Delete account at the bottom of the Profile screen",
       ru: "откройте «Кабинет», нажмите на свой профиль и выберите «Удалить аккаунт» внизу экрана «Профиль»",
-      tk: "«Kabinet» bölümini açyň, profiliňize basyň we «Profil» ekranynyň aşagyndaky «Hasaby poz» düwmesine basyň",
+      tk: "«Kabinet» bölümini açyň, profiliňize basyň we «Profil» ekranynyň aşagyndaky «Akkaunty poz» düwmesine basyň",
     },
   },
   {
@@ -115,7 +115,7 @@ const termsPromises: CopyPromise[] = [
     phrases: {
       en: "in Cabinet, open your profile and tap Delete account",
       ru: "в «Кабинете» откройте свой профиль и выберите «Удалить аккаунт»",
-      tk: "«Kabinet» bölüminde profiliňizi açyň we «Hasaby poz» düwmesine basyň",
+      tk: "«Kabinet» bölüminde profiliňizi açyň we «Akkaunty poz» düwmesine basyň",
     },
   },
   {

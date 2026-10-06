@@ -20,6 +20,26 @@ const Pressable = React.forwardRef(({ children, disabled, accessibilityState, ..
   }, typeof children === "function" ? children({ pressed: false }) : children));
 Pressable.displayName = "Pressable";
 const scrollRequests = [];
+// Android's hardware back button. Listeners register here and a spec presses
+// the button with `pressHardwareBack()`. Like native, the newest listener runs
+// first and a true return stops the rest. Nothing exits the app.
+const backPressHandlers = [];
+const BackHandler = {
+  addEventListener: (_event, handler) => {
+    backPressHandlers.push(handler);
+    return { remove: () => {
+      const index = backPressHandlers.indexOf(handler);
+      if (index >= 0) backPressHandlers.splice(index, 1);
+    } };
+  },
+  exitApp: () => {},
+};
+const pressHardwareBack = () => {
+  for (let index = backPressHandlers.length - 1; index >= 0; index -= 1) {
+    if (backPressHandlers[index]()) return true;
+  }
+  return false;
+};
 const slot = (component) => component == null || React.isValidElement(component)
   ? component ?? null : React.createElement(component);
 // Header renders first, the empty component only when there is no data, and the
@@ -52,6 +72,7 @@ module.exports = {
   // Scroll requests the list received, newest last. Specs read this to prove a
   // component moved a list; the adapter never scrolls anything itself.
   scrollRequests,
+  BackHandler, pressHardwareBack,
   Platform: { OS: "ios", select: (options) => options.ios ?? options.native ?? options.default },
   StyleSheet: { create: (styles) => styles, flatten, hairlineWidth: 1,
     absoluteFillObject: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },

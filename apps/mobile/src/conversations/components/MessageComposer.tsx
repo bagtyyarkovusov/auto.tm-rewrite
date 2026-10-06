@@ -28,6 +28,7 @@ import { QuickReplies } from "./QuickReplies";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 const MAX_CHARS = 1000;
 
@@ -279,7 +280,10 @@ export function MessageComposer({
           onPress={handleSend}
           accessibilityLabel={t("sendMessage")}
         >
-          <Icon as={Send} className="size-5 text-primary-foreground" />
+          <Icon
+            as={Send}
+            className={cn("size-5", canSend ? "text-primary-foreground" : "text-muted-foreground")}
+          />
         </Button>
       </View>
     </KeyboardAvoidingView>

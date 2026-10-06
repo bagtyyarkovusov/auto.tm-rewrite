@@ -12,6 +12,7 @@ import {
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
 import { io, type Socket as ClientSocket } from "socket.io-client";
+import sharp from "sharp";
 import { PrismaService } from "@auto-tm/db";
 import type { Prisma } from "@auto-tm/db";
 
@@ -157,6 +158,7 @@ describe("Conversation message broadcast e2e", () => {
           condition: "used",
           mileageKm: 50000,
           description: "Broadcast test car",
+          contactPhone: suite.phone("seller-1"),
           allowCalls: true,
           allowChat: true,
           conditionDisclosure: { damaged: false },
@@ -196,6 +198,48 @@ describe("Conversation message broadcast e2e", () => {
     };
   }
 
+  /** A 300x200 camera photo with a GPS position, stored rotated (EXIF Orientation 6). */
+  async function photoWithGps(): Promise<Buffer> {
+    return sharp({ create: { width: 300, height: 200, channels: 3, background: { r: 200, g: 30, b: 30 } } })
+      .jpeg()
+      .withExif({
+        IFD0: { Make: "TestCam" },
+        IFD3: {
+          GPSLatitudeRef: "N",
+          GPSLatitude: "37/1 56/1 0/1",
+          GPSLongitudeRef: "E",
+          GPSLongitude: "58/1 23/1 0/1",
+        },
+      })
+      .withMetadata({ orientation: 6 })
+      .toBuffer();
+  }
+
+  /** Uploads an image the way the app does: presign, then PUT to storage. */
+  async function uploadChatImage(token: string, conversationId: string): Promise<string> {
+    const body = await photoWithGps();
+    const presign = await request
+      .post(`/api/v1/conversations/${conversationId}/attachments/presign`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ contentType: "image/jpeg", sizeBytes: body.length })
+      .expect(201);
+    const put = await fetch(presign.body.uploadUrl as string, {
+      method: "PUT",
+      headers: { "Content-Type": "image/jpeg" },
+      body: new Uint8Array(body),
+    });
+    expect(put.status).toBe(200);
+    return presign.body.key as string;
+  }
+
+  /** The image as the other participant's app loads it. */
+  async function servedChatImage(key: string): Promise<Buffer> {
+    const publicUrl = (process.env["MINIO_PUBLIC_URL"] ?? "").replace(/\/$/, "");
+    const res = await fetch(`${publicUrl}/chat-attachments/${key}`);
+    expect(res.status).toBe(200);
+    return Buffer.from(await res.arrayBuffer());
+  }
+
   /** Connects a socket, joins the conversation room, and records every message:new. */
   async function joinedSocket(token: string, conversationId: string) {
     const socket = io(`${baseUrl}${REALTIME_NAMESPACE}`, {
@@ -231,15 +275,27 @@ describe("Conversation message broadcast e2e", () => {
     const peer = await joinedSocket(sellerToken, conversationId);
     const senderDevice = await joinedSocket(buyerToken, conversationId);
 
+    const key = await uploadChatImage(buyerToken, conversationId);
+    const uploaded = await sharp(await servedChatImage(key)).metadata();
+    expect(uploaded.exif).toBeDefined();
+    expect(uploaded.orientation).toBe(6);
+
     const res = await request
       .post(`/api/v1/conversations/${conversationId}/messages/rich`)
       .set("Authorization", `Bearer ${buyerToken}`)
       .send({
         kind: "image",
-        metadata: { key: "chat-attachments/broadcast/original.jpg", width: 800, height: 600 },
+        metadata: { key, width: 800, height: 600 },
         clientMessageId: "client-img-1",
       })
       .expect(201);
+
+    // The peer loads the stored image as it is: no EXIF (so no GPS position),
+    // and upright without the Orientation tag (a 90 degree turn → portrait).
+    const served = await sharp(await servedChatImage(key)).metadata();
+    expect(served.exif).toBeUndefined();
+    expect(served.orientation).toBeUndefined();
+    expect({ width: served.width, height: served.height }).toEqual({ width: 200, height: 300 });
 
     await waitFor(peer.received, 1);
     await waitFor(senderDevice.received, 1);
@@ -249,7 +305,7 @@ describe("Conversation message broadcast e2e", () => {
       conversationId,
       senderId: suite.id("buyer-1"),
       kind: "image",
-      metadata: { key: "chat-attachments/broadcast/original.jpg", width: 800, height: 600 },
+      metadata: { key, width: 800, height: 600 },
       clientMessageId: "client-img-1",
     };
     expect(peer.received).toHaveLength(1);
@@ -257,6 +313,33 @@ describe("Conversation message broadcast e2e", () => {
     expect(senderDevice.received).toHaveLength(1);
     expect(senderDevice.received[0]?.message).toMatchObject(expected);
     expect(messageSentEvents).toHaveLength(1);
+  });
+
+  it("refuses an image that was never uploaded, over HTTP and over the socket, and delivers nothing", async () => {
+    const { buyerToken, sellerToken, conversationId } = await seedConversation();
+    const peer = await joinedSocket(sellerToken, conversationId);
+    const sender = await joinedSocket(buyerToken, conversationId);
+    const key = `chat-attachments/${conversationId}/0b9f3c1e-2d4a-4c6b-8e1f-3a5b7c9d1e2f/original.jpg`;
+
+    const res = await request
+      .post(`/api/v1/conversations/${conversationId}/messages/rich`)
+      .set("Authorization", `Bearer ${buyerToken}`)
+      .send({ kind: "image", metadata: { key } })
+      .expect(400);
+    expect(res.body.details).toMatchObject({ reason: "IMAGE_ATTACHMENT_NOT_USABLE" });
+
+    const ack = (await sender.socket.emitWithAck("message:send", {
+      conversationId,
+      kind: "image",
+      metadata: { key },
+      clientMessageId: "client-img-missing",
+    })) as { ok: boolean };
+    expect(ack.ok).toBe(false);
+
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+    expect(peer.received).toHaveLength(0);
+    expect(messageSentEvents).toHaveLength(0);
+    expect(await prisma.message.count({ where: { conversationId } })).toBe(0);
   });
 
   it("delivers a post-reference card sent over HTTP to the peer", async () => {
@@ -342,7 +425,11 @@ describe("Conversation message broadcast e2e", () => {
       const { buyerToken, sellerToken } = await seedConversation();
       await prisma.user.update({
         where: { id: suite.id("seller-1") },
-        data: { displayName: "Seller One" },
+        data: { displayName: "Seller One", nameNumber: 2057, avatarIndex: 7 },
+      });
+      await prisma.user.update({
+        where: { id: suite.id("buyer-1") },
+        data: { nameNumber: 1111, avatarIndex: 1 },
       });
 
       const unblocked = await request
@@ -352,6 +439,10 @@ describe("Conversation message broadcast e2e", () => {
       expect(unblocked.body.items[0].peer).toEqual({
         id: suite.id("seller-1"),
         displayName: "Seller One",
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
       });
       expect(unblocked.body.items[0].blockedByMe).toBe(false);
       expect(JSON.stringify(unblocked.body)).not.toContain(suite.phone("seller-1"));
@@ -373,12 +464,20 @@ describe("Conversation message broadcast e2e", () => {
       expect(sellerView.body.items[0].peer).toEqual({
         id: suite.id("buyer-1"),
         displayName: null,
+        nameNumber: 1111,
+        avatarIndex: 1,
+        avatarKey: null,
+        deleted: false,
       });
       expect(sellerView.body.items[0].blockedByMe).toBe(false);
     });
 
     it("returns the peer and block state when a Conversation is opened again", async () => {
       const { buyerToken, listingId } = await seedConversation();
+      await prisma.user.update({
+        where: { id: suite.id("seller-1") },
+        data: { nameNumber: 2057, avatarIndex: 7 },
+      });
       await prisma.blockedUser.create({
         data: { blockerId: suite.id("buyer-1"), blockedId: suite.id("seller-1") },
       });
@@ -392,6 +491,10 @@ describe("Conversation message broadcast e2e", () => {
       expect(res.body.peer).toEqual({
         id: suite.id("seller-1"),
         displayName: null,
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
       });
       expect(res.body.blockedByMe).toBe(true);
     });
@@ -431,7 +534,11 @@ describe("Conversation message broadcast e2e", () => {
           .set("Authorization", `Bearer ${buyerToken}`)
           .send({
             kind: "image",
-            metadata: { key: "chat-attachments/sold/original.jpg", width: 800, height: 600 },
+            metadata: {
+              key: await uploadChatImage(buyerToken, conversationId),
+              width: 800,
+              height: 600,
+            },
           })
           .expect(201);
 

@@ -2,8 +2,11 @@ import { z } from "zod";
 
 import { Locale, SignInCodePurpose, UserRole } from "../enums";
 
+/** A Turkmenistan mobile number in E.164: `+993` then 6 or 7, then 7 digits. */
+export const PHONE_TM_PATTERN = /^\+993[67]\d{7}$/;
+
 export const PhoneTm = z.string().regex(
-  /^\+993[67]\d{7}$/,
+  PHONE_TM_PATTERN,
   "Phone must be +993[6-7]XXXXXXX (TM mobile)",
 );
 
@@ -106,7 +109,14 @@ export const MeResponseSchema = z.object({
   phone: PhoneTm.nullable(),
   email: z.string().email().nullable(),
   phoneVerified: z.boolean(),
+  // Null until the User sets a name; show `formatDisplayName` instead.
   displayName: z.string().nullable(),
+  // Server-assigned for the life of the account (#353 identity design).
+  nameNumber: z.number().int().min(1000).max(9999),
+  // Index into the app's car avatars; take it modulo the app's own set size.
+  avatarIndex: z.number().int().nonnegative(),
+  // Object key of the profile photo; null until photos ship.
+  avatarKey: z.string().nullable(),
   role: z.nativeEnum(UserRole),
   avatarUrl: z.string().nullable(),
   locale: z.string().nullable(),

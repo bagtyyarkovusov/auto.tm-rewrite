@@ -1,19 +1,16 @@
-import { ChevronLeft, AlertCircle, RefreshCw } from "lucide-react-native";
-import { useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import { ChevronLeft, AlertCircle, RefreshCw, X } from "lucide-react-native";
+import { useEffect } from "react";
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
@@ -41,8 +38,24 @@ interface WizardLayoutProps {
   onContinue: () => void;
   onPublish: () => void;
   onReturnToReview?: () => void;
-  onDiscard: () => void;
+  /**
+   * ✕ in the header. Create flow: saves the draft and closes. Edit flow: leaves the
+   * edit from its section list. The screen owns the save, the leave rule and its dialog.
+   */
+  onClose?: () => void;
+  /** ✕ is disabled while a close is in progress. */
+  isClosing?: boolean;
   mode: "create" | "edit";
+  /**
+   * Edit flow: this is the Listing's section list, not a step. Its header has ✕ in
+   * place of Back, the title alone, and no step position or progress bar.
+   */
+  sectionList?: boolean;
+  /**
+   * Edit flow: the car's title, under "Edit listing" on the section list and on
+   * every step. An edit's steps have no position in the wizard and no progress bar.
+   */
+  subtitle?: string;
   editDetourActive: boolean;
   canContinue: boolean;
   canPublish: boolean;
@@ -54,13 +67,66 @@ interface WizardLayoutProps {
   progressPercent: number;
   children: React.ReactNode;
   disabledReason?: string;
+  /** Create flow, last step: what keeps Publish disabled, listed above it in this order. */
+  publishBlockers?: string[];
+  /** Create flow: Publish reads "Publishing..." and takes no taps. */
+  isPublishing?: boolean;
+  /** Create flow: why the last publish failed, shown above Publish and announced. */
+  publishError?: string | null;
   secondaryAction?: FooterAction;
   publishLabel?: string;
-  discardTitle?: string;
-  discardDescription?: string;
-  isDiscarding?: boolean;
-  discardError?: string | null;
   uploadStatus?: UploadStatusChip;
+  /** Tapping the header's upload chip: open Photos. Without it the chip is plain status. */
+  onUploadStatusPress?: () => void;
+}
+
+/** "Saved", "Saving..." or "Not saved. Retry", read politely by a screen reader. */
+function SaveStatusLine({
+  saveStatus,
+  onRetrySave,
+}: {
+  saveStatus: WizardLayoutProps["saveStatus"];
+  onRetrySave: () => void;
+}) {
+  const { t } = useTranslation();
+  const text =
+    saveStatus === "saving"
+      ? t("savingEllipsis")
+      : saveStatus === "saved"
+        ? t("saved")
+        : saveStatus === "error"
+          ? t("notSavedRetry")
+          : null;
+
+  // `accessibilityLiveRegion` covers Android; iOS has no live regions, so it is announced.
+  useEffect(() => {
+    if (text && Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(text);
+  }, [text]);
+
+  return (
+    <View accessibilityLiveRegion="polite" className="min-h-4">
+      {saveStatus === "error" ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={text ?? undefined}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+          className="self-start"
+          onPress={onRetrySave}
+        >
+          <Text className="text-xs text-destructive">{text}</Text>
+        </Pressable>
+      ) : text ? (
+        <Text
+          className={cn(
+            "text-xs",
+            saveStatus === "saved" ? "text-success-500" : "text-muted-foreground",
+          )}
+        >
+          {text}
+        </Text>
+      ) : null}
+    </View>
+  );
 }
 
 function WizardHeader({
@@ -70,10 +136,16 @@ function WizardHeader({
   stepCount,
   canGoBack,
   onBack,
-  onOpenDiscard,
+  mode,
+  sectionList,
+  subtitle,
+  onClose,
+  isClosing,
   progressPercent,
   saveStatus,
   onRetrySave,
+  uploadStatus,
+  onUploadStatusPress,
 }: {
   routeTitle: string;
   stepTitle: string;
@@ -81,33 +153,49 @@ function WizardHeader({
   stepCount: number;
   canGoBack: boolean;
   onBack: () => void;
-  onOpenDiscard: () => void;
+  mode: WizardLayoutProps["mode"];
+  sectionList: boolean;
+  subtitle?: string;
+  onClose?: (() => void) | undefined;
+  isClosing: boolean;
   progressPercent: number;
   saveStatus: WizardLayoutProps["saveStatus"];
   onRetrySave: () => void;
+  uploadStatus?: UploadStatusChip;
+  onUploadStatusPress?: () => void;
 }) {
   const { t } = useTranslation();
-  const saveStatusText =
-    saveStatus === "saving"
-      ? t("savingEllipsis")
-      : saveStatus === "error"
-        ? t("couldNotSave")
-        : saveStatus === "saved"
-          ? t("saved")
-          : null;
-
-  const saveStatusClass =
-    saveStatus === "error"
-      ? "text-destructive"
-      : saveStatus === "saved"
-        ? "text-success-500"
-        : "text-muted-foreground";
+  const stepPosition = t("stepOf", { step: stepNumber, total: stepCount });
+  // An edit is not walked step by step: neither its section list nor a step opened
+  // from it has a position in the wizard or a progress bar.
+  const isEdit = mode === "edit";
+  // A screen reader hears the step title, with its position in the create wizard,
+  // each time a step opens.
+  const stepAnnouncement = isEdit || sectionList ? stepTitle : `${stepTitle}, ${stepPosition}`;
+  const closeButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      // Left on the section list of an edit, right in the create wizard; a mounted button is only ever one of them.
+      className={sectionList ? "-ml-3" : "-mr-3"}
+      onPress={onClose}
+      disabled={isClosing}
+      accessibilityLabel={t("close")}
+    >
+      <Icon as={X} className="size-5 text-foreground" />
+    </Button>
+  );
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(stepAnnouncement);
+  }, [stepAnnouncement]);
 
   return (
     <View className="border-b border-border px-5 py-3 gap-2">
-      {/* Row 1: nav + position marker + inline save status + cancel */}
+      {/* Row 1: nav + position marker + close */}
       <View className="flex-row items-center justify-between">
-        {canGoBack ? (
+        {sectionList ? (
+          closeButton
+        ) : canGoBack ? (
           <Button
             variant="ghost"
             size="sm"
@@ -125,49 +213,106 @@ function WizardHeader({
         )}
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
-          <Text className="text-xs text-muted-foreground">
-            {routeTitle} · {t("stepOf", { step: stepNumber, total: stepCount })}
-          </Text>
-          {saveStatusText && (
-            <Text className={cn("text-xs", saveStatusClass)}>
-              {" · "}{saveStatusText}
+          {/* The heading below already reads the position, so this row reads only the route. */}
+          {sectionList ? null : isEdit ? (
+            <View className="items-center">
+              <Text className="text-xs font-medium text-foreground">{routeTitle}</Text>
+              {subtitle ? (
+                <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <Text className="text-xs text-muted-foreground" accessibilityLabel={routeTitle}>
+              {routeTitle} · {stepPosition}
             </Text>
-          )}
-          {saveStatus === "error" && (
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto px-0 py-0"
-              onPress={onRetrySave}
-            >
-              <Text className="text-xs text-destructive">{t("retry")}</Text>
-            </Button>
           )}
         </View>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-10 px-0 -mr-1"
-          onPress={onOpenDiscard}
-          accessibilityLabel={t("discard")}
-        >
-          <Text className="text-sm font-medium text-muted-foreground">{t("cancel")}</Text>
-        </Button>
+        {/* An edit is left from its section list; a step opened from it has Back only. */}
+        {mode === "create" ? closeButton : <View className="w-16" />}
       </View>
 
       {/* Row 2: the prominent step title — the ONE title */}
-      <Text className="text-2xl font-heading text-foreground">
+      <Text
+        className="text-2xl font-heading text-foreground"
+        accessibilityRole="header"
+        accessibilityLabel={stepAnnouncement}
+      >
         {stepTitle}
       </Text>
+      {sectionList && subtitle ? (
+        <Text className="-mt-1 text-sm text-muted-foreground">{subtitle}</Text>
+      ) : null}
 
-      {/* Row 3: progress */}
-      <Progress
-        value={progressPercent}
-        className="bg-muted h-1"
-        indicatorClassName="bg-foreground"
+      {/* Row 3: progress, in the create wizard only */}
+      {isEdit || sectionList ? null : (
+        <Progress
+          testID="wizard-progress"
+          value={progressPercent}
+          className="bg-muted h-1"
+          indicatorClassName="bg-foreground"
+        />
+      )}
+
+      {/* Row 4: where the draft stands; the line's height is kept so nothing jumps */}
+      <SaveStatusLine saveStatus={saveStatus} onRetrySave={onRetrySave} />
+
+      <UploadStatusChipRow
+        uploadStatus={uploadStatus}
+        onPress={onUploadStatusPress}
       />
     </View>
+  );
+}
+
+/** Photos still uploading and photos that failed, kept in view on every step. */
+function UploadStatusChipRow({
+  uploadStatus,
+  onPress,
+}: {
+  uploadStatus?: UploadStatusChip;
+  onPress?: () => void;
+}) {
+  const { t } = useTranslation();
+  if (!uploadStatus || (uploadStatus.inflight === 0 && uploadStatus.failed === 0)) {
+    return null;
+  }
+  const uploadingText = t("uploadChipUploading", { count: uploadStatus.inflight });
+  const failedText = t("uploadChipFailed", { count: uploadStatus.failed });
+  const chip = (
+    <View className="flex-row items-center gap-3 self-start rounded-full bg-muted px-3 py-1.5">
+      {uploadStatus.inflight > 0 && (
+        <View className="flex-row items-center gap-1.5">
+          <ActivityIndicator size="small" />
+          <Text className="text-xs text-muted-foreground">{uploadingText}</Text>
+        </View>
+      )}
+      {uploadStatus.failed > 0 && (
+        <View className="flex-row items-center gap-1.5">
+          <Icon as={AlertCircle} className="size-3.5 text-destructive" />
+          <Text className="text-xs text-destructive">{failedText}</Text>
+        </View>
+      )}
+    </View>
+  );
+  if (!onPress) return chip;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={[
+        uploadStatus.inflight > 0 ? uploadingText : null,
+        uploadStatus.failed > 0 ? failedText : null,
+      ]
+        .filter(Boolean)
+        .join(", ")}
+      className="min-h-11 justify-center self-start active:opacity-70"
+      onPress={onPress}
+    >
+      {chip}
+    </Pressable>
   );
 }
 
@@ -193,6 +338,29 @@ function SaveErrorBanner({
   );
 }
 
+/** Why the last publish failed, above Publish. It interrupts a screen reader, since the seller just asked to publish. */
+function PublishErrorAlert({ message }: { message: string }) {
+  // Announced on both platforms: iOS has no live regions, and TalkBack does not
+  // reliably read a live region that appears already filled. The alert unmounts
+  // while a publish runs, so each failure announces.
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(message);
+  }, [message]);
+
+  return (
+    <View
+      accessible
+      accessibilityRole="alert"
+      accessibilityLabel={message}
+      accessibilityLiveRegion="assertive"
+      className="flex-row items-start gap-2 rounded-lg border border-destructive px-3 py-2"
+    >
+      <Icon as={AlertCircle} className="mt-0.5 size-4 text-destructive" />
+      <Text className="flex-1 text-sm text-destructive">{message}</Text>
+    </View>
+  );
+}
+
 function WizardFooter({
   isLastStep,
   canContinue,
@@ -205,9 +373,15 @@ function WizardFooter({
   mode,
   editDetourActive,
   disabledReason,
+  publishBlockers,
+  isPublishing = false,
+  publishError,
   secondaryAction,
   publishLabel,
 }: {
+  publishBlockers?: string[];
+  isPublishing?: boolean;
+  publishError?: string | null;
   isLastStep: boolean;
   canContinue: boolean;
   canPublish: boolean;
@@ -276,6 +450,17 @@ function WizardFooter({
           {disabledReason}
         </Text>
       )}
+      {isLastStep && publishBlockers && publishBlockers.length > 0 ? (
+        // One line each, so a screen reader reads them in this order before Publish.
+        <View testID="publish-blockers" className="gap-0.5">
+          {publishBlockers.map((line) => (
+            <Text key={line} className="text-xs text-destructive">
+              {line}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+      {isLastStep && publishError && !isPublishing ? <PublishErrorAlert message={publishError} /> : null}
       <View className="flex-row gap-3">
         {canGoBack ? (
           <Button
@@ -306,9 +491,11 @@ function WizardFooter({
             size="pill"
             className="flex-1"
             onPress={onPublish}
-            disabled={!canPublish}
+            // Disabled while publishing, so a second tap cannot publish twice.
+            disabled={!canPublish || isPublishing}
+            accessibilityState={{ busy: isPublishing }}
           >
-            <Text>{publishLabel ?? t("publish")}</Text>
+            <Text>{isPublishing ? t("publishingEllipsis") : (publishLabel ?? t("publish"))}</Text>
           </Button>
         ) : (
           <Button
@@ -339,60 +526,6 @@ function WizardFooter({
   );
 }
 
-function DiscardConfirmationDialog({
-  open,
-  onOpenChange,
-  onDiscard,
-  discardTitle,
-  discardDescription,
-  isDiscarding,
-  discardError,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDiscard: () => void;
-  discardTitle: string;
-  discardDescription: string;
-  isDiscarding?: boolean;
-  discardError?: string | null;
-}) {
-  const { t } = useTranslation();
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{discardTitle}</AlertDialogTitle>
-          <AlertDialogDescription>{discardDescription}</AlertDialogDescription>
-        </AlertDialogHeader>
-        {discardError ? (
-          <Text className="text-sm text-destructive">{discardError}</Text>
-        ) : null}
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDiscarding} onPress={() => onOpenChange(false)}>
-            <Text>{t("keepEditing")}</Text>
-          </AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive active:bg-destructive/90"
-            disabled={isDiscarding}
-            onPress={() => {
-              onDiscard();
-            }}
-          >
-            {isDiscarding ? (
-              <View className="flex-row items-center gap-2">
-                <ActivityIndicator size="small" color="white" />
-                <Text className="text-destructive-foreground">{t("discarding")}</Text>
-              </View>
-            ) : (
-              <Text className="text-destructive-foreground">{t("discard")}</Text>
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
 export function WizardLayout({
   routeTitle,
   stepTitle,
@@ -402,8 +535,11 @@ export function WizardLayout({
   onContinue,
   onPublish,
   onReturnToReview,
-  onDiscard,
+  onClose,
+  isClosing = false,
   mode,
+  sectionList = false,
+  subtitle,
   editDetourActive,
   canContinue,
   canPublish,
@@ -415,17 +551,14 @@ export function WizardLayout({
   progressPercent,
   children,
   disabledReason,
+  publishBlockers,
+  isPublishing,
+  publishError,
   secondaryAction,
   publishLabel,
-  discardTitle,
-  discardDescription,
-  isDiscarding = false,
-  discardError = null,
   uploadStatus,
+  onUploadStatusPress,
 }: WizardLayoutProps) {
-  const { t } = useTranslation();
-  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
-
   return (
     <SafeAreaView className="flex-1 bg-background">
       <WizardHeader
@@ -435,10 +568,16 @@ export function WizardLayout({
         stepCount={stepCount}
         canGoBack={canGoBack}
         onBack={onBack}
-        onOpenDiscard={() => setShowDiscardDialog(true)}
+        mode={mode}
+        sectionList={sectionList}
+        subtitle={subtitle}
+        onClose={onClose}
+        isClosing={isClosing}
         progressPercent={progressPercent}
         saveStatus={saveStatus}
         onRetrySave={onRetrySave}
+        uploadStatus={uploadStatus}
+        onUploadStatusPress={onUploadStatusPress}
       />
 
       <SaveErrorBanner
@@ -455,27 +594,6 @@ export function WizardLayout({
         </ScrollView>
 
         <View className="mt-auto">
-          {uploadStatus && (uploadStatus.inflight > 0 || uploadStatus.failed > 0) && (
-            <View className="mx-5 mb-2 flex-row items-center gap-2 rounded-lg bg-muted px-3 py-2">
-              {uploadStatus.inflight > 0 && (
-                <View className="flex-row items-center gap-1.5">
-                  <ActivityIndicator size="small" />
-                  <Text className="text-xs text-muted-foreground">
-                    {uploadStatus.inflight} {t("uploading")}
-                  </Text>
-                </View>
-              )}
-              {uploadStatus.failed > 0 && (
-                <View className="flex-row items-center gap-1.5">
-                  <Icon as={AlertCircle} className="size-3.5 text-destructive" />
-                  <Text className="text-xs text-destructive">
-                    {uploadStatus.failed} {t("failed")}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-
           <WizardFooter
             isLastStep={isLastStep}
             canContinue={canContinue}
@@ -488,21 +606,15 @@ export function WizardLayout({
             mode={mode}
             editDetourActive={editDetourActive}
             disabledReason={disabledReason}
+            publishBlockers={publishBlockers}
+            isPublishing={isPublishing}
+            publishError={publishError}
             secondaryAction={secondaryAction}
             publishLabel={publishLabel}
           />
         </View>
       </View>
 
-      <DiscardConfirmationDialog
-        open={showDiscardDialog}
-        onOpenChange={setShowDiscardDialog}
-        onDiscard={onDiscard}
-        discardTitle={discardTitle ?? t("discardListingTitle")}
-        discardDescription={discardDescription ?? t("discardListingDescription")}
-        isDiscarding={isDiscarding}
-        discardError={discardError}
-      />
     </SafeAreaView>
   );
 }

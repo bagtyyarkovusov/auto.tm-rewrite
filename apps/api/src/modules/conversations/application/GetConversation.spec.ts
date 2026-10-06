@@ -1,7 +1,11 @@
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 
-import type { IdentityCheckPort, IdentityReadPort } from "../../identity/identity.public";
+import type {
+  IdentityCheckPort,
+  IdentityReadPort,
+  IdentityUserSummary,
+} from "../../identity/identity.public";
 import type {
   ListingSummary,
   ListingsReadPort,
@@ -43,6 +47,27 @@ const lastMessage = Message.createText({
   text: "Hello",
 });
 
+
+function identityUser(
+  id: string,
+  displayName: string | null,
+  nameNumber: number,
+  avatarIndex: number,
+): IdentityUserSummary {
+  return {
+    id,
+    displayName,
+    nameNumber,
+    avatarIndex,
+    avatarKey: null,
+    deleted: false,
+    role: "buyer",
+    suspendedAt: null,
+    suspendedById: null,
+    suspensionReason: null,
+  };
+}
+
 function build(
   overrides: {
     found?: Conversation | null;
@@ -57,7 +82,7 @@ function build(
      * state the first read sees.
      */
     racingViewerBlock?: boolean;
-    users?: Array<{ id: string; displayName: string | null }>;
+    users?: IdentityUserSummary[];
   } = {},
 ) {
   const repository = {
@@ -121,7 +146,7 @@ function build(
     findUsersByIds: vi
       .fn()
       .mockResolvedValue(
-        overrides.users ?? [{ id: "seller-1", displayName: "Seller One" }],
+        overrides.users ?? [identityUser("seller-1", "Seller One", 2057, 7)],
       ),
     findBlockedUserIds: vi.fn(async (blockerId: string, ids: string[]) =>
       racingBlock !== undefined && blockerId === "buyer-1"
@@ -163,7 +188,14 @@ describe("GetConversation", () => {
       peerLastReadAt: new Date("2026-02-02T00:00:00.000Z"),
       peerLastDeliveredAt: new Date("2026-02-03T00:00:00.000Z"),
       mutedAt: new Date("2026-02-01T00:00:00.000Z"),
-      peer: { id: "seller-1", displayName: "Seller One" },
+      peer: {
+        id: "seller-1",
+        displayName: "Seller One",
+        nameNumber: 2057,
+        avatarIndex: 7,
+        avatarKey: null,
+        deleted: false,
+      },
       blockedByMe: false,
       sendRestriction: null,
     });
@@ -171,7 +203,7 @@ describe("GetConversation", () => {
 
   it("shows the seller their own watermarks and the buyer as peer", async () => {
     const { useCase } = build({
-      users: [{ id: "buyer-1", displayName: "Buyer One" }],
+      users: [identityUser("buyer-1", "Buyer One", 1111, 1)],
     });
 
     const result = await useCase.execute({
@@ -179,7 +211,14 @@ describe("GetConversation", () => {
       conversationId: "conv-1",
     });
 
-    expect(result.peer).toEqual({ id: "buyer-1", displayName: "Buyer One" });
+    expect(result.peer).toEqual({
+      id: "buyer-1",
+      displayName: "Buyer One",
+      nameNumber: 1111,
+      avatarIndex: 1,
+      avatarKey: null,
+      deleted: false,
+    });
     expect(result.mutedAt).toBeNull();
     expect(result.peerLastReadAt).toBeNull();
   });
@@ -229,7 +268,25 @@ describe("GetConversation", () => {
     expect(result.lastMessage).toBeNull();
   });
 
-  it("keeps a peer with no display name", async () => {
+  it("keeps a peer with no display name, with their number and avatar", async () => {
+    const { useCase } = build({ users: [identityUser("seller-1", null, 2057, 7)] });
+
+    const result = await useCase.execute({
+      userId: "buyer-1",
+      conversationId: "conv-1",
+    });
+
+    expect(result.peer).toEqual({
+      id: "seller-1",
+      displayName: null,
+      nameNumber: 2057,
+      avatarIndex: 7,
+      avatarKey: null,
+      deleted: false,
+    });
+  });
+
+  it("answers for a peer whose User row is gone as a deleted User", async () => {
     const { useCase } = build({ users: [] });
 
     const result = await useCase.execute({
@@ -237,7 +294,14 @@ describe("GetConversation", () => {
       conversationId: "conv-1",
     });
 
-    expect(result.peer).toEqual({ id: "seller-1", displayName: null });
+    expect(result.peer).toEqual({
+      id: "seller-1",
+      displayName: null,
+      nameNumber: 1000,
+      avatarIndex: 0,
+      avatarKey: null,
+      deleted: true,
+    });
   });
 
   it.each([

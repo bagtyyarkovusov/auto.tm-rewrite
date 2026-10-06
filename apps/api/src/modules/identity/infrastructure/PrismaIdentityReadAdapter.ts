@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
 import type { IdentityReadPort, IdentityUserSummary } from "../domain/ports/IdentityReadPort";
+import { PUBLIC_IDENTITY_SELECT, toPublicIdentity } from "./publicIdentityRow";
 
 @Injectable()
 export class PrismaIdentityReadAdapter implements IdentityReadPort {
@@ -13,8 +14,8 @@ export class PrismaIdentityReadAdapter implements IdentityReadPort {
     const row = await this.prisma.user.findUnique({
       where: { id },
       select: {
+        ...PUBLIC_IDENTITY_SELECT,
         id: true,
-        displayName: true,
         role: true,
         locale: true,
         suspendedAt: true,
@@ -26,8 +27,8 @@ export class PrismaIdentityReadAdapter implements IdentityReadPort {
     if (!row) return null;
 
     return {
+      ...toPublicIdentity(row),
       id: row.id,
-      displayName: row.displayName,
       role: row.role,
       locale: row.locale,
       suspendedAt: row.suspendedAt,
@@ -42,8 +43,8 @@ export class PrismaIdentityReadAdapter implements IdentityReadPort {
     const rows = await this.prisma.user.findMany({
       where: { id: { in: ids } },
       select: {
+        ...PUBLIC_IDENTITY_SELECT,
         id: true,
-        displayName: true,
         role: true,
         locale: true,
         suspendedAt: true,
@@ -53,8 +54,8 @@ export class PrismaIdentityReadAdapter implements IdentityReadPort {
     });
 
     return rows.map((row) => ({
+      ...toPublicIdentity(row),
       id: row.id,
-      displayName: row.displayName,
       role: row.role,
       locale: row.locale,
       suspendedAt: row.suspendedAt,

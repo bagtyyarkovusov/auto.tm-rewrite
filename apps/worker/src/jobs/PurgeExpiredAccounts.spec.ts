@@ -15,6 +15,9 @@ function makeFakePrisma() {
       emailVerifiedAt?: Date | null;
       displayName: string | null;
       avatarUrl: string | null;
+      nameNumber?: number;
+      avatarIndex?: number;
+      avatarKey?: string | null;
       deletionScheduledAt: Date | null;
     }>,
     sessions: [] as Array<{ id: string; userId: string }>,
@@ -28,7 +31,17 @@ function makeFakePrisma() {
     blockedUsers: [] as Array<{ id: string; blockerId: string; blockedId: string }>,
     dealershipMembers: [] as Array<{ id: string; userId: string }>,
     listingDrafts: [] as Array<{ id: string; userId: string }>,
+    verifiedContactPhones: [] as Array<{ id: string; sellerId: string }>,
+    otpRequests: [] as Array<{ id: string; userId: string | null; destination: string; phone: string | null; createdAt: Date }>,
+    listings: [] as Array<{ id: string; sellerId: string; contactPhone: string | null }>,
+    /** Operations passed to each `$transaction`, by the label their delegate gave them. */
+    transactions: [] as string[][],
   };
+
+  /** Labels a pending operation so a test can see which transaction carried it. */
+  function labelled<T>(label: string, op: Promise<T>): Promise<T> {
+    return Object.assign(op, { label });
+  }
 
   const prismaLike = {
     user: {
@@ -152,7 +165,55 @@ function makeFakePrisma() {
       },
     },
 
+    otpRequest: {
+      deleteMany: (args: {
+        where: {
+          OR?: Array<{ userId?: string | null; destination?: { in: string[] } }>;
+          createdAt?: { lt: Date };
+        };
+      }) =>
+        labelled("otpRequest.deleteMany", (async () => {
+          const before = state.otpRequests.length;
+          const matches = (r: (typeof state.otpRequests)[number]) => {
+            if (args.where.createdAt) return r.createdAt < args.where.createdAt.lt;
+            return (args.where.OR ?? []).some(
+              (c) =>
+                (c.userId === undefined || r.userId === c.userId) &&
+                (c.destination === undefined || c.destination.in.includes(r.destination)),
+            );
+          };
+          const kept = state.otpRequests.filter((r) => !matches(r));
+          state.otpRequests.splice(0, state.otpRequests.length, ...kept);
+          return { count: before - state.otpRequests.length };
+        })()),
+    },
+
+    listing: {
+      updateMany: (args: { where: { sellerId: string }; data: { contactPhone: null } }) =>
+        labelled("listing.updateMany", (async () => {
+          let count = 0;
+          for (const l of state.listings) {
+            if (l.sellerId === args.where.sellerId) {
+              l.contactPhone = args.data.contactPhone;
+              count += 1;
+            }
+          }
+          return { count };
+        })()),
+    },
+
+    verifiedContactPhone: {
+      deleteMany: (args: { where: { sellerId: string } }) =>
+        labelled("verifiedContactPhone.deleteMany", (async () => {
+          const before = state.verifiedContactPhones.length;
+          const kept = state.verifiedContactPhones.filter((v) => v.sellerId !== args.where.sellerId);
+          state.verifiedContactPhones.splice(0, state.verifiedContactPhones.length, ...kept);
+          return { count: before - state.verifiedContactPhones.length };
+        })()),
+    },
+
     $transaction: async (ops: Array<Promise<unknown>>) => {
+      state.transactions.push(ops.map((op) => (op as { label?: string }).label ?? "other"));
       await Promise.all(ops);
     },
   };
@@ -210,6 +271,28 @@ describe("PurgeExpiredAccounts", () => {
     expect(kept?.deletionScheduledAt).not.toBeNull();
   });
 
+  it("clears the name and the photo key and keeps the name number and avatar index (#638)", async () => {
+    fake.users.push({
+      id: "user-expired",
+      phone: "+99361234567",
+      displayName: "Expired",
+      avatarUrl: null,
+      nameNumber: 4821,
+      avatarIndex: 7,
+      avatarKey: "avatars/user-expired/photo.jpg",
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+
+    await job.execute({ now: NOW });
+
+    expect(fake.users[0]).toMatchObject({
+      displayName: null,
+      avatarKey: null,
+      nameNumber: 4821,
+      avatarIndex: 7,
+    });
+  });
+
   it("prunes private rows for purged users", async () => {
     fake.users.push({
       id: "user-1",
@@ -243,6 +326,135 @@ describe("PurgeExpiredAccounts", () => {
     expect(fake.blockedUsers).toHaveLength(0);
     expect(fake.dealershipMembers).toHaveLength(0);
     expect(fake.listingDrafts).toHaveLength(0);
+  });
+
+  it("deletes the purged User's verified contact phones in the same transaction as the other rows", async () => {
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      displayName: "Name",
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+    fake.verifiedContactPhones.push(
+      { id: "v1", sellerId: "user-1" },
+      { id: "v2", sellerId: "user-1" },
+      { id: "v3", sellerId: "someone-else" },
+    );
+
+    await job.execute({ now: NOW });
+
+    expect(fake.verifiedContactPhones).toEqual([{ id: "v3", sellerId: "someone-else" }]);
+    expect(fake.transactions).toHaveLength(1);
+    expect(fake.transactions[0]).toContain("verifiedContactPhone.deleteMany");
+    expect(fake.transactions[0]?.length).toBeGreaterThan(1);
+  });
+
+  it("deletes the purged User's sign-in code records and clears the contact phone on their kept Listings, in the same transaction", async () => {
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      email: "aman@example.com",
+      displayName: "Name",
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+    const recent = new Date(NOW.getTime() - 60_000);
+    fake.otpRequests.push(
+      { id: "o1", userId: "user-1", destination: "+99361234567", phone: "+99361234567", createdAt: recent },
+      { id: "o2", userId: null, destination: "+99361234567", phone: "+99361234567", createdAt: recent },
+      { id: "o3", userId: null, destination: "aman@example.com", phone: null, createdAt: recent },
+      { id: "o4", userId: null, destination: "+99365000000", phone: "+99365000000", createdAt: recent },
+    );
+    fake.listings.push(
+      { id: "l1", sellerId: "user-1", contactPhone: "+99361234567" },
+      { id: "l2", sellerId: "someone-else", contactPhone: "+99365000000" },
+    );
+
+    await job.execute({ now: NOW });
+
+    expect(fake.otpRequests.map((r) => r.id)).toEqual(["o4"]);
+    expect(fake.listings).toEqual([
+      { id: "l1", sellerId: "user-1", contactPhone: null },
+      { id: "l2", sellerId: "someone-else", contactPhone: "+99365000000" },
+    ]);
+    expect(fake.transactions[0]).toEqual(
+      expect.arrayContaining(["otpRequest.deleteMany", "listing.updateMany", "verifiedContactPhone.deleteMany"]),
+    );
+  });
+
+  it("keeps a code record another User requested to the purged User's number", async () => {
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      email: null,
+      displayName: null,
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+    const recent = new Date(NOW.getTime() - 60_000);
+    fake.otpRequests.push(
+      { id: "mine", userId: "user-1", destination: "+99361234567", phone: "+99361234567", createdAt: recent },
+      { id: "signed-out", userId: null, destination: "+99361234567", phone: "+99361234567", createdAt: recent },
+      { id: "other-seller", userId: "seller-b", destination: "+99361234567", phone: "+99361234567", createdAt: recent },
+    );
+
+    await job.execute({ now: NOW });
+
+    expect(fake.otpRequests.map((r) => r.id)).toEqual(["other-seller"]);
+  });
+
+  it("still deletes code records older than 30 days when a User's purge fails", async () => {
+    const day = 24 * 60 * 60 * 1000;
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      email: null,
+      displayName: null,
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    });
+    fake.otpRequests.push({
+      id: "old",
+      userId: null,
+      destination: "+99365000000",
+      phone: "+99365000000",
+      createdAt: new Date(NOW.getTime() - 31 * day),
+    });
+    (fake.prisma as unknown as { $transaction: () => Promise<never> }).$transaction = async () => {
+      throw new Error("purge failed");
+    };
+
+    await expect(job.execute({ now: NOW })).rejects.toThrow("purge failed");
+
+    expect(fake.otpRequests).toEqual([]);
+  });
+
+  it("deletes every sign-in code record older than 30 days on each run, even with no User to purge", async () => {
+    const day = 24 * 60 * 60 * 1000;
+    fake.otpRequests.push(
+      { id: "old", userId: null, destination: "+99361234567", phone: "+99361234567", createdAt: new Date(NOW.getTime() - 31 * day) },
+      { id: "new", userId: null, destination: "+99361234567", phone: "+99361234567", createdAt: new Date(NOW.getTime() - 29 * day) },
+    );
+
+    await job.execute({ now: NOW });
+
+    expect(fake.otpRequests.map((r) => r.id)).toEqual(["new"]);
+  });
+
+  it("keeps verified contact phones during the grace period", async () => {
+    fake.users.push({
+      id: "user-1",
+      phone: "+99361234567",
+      displayName: "Name",
+      avatarUrl: null,
+      deletionScheduledAt: new Date(NOW.getTime() + 1000),
+    });
+    fake.verifiedContactPhones.push({ id: "v1", sellerId: "user-1" });
+
+    await job.execute({ now: NOW });
+
+    expect(fake.verifiedContactPhones).toHaveLength(1);
   });
 
   it("returns zero when no users have expired grace", async () => {

@@ -21,6 +21,7 @@ import {
   collectPhotosToResume,
   transitionUploadQueueToWaitingForNetwork,
 } from "./queueState";
+import { getStagingPath } from "./stagingDir";
 import type { StagedPhoto, UploadQueue, UploadError } from "./types";
 
 function makeQueue(photos: StagedPhoto[]): UploadQueue {
@@ -82,6 +83,31 @@ describe("computePublishGate", () => {
     expect(result.canPublish).toBe(false);
     expect(result.blockers).toContain("wizardErrors.uploadsInProgress");
   });
+
+  // A photo waiting for the network has no key yet and would be dropped silently
+  // from the published Listing, so it still counts as an upload in progress.
+  it("blocks publishing while another photo waits for the network", () => {
+    const result = computePublishGate(
+      makeQueue([
+        makePhoto({ photoId: "p1", state: "attached" }),
+        makePhoto({ photoId: "p2", state: "waiting_for_network" }),
+      ]),
+    );
+    expect(result.canPublish).toBe(false);
+    expect(result.blockers).toContain("wizardErrors.uploadsInProgress");
+  });
+
+  // A lost photo can never upload; the seller has to remove it, like a failed one.
+  it("blocks publishing while another photo is lost", () => {
+    const result = computePublishGate(
+      makeQueue([
+        makePhoto({ photoId: "p1", state: "attached" }),
+        makePhoto({ photoId: "p2", state: "lost" }),
+      ]),
+    );
+    expect(result.canPublish).toBe(false);
+    expect(result.blockers).toContain("wizardErrors.uploadsFailed");
+  });
 });
 
 describe("reconstructQueueFromDraft", () => {
@@ -110,6 +136,21 @@ describe("reconstructQueueFromDraft", () => {
       [],
     );
     expect(result.photos[0]?.state).toBe("lost");
+  });
+
+  it("brings back a staged file the draft never saved as ready to upload", () => {
+    const result = reconstructQueueFromDraft(
+      "draft-1",
+      { photos: [{ photoId: "p1", key: "k1", sortOrder: 0 }] },
+      ["p2"],
+    );
+    expect(result.photos[1]).toMatchObject({
+      photoId: "p2",
+      state: "compressed",
+      sortOrder: 1,
+      localUri: getStagingPath("draft-1", "p2"),
+    });
+    expect(collectPhotosToResume(result).map((p) => p.photoId)).toEqual(["p2"]);
   });
 });
 

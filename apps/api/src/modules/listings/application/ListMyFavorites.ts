@@ -12,6 +12,8 @@ import {
   type ListingCardReadPort,
 } from "../domain/ports/ListingCardReadPort";
 
+import { decodeListingsCursor } from "./decodeListingsCursor";
+
 export interface ListMyFavoritesInput {
   userId: string;
   cursor?: string;
@@ -37,7 +39,7 @@ export class ListMyFavorites {
     const limit = Math.min(input.limit ?? 20, 50);
 
     const decodedCursor = input.cursor
-      ? ListingsSchemas.decodeCursor(input.cursor)
+      ? decodeListingsCursor(input.cursor)
       : undefined;
 
     // Paging runs over Favorites whose Listing is visible, so a page is full whenever

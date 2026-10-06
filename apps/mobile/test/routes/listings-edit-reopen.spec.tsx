@@ -23,7 +23,7 @@ const fixture = vi.hoisted(() => {
       media: [{ id, kind: "image", key: "photo.jpg", variants, sortOrder: 0 }],
       viewCount: 0, favoriteCount: 0, publishedAt: "2026-09-30T00:00:00.000Z",
       createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
-      seller: { displayName: "Seller", memberSince: "2026-01-01T00:00:00.000Z" },
+      seller: { displayName: "Seller", nameNumber: 2057, avatarIndex: 7, avatarKey: null, deleted: false, memberSince: "2026-01-01T00:00:00.000Z" },
     },
   };
 });
@@ -59,7 +59,7 @@ vi.mock("../../src/listings/edit/useSaveListingEdit", () => ({
 }));
 vi.mock("lucide-react-native", async () => {
   const Icon = (await import("react-native")).View;
-  return { Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon, ChevronLeft: Icon, RefreshCw: Icon };
+  return { Check: Icon, AlertCircle: Icon, Eye: Icon, ListChecks: Icon, X: Icon, ChevronLeft: Icon, RefreshCw: Icon, Lock: Icon };
 });
 vi.mock("@/components/ui/toast", () => ({ useToast: () => ({ show: vi.fn() }) }));
 vi.mock("react-native-safe-area-context", async () => ({
@@ -67,7 +67,6 @@ vi.mock("react-native-safe-area-context", async () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("react-native")).View }));
-vi.mock("../../src/listings/wizard/Step1Vin", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step2Photos", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step3VehicleId", () => ({ default: () => null }));
 vi.mock("../../src/listings/wizard/Step5Price", () => ({ default: () => null }));
@@ -99,6 +98,8 @@ describe("reopening the Listing editor", () => {
     await waitFor(() => expect([...fixture.files]).toEqual([]));
 
     expect(screen.queryByText(/uploading/i)).toBeNull();
-    expect(screen.getByRole("button", { name: "Save changes", disabled: false })).toBeTruthy();
+    // Only the Listing's own photo, and nothing for Save changes to send (#589).
+    expect(screen.getByText("Photos: 1")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save changes", disabled: true })).toBeTruthy();
   });
 });

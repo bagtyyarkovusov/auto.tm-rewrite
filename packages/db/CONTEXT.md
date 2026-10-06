@@ -4,6 +4,8 @@ The schema, migration history, generated-client boundary, and seed inputs live h
 
 `Listing.publicNumber` is a unique, database-assigned integer for the public detail footer. Its migration numbers existing Listings; subsequent inserts take the next sequence value. UUIDs remain the internal identity and route key.
 
+`users.nameNumber` (1000 to 9999) and `users.avatarIndex` (0 to 11) have random column defaults and range check constraints that Prisma cannot express; `schema.prisma` mirrors the defaults as `dbgenerated` in PostgreSQL's own rendering, so `prisma migrate diff` stays empty. The defaults numbered existing Users when the columns were added and let an older API still create Users; the API normally draws both values itself.
+
 `listings.damaged` is the seller's "Damaged / needs repair" answer (ADR-0052). It is nullable only so its migration applies to existing rows; the API requires it, and the fixture and reviewer seeds set it on every Listing. The earlier accident, mileage-accurate, owner-count, and service-history columns were dropped without data migration, so environments are reseeded.
 
 `Brand.logoKey` is a nullable object key in the `catalog-assets` bucket (see the catalog overview for the layout). Null means no logo.

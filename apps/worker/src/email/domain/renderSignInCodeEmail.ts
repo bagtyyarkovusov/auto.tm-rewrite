@@ -50,7 +50,7 @@ const COPY: Record<EmailLocale, Copy> = {
     lead: {
       "sign-in": "AutoTM-e girmek üçin koduňyz:",
       "sign-in-method": "Bu salgyny AutoTM-de tassyklamak üçin koduňyz:",
-      "account-deletion": "AutoTM hasabyňyzy pozmagy tassyklamak üçin koduňyz:",
+      "account-deletion": "AutoTM akkauntyňyzy pozmagy tassyklamak üçin koduňyz:",
     },
     expiry: `Kod ${EXPIRY} minudyň dowamynda hereket edýär.`,
     neverAsk: "AutoTM bu kody sizden hiç haçan soramaz. Ony hiç kime bermäň.",

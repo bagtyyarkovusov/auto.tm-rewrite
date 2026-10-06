@@ -23,6 +23,9 @@ export const queryKeys = {
       [...queryKeys.catalog.all(), "regions", locale] as const,
     cities: (regionId: string, locale: string = "ru") =>
       [...queryKeys.catalog.all(), "cities", regionId, locale] as const,
+    /** A region's whole city list, apart from the first page `cities` holds. */
+    citiesAll: (regionId: string, locale: string = "ru") =>
+      [...queryKeys.catalog.cities(regionId, locale), "all"] as const,
     search: (query: string, locale: string) =>
       [...queryKeys.catalog.all(), "search", query, locale] as const,
   },
@@ -50,8 +53,17 @@ export const queryKeys = {
     myDrafts: () => [...queryKeys.listings.all(), "my-drafts"] as const,
     myDraftsInfinite: () =>
       [...queryKeys.listings.all(), "my-drafts-infinite"] as const,
+    myCountsAll: () => [...queryKeys.listings.all(), "my-counts"] as const,
+    /** Per User, so a cached total never shows after another User signs in. */
+    myCounts: (userId: string | null) =>
+      [...queryKeys.listings.myCountsAll(), userId] as const,
     /** Shared by every owner lifecycle mutation so pending state spans screens. */
     lifecycleMutation: () => ["listing-lifecycle"] as const,
+    myContactPhonesAll: () =>
+      [...queryKeys.listings.all(), "my-contact-phones"] as const,
+    /** Per User, so a cached list never shows after another User signs in. */
+    myContactPhones: (userId: string | null) =>
+      [...queryKeys.listings.myContactPhonesAll(), userId] as const,
   },
 
   uploads: {
@@ -78,6 +90,12 @@ export const queryKeys = {
       [...queryKeys.conversations.all(), "detail", id] as const,
     messages: (id: string) =>
       [...queryKeys.conversations.all(), "messages", id] as const,
+    /** Every viewer's total; invalidate this to refresh the Messages tab count. */
+    unreadCounts: () =>
+      [...queryKeys.conversations.all(), "unread-count"] as const,
+    /** Keyed by viewer, so another User never sees the previous User's count. */
+    unreadCount: (viewerId: string) =>
+      [...queryKeys.conversations.unreadCounts(), viewerId] as const,
   },
 
   reports: {

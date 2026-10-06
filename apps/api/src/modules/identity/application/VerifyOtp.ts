@@ -15,6 +15,9 @@ import type { ConstantTimeComparatorPort } from "../domain/ports/ConstantTimeCom
 import { CONSTANT_TIME_COMPARATOR_PORT } from "../domain/ports/ConstantTimeComparatorPort";
 import type { ReviewerOtpBypassConfig } from "../domain/ports/ReviewerOtpBypassConfig";
 import { REVIEWER_OTP_BYPASS_CONFIG } from "../domain/ports/ReviewerOtpBypassConfig";
+import type { RandomSourcePort } from "../domain/ports/RandomSourcePort";
+import { RANDOM_SOURCE_PORT } from "../domain/ports/RandomSourcePort";
+import { drawGeneratedIdentity } from "../domain/GeneratedIdentity";
 import { PrismaOtpRequestRepository } from "../infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "../infrastructure/PrismaSessionRepository";
@@ -67,6 +70,8 @@ export class VerifyOtp {
     private readonly constantTimeComparator: ConstantTimeComparatorPort,
     @Inject(VerifySignInCode)
     private readonly verifySignInCode: VerifySignInCode,
+    @Inject(RANDOM_SOURCE_PORT)
+    private readonly random: RandomSourcePort,
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
@@ -129,6 +134,7 @@ export class VerifyOtp {
       existingUser ??
       (await this.userRepo.create(
         destination.verifiedMethods(now),
+        drawGeneratedIdentity(() => this.random.next()),
       ));
 
     // A User in the deletion grace period signs in with the deletion still

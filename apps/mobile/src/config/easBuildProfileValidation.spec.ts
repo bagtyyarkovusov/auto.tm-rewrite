@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { validateCurrentEasBuildProfile, validateEasBuildProfile } from "./easBuildProfileValidation";
+import {
+  validateAndroidApplicationId,
+  validateCurrentEasBuildProfile,
+  validateEasBuildProfile,
+} from "./easBuildProfileValidation";
 
 describe("validateEasBuildProfile", () => {
   it("allows development without remote build URLs", () => {
@@ -38,6 +42,61 @@ describe("validateEasBuildProfile", () => {
         mediaUrl: "https://media.auto.tm",
       }),
     ).toEqual([]);
+  });
+
+  it("allows the production hosts under autotm.bagtyyar.dev, the domain AutoTM runs on today", () => {
+    expect(
+      validateEasBuildProfile({
+        profile: "production",
+        apiUrl: "https://api.autotm.bagtyyar.dev/api/v1",
+        wsUrl: "wss://api.autotm.bagtyyar.dev/ws/chat",
+        mediaUrl: "https://media.autotm.bagtyyar.dev",
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([
+    "https://bagtyyar.dev/api/v1",
+    "https://api.bagtyyar.dev/api/v1",
+    "https://autotm.bagtyyar.dev.evil.example/api/v1",
+    "https://notautotm.bagtyyar.dev/api/v1",
+    "https://api.autotm.bagtyyar.dev.evil.example/api/v1",
+  ])("rejects %s for production: only AutoTM's own domains count", (apiUrl) => {
+    expect(
+      validateEasBuildProfile({
+        profile: "production",
+        apiUrl,
+        wsUrl: "wss://api.autotm.bagtyyar.dev/ws/chat",
+        mediaUrl: "https://media.autotm.bagtyyar.dev",
+      }),
+    ).toEqual(["EXPO_PUBLIC_API_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production"]);
+  });
+
+  it("rejects a foreign websocket or media host for production, not only a foreign API host", () => {
+    expect(
+      validateEasBuildProfile({
+        profile: "production",
+        apiUrl: "https://api.autotm.bagtyyar.dev/api/v1",
+        wsUrl: "wss://api.bagtyyar.dev/ws/chat",
+        mediaUrl: "https://media.autotm.bagtyyar.dev.evil.example",
+      }),
+    ).toEqual([
+      "EXPO_PUBLIC_WS_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production",
+      "EXPO_PUBLIC_MEDIA_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production",
+    ]);
+  });
+
+  it.each([
+    "https://user:password@api.autotm.bagtyyar.dev/api/v1",
+    "https://api.autotm.bagtyyar.dev:8443/api/v1",
+  ])("rejects credentials or a custom port in a production URL without echoing it (%s)", (apiUrl) => {
+    const errors = validateEasBuildProfile({
+      profile: "production",
+      apiUrl,
+      wsUrl: "wss://api.autotm.bagtyyar.dev/ws/chat",
+      mediaUrl: "https://media.autotm.bagtyyar.dev",
+    });
+    expect(errors).toEqual(["EXPO_PUBLIC_API_URL must not carry credentials or a custom port in production"]);
   });
 
   it("rejects Railway hosts for production", () => {
@@ -132,5 +191,37 @@ describe("production-smoke environment isolation", () => {
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.join(" ")).not.toContain(url);
     expect(errors.join(" ")).not.toContain("user:password");
+  });
+});
+
+describe("validateAndroidApplicationId", () => {
+  it("accepts the existing Play app's package on the production profile", () => {
+    expect(validateAndroidApplicationId("production", "com.auto_tm.ynamly")).toEqual([]);
+  });
+
+  it.each([undefined, "", "tm.auto.app"])("rejects %s as the production package", (value) => {
+    expect(validateAndroidApplicationId("production", value)).toEqual([
+      "ANDROID_APPLICATION_ID must be com.auto_tm.ynamly for the production profile",
+    ]);
+  });
+
+  it.each(["staging", "production-smoke", "development"])(
+    "rejects a package override on the %s profile, which must stay tm.auto.app",
+    (profile) => {
+      expect(validateAndroidApplicationId(profile, "com.auto_tm.ynamly")).toEqual([
+        `ANDROID_APPLICATION_ID must not be set for the ${profile} profile`,
+      ]);
+      expect(validateAndroidApplicationId(profile, undefined)).toEqual([]);
+    },
+  );
+
+  it("fails a production build whose environment lost the package", () => {
+    const errors = validateCurrentEasBuildProfile({
+      EAS_BUILD_PROFILE: "production",
+      EXPO_PUBLIC_API_URL: "https://api.auto.tm/api/v1",
+      EXPO_PUBLIC_WS_URL: "wss://api.auto.tm/ws/chat",
+      EXPO_PUBLIC_MEDIA_URL: "https://media.auto.tm",
+    });
+    expect(errors).toEqual(["ANDROID_APPLICATION_ID must be com.auto_tm.ynamly for the production profile"]);
   });
 });

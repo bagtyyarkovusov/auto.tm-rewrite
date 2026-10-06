@@ -134,9 +134,21 @@ class FakeVinDecoder implements VinDecoderPort {
   }
 }
 
+function sellerProfile(overrides: Partial<SellerProfile> = {}): SellerProfile {
+  return {
+    displayName: null,
+    nameNumber: 2057,
+    avatarIndex: 7,
+    avatarKey: null,
+    deleted: false,
+    memberSince: new Date("2025-01-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
+
 class FakeSellerProfilePort implements SellerProfilePort {
   profiles = new Map<string, SellerProfile>([
-    ["user-1", { displayName: "Seller", memberSince: new Date("2025-01-01T00:00:00.000Z") }],
+    ["user-1", sellerProfile({ displayName: "Seller" })],
   ]);
 
   async getSellerProfile(userId: string): Promise<SellerProfile | null> {
@@ -222,10 +234,13 @@ describe("GetListingDetail", () => {
   it("returns a named seller, join date, and public number from persisted data", async () => {
     seedListing();
     const profiles = new FakeSellerProfilePort();
-    profiles.profiles.set("user-1", {
+    profiles.profiles.set("user-1", sellerProfile({
       displayName: "Aýgül",
+      nameNumber: 3310,
+      avatarIndex: 11,
+      avatarKey: "avatars/user-1/a.jpg",
       memberSince: new Date("2024-06-10T12:00:00Z"),
-    });
+    }));
 
     const result = await makeUseCase(
       repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder, profiles,
@@ -234,17 +249,20 @@ describe("GetListingDetail", () => {
     expect(result.publicNumber).toBe(10482);
     expect(result.seller).toEqual({
       displayName: "Aýgül",
+      nameNumber: 3310,
+      avatarIndex: 11,
+      avatarKey: "avatars/user-1/a.jpg",
+      deleted: false,
       memberSince: "2024-06-10T12:00:00.000Z",
     });
   });
 
-  it("returns a null display name for an unnamed seller", async () => {
+  it("returns a null display name and the number for an unnamed seller", async () => {
     seedListing();
     const profiles = new FakeSellerProfilePort();
-    profiles.profiles.set("user-1", {
-      displayName: null,
+    profiles.profiles.set("user-1", sellerProfile({
       memberSince: new Date("2024-06-10T12:00:00Z"),
-    });
+    }));
 
     const result = await makeUseCase(
       repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder, profiles,
@@ -252,7 +270,30 @@ describe("GetListingDetail", () => {
 
     expect(result.seller).toEqual({
       displayName: null,
+      nameNumber: 2057,
+      avatarIndex: 7,
+      avatarKey: null,
+      deleted: false,
       memberSince: "2024-06-10T12:00:00.000Z",
+    });
+  });
+
+  it("marks a seller purged after account deletion, keeping the number and index", async () => {
+    seedListing({ status: "archived" });
+    const profiles = new FakeSellerProfilePort();
+    profiles.profiles.set("user-1", sellerProfile({ deleted: true }));
+
+    const result = await makeUseCase(
+      repo, mediaRepo, exchangeRates, storage, favorites, vinDecoder, profiles,
+    ).execute({ listingId: "listing-1" });
+
+    expect(result.seller).toEqual({
+      displayName: null,
+      nameNumber: 2057,
+      avatarIndex: 7,
+      avatarKey: null,
+      deleted: true,
+      memberSince: "2025-01-01T00:00:00.000Z",
     });
   });
 

@@ -9,6 +9,7 @@ import { ConversationsController } from "./presentation/conversations.controller
 import { ConversationGateway } from "./presentation/gateways/ConversationGateway";
 import { OpenConversation } from "./application/OpenConversation";
 import { ListMyConversations } from "./application/ListMyConversations";
+import { CountMyUnreadMessages } from "./application/CountMyUnreadMessages";
 import { GetConversation } from "./application/GetConversation";
 import { ListMessages } from "./application/ListMessages";
 import { SendTextMessage } from "./application/SendTextMessage";
@@ -26,6 +27,8 @@ import { ValidateConversationAccess } from "./application/ValidateConversationAc
 import { ConversationAccessPolicy } from "./application/ConversationAccessPolicy";
 import { PrismaConversationRepository } from "./infrastructure/PrismaConversationRepository";
 import { EventEmitterMessageEventPublisher } from "./infrastructure/EventEmitterMessageEventPublisher";
+import { SharpChatAttachmentCleaner } from "./infrastructure/SharpChatAttachmentCleaner";
+import { CHAT_ATTACHMENT_CLEANER } from "./domain/ports/ChatAttachmentCleaner";
 import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
 import { MESSAGE_EVENT_PUBLISHER } from "./domain/ports/MessageEventPublisher";
 import { CONVERSATION_STATE_PORT } from "./domain/ports/ConversationStatePort";
@@ -52,8 +55,13 @@ import { CONVERSATION_REPORT_CONTEXT_PORT } from "./domain/ports/ConversationRep
       provide: MESSAGE_EVENT_PUBLISHER,
       useClass: EventEmitterMessageEventPublisher,
     },
+    {
+      provide: CHAT_ATTACHMENT_CLEANER,
+      useClass: SharpChatAttachmentCleaner,
+    },
     OpenConversation,
     ListMyConversations,
+    CountMyUnreadMessages,
     GetConversation,
     ListMessages,
     ConversationMessageCommitter,

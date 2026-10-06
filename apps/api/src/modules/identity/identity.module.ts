@@ -16,6 +16,7 @@ import { RefreshSession } from "./application/RefreshSession";
 import { Logout } from "./application/Logout";
 import { LogoutAll } from "./application/LogoutAll";
 import { GetMe } from "./application/GetMe";
+import { UpdateDisplayName } from "./application/UpdateDisplayName";
 import { DeleteMe } from "./application/DeleteMe";
 import { RecoverAccount } from "./application/RecoverAccount";
 import { GetAdminTotpStatus } from "./application/GetAdminTotpStatus";
@@ -28,6 +29,9 @@ import { RequestSignInMethodChange } from "./application/RequestSignInMethodChan
 import { ConfirmSignInMethodChange } from "./application/ConfirmSignInMethodChange";
 import { RequestAccountDeletion } from "./application/RequestAccountDeletion";
 import { ConfirmAccountDeletion } from "./application/ConfirmAccountDeletion";
+import { IssueContactPhoneCode } from "./application/IssueContactPhoneCode";
+import { ConfirmContactPhoneCode } from "./application/ConfirmContactPhoneCode";
+import type { ContactPhoneCodePort } from "./domain/ports/ContactPhoneCodePort";
 import { PrismaOtpRequestRepository } from "./infrastructure/PrismaOtpRequestRepository";
 import { PrismaUserRepository } from "./infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "./infrastructure/PrismaSessionRepository";
@@ -43,7 +47,8 @@ import { AesGcmTotpSecretCipher } from "./infrastructure/AesGcmTotpSecretCipher"
 import { OtplibTotpVerifier } from "./infrastructure/OtplibTotpVerifier";
 import { InMemoryTotpThrottleAdapter } from "./infrastructure/InMemoryTotpThrottleAdapter";
 import { PinoSecurityLoggerAdapter } from "./infrastructure/PinoSecurityLoggerAdapter";
-import { PrismaAccountDeletionListingsAdapter } from "./infrastructure/PrismaAccountDeletionListingsAdapter";
+import { PrismaAccountDeletionUnitOfWork } from "./infrastructure/PrismaAccountDeletionUnitOfWork";
+import { PrismaAccountRestoreUnitOfWork } from "./infrastructure/PrismaAccountRestoreUnitOfWork";
 import { NodeConstantTimeComparator } from "./infrastructure/NodeConstantTimeComparator";
 import { parseReviewerOtpBypassConfig } from "./infrastructure/ReviewerOtpBypassConfigFactory";
 import { EventEmitterIdentityEventBus } from "./infrastructure/EventEmitterIdentityEventBus";
@@ -53,9 +58,12 @@ import { IDENTITY_ADMIN_PORT } from "./domain/ports/IdentityAdminPort";
 import { IDENTITY_READ_PORT } from "./domain/ports/IdentityReadPort";
 import { SELLER_PROFILE_READ_PORT } from "./domain/ports/SellerProfileReadPort";
 import { PrismaSellerProfileReadAdapter } from "./infrastructure/PrismaSellerProfileReadAdapter";
-import { ACCOUNT_DELETION_LISTINGS_PORT } from "./domain/ports/AccountDeletionListingsPort";
+import { ACCOUNT_DELETION_UNIT_OF_WORK } from "./domain/ports/AccountDeletionUnitOfWork";
+import { ACCOUNT_RESTORE_UNIT_OF_WORK } from "./domain/ports/AccountRestoreUnitOfWork";
 import { BLOCKED_USER_REPOSITORY } from "./domain/ports/BlockedUserRepository";
 import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeComparatorPort";
+import { RANDOM_SOURCE_PORT } from "./domain/ports/RandomSourcePort";
+import { MathRandomSource } from "./infrastructure/MathRandomSource";
 import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConfig";
 import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
 
@@ -89,7 +97,6 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     OtplibTotpVerifier,
     InMemoryTotpThrottleAdapter,
     PinoSecurityLoggerAdapter,
-    PrismaAccountDeletionListingsAdapter,
     NodeConstantTimeComparator,
     EventEmitterIdentityEventBus,
     BullMqEmailCodeSenderAdapter,
@@ -98,8 +105,12 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
       useExisting: BullMqEmailCodeSenderAdapter,
     },
     {
-      provide: ACCOUNT_DELETION_LISTINGS_PORT,
-      useClass: PrismaAccountDeletionListingsAdapter,
+      provide: ACCOUNT_DELETION_UNIT_OF_WORK,
+      useClass: PrismaAccountDeletionUnitOfWork,
+    },
+    {
+      provide: ACCOUNT_RESTORE_UNIT_OF_WORK,
+      useClass: PrismaAccountRestoreUnitOfWork,
     },
     {
       provide: IDENTITY_TOKENS.OtpTestMode,
@@ -128,6 +139,10 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     {
       provide: CONSTANT_TIME_COMPARATOR_PORT,
       useClass: NodeConstantTimeComparator,
+    },
+    {
+      provide: RANDOM_SOURCE_PORT,
+      useClass: MathRandomSource,
     },
     {
       provide: REVIEWER_OTP_BYPASS_CONFIG,
@@ -188,6 +203,7 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     Logout,
     LogoutAll,
     GetMe,
+    UpdateDisplayName,
     DeleteMe,
     RecoverAccount,
     GetAdminTotpStatus,
@@ -200,10 +216,25 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     ConfirmSignInMethodChange,
     RequestAccountDeletion,
     ConfirmAccountDeletion,
+    IssueContactPhoneCode,
+    ConfirmContactPhoneCode,
+    {
+      // The purpose is fixed by the two use-cases; callers cannot choose it.
+      provide: IDENTITY_TOKENS.ContactPhoneCodePort,
+      useFactory: (
+        issue: IssueContactPhoneCode,
+        confirm: ConfirmContactPhoneCode,
+      ): ContactPhoneCodePort => ({
+        requestCode: (input) => issue.execute(input),
+        confirmCode: (input) => confirm.execute(input),
+      }),
+      inject: [IssueContactPhoneCode, ConfirmContactPhoneCode],
+    },
   ],
   exports: [
     SELLER_PROFILE_READ_PORT,
     IDENTITY_TOKENS.IdentityCheckPort,
+    IDENTITY_TOKENS.ContactPhoneCodePort,
     IDENTITY_READ_PORT,
     IDENTITY_TOKENS.SessionRepository,
     IDENTITY_TOKENS.ClockPort,

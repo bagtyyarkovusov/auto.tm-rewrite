@@ -14,6 +14,7 @@ export const ErrorCode = {
   OtpLocked: "OTP_LOCKED",
   OtpNotFound: "OTP_NOT_FOUND",
   SignInMethodTaken: "SIGN_IN_METHOD_TAKEN",
+  InvalidDisplayName: "INVALID_DISPLAY_NAME",
   Internal: "INTERNAL",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -38,6 +39,13 @@ export const RateLimitedDetailsSchema = z.object({
   retryInSeconds: z.number().int().nonnegative(),
 });
 export type RateLimitedDetails = z.infer<typeof RateLimitedDetailsSchema>;
+
+// Sent as `details` on INVALID_OTP while the code still has tries (ADR-0081).
+// The fifth wrong code answers OTP_LOCKED instead, so the count is 1 to 4.
+export const InvalidOtpDetailsSchema = z.object({
+  attemptsLeft: z.number().int().min(1).max(4),
+});
+export type InvalidOtpDetails = z.infer<typeof InvalidOtpDetailsSchema>;
 
 export const ErrorResponseSchema = z.object({
   statusCode: z.number().int(),

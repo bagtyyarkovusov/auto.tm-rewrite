@@ -1,9 +1,6 @@
 import { Controller, Get, Inject, Param, Query, Req } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
-import {
-  CatalogSchemas,
-  CursorPaginationRequestSchema,
-} from "@auto-tm/contracts";
+import { CatalogSchemas } from "@auto-tm/contracts";
 
 import { Public } from "../../../common/public.decorator";
 import type { LocalizedRequest } from "../../../common/accept-language";
@@ -18,6 +15,12 @@ import { ListDriveTypes } from "../application/ListDriveTypes";
 import { ListEngineTypes } from "../application/ListEngineTypes";
 import { ListTransmissions } from "../application/ListTransmissions";
 import { SearchCatalog } from "../application/SearchCatalog";
+
+import {
+  encodeCatalogCursor,
+  parseCatalogPagination,
+  parseCatalogQuery,
+} from "./parseCatalogPagination";
 
 @Controller("api/v1/catalog")
 export class CatalogController {
@@ -44,7 +47,7 @@ export class CatalogController {
     @Query() query: CatalogSchemas.CatalogSearchQuery,
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
-    const parsed = CatalogSchemas.CatalogSearchQuerySchema.parse({
+    const parsed = parseCatalogQuery(CatalogSchemas.CatalogSearchQuerySchema, {
       q: query.q,
       locale: query.locale,
     });
@@ -63,28 +66,19 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
-    const pagination = CursorPaginationRequestSchema.parse(query);
-    const cursor = pagination.cursor
-      ? JSON.parse(Buffer.from(pagination.cursor, "base64").toString("utf-8"))
-      : undefined;
+    const pagination = parseCatalogPagination(query);
 
     const result = await this.listBrandsUC.execute({
       locale: locale as "tk" | "ru" | "en",
-      cursor,
-      limit: pagination.limit,
+      ...pagination,
     });
 
     return {
       items: result.items,
-      nextCursor: result.nextCursor
-        ? Buffer.from(
-            JSON.stringify(result.nextCursor),
-            "utf-8",
-          ).toString("base64")
-        : null,
+      nextCursor: encodeCatalogCursor(result.nextCursor),
       hasMore: !!result.nextCursor,
     };
   }
@@ -97,29 +91,20 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
-    const pagination = CursorPaginationRequestSchema.parse(query);
-    const cursor = pagination.cursor
-      ? JSON.parse(Buffer.from(pagination.cursor, "base64").toString("utf-8"))
-      : undefined;
+    const pagination = parseCatalogPagination(query);
 
     const result = await this.listModelsForBrandUC.execute({
       brandId,
       locale: locale as "tk" | "ru" | "en",
-      cursor,
-      limit: pagination.limit,
+      ...pagination,
     });
 
     return {
       items: result.items,
-      nextCursor: result.nextCursor
-        ? Buffer.from(
-            JSON.stringify(result.nextCursor),
-            "utf-8",
-          ).toString("base64")
-        : null,
+      nextCursor: encodeCatalogCursor(result.nextCursor),
       hasMore: !!result.nextCursor,
     };
   }
@@ -132,7 +117,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -151,7 +136,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -170,29 +155,20 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
-    const pagination = CursorPaginationRequestSchema.parse(query);
-    const cursor = pagination.cursor
-      ? JSON.parse(Buffer.from(pagination.cursor, "base64").toString("utf-8"))
-      : undefined;
+    const pagination = parseCatalogPagination(query);
 
     const result = await this.listCitiesForRegionUC.execute({
       regionId,
       locale: locale as "tk" | "ru" | "en",
-      cursor,
-      limit: pagination.limit,
+      ...pagination,
     });
 
     return {
       items: result.items,
-      nextCursor: result.nextCursor
-        ? Buffer.from(
-            JSON.stringify(result.nextCursor),
-            "utf-8",
-          ).toString("base64")
-        : null,
+      nextCursor: encodeCatalogCursor(result.nextCursor),
       hasMore: !!result.nextCursor,
     };
   }
@@ -204,7 +180,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -222,7 +198,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -240,7 +216,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -258,7 +234,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 
@@ -276,7 +252,7 @@ export class CatalogController {
     @Req() req: FastifyRequest & LocalizedRequest,
   ) {
     const locale =
-      CatalogSchemas.LocaleQuerySchema.parse({ locale: query.locale }).locale ??
+      parseCatalogQuery(CatalogSchemas.LocaleQuerySchema, { locale: query.locale }).locale ??
       req.locale ??
       "ru";
 

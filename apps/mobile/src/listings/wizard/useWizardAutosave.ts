@@ -41,7 +41,6 @@ function debounce<TArgs extends unknown[]>(
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [1000, 2000, 4000]; // exponential backoff
 const SAVE_TIMEOUT_MS = 10_000;
-const SAVED_CLEAR_MS = 2_000;
 
 export function useWizardAutosave(draftId: string | undefined) {
   const { t } = useTranslation();
@@ -62,7 +61,10 @@ export function useWizardAutosave(draftId: string | undefined) {
   const isMountedRef = useRef(true);
   const isOnlineRef = useRef(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedClearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The draft this hook saves now. A save that finishes after the wizard moved
+  // to another draft, or closed, must not touch the new draft's status.
+  const draftIdRef = useRef(draftId);
+  draftIdRef.current = draftId;
 
   // Track network status
   useEffect(() => {
@@ -71,17 +73,17 @@ export function useWizardAutosave(draftId: string | undefined) {
       const online = state.isConnected ?? true;
       isOnlineRef.current = online;
 
-      // If we came back online and have a pending save in error state, retry
+      // If we came back online and have a pending save in error state, retry.
+      // Go through the ref: this effect runs once, when there may be no draft yet.
       if (online && pendingPayloadRef.current && saveStatusRef.current === "error") {
         retryCountRef.current = 0;
-        performSave(pendingPayloadRef.current);
+        void performSaveRef.current(pendingPayloadRef.current);
       }
     });
     return () => {
       unsub();
       isMountedRef.current = false;
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (savedClearTimeoutRef.current) clearTimeout(savedClearTimeoutRef.current);
     };
   }, []);
 
@@ -92,33 +94,32 @@ export function useWizardAutosave(draftId: string | undefined) {
     }
   }, []);
 
-  const clearSavedTimeout = useCallback(() => {
-    if (savedClearTimeoutRef.current) {
-      clearTimeout(savedClearTimeoutRef.current);
-      savedClearTimeoutRef.current = null;
-    }
-  }, []);
-
+  /**
+   * Saves `payload`. Resolves true when the server holds it, false otherwise.
+   * `once` makes a single attempt and reports a failure at once instead of
+   * running the retry schedule, for a seller who is waiting to leave.
+   */
   const performSave = useCallback(
-    async (payload: WizardSchemas.WizardDraftPayload): Promise<void> => {
-      if (!draftId || draftId.length === 0) return;
+    async (
+      payload: WizardSchemas.WizardDraftPayload,
+      options: { once?: boolean } = {},
+    ): Promise<boolean> => {
+      if (!draftId || draftId.length === 0) return false;
 
       const payloadKey = JSON.stringify(payload);
       if (payloadKey === lastSavedPayloadRef.current) {
         // Already saved this exact payload — nothing to do
+        pendingPayloadRef.current = null;
+        clearSaveTimeout();
         setSaveStatus("saved");
-        clearSavedTimeout();
-        savedClearTimeoutRef.current = setTimeout(() => {
-          if (isMountedRef.current) setSaveStatus("idle");
-        }, SAVED_CLEAR_MS);
-        return;
+        setSaveError(null);
+        return true;
       }
 
       pendingPayloadRef.current = payload;
       setSaveStatus("saving");
       setSaveError(null);
       clearSaveTimeout();
-      clearSavedTimeout();
 
       saveTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current && saveStatusRef.current === "saving") {
@@ -130,20 +131,17 @@ export function useWizardAutosave(draftId: string | undefined) {
       try {
         await updateDraft.mutateAsync({ draftId, payload });
 
-        if (!isMountedRef.current) return;
+        if (!isMountedRef.current || draftIdRef.current !== draftId) return false;
 
         clearSaveTimeout();
         retryCountRef.current = 0;
         pendingPayloadRef.current = null;
         lastSavedPayloadRef.current = payloadKey;
         setSaveStatus("saved");
-
-        savedClearTimeoutRef.current = setTimeout(() => {
-          if (isMountedRef.current) setSaveStatus("idle");
-        }, SAVED_CLEAR_MS);
+        return true;
       } catch (err) {
+        if (!isMountedRef.current || draftIdRef.current !== draftId) return false;
         clearSaveTimeout();
-        if (!isMountedRef.current) return;
 
         const message =
           err instanceof Error ? err.message : t("failedToSaveDraft");
@@ -157,10 +155,10 @@ export function useWizardAutosave(draftId: string | undefined) {
         if (isNetworkError) {
           setSaveStatus("error");
           setSaveError(t("noInternetWillRetry"));
-          return;
+          return false;
         }
 
-        if (retryCountRef.current < MAX_RETRIES) {
+        if (!options.once && retryCountRef.current < MAX_RETRIES) {
           const delay = RETRY_DELAYS[retryCountRef.current] ?? 4000;
           retryCountRef.current += 1;
 
@@ -177,9 +175,10 @@ export function useWizardAutosave(draftId: string | undefined) {
           setSaveStatus("error");
           setSaveError(message);
         }
+        return false;
       }
     },
-    [draftId, updateDraft, clearSaveTimeout, clearSavedTimeout],
+    [draftId, updateDraft, clearSaveTimeout, t],
   );
 
   // Use a ref so the debounce closure always calls the current performSave
@@ -195,6 +194,19 @@ export function useWizardAutosave(draftId: string | undefined) {
       }, 500),
     [], // never recreate — stable forever
   );
+
+  // The next draft starts clean. The hook outlives each wizard session, so
+  // without this a failed save, a pending retry payload or the last saved
+  // payload of the draft the seller left would carry over to the next one.
+  useEffect(() => {
+    debouncedSave.cancel?.();
+    clearSaveTimeout();
+    pendingPayloadRef.current = null;
+    lastSavedPayloadRef.current = null;
+    retryCountRef.current = 0;
+    setSaveStatus("idle");
+    setSaveError(null);
+  }, [draftId, debouncedSave, clearSaveTimeout]);
 
   const save = useCallback(
     (payload: WizardSchemas.WizardDraftPayload) => {
@@ -215,6 +227,26 @@ export function useWizardAutosave(draftId: string | undefined) {
     [debouncedSave, performSave],
   );
 
+  /**
+   * Saves `payload` now, for a seller who is leaving: one attempt, no retry
+   * schedule. Resolves true when the server holds it.
+   */
+  const flush = useCallback(
+    (payload: WizardSchemas.WizardDraftPayload): Promise<boolean> => {
+      pendingPayloadRef.current = payload;
+      debouncedSave.cancel?.();
+      retryCountRef.current = 0;
+      return performSave(payload, { once: true });
+    },
+    [debouncedSave, performSave],
+  );
+
+  /** Drops a save that has not been sent, for a draft that is about to be deleted. */
+  const discardPending = useCallback(() => {
+    debouncedSave.cancel?.();
+    pendingPayloadRef.current = null;
+  }, [debouncedSave]);
+
   const retrySave = useCallback(() => {
     if (pendingPayloadRef.current) {
       retryCountRef.current = 0;
@@ -222,5 +254,5 @@ export function useWizardAutosave(draftId: string | undefined) {
     }
   }, [performSave]);
 
-  return { save, forceSave, retrySave, saveStatus, saveError };
+  return { save, forceSave, flush, discardPending, retrySave, saveStatus, saveError };
 }
