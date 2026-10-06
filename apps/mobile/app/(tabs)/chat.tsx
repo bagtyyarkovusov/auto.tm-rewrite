@@ -1,4 +1,3 @@
-import { MessageSquare } from "lucide-react-native";
 import { ActivityIndicator, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -7,10 +6,11 @@ import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { ConversationList } from "../../src/conversations/components/ConversationList";
 import { useChatPushTokenRegistration } from "../../src/notifications/useChatPushTokenRegistration";
+import { LargeTitle } from "../../components/navigation/ScreenHeader";
 import { TabScreen } from "../../components/navigation/TabScreen";
 
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Text } from "@/components/ui/text";
 
 function AnonymousChatEntry() {
@@ -24,17 +24,11 @@ function AnonymousChatEntry() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center gap-4 px-6 py-12">
-      <View className="size-16 items-center justify-center rounded-full bg-muted">
-        <Icon as={MessageSquare} className="size-8 text-muted-foreground" />
-      </View>
-      <Text className="text-center text-subhead font-semibold text-foreground">
-        {t("messagesSignedOutTitle")}
-      </Text>
-      <Button variant="brand" size="pill" onPress={handleSignIn}>
+    <EmptyState illustration="messages" title={t("messagesSignedOutTitle")}>
+      <Button variant="brand" size="lg" onPress={handleSignIn}>
         <Text>{t("signIn")}</Text>
       </Button>
-    </View>
+    </EmptyState>
   );
 }
 
@@ -65,9 +59,7 @@ export default function ChatScreen() {
 
   return (
     <TabScreen>
-      <View className="px-4 pt-6 pb-3">
-        <Text className="text-headline font-heading text-foreground">{t("messages")}</Text>
-      </View>
+      <LargeTitle title={t("messages")} />
 
       <ChatContent isAuthenticated={isAuthenticated} />
     </TabScreen>

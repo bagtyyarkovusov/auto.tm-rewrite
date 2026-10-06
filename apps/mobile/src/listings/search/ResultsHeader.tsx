@@ -18,7 +18,7 @@ export function ResultsHeader({ count, sort, onSort, onBack }: {
   return <View className="flex-row items-center gap-1 px-1 py-2">
     <Button variant="secondary" size="icon" className="h-11 w-11" onPress={onBack} accessibilityLabel={t("back")}><Icon as={ChevronLeft} className="size-6 text-foreground" /></Button>
     <View className="min-w-0 flex-1 gap-0.5">
-      <Text className="text-headline font-heading text-foreground" numberOfLines={1}>{count ? t("listingsCount", { total: count.totalMatching }) : t("carsBrowseTitle")}</Text>
+      <Text className="text-headline font-heading font-semibold text-foreground" numberOfLines={1}>{count ? t("listingsCount", { total: count.totalMatching }) : t("carsBrowseTitle")}</Text>
       {range ? <Text className="text-caption text-muted-foreground" numberOfLines={1}>{range}</Text> : null}
       <Text className="text-caption text-muted-foreground" numberOfLines={1}>{t(`resultsSort_${sort}`)}</Text>
     </View>

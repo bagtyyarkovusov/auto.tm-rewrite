@@ -33,17 +33,13 @@ describe("FilteredEmpty", () => {
     expect(source).toContain("onPress={onReset}");
   });
 
-  it("uses brand pill button variant for the primary action", () => {
+  it("uses the brand button at the large size for the primary action", () => {
     expect(source).toContain('variant="brand"');
-    expect(source).toContain('size="pill"');
+    expect(source).toContain('size="lg"');
   });
 
-  it("uses muted-foreground icon matching FeedEmpty/FeedError visual language", () => {
-    expect(source).toContain('className="size-8 text-muted-foreground"');
-  });
-
-  it("uses semantic text tokens", () => {
-    expect(source).toContain("text-foreground");
-    expect(source).toContain("text-muted-foreground");
+  it("is built on the shared empty state with the search composition, like FeedEmpty", () => {
+    expect(source).toContain("<EmptyState");
+    expect(source).toContain('illustration="search"');
   });
 });

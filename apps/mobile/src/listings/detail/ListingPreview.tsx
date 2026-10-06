@@ -134,7 +134,7 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
         )}
 
         <View className="gap-4 px-5 py-5">
-          <Text className="text-headline font-heading text-foreground" numberOfLines={2}>
+          <Text className="text-headline font-heading font-semibold text-foreground" numberOfLines={2}>
             {title || t("listing")}
           </Text>
           <PriceDisplay

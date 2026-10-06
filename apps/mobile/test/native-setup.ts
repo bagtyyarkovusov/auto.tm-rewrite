@@ -195,6 +195,16 @@ vi.mock("@/components/ui/motion", async () => {
     React.createElement(View, props as never);
   return { Enter: Plain, Pop: Plain, Pulse: Plain, SlideIndicator: Plain };
 });
+// Empty-state compositions are decoration built from icons. They are replaced
+// whole, so a spec with its own narrow icon stub still renders the state.
+vi.mock("@/components/ui/illustration", async () => {
+  const React = await import("react");
+  const { View } = await import("react-native");
+  return {
+    Illustration: ({ name }: { name: string }) =>
+      React.createElement(View, { testID: `illustration-${name}` } as never),
+  };
+});
 // expo-glass-effect ships JSX in its build output, which Node cannot load, and
 // draws through a native view. Off iOS 26 it is a plain View; that is what a
 // spec renders.

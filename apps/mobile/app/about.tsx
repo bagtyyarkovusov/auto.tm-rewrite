@@ -18,7 +18,7 @@ export default function AboutScreen() {
 
   return (
     <SafeScreen>
-      <View className="px-4 pb-3 flex-row items-center gap-2">
+      <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
         <Button
           variant="secondary"
           className="h-11 w-11"
@@ -28,7 +28,7 @@ export default function AboutScreen() {
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-headline font-heading text-foreground">{t("about")}</Text>
+        <Text className="text-headline font-heading font-semibold text-foreground">{t("about")}</Text>
       </View>
 
       <View className="items-center px-4 py-[60px]">

@@ -12,7 +12,9 @@ import * as Linking from "expo-linking";
 import { ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { LargeTitle } from "../../components/navigation/ScreenHeader";
 import { TabScreen } from "../../components/navigation/TabScreen";
+import { useTabBarSpace } from "../../components/navigation/tabBarHeight";
 import { maskEmail } from "../../src/auth/email";
 import { maskTmPhone } from "../../src/auth/phone";
 import { useAuth } from "../../src/auth/useAuth";
@@ -22,7 +24,7 @@ import { useDisplayName } from "../../src/identity/useDisplayName";
 import { legalPageUrl } from "../../src/config/publicWebUrl";
 
 import { LanguageRow } from "@/components/account/LanguageRow";
-import { MenuDivider, MenuGap, MenuRow } from "@/components/account/MenuRow";
+import { MenuDivider, MenuGap, MenuGroup, MenuRow } from "@/components/account/MenuRow";
 import { MyListingsRow } from "@/components/account/MyListingsRow";
 import { ThemeRow } from "@/components/account/ThemeRow";
 import { UserAvatar } from "@/components/identity/UserAvatar";
@@ -69,7 +71,7 @@ function ProfileRowSkeleton() {
     <View
       accessible
       accessibilityLabel={t("loading")}
-      className="min-h-[76px] flex-row items-center gap-3.5 px-4 py-2"
+      className="min-h-20 flex-row items-center gap-3 px-4 py-2.5"
     >
       <Skeleton className="size-12 rounded-full" />
       <View className="flex-1 gap-2">
@@ -95,7 +97,7 @@ function ProfileRow() {
     return (
       <View
         accessibilityRole="alert"
-        className="min-h-[76px] flex-row items-center gap-3.5 px-4 py-2"
+        className="min-h-20 flex-row items-center gap-3 px-4 py-2.5"
       >
         <PersonAvatar />
         <Text className="flex-1 text-body text-muted-foreground">
@@ -149,43 +151,53 @@ function openLegalPage(locale: string, kind: "terms" | "privacy" | "posting-rule
 export default function CabinetScreen() {
   const { t, i18n } = useTranslation(["account", "common", "support"]);
   const { isAuthenticated } = useAuth();
+  const tabBarSpace = useTabBarSpace();
 
   return (
-    <TabScreen>
-      <View className="px-4 pt-6 pb-3">
-        <Text className="text-headline font-heading text-foreground">
-          {t("common:cabinet")}
-        </Text>
-      </View>
+    <TabScreen underTabBar>
+      <LargeTitle title={t("common:cabinet")} />
 
-      <ScrollView className="flex-1" contentContainerClassName="pb-6">
-        {isAuthenticated === null ? (
-          <ProfileRowSkeleton />
-        ) : isAuthenticated ? (
-          <ProfileRow />
-        ) : (
-          <SignInRow />
-        )}
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="pt-1"
+        contentContainerStyle={{ paddingBottom: tabBarSpace + 16 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <MenuGroup>
+          {isAuthenticated === null ? (
+            <ProfileRowSkeleton />
+          ) : isAuthenticated ? (
+            <ProfileRow />
+          ) : (
+            <SignInRow />
+          )}
+        </MenuGroup>
 
         {isAuthenticated ? (
           <>
             <MenuGap />
-            <MenuRow
-              icon={Bell}
-              label={t("account:notifications")}
-              chevron
-              onPress={() => router.push("/notifications")}
-            />
-            <MenuDivider />
-            <MyListingsRow />
+            <MenuGroup>
+              <MenuRow
+                icon={Bell}
+                label={t("account:notifications")}
+                chevron
+                onPress={() => router.push("/notifications")}
+              />
+              <MenuDivider />
+              <MyListingsRow />
+            </MenuGroup>
           </>
         ) : null}
 
         <MenuGap />
-        <LanguageRow />
-        <MenuDivider />
-        <ThemeRow />
-        <MenuDivider />
+        <MenuGroup>
+          <LanguageRow />
+          <MenuDivider />
+          <ThemeRow />
+        </MenuGroup>
+
+        <MenuGap />
+        <MenuGroup>
         <MenuRow
           icon={CircleHelp}
           label={t("support:help")}
@@ -215,6 +227,7 @@ export default function CabinetScreen() {
           label={t("support:about")}
           onPress={() => router.push("/about")}
         />
+        </MenuGroup>
       </ScrollView>
     </TabScreen>
   );

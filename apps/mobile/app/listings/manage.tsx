@@ -8,7 +8,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
-import { ChevronLeft, List } from "lucide-react-native";
+import { ChevronLeft } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -56,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EmptyState as EmptyStateView } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
@@ -118,29 +119,13 @@ function EmptyState({
   const current = copy[tab];
 
   return (
-    <View className="items-center justify-center px-6 py-12 gap-4">
-      <View className="size-16 items-center justify-center rounded-full bg-muted">
-        <Icon as={List} className="size-8 text-muted-foreground" />
-      </View>
-      <View className="items-center gap-1">
-        <Text className="text-subhead font-semibold text-foreground">
-          {current.title}
-        </Text>
-        <Text className="text-center text-callout text-muted-foreground">
-          {current.body}
-        </Text>
-      </View>
-      {current.cta && onCreate && (
-        <Button
-          variant="default"
-          size="pill"
-          className="mt-2"
-          onPress={onCreate}
-        >
+    <EmptyStateView className="flex-none py-10" illustration="listings" title={current.title} hint={current.body}>
+      {current.cta && onCreate ? (
+        <Button variant="brand" size="lg" onPress={onCreate}>
           <Text>{current.cta}</Text>
         </Button>
-      )}
-    </View>
+      ) : null}
+    </EmptyStateView>
   );
 }
 
@@ -401,7 +386,7 @@ export default function ManageListingsScreen() {
   if (isAuthenticated === false) {
     return (
       <SafeScreen>
-        <View className="px-4 pb-3 flex-row items-center gap-2">
+        <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
           <Button
             variant="secondary"
             className="h-11 w-11"
@@ -410,7 +395,7 @@ export default function ManageListingsScreen() {
           >
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
-          <Text className="text-headline font-heading text-foreground">
+          <Text className="text-headline font-heading font-semibold text-foreground">
             {t("myListings")}
           </Text>
         </View>
@@ -477,7 +462,7 @@ export default function ManageListingsScreen() {
           >
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
-          <Text className="text-headline font-heading text-foreground">
+          <Text className="text-headline font-heading font-semibold text-foreground">
             {t("myListings")}
           </Text>
         </View>

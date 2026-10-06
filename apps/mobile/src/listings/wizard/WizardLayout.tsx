@@ -236,7 +236,7 @@ function WizardHeader({
 
       {/* Row 2: the prominent step title — the ONE title */}
       <Text
-        className="text-headline font-heading text-foreground"
+        className="text-headline font-heading font-semibold text-foreground"
         accessibilityRole="header"
         accessibilityLabel={stepAnnouncement}
       >

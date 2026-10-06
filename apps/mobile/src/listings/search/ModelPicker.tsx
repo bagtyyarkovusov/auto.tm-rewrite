@@ -128,7 +128,7 @@ export function ModelPicker({
     <View className="min-h-0 flex-1">
       <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
         {leading}
-        <Text className="min-w-0 flex-1 text-headline font-heading text-foreground" numberOfLines={1}>
+        <Text className="min-w-0 flex-1 text-headline font-heading font-semibold text-foreground" numberOfLines={1}>
           {picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
         </Text>
         <Button variant="ghost" className="h-11 px-3 py-0" onPress={actions.changeBrand}>

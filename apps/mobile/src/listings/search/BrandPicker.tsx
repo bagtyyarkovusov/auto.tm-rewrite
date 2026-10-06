@@ -178,7 +178,7 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
     <View className="min-h-0 flex-1">
       <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
         {leading}
-        <Text className="text-headline font-heading text-foreground">{t("brand")}</Text>
+        <Text className="text-headline font-heading font-semibold text-foreground">{t("brand")}</Text>
       </View>
       <View className="px-4 pb-2">
         <Input

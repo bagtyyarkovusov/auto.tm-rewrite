@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Heart } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../src/auth/useAuth";
@@ -14,25 +13,19 @@ import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
 import { HideSoldToggle } from "../../src/listings/favorites/HideSoldToggle";
 import { useFavoritesView } from "../../src/listings/favorites/useFavoritesView";
 import { HOME_HREF } from "../../src/navigation/homeHref";
+import { LargeTitle } from "../../components/navigation/ScreenHeader";
 import { TabScreen } from "../../components/navigation/TabScreen";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Text } from "@/components/ui/text";
 
 function CenteredMessage({ title, hint, children, icon = true }: { title: string; hint: string; children?: ReactNode; icon?: boolean }) {
   return (
-    <View className="flex-1 items-center justify-center gap-4 px-6 py-12">
-      {icon ? (
-        <View className="size-16 items-center justify-center rounded-full bg-muted">
-          <Icon as={Heart} className="size-8 text-muted-foreground" />
-        </View>
-      ) : null}
-      <Text className="text-center text-subhead font-semibold text-foreground">{title}</Text>
-      <Text className="text-center text-callout text-muted-foreground">{hint}</Text>
+    <EmptyState illustration={icon ? "favorites" : undefined} title={title} hint={hint}>
       {children}
-    </View>
+    </EmptyState>
   );
 }
 
@@ -40,7 +33,7 @@ function BrowseListingsButton() {
   const router = useRouter();
   const { t } = useTranslation();
   return (
-    <Button variant="secondary" size="pill" onPress={() => router.navigate(HOME_HREF)}>
+    <Button variant="secondary" size="lg" onPress={() => router.navigate(HOME_HREF)}>
       <Text>{t("browseListings")}</Text>
     </Button>
   );
@@ -58,7 +51,7 @@ function AnonymousFavoritesEntry() {
 
   return (
     <CenteredMessage title={t("favoritesSignedOutTitle")} hint={t("favoritesSignedOutHint")}>
-      <Button variant="brand" size="pill" onPress={handleSignIn}>
+      <Button variant="brand" size="lg" onPress={handleSignIn}>
         <Text>{t("signIn")}</Text>
       </Button>
     </CenteredMessage>
@@ -191,14 +184,16 @@ function SignedInFavorites() {
 function Title({ count }: { count?: number }) {
   const { t } = useTranslation();
   return (
-    <View className="flex-row items-baseline gap-2 px-4 pt-6 pb-3">
-      <Text className="text-headline font-heading text-foreground">{t("favorites")}</Text>
-      {count ? (
-        <Text testID="favorites-count" className="text-body text-muted-foreground">
-          {count}
-        </Text>
-      ) : null}
-    </View>
+    <LargeTitle
+      title={t("favorites")}
+      accessory={
+        count ? (
+          <Text testID="favorites-count" className="text-headline font-medium text-muted-foreground">
+            {count}
+          </Text>
+        ) : null
+      }
+    />
   );
 }
 

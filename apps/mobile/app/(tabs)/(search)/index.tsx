@@ -19,6 +19,7 @@ import { useFeedCatalogMaps } from "../../../src/listings/feed/useFeedCatalogMap
 import { useFeedFavoriteReplay } from "../../../src/listings/feed/useFeedFavoriteReplay";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { TabScreen } from "../../../components/navigation/TabScreen";
+import { useTabBarSpace } from "../../../components/navigation/tabBarHeight";
 
 import { Text } from "@/components/ui/text";
 
@@ -96,6 +97,7 @@ export default function HomeScreen() {
   );
 
   const header = <HomeHeader />;
+  const tabBarSpace = useTabBarSpace();
 
   if (isPending) {
     return (
@@ -116,7 +118,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <TabScreen>
+    <TabScreen underTabBar>
       <FlatList
         data={cells}
         keyExtractor={(item) => item.id}
@@ -125,7 +127,9 @@ export default function HomeScreen() {
         ListHeaderComponent={header}
         ListEmptyComponent={<FeedEmpty />}
         columnWrapperClassName="gap-3 px-4"
-        contentContainerClassName="gap-3 pb-4"
+        contentContainerClassName="grow gap-3"
+        contentContainerStyle={{ paddingBottom: tabBarSpace + 16 }}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} />
         }
@@ -142,7 +146,7 @@ export default function HomeScreen() {
             </View>
           ) : !hasNextPage && items.length > 0 ? (
             <View className="items-center py-4">
-              <Text className="text-caption text-muted-foreground">{t("noMore")}</Text>
+              <Text className="text-footnote text-muted-foreground">{t("noMore")}</Text>
             </View>
           ) : null
         }

@@ -186,7 +186,7 @@ export function ListingDetailView({
           </View>
         )}
         <Text
-          className="text-headline font-heading text-foreground"
+          className="text-headline font-heading font-semibold text-foreground"
           numberOfLines={2}
         >
           {listingTitle(listing, maps) || t("listing")}

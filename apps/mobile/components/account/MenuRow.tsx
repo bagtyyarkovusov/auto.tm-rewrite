@@ -28,9 +28,9 @@ interface MenuRowProps {
 }
 
 /**
- * One plain menu row, as Cabinet and Profile list them: icon, label, optional
- * value and chevron. Screen readers read the label, then the second line and
- * the value.
+ * One menu row, as Cabinet and Profile list them: an icon in a tonal disc, the
+ * label, an optional value and chevron. Rows sit inside a `MenuGroup`. Screen
+ * readers read the label, then the second line and the value.
  */
 export function MenuRow({
   label,
@@ -52,24 +52,32 @@ export function MenuRow({
       accessibilityRole="button"
       accessibilityLabel={[label, sub, value].filter(Boolean).join(", ")}
       className={cn(
-        "flex-row items-center gap-3.5 px-4 py-2 active:bg-secondary",
-        large ? "min-h-[76px]" : "min-h-14",
+        "flex-row items-center gap-3 px-4 py-2.5 active:bg-secondary",
+        large ? "min-h-20" : "min-h-14",
       )}
       onPress={onPress}
     >
-      {lead ?? (icon ? <Icon as={icon} className="size-6 text-muted-foreground" /> : null)}
+      {lead ??
+        (icon ? (
+          <View className="size-9 items-center justify-center rounded-full bg-secondary">
+            <Icon
+              as={icon}
+              className={cn("size-5", variant === "danger" ? "text-destructive" : "text-foreground")}
+            />
+          </View>
+        ) : null)}
       <View className="min-w-0 flex-1">
         <Text
           numberOfLines={singleLineLabel ? 1 : undefined}
           className={cn(
-            large ? "text-subhead font-semibold" : "text-body",
+            large ? "text-subhead font-semibold" : "text-body font-medium",
             variant === "danger" ? "text-destructive" : "text-foreground",
           )}
         >
           {label}
         </Text>
         {sub ? (
-          <Text className="text-footnote text-muted-foreground" numberOfLines={1}>
+          <Text className="mt-0.5 text-footnote text-muted-foreground" numberOfLines={1}>
             {sub}
           </Text>
         ) : null}
@@ -85,17 +93,27 @@ export function MenuRow({
           {value}
         </Text>
       ) : null}
-      {chevron ? <Icon as={ChevronRight} className="size-[18px] text-muted-foreground opacity-60" /> : null}
+      {chevron ? <Icon as={ChevronRight} className="size-5 text-muted-foreground opacity-60" /> : null}
     </Pressable>
   );
 }
 
-/** Hairline divider between rows, inset to the label after the icon. */
-export function MenuDivider() {
-  return <View className="ml-[54px] h-px bg-border" />;
+/**
+ * A group of rows on one raised surface. Groups are separated by page, not by
+ * lines; inside a group the rows are separated by an inset `MenuDivider`.
+ */
+export function MenuGroup({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <View className={cn("mx-4 overflow-hidden rounded-2xl bg-card", className)}>{children}</View>
+  );
 }
 
-/** The thin gap between groups of rows. */
+/** Divider between rows of a group, inset to where the label starts. */
+export function MenuDivider() {
+  return <View className="ml-16 h-px bg-border" />;
+}
+
+/** The space between two groups of rows. */
 export function MenuGap() {
-  return <View className="h-2 bg-secondary" />;
+  return <View className="h-4" />;
 }

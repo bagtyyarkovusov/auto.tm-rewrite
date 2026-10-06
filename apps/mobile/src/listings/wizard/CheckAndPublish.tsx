@@ -125,7 +125,7 @@ function PreviewCard({
         ) : null}
       </View>
       <View className="gap-0.5 px-4 py-3">
-        <Text className="text-headline font-heading text-foreground" numberOfLines={1}>
+        <Text className="text-headline font-heading font-semibold text-foreground" numberOfLines={1}>
           {values.price || "—"}
         </Text>
         {values.specs ? (

@@ -46,7 +46,7 @@ export function SignInMethodEntryScreen({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <View className="px-4 pb-3 flex-row items-center gap-2">
+        <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
           <Button
             accessibilityLabel={t("common:back")}
             variant="secondary"
@@ -57,7 +57,7 @@ export function SignInMethodEntryScreen({
             <Icon as={ChevronLeft} className="size-6 text-foreground" />
           </Button>
           <Text
-            className="flex-1 text-headline font-heading text-foreground"
+            className="flex-1 text-headline font-heading font-semibold text-foreground"
             numberOfLines={1}
           >
             {title}

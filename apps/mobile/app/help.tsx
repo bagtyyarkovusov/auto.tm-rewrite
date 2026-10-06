@@ -57,7 +57,7 @@ export default function HelpScreen() {
 
   return (
     <SafeScreen>
-      <View className="px-4 pb-3 flex-row items-center gap-2">
+      <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
         <Button
           variant="secondary"
           className="h-11 w-11"
@@ -67,7 +67,7 @@ export default function HelpScreen() {
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-headline font-heading text-foreground">{t("help")}</Text>
+        <Text className="text-headline font-heading font-semibold text-foreground">{t("help")}</Text>
       </View>
 
       <ScrollView className="flex-1" contentContainerClassName="pb-6">

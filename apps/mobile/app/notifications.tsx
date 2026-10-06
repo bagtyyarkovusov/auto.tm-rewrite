@@ -30,7 +30,7 @@ export default function NotificationsScreen() {
 
   return (
     <SafeScreen>
-      <View className="px-4 pb-3 flex-row items-center gap-2">
+      <View className="px-4 pb-3 pt-1 flex-row items-center gap-3">
         <Button
           variant="secondary"
           className="h-11 w-11"
@@ -40,7 +40,7 @@ export default function NotificationsScreen() {
         >
           <Icon as={ChevronLeft} className="size-6 text-foreground" />
         </Button>
-        <Text className="text-headline font-heading text-foreground">
+        <Text className="text-headline font-heading font-semibold text-foreground">
           {t("notifications")}
         </Text>
       </View>
