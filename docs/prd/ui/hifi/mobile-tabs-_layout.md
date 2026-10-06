@@ -11,6 +11,17 @@ Platform: mobile
 Mode: light + dark
 ==============================================
 
+## Current look (issue 695)
+
+The tab bar's look changed in issue 695; what it does is unchanged (five tabs, their order, routes, labels, test IDs, the unread badge and its refresh). The current look is specified in [78-07, Mobile rendering](../components/78-07-tabs-nav.md#mobile-rendering) and implemented in `apps/mobile/components/navigation/AutoTmTabBar.tsx`:
+
+- A floating full capsule on the glass surface, 64 dp high, 12 dp from the side edges, with no top border. Content scrolls underneath.
+- The selected tab sits in a sliding capsule concentric with the bar, with a filled icon and a semibold label.
+- Sell is a 48 by 28 dp brand-red capsule (not black or white), level with the other icons.
+- Bottom position follows the inset: partly inside a gesture handle's inset, wholly above Android three-button navigation.
+
+The layout sketch, token list, sizes and code sample below describe the earlier flat bar and are kept as history. Where they disagree with this section, this section is current.
+
 ## Purpose
 
 Provide the primary navigation chrome for the mobile app: five tabs with a distinctive central sell action pill. This is the single most recognizable chrome surface.

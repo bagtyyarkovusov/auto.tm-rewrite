@@ -140,4 +140,48 @@ Using shadcn `Tabs`:
 
 ## Mobile rendering
 
-The mobile tab bar is a floating pill on the glass surface: 60 dp high, radius 28, 12 dp from the side edges, partly inside the bottom inset. Content scrolls underneath it. The selected tab sits in a capsule that slides between tabs with the `settle` spring; its icon fills and its label is medium weight in the foreground colour. Unselected tabs are outline icons with secondary-colour labels. Sell is a brand-red circle level with its neighbours' icons. Screen headers use a large bold title on tab roots and circular tonal buttons for back and header actions. See `docs/prd/ui/hifi/mobile-tabs-_layout.md`.
+The mobile navigation chrome is four parts. Their geometry lives in `apps/mobile/components/navigation/tabBarHeight.ts` as pure functions with unit tests. The sections above describe the web tabs and the older mobile look; where they disagree with this section about mobile, this section is current.
+
+### Tab bar (`AutoTmTabBar`)
+
+- A full capsule on the glass surface: 64 dp high (`mobileControl.tabBar`), full radius, 12 dp from the side edges, 4 dp of inner padding. Content scrolls underneath it.
+- The selected tab sits in a capsule concentric with the bar (4 dp inset on every side, full radius, `bg-foreground/10`). It slides between tabs with the `settle` spring. On Sell it fades out, because Sell carries its own red marker; when another tab is chosen it fades back in already in place.
+- Icons are 24 dp in a 28 dp row, with the label 2 dp below, so all five labels share one baseline. The selected icon cross-fades from outline to filled (heavier stroke for the magnifier, which has no inside) and swells once (`pop` spring). Unselected icons and labels use the secondary text colour.
+- Labels are `micro` (11/14), medium, and semibold when selected. A label keeps 6 dp from the edge of its slot and shrinks to 80% before it is cut, so "Halanlarym", "Избранное" and "Сообщения" stay whole on a 360 dp phone. Labels stop growing at 1.3 times the system font size, because the bar's height is fixed.
+- Sell is a 48 by 28 dp brand-red capsule with a white plus, in the same 28 dp icon row as its neighbours.
+- The unread badge on Messages is a 20 dp brand-red disc at the top right of the icon; it never changes the tab's size.
+- Every tab gives under a finger (scale 0.96, `press` duration) and is at least 64 dp tall and 65 dp wide.
+- Reduce Motion: the capsule, the icon and the press change at once, with no slide, fade or swell.
+
+### Bottom position and safe areas
+
+| Bottom inset | Case | Bar sits above the screen edge |
+|---|---|---|
+| 0 | No inset | 8 dp |
+| about 16 to 24 | Android gesture navigation | inset minus 8, at least 8 |
+| 34 | iPhone home indicator | 26 pt |
+| 40 or more (about 48) | Android three-button navigation | inset plus 8 |
+
+A tab screen keeps `useTabBarSpace()` clear at its bottom: either its root is padded (`TabScreen`), or its list runs under the bar and ends with that much padding (`TabScreen underTabBar`). Side insets are added to the 12 dp margin.
+
+### Stack header (`StackHeader`, `BackButton`, `HeaderButton`, `HeaderTextAction`)
+
+- One header for every pushed screen: a row at least 44 dp high with 16 dp side padding, on the page surface, with no divider under it.
+- Leading: `BackButton`, a 44 dp tonal circle (`bg-secondary`, pressed `bg-accent`). The chevron is 24 dp and sits 1 dp left of centre so it looks centred. `kind="close"` draws a 20 dp cross for a flow or a sheet.
+- Title: inline, `headline` (22/28) in the heading face, semibold, one line, with an optional `caption` second line. A screen that is a destination (Help, About, Notifications, Profile, My listings, Messages list, Brand and Model pickers) uses `large`: the title moves under the button row at `title` size (28/34), bold, up to two lines. Tab roots keep `LargeTitle` at `display` size, so a tab root is always the loudest title.
+- Trailing: `HeaderButton` (the same 44 dp tonal circle with a 20 dp glyph) or one `HeaderTextAction` in the brand colour (Reset, Change brand). Results keeps its named Sort capsule, 44 dp high.
+- The middle can hold something else: the Search field, or the peer's avatar, name and presence in a Conversation.
+- Buttons over a photo (Listing detail) are the same circles on `bg-background/90`.
+
+### Sticky action bar (`StickyActionBar`, `useStickyActionBar`)
+
+- The primary action of a screen floats on a glass slab: radius 28, 8 dp padding, 12 dp from the side edges. Buttons inside are 56 dp high with a 20 dp radius, concentric with the slab. A hint, an error or a quiet second action sits in the same slab.
+- Content scrolls under the bar. The hook measures the bar and returns the padding the scrolling content must end with, so the last row can always be scrolled clear, also when the bar grows.
+- Position: where the bar's parent reaches the screen's bottom edge (Listing detail, a sheet) it sits at the tab bar's level from the table above. Where the parent already ends above the system inset, the tab bar or the keyboard, it sits 8 dp above the parent's edge. Inside a keyboard-avoiding view it rides up with the keyboard.
+- Used by: Model picker, Search parameters, Search (All filters), Listing detail (contact bar and owner bar), the Listing preview, and the Sell wizard and edit footer.
+
+### Glass renderings
+
+iOS 26 draws the tab bar and the sticky bar with the system Liquid Glass. Android and older iOS draw a 94% opaque surface with a light hairline edge and the `floating` shadow. Reduce Transparency draws the opaque raised surface. The first two were checked on the iPhone simulator in light and dark (the second by forcing the fallback branch); Reduce Transparency and a real Android device were not.
+
+See `docs/prd/ui/hifi/mobile-tabs-_layout.md`.
