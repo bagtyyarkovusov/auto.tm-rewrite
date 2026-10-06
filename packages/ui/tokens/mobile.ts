@@ -53,9 +53,10 @@ export const mobileGlassOpacity = {
   /**
    * The tone laid inside the system Liquid Glass. The glass alone refracts
    * whatever scrolls behind it straight through a label; this keeps text on
-   * it readable over a photo while the material still shows.
+   * it readable over a photo while the material still shows: what scrolls
+   * under the bar stays visible, softened.
    */
-  tint: 0.64,
+  tint: 0.4,
   /** Reduce Transparency: fully opaque. */
   reduced: 1,
 } as const;
@@ -194,6 +195,12 @@ export const mobileSpring = {
   snappy: { duration: 180, dampingRatio: 1 },
   /** The tab indicator, sheets settling, sticky bars. */
   settle: { duration: 320, dampingRatio: 0.9 },
+  /**
+   * The leading edge of a marker travelling between slots. It arrives ahead
+   * of the trailing edge, which follows on `settle`, so the marker stretches
+   * along its path and then settles, with no overshoot.
+   */
+  glide: { duration: 220, dampingRatio: 1 },
   /** The favorite heart and other one-shot confirmations. */
   pop: { duration: 360, dampingRatio: 0.55 },
 } as const;
@@ -204,6 +211,12 @@ export const mobilePressScale = {
   control: 0.96,
   /** Cards and rows. */
   surface: 0.985,
+  /** A tab of the floating tab bar grows toward the finger instead of giving under it. */
+  lift: 1.08,
+  /** The whole tab bar swells this much while a finger is on it. It is wide, so the factor is small. */
+  swell: 1.03,
+  /** How much the tab bar's lens enlarges the icons and labels under it. */
+  magnify: 1.18,
 } as const;
 
 export type MobileSurface = keyof typeof mobileSurfaces;

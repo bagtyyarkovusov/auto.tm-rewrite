@@ -24,6 +24,7 @@ import {
   useColorScheme as useOsColorScheme,
   type AppStateStatus,
 } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
@@ -215,6 +216,8 @@ export default function RootLayout() {
   }
 
   return (
+    // Gesture Handler needs one root view above every gesture (the tab bar's slide, the photo zoom).
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <QueryClientProvider client={queryClient}>
       <AppNavigationEffects />
       <ThemeProvider value={NAV_THEME[scheme]}>
@@ -240,5 +243,6 @@ export default function RootLayout() {
         </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

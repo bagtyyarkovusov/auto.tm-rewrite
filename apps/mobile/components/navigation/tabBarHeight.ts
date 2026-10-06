@@ -22,9 +22,11 @@ export const TAB_BAR_PADDING = 4;
 
 /**
  * Where a tab's icon row starts, from the top of the bar. The 32 dp icon row,
- * a 4 dp gap and the 14 dp label make 50 dp, centred in the 64 dp bar.
+ * a 4 dp gap and the 14 dp label make 50 dp. They sit one dp above the centre
+ * of the 64 dp bar: a label has room under its baseline that an icon does not
+ * have above it, so the true centre looks low.
  */
-export const TAB_CONTENT_TOP = 7;
+export const TAB_CONTENT_TOP = 6;
 
 /** The least room a floating bar keeps from the edge below it. */
 export const FLOATING_BAR_MARGIN = 8;
