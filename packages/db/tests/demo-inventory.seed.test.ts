@@ -31,6 +31,7 @@ import { seedDemoInventory } from "../scripts/demo-inventory/seed";
 import { createS3ObjectStore, type ObjectStore } from "../scripts/demo-inventory/storage";
 
 const BUCKET = "listing-photos";
+const CHAT_BUCKET = "chat-attachments";
 const packageDir = fileURLToPath(new URL("..", import.meta.url));
 const DAY = 86_400_000;
 const FIRST_RUN = new Date("2026-10-06T09:00:00.000Z");
@@ -43,6 +44,7 @@ const REAL_BUYER = "0a000000-0000-4000-8000-000000000002";
 const REAL_LISTING = "0a000000-0000-4000-8000-000000000101";
 const REAL_CONVERSATION = "0a000000-0000-4000-8000-000000000201";
 const REAL_OBJECT = "pending/0a000000-0000-4000-8000-000000000301/original.jpg";
+const REAL_CHAT_PHOTO = `chat-attachments/${REAL_CONVERSATION}/0a000000-0000-4000-8000-000000000401/original.jpg`;
 
 const photoCount = DEMO_CARS.reduce(
   (sum, car) => sum + (DEMO_PHOTO_MANIFEST.listings[car.slug]?.photos.length ?? 0),
@@ -94,6 +96,7 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     const credentials = { accessKeyId: "minioadmin", secretAccessKey: "minioadmin" };
     s3 = new S3Client({ endpoint, region: "us-east-1", credentials, forcePathStyle: true });
     await s3.send(new CreateBucketCommand({ Bucket: BUCKET }));
+    await s3.send(new CreateBucketCommand({ Bucket: CHAT_BUCKET }));
     storage = createS3ObjectStore({
       endpoint,
       region: "us-east-1",
@@ -128,11 +131,11 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     await minio?.stop();
   });
 
-  async function bucketKeys(): Promise<string[]> {
+  async function bucketKeys(bucket = BUCKET): Promise<string[]> {
     const keys: string[] = [];
     let token: string | undefined;
     do {
-      const page = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, ContinuationToken: token }));
+      const page = await s3.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token }));
       for (const object of page.Contents ?? []) keys.push(`${object.Key} ${object.ETag}`);
       token = page.IsTruncated ? page.NextContinuationToken : undefined;
     } while (token);
@@ -178,6 +181,7 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
       ],
     });
     await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: REAL_OBJECT, Body: "real photo", ContentType: "image/jpeg" }));
+    await s3.send(new PutObjectCommand({ Bucket: CHAT_BUCKET, Key: REAL_CHAT_PHOTO, Body: "real chat photo", ContentType: "image/jpeg" }));
     await db.listing.create({
       data: {
         id: REAL_LISTING,
@@ -224,6 +228,16 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
       },
       include: { messages: true },
     });
+    // A photo the buyer sent in that Conversation. It is public, and no row points at it once
+    // the Conversation is gone.
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: CHAT_BUCKET,
+        Key: `chat-attachments/${conversation.id}/0a000000-0000-4000-8000-000000000402/original.jpg`,
+        Body: "chat photo",
+        ContentType: "image/jpeg",
+      }),
+    );
     await db.contentReport.createMany({
       data: [
         { reporterUserId: REAL_BUYER, targetType: "listing", targetId: demoListing, reason: "misleading" },
@@ -371,6 +385,8 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     expect(cleared.exitCode, cleared.message).toBe(0);
     const databaseBefore = await databaseSnapshot();
     const bucketBefore = await bucketKeys();
+    const chatBucketBefore = await bucketKeys(CHAT_BUCKET);
+    expect(chatBucketBefore).toHaveLength(1);
     expect(databaseBefore["users"]).toHaveLength(2);
     expect(bucketBefore).toHaveLength(1);
 
@@ -393,6 +409,7 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
       favorites: 1,
       conversations: 1,
       messages: 1,
+      chatPhotos: 1,
       reports: 3,
       inspectionInterests: 1,
     });
@@ -400,6 +417,8 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
 
     expect(await databaseSnapshot()).toEqual(databaseBefore);
     expect(await bucketKeys()).toEqual(bucketBefore);
+    // The photo sent in the demo Conversation is gone; the real Conversation's photo is not.
+    expect(await bucketKeys(CHAT_BUCKET)).toEqual(chatBucketBefore);
 
     // The real user's Listing, favourite and Conversation are still there, named one by one.
     expect(await db.listing.findUnique({ where: { id: REAL_LISTING } })).toMatchObject({

@@ -106,6 +106,22 @@ describe("demo inventory guard", () => {
     );
   });
 
+  it("refuses a database URL whose host or port parameter would redirect the connection", () => {
+    // The driver lets `?host=` and `?port=` override the URL's own host, so a private-looking URL
+    // could still reach a public proxy.
+    for (const query of ["host=roundhouse.proxy.rlwy.net&port=41234", "host=db.example.com", "port=41234"]) {
+      expect(
+        refusal({ ...production, DATABASE_URL: `${production.DATABASE_URL}?${query}` }, "seed"),
+      ).toMatch(/DATABASE_URL must not set a host or port parameter/);
+      expect(refusal({ ...local, DATABASE_URL: `${local.DATABASE_URL}?${query}` }, "seed")).toMatch(
+        /DATABASE_URL must not set a host or port parameter/,
+      );
+    }
+    expect(() =>
+      assertDemoInventoryTarget({ ...production, DATABASE_URL: `${production.DATABASE_URL}?sslmode=disable` }, "seed"),
+    ).not.toThrow();
+  });
+
   it("refuses a public MinIO origin in a deployed environment", () => {
     for (const endpoint of [
       "https://minio-production.up.railway.app",
