@@ -3,7 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { router, usePathname } from "expo-router";
 
 import { ApiError } from "../api/client";
-import { clearAuthSession, subscribeAuthUserChange } from "../auth/session";
+import {
+  clearAuthSession,
+  loadAuthSession,
+  subscribeAuthSession,
+  subscribeAuthUserChange,
+} from "../auth/session";
 import { isConversationPath } from "../conversations/conversationRoutes";
 import { useDirectMessagePushRouting } from "../notifications/useDirectMessagePushRouting";
 
@@ -27,11 +32,11 @@ export function AppNavigationEffects() {
     [queryClient],
   );
 
+  // A refused session on any request, query or mutation, ends it and offers
+  // sign-in, so an account edit with an expired token cannot strand the User.
   useEffect(() => {
     let redirecting = false;
-    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      if (event.type !== "updated" || event.action?.type !== "error") return;
-      const error = event.query.state.error;
+    const onError = (error: unknown) => {
       if (!redirecting && error instanceof ApiError && error.code === "UNAUTHENTICATED") {
         void clearAuthSession();
         // This screen offers sign-in and preserves its Conversation return intent.
@@ -39,8 +44,28 @@ export function AppNavigationEffects() {
         redirecting = true;
         queueMicrotask(() => router.replace("/(auth)/phone"));
       }
+    };
+    const unsubscribeQueries = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === "updated" && event.action?.type === "error") onError(event.query.state.error);
     });
-    return unsubscribe;
+    const unsubscribeMutations = queryClient.getMutationCache().subscribe((event) => {
+      if (event.type === "updated" && event.action.type === "error") onError(event.mutation.state.error);
+    });
+    // A stored session re-arms the redirect, so a later expiry offers sign-in again.
+    const unsubscribeSession = subscribeAuthSession(() => {
+      void loadAuthSession()
+        .then((session) => {
+          if (session) redirecting = false;
+        })
+        .catch((error: unknown) => {
+          console.error("[AppNavigationEffects] could not read the session", error);
+        });
+    });
+    return () => {
+      unsubscribeQueries();
+      unsubscribeMutations();
+      unsubscribeSession();
+    };
   }, [queryClient]);
   return null;
 }

@@ -38,6 +38,76 @@ describe("stripImageMetadata", () => {
     await expect(stripImageMetadata(clean, "jpeg", 5_000_000)).resolves.toBeNull();
   });
 
+  it("rewrites a JPEG whose only metadata is a comment segment", async () => {
+    // sharp reports no EXIF/XMP/IPTC for a JPEG COM marker, so the check has
+    // to look for the marker itself.
+    const base = await sharp({
+      create: { width: 40, height: 30, channels: 3, background: { r: 1, g: 2, b: 3 } },
+    })
+      .jpeg()
+      .toBuffer();
+    const note = Buffer.from("owner: jdoe, taken at home", "latin1");
+    const segment = Buffer.concat([
+      Buffer.from([0xff, 0xfe, (note.length + 2) >> 8, (note.length + 2) & 0xff]),
+      note,
+    ]);
+    const withComment = Buffer.concat([base.subarray(0, 2), segment, base.subarray(2)]);
+    expect((await sharp(withComment).metadata()).exif).toBeUndefined();
+
+    const cleaned = await stripImageMetadata(withComment, "jpeg", 5_000_000);
+
+    expect(cleaned).not.toBeNull();
+    expect(cleaned!.includes(note)).toBe(false);
+  });
+
+  it("keeps every frame of an animated WebP while dropping its EXIF", async () => {
+    const frame = (background: { r: number; g: number; b: number }) =>
+      sharp({ create: { width: 60, height: 40, channels: 3 as const, background } })
+        .png()
+        .toBuffer();
+    const input = await sharp(
+      [await frame({ r: 220, g: 10, b: 10 }), await frame({ r: 10, g: 10, b: 220 })],
+      { join: { animated: true } },
+    )
+      .webp()
+      .withExif({ IFD0: { Make: "TestCam" } })
+      .toBuffer();
+    expect((await sharp(input).metadata()).pages).toBe(2);
+
+    const cleaned = await stripImageMetadata(input, "webp", 5_000_000);
+
+    expect(cleaned).not.toBeNull();
+    const meta = await sharp(cleaned!).metadata();
+    expect(meta.format).toBe("webp");
+    expect(meta.pages).toBe(2);
+    expect(meta.exif).toBeUndefined();
+  });
+
+  it("cleans an animated WebP stored rotated a quarter turn without losing a frame", async () => {
+    const frame = (background: { r: number; g: number; b: number }) =>
+      sharp({ create: { width: 60, height: 40, channels: 3 as const, background } })
+        .png()
+        .toBuffer();
+    const input = await sharp(
+      [await frame({ r: 220, g: 10, b: 10 }), await frame({ r: 10, g: 10, b: 220 })],
+      { join: { animated: true } },
+    )
+      .webp()
+      .withMetadata({ orientation: 6 })
+      .toBuffer();
+    const before = await sharp(input).metadata();
+    expect(before.pages).toBe(2);
+    expect(before.orientation).toBe(6);
+
+    const cleaned = await stripImageMetadata(input, "webp", 5_000_000);
+
+    expect(cleaned).not.toBeNull();
+    const meta = await sharp(cleaned!).metadata();
+    expect(meta.pages).toBe(2);
+    expect(meta.exif).toBeUndefined();
+    expect(meta.orientation ?? 1).toBe(1);
+  });
+
   it("steps the quality down until the cleaned image fits the limit", async () => {
     const input = await noisyPhotoWithExif();
     const atQuality80 = await encodedSize(input, 80);

@@ -1,7 +1,9 @@
 import { BadRequestException } from "@nestjs/common";
-import { z, type ZodError } from "zod";
+import { z } from "zod";
 
 import { CursorPaginationRequestSchema, ErrorCode } from "@auto-tm/contracts";
+
+import { parseCatalogQuery } from "./parseCatalogQuery";
 
 // Matches what the catalog encoders write: the localized name and id of the
 // last row of the previous page (the Prisma brand, model and city
@@ -17,28 +19,6 @@ export type CatalogCursor = z.infer<typeof CatalogCursorSchema>;
 export interface CatalogPagination {
   cursor?: CatalogCursor;
   limit: number;
-}
-
-/**
- * Parses a catalog query with a contracts schema. A value the schema refuses,
- * such as an unknown `locale`, is a client error, never a 500: it becomes a
- * 400 `VALIDATION_FAILED` with the flattened field errors.
- */
-export function parseCatalogQuery<T>(schema: { parse(value: unknown): T }, value: unknown): T {
-  try {
-    return schema.parse(value);
-  } catch (err) {
-    // Duck-typed: the schema's ZodError can come from another copy of zod,
-    // which fails `instanceof` and would turn a bad request into a 500.
-    if (err && typeof err === "object" && "issues" in err) {
-      throw new BadRequestException({
-        code: ErrorCode.ValidationFailed,
-        message: "Invalid request",
-        details: (err as ZodError).flatten(),
-      });
-    }
-    throw err;
-  }
 }
 
 /**

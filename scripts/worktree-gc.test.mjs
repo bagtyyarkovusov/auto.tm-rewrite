@@ -907,6 +907,13 @@ test("a missing claude binary is reported as not checked, never as an empty sess
   assert.deepEqual(missing, { status: "missing", sessions: [], withoutCwd: 0 });
 });
 
+test("a claude run that exits non-zero, times out or prints nothing is an unreadable scan", () => {
+  assert.equal(scanClaudeSessions(() => ({ status: 1, stdout: "[]" })), null);
+  assert.equal(scanClaudeSessions(() => ({ error: Object.assign(new Error("spawnSync claude ETIMEDOUT"), { code: "ETIMEDOUT" }), status: null, stdout: "" })), null);
+  assert.equal(scanClaudeSessions(() => ({ status: 0, stdout: "" })), null);
+  assert.deepEqual(scanClaudeSessions(() => ({ status: 0, stdout: "[]" })), { status: "ok", sessions: [], withoutCwd: 0 });
+});
+
 test("a missing claude binary warns, and the report says Claude sessions were not checked", (t) => {
   const repo = fixtureRepo(t);
   const missing = () => ({ status: "missing", sessions: [], withoutCwd: 0 });
@@ -920,14 +927,21 @@ test("a missing claude binary warns, and the report says Claude sessions were no
   assert.match(applied.stdout, /Completion report[\s\S]*Claude sessions: not checked/);
 });
 
-test("Claude sessions without a working directory are named in the report and as a warning", (t) => {
+// Runs through the real `claude agents --json` parser: only a list with at least one directory is a
+// usable scan, so a list of directory-less sessions alone must stop --apply.
+test("Claude sessions without a working directory are named in the report and as a warning, and alone stop --apply", (t) => {
   const repo = fixtureRepo(t);
-  const result = runMain(repo, ["--apply", "--prs-file", repo.prsFile], {
-    scanClaudeSessions: () => ({ status: "ok", sessions: [], withoutCwd: 2 }),
-  });
+  const before = repo.snapshot();
+  const remote = [{ pid: 10, kind: "remote", name: "cloud" }, { pid: 11, kind: "remote", name: "cloud 2" }];
+  const unreadable = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions: remote });
+  assert.equal(unreadable.status, 1, unreadable.stderr);
+  assert.match(unreadable.stderr, /Cannot read Claude sessions/);
+  assert.equal(repo.snapshot(), before, "nothing was removed");
+  const sessions = [{ pid: 9, cwd: repo.main, name: "orchestrator" }, ...remote];
+  const result = repo.gc(["--apply", "--prs-file", repo.prsFile], { env: ALLOW_PRS_FILE, sessions });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stderr, /2 Claude sessions have no working directory/);
-  assert.match(result.stdout, /Claude sessions: checked \(0 with a directory, 2 without one are not matched to any worktree\)/);
+  assert.match(result.stdout, /Claude sessions: checked \(1 with a directory, 2 without one are not matched to any worktree\)/);
 });
 
 test("a clean Claude session scan is stated in the report with no warning", (t) => {
