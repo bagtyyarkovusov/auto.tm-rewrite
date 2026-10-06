@@ -9,6 +9,7 @@ import { useListingCount } from "../../api/listings/useListingCount";
 import { BrandPicker } from "./BrandPicker";
 import { CityFilterControl } from "./CityFilterControl";
 import { ConditionFilterControl } from "./ConditionFilterControl";
+import { FilterLabel } from "./FilterSection";
 import { ModelPicker } from "./ModelPicker";
 import { PriceRangeFilterControl } from "./PriceRangeFilterControl";
 import { YearRangeFilterControl } from "./YearRangeFilterControl";
@@ -25,6 +26,7 @@ import { pickerRouter } from "./useRoutePickerActions";
 
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Button } from "@/components/ui/button";
+import { GroupedList } from "@/components/ui/grouped-list";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
 import { BackButton, HeaderTextAction, StackHeader } from "@/components/navigation/StackHeader";
@@ -110,7 +112,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
   );
 
   return (
-    <TabScreen>
+    <TabScreen edgeFade={false}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <StackHeader
           title={t("searchParameters")}
@@ -131,19 +133,24 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
         <View className="min-h-0 flex-1">
         <ScrollView
           className="min-h-0 flex-1"
-          contentContainerClassName="gap-5 px-4 pt-1"
+          contentContainerClassName="gap-6 px-4 pt-2"
           contentContainerStyle={{ paddingBottom: bar.space + 8 }}
           keyboardShouldPersistTaps="handled"
         >
           <ConditionFilterControl value={draft.condition} onChange={(value) => setField("condition", value)} />
           <CityFilterControl key={cityResetVersion} draft={draft} setField={setField} />
+          <View className="gap-2">
+          <FilterLabel>{t("brandModel")}</FilterLabel>
+          <GroupedList inset="text" className="mx-0">
           <PickerRow
+            grouped
             label={t("brand")}
             value={selectedBrand?.name}
             placeholder={t("selectBrand")}
             onPress={() => setStep({ step: "brand" })}
           />
           <PickerRow
+            grouped
             label={t("model")}
             value={modelRowValue}
             placeholder={t("selectModel")}
@@ -153,6 +160,8 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
               setStep({ step: "model", brand: { id: draft.brandId, name: selectedBrand?.name ?? "" } });
             }}
           />
+          </GroupedList>
+          </View>
           <YearRangeFilterControl draft={draft} setField={setField} />
           <PriceRangeFilterControl
             priceMin={draft.priceMin}
@@ -162,7 +171,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
           />
         </ScrollView>
 
-        <StickyActionBar {...bar.barProps}>
+        <StickyActionBar {...bar.barProps} edgeFade>
           {!countEnabled ? (
             <Text className="px-2 pt-1 text-center text-callout text-destructive">{t("checkFilterValues")}</Text>
           ) : null}

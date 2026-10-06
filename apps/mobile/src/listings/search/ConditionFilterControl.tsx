@@ -2,6 +2,8 @@ import { Pressable, View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
+import { FilterLabel } from "./FilterSection";
+
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 
@@ -25,9 +27,10 @@ export function ConditionFilterControl({
   ];
 
   return (
-    <View className="gap-1.5">
-      <Text className="text-callout font-medium text-foreground">{t("condition")}</Text>
-      <View className="flex-row rounded-lg bg-muted p-1">
+    <View className="gap-2">
+      <FilterLabel>{t("condition")}</FilterLabel>
+      {/* The same segmented control as `ConditionSwitch` on Results. */}
+      <View className="flex-row rounded-lg bg-secondary p-1">
         {segments.map((segment) => {
           const selected = value === segment.value;
           return (
@@ -38,15 +41,20 @@ export function ConditionFilterControl({
               accessibilityState={{ selected }}
               accessibilityLabel={`${segment.label} ${t("condition")}`}
               className={cn(
-                "flex-1 items-center justify-center rounded-md py-2.5",
+                "min-h-11 flex-1 items-center justify-center rounded-md px-2",
                 selected && "bg-card",
+                selected && "shadow-raised dark:bg-accent",
               )}
             >
               <Text
                 className={cn(
-                  "text-callout font-medium",
+                  "text-callout",
+                  selected ? "font-semibold" : "font-medium",
                   selected ? "text-foreground" : "text-muted-foreground",
                 )}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
               >
                 {segment.label}
               </Text>

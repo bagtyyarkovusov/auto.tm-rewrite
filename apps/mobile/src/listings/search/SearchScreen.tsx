@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TextInput} from "react-native";
 import {
-  ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable,
+  Keyboard, KeyboardAvoidingView, Platform, Pressable,
   ScrollView, View,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
@@ -27,7 +27,8 @@ import { StickyActionBar, useStickyActionBar } from "@/components/navigation/Sti
 import { Button } from "@/components/ui/button";
 import { GroupedList } from "@/components/ui/grouped-list";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
+import { GroupedListSkeleton, ListNote } from "@/components/ui/list-states";
+import { SearchField } from "@/components/ui/search-field";
 import { Text } from "@/components/ui/text";
 
 /** Search consumes catalog matches and parsed years; the API owns spelling and parsing. */
@@ -98,45 +99,45 @@ export function SearchScreen() {
           accessibilityLabel={t("clearSearch")} onPress={() => { setQuery(""); input.current?.focus(); }} /> : null}
       >
         <View className="min-w-0 flex-1">
-          <Input ref={input} value={query} onChangeText={setQuery} autoFocus
+          <SearchField ref={input} value={query} onChangeText={setQuery} autoFocus
             placeholder={t("searchBrandOrModel")} accessibilityLabel={t("searchBrandOrModel")}
             autoCorrect={false} autoCapitalize="none" returnKeyType="search" maxLength={100} />
         </View>
       </StackHeader>
       {/* The list runs under the bar; the bar rides up with the keyboard. */}
       <View className="min-h-0 flex-1">
-      <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: bar.space + 8 }}>
+      <ScrollView className="flex-1" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bar.space + 8 }}>
         {empty ? <>
           {recent.length > 0 ? <>
             <View className="flex-row items-center justify-between px-5 pb-2 pt-3">
               <Text className="font-heading text-subhead font-semibold text-foreground">{t("recentChoices")}</Text>
-              <Button variant="ghost" size="sm" className="-mr-2 px-2" accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
+              <Button variant="ghost" size="sm" className="-mr-2 h-6 px-2" hitSlop={10} accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
                 <Text className="text-callout font-medium text-primary">{t("clear")}</Text>
               </Button>
             </View>
             <GroupedList>{recent.map((choice) => <SearchRow key={`${choice.brandId}-${choice.modelIds.join(",")}`}
               label={choice.modelNames.length ? `${choice.brandName} ${choice.modelNames.join(", ")}` : t("brandAllModels", { brand: choice.brandName })}
-              leading={<CarBrandLogo name={choice.brandName} logoUrl={brandMap.get(choice.brandId)?.logoUrl} />}
+              leading={<CarBrandLogo name={choice.brandName} logoUrl={brandMap.get(choice.brandId)?.logoUrl} size={36} />}
               trailing={<Icon as={History} className="size-4 text-muted-foreground" />}
               onPress={() => openResults(choice)} />)}</GroupedList>
           </> : null}
           <Text className="px-5 pb-2 pt-6 font-heading text-subhead font-semibold text-foreground">{t("popularBrands")}</Text>
           {browseError ? <ErrorState error={browseError} onRetry={retryBrowse} /> : browseLoading ? <Loading /> : <GroupedList>{popular.map((brand) =>
             <SearchRow key={brand.id} label={brand.name}
-              leading={<CarBrandLogo name={brand.name} logoUrl={brand.logoUrl} />}
+              leading={<CarBrandLogo name={brand.name} logoUrl={brand.logoUrl} size={36} />}
               detail={brand.count ? String(brand.count) : undefined}
               onPress={() => openResults({ brandId: brand.id, brandName: brand.name, modelIds: [], modelNames: [] })} />)}</GroupedList>}
         </> : search.isPaused && enoughText ? <ErrorState error={pausedError} onRetry={() => void search.refetch()} /> : waiting ? <Loading /> : search.isError && enoughText ?
           <ErrorState error={search.error} onRetry={() => void search.refetch()} /> : current?.results.length ? <GroupedList className="mt-1">
             {current.results.map((match) => <SearchRow key={`${match.kind}-${match.brandId}-${match.modelId ?? ""}`}
               label={match.kind === "model" ? `${match.brandLabel ?? brandMap.get(match.brandId)?.name ?? match.brandId} ${match.label}` : match.label}
-              leading={match.kind === "brand" ? <CarBrandLogo name={match.label} logoUrl={brandMap.get(match.brandId)?.logoUrl} /> : <View className="size-8" />}
+              leading={match.kind === "brand" ? <CarBrandLogo name={match.label} logoUrl={brandMap.get(match.brandId)?.logoUrl} size={36} /> : <View className="size-9" />}
               detail={years ?? (match.kind === "brand" ? t("brand") : undefined)} onPress={() => pickMatch(match)} />)}
           </GroupedList> : years && /^[\d\s–—-]+$/u.test(query.trim()) ? <GroupedList className="mt-1"><SearchRow label={t("allCarsYear", { years })}
-            leading={<View className="size-8 items-center justify-center rounded-full bg-secondary"><Icon as={Calendar} className="size-4 text-foreground" /></View>} onPress={() => openResults(undefined, true)} /></GroupedList> :
-          <Text className="px-6 py-8 text-center text-body text-muted-foreground">{t("noCatalogMatch", { query: query.trim() })}</Text>}
+            leading={<View className="size-9 items-center justify-center rounded-full bg-secondary"><Icon as={Calendar} className="size-5 text-foreground" /></View>} onPress={() => openResults(undefined, true)} /></GroupedList> :
+          <ListNote>{t("noCatalogMatch", { query: query.trim() })}</ListNote>}
       </ScrollView>
-      <StickyActionBar {...bar.barProps}>
+      <StickyActionBar {...bar.barProps} edgeFade>
         <Button variant="secondary" size="lg" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
           <Icon as={SlidersHorizontal} className="size-5 text-foreground" /><Text>{t("allFilters")}</Text>
         </Button>
@@ -148,7 +149,7 @@ export function SearchScreen() {
 
 function Loading() {
   const { t } = useTranslation();
-  return <View className="items-center py-8"><ActivityIndicator accessibilityLabel={t("loadingEllipsis")} /></View>;
+  return <GroupedListSkeleton rows={5} className="mt-1" accessibilityLabel={t("loadingEllipsis")} />;
 }
 
 function SearchRow({ label, leading, trailing, detail, onPress }: {
@@ -156,7 +157,7 @@ function SearchRow({ label, leading, trailing, detail, onPress }: {
 }) {
   return <Pressable onPress={onPress} accessibilityRole="button"
     className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-secondary">
-    {leading}<Text className="flex-1 text-body font-medium text-foreground" numberOfLines={1}>{label}</Text>
+    {leading}<Text className="min-w-0 flex-1 text-body font-medium text-foreground" numberOfLines={1}>{label}</Text>
     {detail ? <Text className="text-callout text-muted-foreground">{detail}</Text> : null}
     {trailing ?? <Icon as={ChevronRight} className="size-4 text-muted-foreground" />}
   </Pressable>;

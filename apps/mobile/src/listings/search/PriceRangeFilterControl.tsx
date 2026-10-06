@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { FilterLabel, FilterRange } from "./FilterSection";
+
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 
@@ -39,31 +41,34 @@ export function PriceRangeFilterControl({
   };
 
   return (
-    <View className="gap-1.5">
-      <Text className="text-callout font-medium text-foreground">{t("priceRange")}</Text>
-      <View className="flex-row gap-3 items-start">
-        <View className="flex-1 gap-1.5">
+    <View className="gap-2">
+      <FilterLabel>{t("priceRange")}</FilterLabel>
+      <FilterRange>
+        {/* The currency sits inside each field at its trailing edge, where the amount ends. */}
+        <View className="min-w-0 flex-1 justify-center">
           <Input
             value={priceMin?.toString() ?? ""}
             onChangeText={handleMinChange}
             placeholder={t("min")}
             keyboardType="number-pad"
+            className={isInvalid ? "border-destructive pr-14" : "pr-14"}
           />
-          <Text className="text-caption text-muted-foreground">TMT</Text>
+          <Text pointerEvents="none" className="absolute right-4 text-footnote font-medium text-muted-foreground">TMT</Text>
         </View>
-        <View className="flex-1 gap-1.5">
+        <View className="min-w-0 flex-1 justify-center">
           <Input
             value={priceMax?.toString() ?? ""}
             onChangeText={handleMaxChange}
             placeholder={t("max")}
             keyboardType="number-pad"
+            className={isInvalid ? "border-destructive pr-14" : "pr-14"}
           />
-          <Text className="text-caption text-muted-foreground">TMT</Text>
+          <Text pointerEvents="none" className="absolute right-4 text-footnote font-medium text-muted-foreground">TMT</Text>
         </View>
-      </View>
+      </FilterRange>
       {isInvalid && (
         <Text
-          className="text-callout text-destructive"
+          className="px-1 text-callout text-destructive"
           accessibilityLiveRegion="polite"
         >
           {t("minPriceExceedsMax")}

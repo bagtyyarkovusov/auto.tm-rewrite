@@ -13,10 +13,11 @@ import { StickyActionBar, useStickyActionBar } from "@/components/navigation/Sti
 import type { StickyBarContainer } from "@/components/navigation/tabBarHeight";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { GroupedItem } from "@/components/ui/grouped-list";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GroupedListSkeleton, ListNote } from "@/components/ui/list-states";
+import { SearchField } from "@/components/ui/search-field";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 interface ModelPickerProps {
   actions: PickerActions;
@@ -84,13 +85,7 @@ export function ModelPicker({
 
   let body: ReactNode;
   if (content.kind === "loading") {
-    body = (
-      <View className="gap-3 px-4 py-2" accessibilityLabel={t("loadingEllipsis")}>
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-14 rounded-lg" />
-        ))}
-      </View>
-    );
+    body = <GroupedListSkeleton rows={8} leading="check" accessibilityLabel={t("loadingEllipsis")} />;
   } else if (content.kind === "error") {
     body = <ErrorState error={content.error} onRetry={picker.retry} />;
   } else {
@@ -103,6 +98,7 @@ export function ModelPicker({
         stickySectionHeadersEnabled={false}
         className="min-h-0 flex-1"
         contentContainerStyle={{ paddingBottom: bar.space + 8 }}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           picker.query.trim() ? null : (
             <GroupedItem inset="check">
@@ -115,9 +111,7 @@ export function ModelPicker({
           )
         }
         ListEmptyComponent={
-          <Text className="px-4 py-8 text-center text-body text-muted-foreground">
-            {t("noModelsMatch")}
-          </Text>
+          <ListNote>{t("noModelsMatch")}</ListNote>
         }
         renderSectionHeader={({ section }) => (
           <Text className="px-5 pb-2 pt-6 font-heading text-subhead font-semibold text-foreground">
@@ -147,7 +141,7 @@ export function ModelPicker({
         trailing={<HeaderTextAction label={t("changeBrand")} onPress={actions.changeBrand} />}
       />
       <View className="px-4 pb-3 pt-1">
-        <Input
+        <SearchField
           value={picker.query}
           onChangeText={picker.setQuery}
           placeholder={t("searchModel")}
@@ -160,7 +154,7 @@ export function ModelPicker({
       {/* The list runs under the bar; the bar floats at the bottom of this view. */}
       <View className="min-h-0 flex-1">
         {body}
-        <StickyActionBar {...bar.barProps}>
+        <StickyActionBar {...bar.barProps} edgeFade={barContainer === "inset"}>
           {actions.mode === "show" && selected.length === 0 && picker.brandName ? (
             <Text className="px-2 pt-1 text-center text-footnote text-muted-foreground">
               {t("noModelPickedHint", { brand: picker.brandName })}
@@ -219,7 +213,10 @@ function ModelCheckRow({
         className="min-h-14 flex-row items-center gap-4 px-4 py-3 active:bg-secondary"
       >
         <Checkbox checked={checked} pointerEvents="none" />
-        <Text className="flex-1 text-body text-foreground" numberOfLines={1}>
+        <Text
+          className={cn("min-w-0 flex-1 text-body text-foreground", checked && "font-medium")}
+          numberOfLines={1}
+        >
           {name}
         </Text>
         {count !== undefined && count > 0 ? (

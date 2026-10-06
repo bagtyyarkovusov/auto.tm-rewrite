@@ -7,6 +7,7 @@ import { useRoutePickerActions } from "../../../src/listings/search/useRoutePick
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
 import { TabScreen } from "../../../components/navigation/TabScreen";
+import { useTabBarSpace } from "../../../components/navigation/tabBarHeight";
 
 import { BackButton } from "@/components/navigation/StackHeader";
 
@@ -20,10 +21,13 @@ export default function BrandPickerScreen() {
   const goBack = useSafeBack(HOME_HREF);
   const actions = useRoutePickerActions();
   const params = useLocalSearchParams<{ returnToResults?: string; resultsState?: string }>();
+  const tabBarSpace = useTabBarSpace();
 
   return (
-    <TabScreen>
+    // The list runs under the floating tab bar and ends clear of it.
+    <TabScreen underTabBar>
       <BrandPicker
+        bottomSpace={tabBarSpace}
         actions={actions}
         filters={readPickerResultsFilters(params)}
         leading={<BackButton onPress={goBack} accessibilityLabel={t("back")} />}

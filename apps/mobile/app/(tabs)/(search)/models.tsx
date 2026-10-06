@@ -32,7 +32,8 @@ export default function ModelPickerScreen() {
   if (!brandId) return <Redirect href={BRANDS_PATH} />;
 
   return (
-    <TabScreen>
+    // The picker pins its own bar above the tab bar and brings the fade under it.
+    <TabScreen edgeFade={false}>
       <ModelPicker
         key={brandId}
         actions={actions}
