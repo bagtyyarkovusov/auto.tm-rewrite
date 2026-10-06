@@ -6,13 +6,14 @@ import { PrismaService } from "@auto-tm/db";
 import { PurgeExpiredAccounts } from "./PurgeExpiredAccounts";
 
 /**
- * Runs against the CI disposable Postgres, which the workflow migrates before
- * `pnpm test`. The purge's every-run delete drops ALL code requests older
- * than 30 days, so the suite stays away from any database a developer pointed
- * DATABASE_URL at by hand: it runs only under NODE_ENV=test, which the CI
- * step sets.
+ * Runs only against the CI disposable Postgres, which the workflow migrates
+ * before `pnpm test`. The purge's every-run delete drops ALL code requests
+ * older than 30 days in whatever database DATABASE_URL names, and vitest sets
+ * NODE_ENV=test on its own, so an environment variable the runner controls
+ * (CI=true, which GitHub Actions always sets) gates the suite instead: a dev
+ * database pointed at by hand is never touched.
  */
-const runWithDatabase = process.env["DATABASE_URL"] && process.env["NODE_ENV"] === "test";
+const runWithDatabase = process.env["CI"] === "true" && Boolean(process.env["DATABASE_URL"]);
 const describeWithDatabase = runWithDatabase ? describe : describe.skip;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
