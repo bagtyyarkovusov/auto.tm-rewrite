@@ -131,13 +131,15 @@ driver delivers the code to the API log rather than to the caller:
 node scripts/staging-reviewer-flow-smoke.mjs signup-probe-request
 
 railway logs --service api --environment <env> -d --lines 200 \
-  | grep -a 'mock] OTP for \*\*\*<last four digits of the probe phone>:' | tail -1 | sed -E 's/.*: ([0-9]{6}).*/\1/' \
+  | grep -a 'mock] OTP for \*\*\*<last four> (fp <fingerprint>):' | tail -1 | sed -E 's/.*: ([0-9]{6}).*/\1/' \
   | node scripts/staging-reviewer-flow-smoke.mjs signup-probe-verify
 ```
 
-The log line carries only the last four digits of the phone number
-(`[mock] OTP for ***3456: 123456`), so pick the newest line with the probe
-phone's last four digits, requested just now.
+The log line masks the phone to its last four digits plus a short hash
+fingerprint (`[mock] OTP for ***3456 (fp 50d3ac): 123456`), because two phones
+can share their last four. `signup-probe-request` prints the exact
+`***<last four> (fp <fingerprint>)` pattern for the probe phone; grep for it
+and take the newest matching line, requested just now.
 
 The code goes down a pipe rather than into an argument: it is single-use, but
 argv lands in shell history and in `ps` output.

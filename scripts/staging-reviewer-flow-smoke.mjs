@@ -34,7 +34,7 @@
  */
 
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
-import { createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
@@ -295,9 +295,14 @@ async function signupProbeRequest() {
     body: { phone },
   });
   expectStatus(res, [200, 201], "signup probe OTP request");
+  // The mock-SMS log line masks the phone to its last four digits plus this
+  // fingerprint, so two phones that share their last four still grep apart.
+  // Keep in step with maskedPhone in apps/api's HttpOtpSenderAdapter.
+  const fingerprint = createHash("sha256").update(phone).digest("hex").slice(0, 6);
   console.log(
     "PASS  signup-probe-request — OTP issued for an unreserved number; " +
-      "pipe the code from the API mock-SMS log line into signup-probe-verify",
+      `grep the API mock-SMS log for 'mock] OTP for \\*\\*\\*${phone.slice(-4)} (fp ${fingerprint}):' ` +
+      "and pipe the newest matching line's code into signup-probe-verify",
   );
 }
 

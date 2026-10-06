@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { Injectable, Logger } from "@nestjs/common";
 
 import { renderCodeSms } from "../domain/codeSms";
@@ -12,11 +14,15 @@ export interface GatewaySmsRequest {
 
 /**
  * The hosting log outlives the 30 days the privacy policy gives sign-in code
- * records, so a log line carries only the last four digits: enough to pick
- * one request out of the log, not enough to identify a person.
+ * records, so a log line carries only the last four digits plus a short hash
+ * fingerprint: two phones that share their last four still produce different
+ * lines, and neither form identifies a person. The mock-SMS runbook greps
+ * this line; `staging-reviewer-flow-smoke.mjs signup-probe-request` prints
+ * the fingerprint to grep for.
  */
 function maskedPhone(phone: string): string {
-  return `***${phone.slice(-4)}`;
+  const fingerprint = createHash("sha256").update(phone).digest("hex").slice(0, 6);
+  return `***${phone.slice(-4)} (fp ${fingerprint})`;
 }
 
 @Injectable()
