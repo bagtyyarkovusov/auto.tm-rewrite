@@ -347,7 +347,7 @@ describe("ListFeed", () => {
     expect(receivedFilters).toEqual({ brandId: "brand-x", priceMin: 50000 });
   });
 
-  it("returns photoKeys and photoCount from one batched photo read", async () => {
+  it("returns the photo and gallery keys and photoCount from one batched photo read, none for a Listing without photos", async () => {
     ranking.items = [seedListing({ id: "l1" }), seedListing({ id: "l2" })];
     const cards = new FakeListingCardReadPort();
     cards.photos.set("l1", {
@@ -361,10 +361,12 @@ describe("ListFeed", () => {
     const result = await uc.execute({});
 
     expect(cards.photoLookups).toBe(1);
-    expect(result.items[0]!.photoKeys).toEqual(["a", "b"]);
-    expect(result.items[0]!.photoCount).toBe(5);
-    expect(result.items[1]!.photoKeys).toEqual([]);
-    expect(result.items[1]!.photoCount).toBe(0);
+    expect(result.items[0]).toMatchObject({
+      photoKeys: ["a", "b"],
+      galleryKeys: ["a", "b", "c", "d", "e"],
+      photoCount: 5,
+    });
+    expect(result.items[1]).toMatchObject({ photoKeys: [], galleryKeys: [], photoCount: 0 });
   });
 
   it("returns mileageKm, condition, transmissionId, and engineTypeId when set", async () => {
@@ -423,26 +425,6 @@ describe("ListFeed", () => {
 
     expect(result.items[0]).not.toHaveProperty("isFavorited");
     expect(favorites.lookups).toBe(0);
-  });
-
-  it("passes the Results strip the gallery keys the photo read returned, none for a Listing without photos", async () => {
-    ranking.items = [seedListing({ id: "l1" }), seedListing({ id: "l2" })];
-    const cards = new FakeListingCardReadPort();
-    cards.photos.set("l1", {
-      coverMediaKey: "l1/p0",
-      photoKeys: ["l1/p0", "l1/p1"],
-      galleryKeys: ["l1/p0", "l1/p1", "l1/p2"],
-      photoCount: 12,
-    });
-
-    const result = await makeUseCase(ranking, exchangeRates, undefined, undefined, cards).execute({});
-
-    expect(result.items[0]).toMatchObject({
-      photoKeys: ["l1/p0", "l1/p1"],
-      galleryKeys: ["l1/p0", "l1/p1", "l1/p2"],
-      photoCount: 12,
-    });
-    expect(result.items[1]).toMatchObject({ photoKeys: [], galleryKeys: [], photoCount: 0 });
   });
 
   it("tells the card whether the seller takes calls and chat messages", async () => {
