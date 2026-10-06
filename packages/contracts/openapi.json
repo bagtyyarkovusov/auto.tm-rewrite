@@ -941,12 +941,117 @@
             },
             "maxItems": 2
           },
-          "galleryKeys": {
+          "photoCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mileageKm": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "new",
+              "used"
+            ]
+          },
+          "transmissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "engineTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isFavorited": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "sellerId",
+          "status",
+          "brandId",
+          "modelId",
+          "priceAmount",
+          "priceCurrency",
+          "displayPriceTmt",
+          "photoKeys",
+          "photoCount",
+          "cityId",
+          "publishedAt"
+        ]
+      },
+      "FeedListingSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sellerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "active",
+              "sold",
+              "archived",
+              "rejected",
+              "banned"
+            ]
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "modelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "priceAmount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priceCurrency": {
+            "type": "string",
+            "enum": [
+              "TMT",
+              "USD",
+              "AED"
+            ]
+          },
+          "displayPriceTmt": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "coverMediaKey": {
+            "type": "string"
+          },
+          "photoKeys": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "maxItems": 8
+            "maxItems": 2
           },
           "photoCount": {
             "type": "integer",
@@ -981,6 +1086,13 @@
           },
           "isFavorited": {
             "type": "boolean"
+          },
+          "galleryKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8
           },
           "allowCalls": {
             "type": "boolean"
@@ -2338,13 +2450,6 @@
                   },
                   "maxItems": 2
                 },
-                "galleryKeys": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 8
-                },
                 "photoCount": {
                   "type": "integer",
                   "minimum": 0
@@ -2378,6 +2483,13 @@
                 },
                 "isFavorited": {
                   "type": "boolean"
+                },
+                "galleryKeys": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
                 },
                 "allowCalls": {
                   "type": "boolean"
@@ -2736,13 +2848,6 @@
                   },
                   "maxItems": 2
                 },
-                "galleryKeys": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 8
-                },
                 "photoCount": {
                   "type": "integer",
                   "minimum": 0
@@ -2776,34 +2881,6 @@
                 },
                 "isFavorited": {
                   "type": "boolean"
-                },
-                "allowCalls": {
-                  "type": "boolean"
-                },
-                "allowChat": {
-                  "type": "boolean"
-                },
-                "seller": {
-                  "type": "object",
-                  "properties": {
-                    "displayName": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "nameNumber": {
-                      "type": "integer",
-                      "minimum": 1000,
-                      "maximum": 9999
-                    },
-                    "deleted": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "displayName",
-                    "nameNumber",
-                    "deleted"
-                  ]
                 }
               },
               "required": [
@@ -3125,13 +3202,6 @@
             },
             "maxItems": 2
           },
-          "galleryKeys": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 8
-          },
           "photoCount": {
             "type": "integer",
             "minimum": 0
@@ -3166,36 +3236,14 @@
           "isFavorited": {
             "type": "boolean"
           },
+          "contactPhone": {
+            "type": "string"
+          },
           "allowCalls": {
             "type": "boolean"
           },
           "allowChat": {
             "type": "boolean"
-          },
-          "seller": {
-            "type": "object",
-            "properties": {
-              "displayName": {
-                "type": "string",
-                "nullable": true
-              },
-              "nameNumber": {
-                "type": "integer",
-                "minimum": 1000,
-                "maximum": 9999
-              },
-              "deleted": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "displayName",
-              "nameNumber",
-              "deleted"
-            ]
-          },
-          "contactPhone": {
-            "type": "string"
           }
         },
         "required": [
@@ -3282,13 +3330,6 @@
                   },
                   "maxItems": 2
                 },
-                "galleryKeys": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 8
-                },
                 "photoCount": {
                   "type": "integer",
                   "minimum": 0
@@ -3323,36 +3364,14 @@
                 "isFavorited": {
                   "type": "boolean"
                 },
+                "contactPhone": {
+                  "type": "string"
+                },
                 "allowCalls": {
                   "type": "boolean"
                 },
                 "allowChat": {
                   "type": "boolean"
-                },
-                "seller": {
-                  "type": "object",
-                  "properties": {
-                    "displayName": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "nameNumber": {
-                      "type": "integer",
-                      "minimum": 1000,
-                      "maximum": 9999
-                    },
-                    "deleted": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "displayName",
-                    "nameNumber",
-                    "deleted"
-                  ]
-                },
-                "contactPhone": {
-                  "type": "string"
                 }
               },
               "required": [
