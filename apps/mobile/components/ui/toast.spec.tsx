@@ -55,7 +55,7 @@ describe("Toast", () => {
     act(() => { toast.show({ title: "Above the tab bar", placement: "aboveTabBar" }); });
     act(() => { toast.show({ title: "At the top" }); });
     const bottom = view.getByTestId("toast-viewport-above-tab-bar");
-    expect(StyleSheet.flatten(bottom.props.style).bottom).toBe(76);
+    expect(StyleSheet.flatten(bottom.props.style).bottom).toBe(80);
     expect(view.getByTestId("toast-viewport-top")).toBeTruthy();
   });
 
@@ -80,7 +80,7 @@ describe("Toast", () => {
     insets.top = 59;
     view.rerender(<ToastProvider><Capture /></ToastProvider>);
     expect(StyleSheet.flatten(view.getByTestId("toast-viewport-top").props.style)?.top).toBe(131);
-    expect(StyleSheet.flatten(view.getByTestId("toast-viewport-above-tab-bar").props.style).bottom).toBe(94);
+    expect(StyleSheet.flatten(view.getByTestId("toast-viewport-above-tab-bar").props.style).bottom).toBe(98);
   });
 
   it.each([

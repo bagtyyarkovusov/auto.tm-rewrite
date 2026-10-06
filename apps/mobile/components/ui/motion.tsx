@@ -120,18 +120,30 @@ function Pulse({ children, style: callerStyle, ...props }: MotionViewProps) {
  * slides to the selected slot instead of a highlight that jumps. `slot` is
  * the width of one slot and `index` the selected slot; the first placement is
  * immediate, later ones spring.
+ *
+ * `visible` hides the marker without unmounting it, for a slot that carries
+ * its own marker (the tab bar's Sell button). It fades out where it stands
+ * and, when it returns, fades in already at the new slot: it never slides in
+ * from a slot the eye has stopped following.
  */
 function SlideIndicator({
   index,
   slot,
+  visible = true,
   children,
   style: callerStyle,
   ...props
-}: MotionViewProps & { index: number; slot: number }) {
+}: MotionViewProps & { index: number; slot: number; visible?: boolean }) {
   const offset = useSharedValue(index * slot);
-  const placed = React.useRef(slot > 0);
+  const opacity = useSharedValue(visible ? 1 : 0);
+  const placed = React.useRef(slot > 0 && visible);
 
   React.useEffect(() => {
+    if (!visible) {
+      opacity.value = withTiming(0, timing("fast", "exit"));
+      placed.current = false;
+      return;
+    }
     const target = index * slot;
     if (placed.current) {
       offset.value = withSpring(target, spring.settle);
@@ -139,10 +151,12 @@ function SlideIndicator({
       offset.value = target;
       placed.current = slot > 0;
     }
-  }, [index, slot, offset]);
+    opacity.value = withTiming(1, timing("fast", "enter"));
+  }, [index, slot, visible, offset, opacity]);
 
   const style = useAnimatedStyle(() => ({
     width: slot,
+    opacity: opacity.value,
     transform: [{ translateX: offset.value }],
   }));
 
@@ -153,4 +167,57 @@ function SlideIndicator({
   );
 }
 
-export { Enter, Pop, Pulse, SlideIndicator };
+/**
+ * Two drawings of one thing, for example a tab's outline and filled icon.
+ * `active` cross-fades from `off` to `on`, and `on` arrives with a small
+ * swell so the change reads as the answer to the tap. Both layers stay
+ * mounted and stacked, so nothing is laid out again. Reduce Motion swaps them
+ * at once.
+ */
+function CrossFade({
+  active,
+  on,
+  off,
+  style: callerStyle,
+  ...props
+}: Omit<MotionViewProps, "children"> & {
+  active: boolean;
+  on: React.ReactNode;
+  off: React.ReactNode;
+}) {
+  const progress = useSharedValue(active ? 1 : 0);
+  const scale = useSharedValue(1);
+  const wasActive = React.useRef(active);
+
+  React.useEffect(() => {
+    if (active === wasActive.current) return;
+    wasActive.current = active;
+    progress.value = withTiming(active ? 1 : 0, timing("fast"));
+    if (active) {
+      scale.value = withSequence(
+        withTiming(0.84, { ...timing("press"), duration: 0 }),
+        withSpring(1, spring.pop),
+      );
+    }
+  }, [active, progress, scale]);
+
+  const onStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: scale.value }],
+  }));
+  const offStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }));
+
+  return (
+    <Animated.View style={callerStyle} {...props}>
+      <Animated.View style={offStyle}>{off}</Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }, onStyle]}
+      >
+        {on}
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+export { CrossFade, Enter, Pop, Pulse, SlideIndicator };

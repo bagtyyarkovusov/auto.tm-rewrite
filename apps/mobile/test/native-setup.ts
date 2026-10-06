@@ -191,9 +191,12 @@ vi.mock("@/components/ui/motion", async () => {
   const React = await import("react");
   const { View } = await import("react-native");
   // Drops the motion-only props and passes every other prop through.
-  const Plain = ({ order: _order, active: _active, index: _index, slot: _slot, ...props }: Record<string, unknown>) =>
+  const Plain = ({ order: _order, active: _active, index: _index, slot: _slot, visible: _visible, ...props }: Record<string, unknown>) =>
     React.createElement(View, props as never);
-  return { Enter: Plain, Pop: Plain, Pulse: Plain, SlideIndicator: Plain };
+  // Renders the drawing that is showing, so a spec sees one icon, not both.
+  const CrossFade = ({ active, on, off, ...props }: Record<string, unknown>) =>
+    React.createElement(View, props as never, (active ? on : off) as never);
+  return { CrossFade, Enter: Plain, Pop: Plain, Pulse: Plain, SlideIndicator: Plain };
 });
 // Empty-state compositions are decoration built from icons. They are replaced
 // whole, so a spec with its own narrow icon stub still renders the state.
