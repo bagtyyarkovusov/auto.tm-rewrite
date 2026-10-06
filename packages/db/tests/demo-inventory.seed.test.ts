@@ -35,6 +35,8 @@ const packageDir = fileURLToPath(new URL("..", import.meta.url));
 const DAY = 86_400_000;
 const FIRST_RUN = new Date("2026-10-06T09:00:00.000Z");
 const SECOND_RUN = new Date("2026-10-09T15:30:00.000Z");
+/** Each seed uploads about 1,500 objects; a CI runner is several times slower than a laptop. */
+const SEED_TIMEOUT = 300_000;
 
 const REAL_SELLER = "0a000000-0000-4000-8000-000000000001";
 const REAL_BUYER = "0a000000-0000-4000-8000-000000000002";
@@ -101,7 +103,9 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
 
     // The download is stubbed: no test reaches Commons. The stub photo carries EXIF and an
     // orientation tag, as a real camera file would, so the seed has metadata to remove.
-    const stub = await sharp({ create: { width: 1920, height: 1280, channels: 3, background: "#7a8fa3" } })
+    // It is small on purpose: every seed resizes each of about 300 photos into five files, and a
+    // full-size frame makes that run for minutes on a CI runner without testing anything more.
+    const stub = await sharp({ create: { width: 480, height: 320, channels: 3, background: "#7a8fa3" } })
       .jpeg()
       .withExif({ IFD0: { Artist: "A Real Photographer", Copyright: "CC BY-SA 4.0" } })
       .withMetadata({ orientation: 6 })
@@ -340,7 +344,7 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
 
     expect(new Set(downloads).size).toBe(photoCount);
     firstDraw = listings.map(({ id, publishedAt, viewCount }) => ({ id, publishedAt, viewCount }));
-  });
+  }, SEED_TIMEOUT);
 
   it("converges on the same rows and objects when run again", async () => {
     const before = await seededRows();
@@ -358,7 +362,7 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     expect(await seededRows()).toEqual(before);
     expect(await totals()).toEqual(totalsBefore);
     expect((await bucketKeys()).map((entry) => entry.split(" ")[0])).toEqual(keysBefore);
-  });
+  }, SEED_TIMEOUT);
 
   it("removes exactly what it created and leaves a real user's rows and objects alone", async () => {
     // Start from a database that holds a real seller, buyer, Listing, favourite, Conversation and report.
@@ -408,7 +412,7 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     expect(await db.message.count({ where: { conversationId: REAL_CONVERSATION } })).toBe(1);
     expect(await db.listingMedia.count({ where: { listingId: REAL_LISTING } })).toBe(1);
     expect(await db.contentReport.count({ where: { targetId: REAL_LISTING } })).toBe(1);
-  });
+  }, SEED_TIMEOUT);
 
   it("is safe to run twice", async () => {
     const databaseBefore = await databaseSnapshot();
@@ -450,5 +454,5 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     await db.user.update({ where: { id: demoSellerId(2) }, data: { email: null, emailVerifiedAt: null } });
     expect((await removeDemoInventory({ prisma: db, storage })).exitCode).toBe(0);
     expect(await db.user.count({ where: { id: { startsWith: DEMO_ID_PREFIX } } })).toBe(0);
-  });
+  }, SEED_TIMEOUT);
 });
