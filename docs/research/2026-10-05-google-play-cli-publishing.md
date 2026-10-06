@@ -9,9 +9,9 @@
 
 > **Changed since this was written (2026-10-06).** The note below is kept as researched; these repo facts it relied on have moved:
 >
-> - The store release updates the existing Play app `com.auto_tm.ynamly` instead of creating `tm.auto.app` ([#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697), PR 698). Read every `tm.auto.app` in the snippets as `com.auto_tm.ynamly`, and skip "Create the app": it exists and has completed its closed-test requirements.
-> - The `production` profile in `apps/mobile/eas.json` now has `autoIncrement: true` with `appVersionSource: remote`, and the remote versionCode is set to 4, so the first new build is 5 (PR 698). The "No `autoIncrement`" row and its risk are resolved; there is still no `submit` block.
-> - The upload key for `com.auto_tm.ynamly` is being reset to a key EAS generated; no `production` build runs before Play shows the new certificate. The current steps live in [88 — Play Console submission pack](../prd/ops/88-play-console-submission.md).
+> - The store release updates the existing Play app `com.auto_tm.ynamly` instead of creating `tm.auto.app` ([#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697), PR 698). Read every `tm.auto.app` in the snippets as `com.auto_tm.ynamly`. Because that app exists, already has uploads, and has completed its closed-test requirements, these parts no longer apply to it: founder steps 1 (account check and tester plan), 2 ("Create the app") and 6 (first AAB and Play App Signing terms), the "First upload" rows, and the open fact about a draft app.
+> - The `production` profile in `apps/mobile/eas.json` now has `autoIncrement: true` (PR 698); `cli.appVersionSource` was already `remote`. The `eas.json` row's "No `autoIncrement`" cell and the versionCode-reuse risk row are resolved; there is still no `submit` block. The remote versionCode was set to 4, so the first new build is 5 ([#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697) comment, 2026-10-06).
+> - The upload key for `com.auto_tm.ynamly` is being reset to a key EAS generated, and the reset is pending Google's approval ([#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697) comment, 2026-10-06); no `production` build runs before Play shows the new certificate. The current steps live in [88 — Play Console submission pack](../prd/ops/88-play-console-submission.md).
 
 ## Short answer
 
@@ -60,7 +60,7 @@
 | Read Play review status of a release | No | No | No | No documented method (see "Open facts") | No |
 | Auth | Service-account key stored in EAS; `EXPO_TOKEN` for the CLI | Service-account JSON key or Workload Identity file | Service-account key or ADC | Any Google credential with the `androidpublisher` scope | Service-account key |
 | Runtime | Node (`eas-cli`) and Expo's servers do the upload | Ruby + Bundler | JVM + a Gradle project | Anything that can call HTTPS | Go binary or Node |
-| Maintenance | `eas-cli` 24.10.0 released 2026-10-02, MIT | fastlane 2.240.1 released 2026-09-15, MIT, pushed today | v4.1.1 released 2026-08-11, README says "maintenance mode" | Google | `gplay` v1.0.0 (2026-09-26), `gpc` v1.0.0-rc.1 (2026-09-29) |
+| Maintenance | `eas-cli` 24.10.0 released 2026-10-02, MIT | fastlane 2.240.1 released 2026-09-15, MIT, repository pushed on 2026-10-05 | v4.1.1 released 2026-08-11, README says "maintenance mode" | Google | `gplay` v1.0.0 (2026-09-26), `gpc` v1.0.0-rc.1 (2026-09-29) |
 
 ## Tool notes
 
@@ -82,7 +82,7 @@
 - **Cannot do.** No code path in `client.rb` or `uploader.rb` touches testers, reviews, in-app products or country availability (checked on `master`, 2026-10-05). It never sets `changesInReviewBehavior`, so every commit uses Google's default, which cancels changes in review and resubmits (see the API section). It cannot create the app. fastlane's own setup page says supply needs at least one successful upload before it can initialize ([fastlane, Android setup](https://docs.fastlane.tools/getting-started/android/setup/)).
 - **Promotion detail.** When `version_code` is empty, `track_promote_to` selects releases on the source track whose status equals `release_status` (default `completed`). It fails if none or more than one match. Pass `version_code` when promoting a draft.
 - **Auth.** Service-account JSON, or Workload Identity Federation (fastlane's setup page lists both). Test with `fastlane run validate_play_store_json_key json_key:<path>`.
-- **Maintenance.** fastlane 2.240.1 (2026-09-15), 2.240.0 (2026-09-14), 2.239.0 (2026-09-04) on [GitHub releases](https://github.com/fastlane/fastlane/releases) and [RubyGems](https://rubygems.org/gems/fastlane); MIT; about 666 open issues. Needs Ruby. macOS system Ruby is `/usr/bin/ruby` here. Use Bundler with a project-local path, or run supply on a GitHub-hosted runner, so nothing is installed globally.
+- **Maintenance.** fastlane 2.240.1 (2026-09-15), 2.240.0 (2026-09-14), 2.239.0 (2026-09-04) on [GitHub releases](https://github.com/fastlane/fastlane/releases) and [RubyGems](https://rubygems.org/gems/fastlane); MIT; about 666 open issues. Needs Ruby. macOS system Ruby is `/usr/bin/ruby` on the researcher's machine. Use Bundler with a project-local path, or run supply on a GitHub-hosted runner, so nothing is installed globally.
 
 ### Gradle Play Publisher (GPP)
 
@@ -157,7 +157,7 @@ Also in force from #324: new apps and updates must target API 36 from 2026-08-31
 
 ### Principle
 
-Agents prepare and upload drafts. The founder owns identity, legal declarations and the final send-for-review. Production-release and policy-declaration permissions never go to an agent credential.
+Proposed: agents prepare and upload drafts. The founder owns identity, legal declarations and the final send-for-review. Production-release and policy-declaration permissions never go to an agent credential.
 
 ### Founder, once, by hand
 
