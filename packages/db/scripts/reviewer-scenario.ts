@@ -4,7 +4,7 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import { PrismaClient } from "../generated/prisma/client/client";
+import { Prisma, PrismaClient } from "../generated/prisma/client/client";
 import {
   reviewerScenarioSeedIds,
   runReviewerScenarioSeed,
@@ -13,6 +13,11 @@ import {
 } from "../src/reviewer-scenario-seed";
 
 type PrismaOrTx = PrismaClient;
+
+/** A nullable Json column takes SQL NULL as `Prisma.DbNull`, matching a create that omits it. */
+function jsonOrDbNull(value: Record<string, unknown> | null): Prisma.InputJsonValue | typeof Prisma.DbNull {
+  return value === null ? Prisma.DbNull : (value as Prisma.InputJsonValue);
+}
 
 function parseArgs(argv: string[]): { mode: "seed" | "revoke" | null } {
   let mode: "seed" | "revoke" | null = "seed";
@@ -328,11 +333,11 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         senderId: input.senderId,
         kind: input.kind,
         body: input.body,
-        metadata: input.metadata,
+        metadata: jsonOrDbNull(input.metadata),
         createdAt: input.createdAt,
         deletedAt: null,
       },
-      create: input,
+      create: { ...input, metadata: jsonOrDbNull(input.metadata) },
     });
   }
 
@@ -355,7 +360,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         status: "pending",
         reviewedById: null,
         reviewedAt: null,
-        messageContext: null,
+        messageContext: Prisma.DbNull,
       },
       create: {
         id: input.id,
@@ -381,7 +386,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         action: input.action,
         targetType: input.targetType,
         targetId: input.targetId,
-        details: input.details,
+        details: input.details as Prisma.InputJsonValue,
       },
     });
   }
