@@ -27,7 +27,7 @@ const photo = (n: number): DemoPhoto => ({
 
 const photos = (count: number): DemoPhoto[] => Array.from({ length: count }, (_, n) => photo(n + 1));
 
-const car = (slug: string): DemoCar => ({ ...DEMO_CARS[0]!, slug });
+const car = (slug: string): DemoCar => ({ ...(DEMO_CARS[0] as DemoCar), slug });
 
 const manifestOf = (listings: DemoPhotoManifest["listings"]): DemoPhotoManifest => ({
   schemaVersion: 1,

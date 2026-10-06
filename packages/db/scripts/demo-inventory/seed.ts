@@ -154,6 +154,9 @@ export async function seedDemoInventory(deps: {
 
   const problems = validateDemoInventory(cars, manifest);
   if (problems.length > 0) return refused("seed", `the photo manifest is incomplete (${problems[0]})`);
+  const sellerKeys = new Set(sellers.map((seller) => seller.key));
+  const orphan = cars.find((car) => !sellerKeys.has(car.sellerKey));
+  if (orphan) return refused("seed", `${orphan.slug} names a seller that is not listed`);
 
   const held = await prisma.user.findMany({
     where: { id: { startsWith: DEMO_ID_PREFIX } },
@@ -195,9 +198,12 @@ export async function seedDemoInventory(deps: {
 
   for (const [index, car] of cars.entries()) {
     const id = demoListingId(index);
-    const reference = resolved[index]!;
-    const draw = drawn[index]!;
-    const entry = manifest.listings[car.slug]!;
+    const reference = resolved[index];
+    const draw = drawn[index];
+    const entry = manifest.listings[car.slug];
+    const sellerId = sellerIds.get(car.sellerKey);
+    // The checks above cover all four; this narrows them for the compiler.
+    if (!reference || !draw || !entry || !sellerId) throw new Error(`Demo car ${car.slug} is incomplete`);
 
     // Upload first: a media row whose object is missing renders an empty frame.
     const media: { id: string; key: string; sortOrder: number; width: number; height: number }[] = [];
@@ -221,7 +227,7 @@ export async function seedDemoInventory(deps: {
 
     const rate = car.priceCurrency === "TMT" ? 1 : catalog.ratesToTmt.get(car.priceCurrency);
     const fields = {
-      sellerId: sellerIds.get(car.sellerKey)!,
+      sellerId,
       status: "active" as const,
       ...reference,
       year: car.year,

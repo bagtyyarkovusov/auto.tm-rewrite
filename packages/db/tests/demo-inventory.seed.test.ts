@@ -46,6 +46,12 @@ const photoCount = DEMO_CARS.reduce(
   0,
 );
 
+/** The value, or a failed test when it is missing. */
+function must<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected a value");
+  return value;
+}
+
 describe("demo inventory seed and removal — Testcontainers Postgres and MinIO", () => {
   let postgres: StartedPostgreSqlContainer;
   let minio: StartedTestContainer;
@@ -139,9 +145,9 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     return snapshot;
   }
 
-  /** The seeded rows without the two columns a rerun is allowed to touch. */
+  /** The seeded rows without `updatedAt`, the one column a rerun is allowed to touch. */
   async function seededRows() {
-    const strip = <T extends { updatedAt?: Date }>(row: T) => ({ ...row, updatedAt: undefined });
+    const strip = <T extends { updatedAt: Date }>({ updatedAt: _touched, ...row }: T) => row;
     const [users, listings, media] = await Promise.all([
       db.user.findMany({ where: { id: { startsWith: DEMO_ID_PREFIX } }, orderBy: { id: "asc" } }),
       db.listing.findMany({ where: { sellerId: { startsWith: DEMO_ID_PREFIX } }, orderBy: { id: "asc" } }),
@@ -218,7 +224,7 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
         {
           reporterUserId: REAL_BUYER,
           targetType: "message",
-          targetId: conversation.messages[0]!.id,
+          targetId: must(conversation.messages[0]).id,
           reason: "abuse",
           messageContext: { conversationId: conversation.id },
         },
@@ -228,6 +234,24 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
       data: { listingId: demoListing, requesterUserId: REAL_BUYER, side: "buyer" },
     });
   }
+
+  it("refuses a car whose seller is not listed, and writes nothing", async () => {
+    const car = { ...must(DEMO_CARS[0]), sellerKey: "nobody" };
+    const entry = must(DEMO_PHOTO_MANIFEST.listings[car.slug]);
+    const result = await seedDemoInventory({
+      prisma: db,
+      storage,
+      photos,
+      now: FIRST_RUN,
+      cars: [car],
+      manifest: { ...DEMO_PHOTO_MANIFEST, listings: { [car.slug]: entry } },
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.message).toMatch(/refused: camry-xv70-graphite names a seller that is not listed/);
+    expect(await db.user.count()).toBe(0);
+    expect(await bucketKeys()).toEqual([]);
+    expect(downloads).toEqual([]);
+  });
 
   it("seeds about 50 active Listings with 5 to 8 clean photos each, for sellers who cannot sign in", async () => {
     const result = await seedDemoInventory({ prisma: db, storage, photos, now: FIRST_RUN });
@@ -264,14 +288,14 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
       });
       expect(typeof listing.damaged).toBe("boolean");
       expect(listing.priceTmt).toBeGreaterThan(0);
-      const age = FIRST_RUN.getTime() - listing.publishedAt!.getTime();
+      const age = FIRST_RUN.getTime() - must(listing.publishedAt).getTime();
       expect(age).toBeGreaterThanOrEqual(0);
       expect(age).toBeLessThanOrEqual(30 * DAY);
     }
-    const publishedDays = new Set(listings.map((listing) => listing.publishedAt!.toISOString().slice(0, 10)));
+    const publishedDays = new Set(listings.map((listing) => must(listing.publishedAt).toISOString().slice(0, 10)));
     expect(publishedDays.size).toBeGreaterThanOrEqual(15);
     expect(new Set(listings.map((listing) => listing.viewCount)).size).toBeGreaterThan(listings.length / 2);
-    const usd = listings.find((listing) => listing.priceCurrency === "USD")!;
+    const usd = must(listings.find((listing) => listing.priceCurrency === "USD"));
     expect(usd.priceTmt).toBeCloseTo(usd.priceAmount * 3.5, 5);
 
     expect(media).toHaveLength(photoCount);
@@ -296,9 +320,9 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     }
 
     // Seeded originals are as clean as the ones the Listing photo pipeline leaves behind.
-    const sample = media[0]!;
+    const sample = must(media[0]);
     const object = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: sample.key }));
-    const original = Buffer.from(await object.Body!.transformToByteArray());
+    const original = Buffer.from(await must(object.Body).transformToByteArray());
     const meta = await sharp(original).metadata();
     expect(meta.exif).toBeUndefined();
     expect(meta.xmp).toBeUndefined();
