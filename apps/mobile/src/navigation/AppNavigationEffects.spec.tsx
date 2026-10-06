@@ -34,4 +34,32 @@ describe("app auth error navigation", () => {
     });
     expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/phone");
   });
+
+  it("redirects an expired session after a refused mutation, as after a refused query (#673)", async () => {
+    state.pathname = "/account/display-name";
+    state.clear.mockClear();
+    const screen = renderMobile(<AppNavigationEffects />);
+    const mutation = screen.queryClient.getMutationCache().build(screen.queryClient, {
+      mutationFn: () => Promise.reject(new ApiError("UNAUTHENTICATED", 401, "Expired")),
+    });
+    await act(async () => {
+      await mutation.execute(undefined).catch(() => {});
+    });
+    expect(state.clear).toHaveBeenCalled();
+    expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/phone");
+  });
+
+  it("keeps a Conversation's route after a refused mutation there", async () => {
+    state.pathname = "/conversations/conv-a";
+    state.clear.mockClear();
+    const screen = renderMobile(<AppNavigationEffects />);
+    const mutation = screen.queryClient.getMutationCache().build(screen.queryClient, {
+      mutationFn: () => Promise.reject(new ApiError("UNAUTHENTICATED", 401, "Expired")),
+    });
+    await act(async () => {
+      await mutation.execute(undefined).catch(() => {});
+    });
+    expect(state.clear).toHaveBeenCalled();
+    expect(routerMock.replace).not.toHaveBeenCalled();
+  });
 });
