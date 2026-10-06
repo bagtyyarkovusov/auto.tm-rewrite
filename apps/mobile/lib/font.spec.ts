@@ -8,11 +8,11 @@ describe("fontFaceClass", () => {
     ["font-sans text-base", "font-sans"],
     ["font-sans font-light", "font-sans-light"],
     ["font-sans font-medium", "font-sans-medium"],
-    ["font-sans font-semibold", "font-sans-bold"],
+    ["font-sans font-semibold", "font-sans-semibold"],
     ["font-sans font-bold", "font-sans-bold"],
     ["font-heading text-2xl", "font-heading"],
     ["font-heading font-medium", "font-heading"],
-    ["font-heading font-semibold", "font-heading-bold"],
+    ["font-heading font-semibold", "font-heading-semibold"],
     ["font-heading font-bold", "font-heading-bold"],
     ["font-mono", "font-mono"],
     ["font-mono font-semibold", "font-mono-medium"],
@@ -21,7 +21,7 @@ describe("fontFaceClass", () => {
   });
 
   it("uses the sans family when only a weight is named", () => {
-    expect(fontFaceClass("text-sm font-semibold")).toBe("font-sans-bold");
+    expect(fontFaceClass("text-sm font-semibold")).toBe("font-sans-semibold");
   });
 
   it("lets the last family and the last weight win, as tailwind-merge orders them", () => {
@@ -44,7 +44,7 @@ describe("fontFaceClass", () => {
 
 describe("withFontFace", () => {
   it("appends the face and keeps the weight class", () => {
-    expect(withFontFace("font-sans font-semibold")).toBe("font-sans font-semibold font-sans-bold");
+    expect(withFontFace("font-sans font-semibold")).toBe("font-sans font-semibold font-sans-semibold");
   });
 });
 

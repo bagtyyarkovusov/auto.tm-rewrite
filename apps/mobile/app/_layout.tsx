@@ -21,7 +21,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import {
   AppState,
-  Platform,
   useColorScheme as useOsColorScheme,
   type AppStateStatus,
 } from "react-native";
@@ -160,25 +159,19 @@ export default function RootLayout() {
 
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMove-Bold": require("../assets/fonts/UberMoveBold.otf"),
+    "Geist-Light": require("../assets/fonts/Geist-Light.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMove-Medium": require("../assets/fonts/UberMoveMedium.otf"),
+    "Geist-Regular": require("../assets/fonts/Geist-Regular.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMoveText-Bold": require("../assets/fonts/UberMoveTextBold.otf"),
+    "Geist-Medium": require("../assets/fonts/Geist-Medium.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMoveText-Light": require("../assets/fonts/UberMoveTextLight.otf"),
+    "Geist-SemiBold": require("../assets/fonts/Geist-SemiBold.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMoveText-Medium": require("../assets/fonts/UberMoveTextMedium.otf"),
+    "Geist-Bold": require("../assets/fonts/Geist-Bold.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMoveText-Regular": require("../assets/fonts/UberMoveTextRegular.otf"),
-    ...(Platform.OS === "ios"
-      ? {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          "UberMoveMono-Medium": require("../assets/fonts/UberMoveMono-Medium.ttf"),
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          "UberMoveMono-Regular": require("../assets/fonts/UberMoveMono-Regular.ttf"),
-        }
-      : {}),
+    "GeistMono-Regular": require("../assets/fonts/GeistMono-Regular.ttf"),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    "GeistMono-Medium": require("../assets/fonts/GeistMono-Medium.ttf"),
   });
   const appReady = fontsLoaded && i18nReady;
 

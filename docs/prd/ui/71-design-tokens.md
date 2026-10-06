@@ -1,6 +1,6 @@
 # 71 — Design tokens
 
-Shared visual defaults live in `packages/ui/tokens/`. Components use semantic token names rather than scattering raw hex/px values. Platform theme files may deliberately override a shared default—for example, mobile maps the semantic font families to bundled UberMove assets.
+Shared visual defaults live in `packages/ui/tokens/`. Components use semantic token names rather than scattering raw hex/px values. Platform theme files may deliberately override a shared default—for example, mobile maps the semantic font families to bundled Geist assets.
 
 ## Where tokens live in code
 
@@ -101,9 +101,11 @@ Shared web/admin defaults: **Inter** for sans and **Menlo** for mono.
 
 Mobile semantic mappings are current implementation truth:
 
-- `font-sans` → **UberMoveText**: Light, Regular, Medium and Bold files
-- `font-heading` → **UberMove**: Medium and Bold files
-- `font-mono` → **UberMove Mono** on iOS, falling through to Menlo/system monospace on Android until Android mono assets are bundled
+- `font-sans` → **Geist**: Light, Regular, Medium, SemiBold and Bold files
+- `font-heading` → **Geist**: Medium, SemiBold and Bold files (the same family as text)
+- `font-mono` → **Geist Mono**: Regular and Medium files, on iOS and Android
+
+Geist and Geist Mono are bundled under the SIL Open Font License (`apps/mobile/assets/fonts/Geist-OFL.txt`). They cover Turkmen Latin and Russian Cyrillic, so all three languages draw in one typeface.
 
 See `apps/mobile/CONTEXT.md` and `apps/mobile/tailwind.config.js`; do not copy the shared Inter value into a mobile spec.
 

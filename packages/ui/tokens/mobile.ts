@@ -124,23 +124,29 @@ export const mobileType = {
 } as const;
 
 /**
- * The bundled font faces. React Native does not synthesize a real weight from
- * one face, so each weight is its own family name (see `apps/mobile/lib/font.ts`).
+ * The bundled font faces: Geist and Geist Mono (SIL Open Font License,
+ * `apps/mobile/assets/fonts/Geist-OFL.txt`). They cover Turkmen Latin and
+ * Russian Cyrillic and carry tabular figures. React Native does not synthesize
+ * a real weight from one face, so each weight is its own family name (see
+ * `apps/mobile/lib/font.ts`). Headings use the same family as text: hierarchy
+ * comes from size and weight, not from a second typeface.
  */
 export const mobileFontFaces = {
   sans: {
-    light: "UberMoveText-Light",
-    regular: "UberMoveText-Regular",
-    medium: "UberMoveText-Medium",
-    bold: "UberMoveText-Bold",
+    light: "Geist-Light",
+    regular: "Geist-Regular",
+    medium: "Geist-Medium",
+    semibold: "Geist-SemiBold",
+    bold: "Geist-Bold",
   },
   heading: {
-    medium: "UberMove-Medium",
-    bold: "UberMove-Bold",
+    medium: "Geist-Medium",
+    semibold: "Geist-SemiBold",
+    bold: "Geist-Bold",
   },
   mono: {
-    regular: "UberMoveMono-Regular",
-    medium: "UberMoveMono-Medium",
+    regular: "GeistMono-Regular",
+    medium: "GeistMono-Medium",
   },
 } as const;
 

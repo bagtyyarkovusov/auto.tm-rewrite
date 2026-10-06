@@ -6,9 +6,11 @@ Typography is platform-specific behind shared semantic names:
 
 | Semantic use | Web + admin | Mobile |
 |---|---|---|
-| Body / `font-sans` | Inter | UberMoveText (Light, Regular, Medium, Bold) |
-| Heading / `font-heading` | Inter with heading weight | UberMove (Medium, Bold) |
-| Mono / `font-mono` | Menlo, monospace | UberMove Mono on iOS; Menlo/system monospace fallback on Android |
+| Body / `font-sans` | Inter | Geist (Light, Regular, Medium, SemiBold, Bold) |
+| Heading / `font-heading` | Inter with heading weight | Geist (Medium, SemiBold, Bold) |
+| Mono / `font-mono` | Menlo, monospace | Geist Mono (Regular, Medium) |
+
+Mobile uses one family, Geist (SIL Open Font License), for text and headings. It was chosen on 2026-10-06 (issue 695) to replace Uber Move, which has no Cyrillic: Russian text used to fall back to the system font. Geist covers Turkmen Latin and Russian Cyrillic, carries tabular figures, and gives a real SemiBold. Hierarchy comes from size and weight inside the one family.
 
 The shared defaults live in `packages/ui/tokens/type.ts`. Mobile deliberately overrides the family mappings in `apps/mobile/tailwind.config.js` and bundles fonts through `apps/mobile/app/_layout.tsx`. Current mobile usage is documented in `apps/mobile/CONTEXT.md`; a mobile design must not specify Inter from the shared default.
 
@@ -34,15 +36,15 @@ Mobile names its sizes by role (`packages/ui/tokens/mobile.ts`, `mobileType`). S
 
 | Utility | Size / line (dp) | Tracking | Use | Usual face |
 |---|---|---|---|---|
-| `text-display` | 34 / 40 | -0.4 | Large screen titles, the detail price | UberMove Bold |
-| `text-title` | 28 / 34 | -0.3 | Compact screen titles, hero numbers | UberMove Bold |
-| `text-headline` | 22 / 28 | -0.2 | Card prices, sheet titles, empty-state titles | UberMove Bold |
-| `text-subhead` | 18 / 24 | -0.1 | Section titles, large row titles | UberMoveText Bold |
-| `text-body` | 16 / 22 | 0 | Reading and control text | UberMoveText Regular or Medium |
-| `text-callout` | 15 / 20 | 0 | Dense rows, the line beside a title | UberMoveText Regular |
-| `text-footnote` | 13 / 18 | 0 | Helper text, metadata | UberMoveText Regular |
-| `text-caption` | 12 / 16 | 0 | Captions, timestamps, chips on photos | UberMoveText Medium |
-| `text-micro` | 11 / 14 | 0.1 | Tab labels, count badges | UberMoveText Medium |
+| `text-display` | 34 / 40 | -0.4 | Large screen titles, the detail price | Geist Bold |
+| `text-title` | 28 / 34 | -0.3 | Compact screen titles, hero numbers | Geist Bold |
+| `text-headline` | 22 / 28 | -0.2 | Card prices, sheet titles, empty-state titles | Geist Bold |
+| `text-subhead` | 18 / 24 | -0.1 | Section titles, large row titles | Geist SemiBold |
+| `text-body` | 16 / 22 | 0 | Reading and control text | Geist Regular or Medium |
+| `text-callout` | 15 / 20 | 0 | Dense rows, the line beside a title | Geist Regular |
+| `text-footnote` | 13 / 18 | 0 | Helper text, metadata | Geist Regular |
+| `text-caption` | 12 / 16 | 0 | Captions, timestamps, chips on photos | Geist Medium |
+| `text-micro` | 11 / 14 | 0.1 | Tab labels, count badges | Geist Medium |
 
 ### Weight on mobile
 
@@ -50,18 +52,22 @@ React Native draws a custom font from exactly one file; a weight class on top of
 
 | Family class | Weight class | Face |
 |---|---|---|
-| `font-sans` | `font-light` | UberMoveText Light |
-| `font-sans` | none, `font-normal` | UberMoveText Regular |
-| `font-sans` | `font-medium` | UberMoveText Medium |
-| `font-sans` | `font-semibold`, `font-bold` | UberMoveText Bold |
-| `font-heading` | none, `font-medium` | UberMove Medium |
-| `font-heading` | `font-semibold`, `font-bold` | UberMove Bold |
-| `font-mono` | none | UberMove Mono Regular (iOS) |
-| `font-mono` | `font-medium` and heavier | UberMove Mono Medium (iOS) |
+| `font-sans` | `font-light` | Geist Light |
+| `font-sans` | none, `font-normal` | Geist Regular |
+| `font-sans` | `font-medium` | Geist Medium |
+| `font-sans` | `font-semibold` | Geist SemiBold |
+| `font-sans` | `font-bold` | Geist Bold |
+| `font-heading` | none, `font-medium` | Geist Medium |
+| `font-heading` | `font-semibold` | Geist SemiBold |
+| `font-heading` | `font-bold` | Geist Bold |
+| `font-mono` | none | Geist Mono Regular |
+| `font-mono` | `font-medium` and heavier | Geist Mono Medium |
 
-The `Text` primitive does this mapping (`apps/mobile/lib/font.ts`), so a call site writes `font-heading font-semibold` and gets the Bold file on both platforms. There is no semibold file: `font-semibold` and `font-bold` draw the same face. Hierarchy on mobile comes from three steps: Regular, Medium, Bold.
+The `Text` primitive does this mapping (`apps/mobile/lib/font.ts`), so a call site writes `font-heading font-semibold` and gets the SemiBold file on both platforms. Hierarchy on mobile comes from four steps: Regular, Medium, SemiBold, Bold. Bold is for the price and the largest titles; SemiBold carries section titles and emphasis.
 
-A raw React Native `Text` or `TextInput` does not go through the primitive; give it the face utility directly (`font-sans-medium`, `font-sans-bold`, `font-heading-bold`).
+Numbers that should line up (prices, mileage, years, counts) take `tabularFigures` from `apps/mobile/lib/font.ts`; Geist carries the `tnum` feature.
+
+A raw React Native `Text` or `TextInput` does not go through the primitive; give it the face utility directly (`font-sans-medium`, `font-sans-semibold`, `font-sans-bold`, `font-heading-semibold`, `font-heading-bold`).
 
 ## Usage map
 

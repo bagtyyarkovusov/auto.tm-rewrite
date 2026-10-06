@@ -2,7 +2,7 @@
  * Picks the bundled font face for a set of text classes.
  *
  * React Native draws a custom font from exactly one file. A weight class on
- * top of `UberMoveText-Regular` does not select the Bold file, so
+ * top of `Geist-Regular` does not select the Bold file, so
  * `font-semibold` used to render at regular weight (and Android would smear a
  * fake bold over it). Each bundled face is its own family utility
  * (`font-sans-bold`, `font-heading-bold`, see `mobileFontFaces` in
@@ -32,20 +32,20 @@ const WEIGHT_CLASS: Record<string, Weight> = {
   "font-extrabold": "bold",
 };
 
-/** The bundled faces: UberMoveText has four weights, UberMove and the mono face two. */
+/** The bundled faces: Geist in five weights (headings start at Medium), Geist Mono in two. */
 const FACE: Record<Family, Record<Weight, string>> = {
   sans: {
     light: "font-sans-light",
     normal: "font-sans",
     medium: "font-sans-medium",
-    semibold: "font-sans-bold",
+    semibold: "font-sans-semibold",
     bold: "font-sans-bold",
   },
   heading: {
     light: "font-heading",
     normal: "font-heading",
     medium: "font-heading",
-    semibold: "font-heading-bold",
+    semibold: "font-heading-semibold",
     bold: "font-heading-bold",
   },
   mono: {
@@ -110,9 +110,7 @@ export function withFontFace(className: string): string {
  * prices, mileage, years, counts. Pass it as a `Text` style; NativeWind 4 has
  * no working utility for `font-variant-numeric`.
  *
- * The bundled Uber Move faces carry no `tnum` feature today, so the request is
- * ignored and the figures stay proportional; a face that adds the feature
- * takes effect wherever this is applied, with no change at call sites.
+ * Geist carries the `tnum` feature, so the figures line up on iOS and Android.
  */
 export const tabularFigures: { fontVariant: "tabular-nums"[] } = {
   fontVariant: ["tabular-nums"],
