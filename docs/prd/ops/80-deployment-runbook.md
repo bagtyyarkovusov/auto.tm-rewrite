@@ -224,6 +224,52 @@ pnpm --filter @auto-tm/db reviewer:scenario -- --mode revoke
 
 Revocation rewrites reserved reviewer user phones to non-login `revoked:<id>` tombstones, clears their reserved emails, deletes their sessions, invalidates push tokens, and writes a `REVIEWER_SCENARIO_REVOKE` audit row. Remove or disable `REVIEW_DEMO_ACCOUNTS_JSON` / `REVIEW_DEMO_ACCOUNT_ENABLED` in the same operator change when store review is no longer in flight.
 
+### Demo inventory seed and removal
+
+Reviewer production starts empty. The demo inventory fills it for store review and closed testing: about 50 active car Listings, each with 5 to 8 photographs of that car, spread over demo sellers. It is temporary and one command removes it. It is operator work, not a boot side effect, and an agent runs it against staging or production only on the founder's go-ahead in chat.
+
+Run the reviewer scenario seed first. The demo inventory adds Listings around it and touches none of its rows. Run it on staging before production.
+
+Both modes run inside the API container, where Postgres and MinIO are reachable on Railway's private network. The script refuses a public database proxy or a public MinIO host. It needs the catalog seeded and the media buckets created.
+
+Required environment:
+
+- `APP_ENV=staging` or `APP_ENV=production`
+- `DEMO_INVENTORY_AUTHORIZATION=seed-demo-inventory` to seed, `DEMO_INVENTORY_AUTHORIZATION=remove-demo-inventory` to remove. Pass it on the command line as below, so it is not left in the service's variables.
+- `SIGNUPS_ENABLED=false` to seed production. Removal does not check it.
+- `DATABASE_URL`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`, which the API service already has.
+
+Seed:
+
+```bash
+railway ssh --service api --environment <env> -- sh -c \
+  'cd /app && DEMO_INVENTORY_AUTHORIZATION=seed-demo-inventory node --import tsx packages/db/scripts/demo-inventory.ts --mode seed'
+```
+
+The seed downloads each photograph from Wikimedia Commons (`upload.wikimedia.org`), one at a time, so the container needs outbound HTTPS and the first run takes a while. It prints one line per Listing and then the counts. A rerun converges: fixed ids, no duplicates, and it keeps each Listing's publication time and views. If it stops part way, run it again.
+
+Demo sellers have no Sign-in Method, so nobody can sign in as one. Their Listings have calls off and chat on and carry no contact phone.
+
+The photographs are CC BY and CC BY-SA files. `packages/db/scripts/demo-inventory/photos.manifest.json` records each one's author, licence and source, and the web page `/<locale>/demo-credits` shows the same list. Keep that page deployed for as long as the demo Listings are public.
+
+Remove, after review and testing end:
+
+```bash
+railway ssh --service api --environment <env> -- sh -c \
+  'cd /app && DEMO_INVENTORY_AUTHORIZATION=remove-demo-inventory node --import tsx packages/db/scripts/demo-inventory.ts --mode remove'
+```
+
+Removal deletes the demo sellers, their Listings and media rows, every stored object under `demo-inventory/` in `listing-photos`, and what reviewers and testers left on those Listings: favourites, Conversations with their messages, Inspection Interests, and reports about a demo Listing, a demo seller or a message in one of those Conversations. It prints the counts. It touches nothing else, and a second run reports zeros.
+
+Removal refuses, deleting nothing, if a demo seller has gained a Sign-in Method. That account may now belong to a person; resolve it by hand before running removal again.
+
+Removal checklist:
+
+1. Run the removal command and keep the printed counts.
+2. Run it again and confirm it reports zeros.
+3. Take the credits page down: delete `apps/web/src/app/[locale]/demo-credits` and any link to it, and deploy web.
+4. Audit rows and notification history that mention a demo Listing stay as history.
+
 ### Step 5 — Railway rollback and restore
 
 - **Application rollback:** redeploy the last known-good Railway application revision and repeat health + focused smoke checks.
