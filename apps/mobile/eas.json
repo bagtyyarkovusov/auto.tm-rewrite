@@ -43,7 +43,9 @@
       "extends": "base",
       "distribution": "store",
       "environment": "production",
+      "autoIncrement": true,
       "env": {
+        "ANDROID_APPLICATION_ID": "com.auto_tm.ynamly",
         "EXPO_PUBLIC_ENV": "production",
         "EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN": "auto.tm",
         "EXPO_PUBLIC_WEB_URL": "https://autotm.bagtyyar.dev"

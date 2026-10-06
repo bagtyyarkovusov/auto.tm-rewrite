@@ -55,7 +55,7 @@ export class FavoritesController {
       if (err && typeof err === "object" && "issues" in err) {
         const zodError = err as ZodError;
         // eslint-disable-next-line no-console
-        console.error("[Zod validation failed]", zodError.flatten(), "data:", JSON.stringify(data));
+        console.error("[Zod validation failed]", Object.keys(zodError.flatten().fieldErrors));
         throw new BadRequestException({
           code: "VALIDATION_ERROR",
           message: "Request validation failed",

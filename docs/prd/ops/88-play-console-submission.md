@@ -2,12 +2,21 @@
 
 ## Founder decisions (2026-10-06)
 
+**The store release updates the existing Play app `com.auto_tm.ynamly`** (founder decision, 2026-10-06, [#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697)). That app, the Flutter build from a year ago, has completed its closed-test requirements and can apply for production; a new app would have to repeat 12 testers for 14 days. The EAS `production` profile therefore builds package `com.auto_tm.ynamly`. The build refuses to start if the `production` profile has any other package, or if another profile sets one (`validate:eas-env`). This also settles checklist steps 10 and 11: the testing requirement is already met on this app, and the track is its existing closed track. **Before the first `production` build (checklist step 2)** the founder:
+
+1. **Firebase.** In the production Firebase project, add an Android app with package `com.auto_tm.ynamly` (no SHA-1 needed; the app uses push only), download its `google-services.json`, and store it as the `GOOGLE_SERVICES_JSON` file variable of the EAS `production` environment. The worker's service account does not change.
+2. **Upload key.** The EAS Android credentials for `com.auto_tm.ynamly` must hold the upload key Play has for the app. Upload the Flutter keystore to EAS, or request an upload key reset in Play Console (Setup, App signing) with a key EAS generates. A reset needs the new key's certificate exported as a PEM file, and Play takes up to about 48 hours to accept the new key, so start this first. Do not run a `production` build before this is settled, or EAS generates a keystore Play does not know.
+3. **Version code.** Find the highest versionCode ever uploaded to the app in Play Console and set the EAS remote version above it (`eas build:version:set --platform android --profile production`). The `production` profile has `autoIncrement`, so each later build takes the next number.
+4. **Store listing.** Replace the old title, icon, descriptions, screenshots, Data safety answers and privacy URL with this page's.
+5. **Closed track first.** Upload the new build to the existing closed track, let the testers use it for a few days, then apply for production and answer the application's questions about that build.
+
+
 The founder accepted every recommendation below on 2026-10-06 (recorded on #685). Where a row further down still says **Founder decides**, this list wins.
 
 - **Store title:** `AutoTM – Car Marketplace`. **Category:** Auto & Vehicles.
 - **Developer contact email:** `bagtyyarkowusow.dev@gmail.com` until AutoTM owns a domain (also the privacy and terms contact, PR 689).
 - **Approximate location:** declared: collected, not shared, optional, App functionality (the seller's region and city).
-- **In-app search history:** not collected. Recent searches stay on the device, and the API request log no longer keeps query strings.
+- **In-app search history:** not collected. Recent searches stay on the device, and the API request log no longer keeps query strings. Subject to the Railway edge log check in checklist step 9.
 - **Device or other IDs (FCM token):** declared: collected, optional, App functionality.
 - **Fraud prevention, security, and compliance:** added as a purpose for Phone number and Other in-app messages (code rate limits, moderation of reported messages).
 - **Sign-in code records:** deleted after 30 days, and at purge; the privacy policy says so.
@@ -183,7 +192,7 @@ No advertising, analytics or crash SDK is a dependency of `apps/mobile/package.j
 
 Every type below is **encrypted in transit**. The production EAS profile refuses API, socket and media URLs that are not `https:` or `wss:` (`apps/mobile/src/config/easBuildProfileValidation.ts`, lines 140–142), and #325 found no cleartext setting in the release manifest. Uploads use presigned URLs from the API. **Release audit:** confirm the presigned upload host in reviewer production is `https`.
 
-Deletion: Users can **request deletion**. In the app it is Cabinet > Profile > Delete account (`apps/mobile/app/account/delete.tsx`). On the web it is the deletion page (`apps/web/src/app/[locale]/account/delete/page.tsx`). After 30 days, `apps/worker/src/jobs/PurgeExpiredAccounts.ts` clears the Sign-in Methods, the Display Name and avatar fields, and deletes sessions, push devices, notification history, favorites, drafts, blocks and Verified Contact Phones. Listings, Messages, Content Reports and audit rows are kept with "Deleted user" attribution, as the privacy policy says ([83-legal](83-legal.md#privacy-policy--required-sections)). See [Gaps](#gaps-that-could-make-a-declaration-untrue) for data the purge does not reach.
+Deletion: Users can **request deletion**. In the app it is Cabinet > Profile > Delete account (`apps/mobile/app/account/delete.tsx`). On the web it is the deletion page (`apps/web/src/app/[locale]/account/delete/page.tsx`). After 30 days, `apps/worker/src/jobs/PurgeExpiredAccounts.ts` clears the Sign-in Methods, the Display Name and avatar fields, and deletes sessions, push devices, notification history, favorites, drafts, blocks, Verified Contact Phones and the User's Sign-in Code request rows, and clears the contact phone on the Listings it keeps. The same job deletes every Sign-in Code request row older than 30 days. Listings, Messages, Content Reports and audit rows are kept with "Deleted user" attribution, as the privacy policy says ([83-legal](83-legal.md#privacy-policy--required-sections)). See [Gaps](#gaps-that-could-make-a-declaration-untrue) for data the purge does not reach.
 
 | Category → type | Collect? | What and where | Shared | Optional? | Purposes |
 |---|---|---|---|---|---|
@@ -200,7 +209,7 @@ Deletion: Users can **request deletion**. In the app it is Cabinet > Profile > D
 | Messages → Emails, SMS or MMS | No | The app reads no SMS or email. The Sign-in Code emails AutoTM sends are not user messages the app collects. | — | — | — |
 | App activity → **Other user-generated content** | Yes | Listing fields (description, price, mileage, optional VIN, area text), Content Report reason and details (`ContentReport`) | No | Optional | App functionality. Fraud prevention, security, and compliance for reports. |
 | App activity → **Other actions** | Yes | Favorites (`Favorite`), blocks (`BlockedUser`), Conversation read watermarks and mutes (`src/api/conversations/useUpdateWatermark.ts`, `useMuteConversation.ts`) | No | Optional | App functionality |
-| App activity → **In-app search history** | **Founder decides** | Recent searches stay on the device ([#344](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344) decision). No table stores searches. The API's request logger (`apps/api/src/app.module.ts`, `pinoHttp` with default serializers) writes each request URL, query string included, to Railway logs. | No | Optional | — |
+| App activity → **In-app search history** | No (founder decision, 2026-10-06) | Recent searches stay on the device ([#344](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344) decision). No table stores searches. The API's request logger (`apps/api/src/common/requestLogging.ts`) writes each request path without its query string or parsed query, so no search term reaches the API request log; `requestLogging.spec.ts` proves it on the Nest Fastify stack. Railway's own edge HTTP log records a path per request and is outside the app: check one typed search, `GET /api/v1/catalog/search?q=…`, there before submission (founder checklist). | No | Optional | — |
 | App activity → App interactions, installed apps | No | No analytics. `Listing.viewCount` is a counter with no User attached. | — | — | — |
 | App info and performance → Crash logs, Diagnostics, other | No | No crash or performance SDK. `components/ErrorBoundary.tsx` only writes to the device console. Play's Android vitals are Google's own collection, not the app's. | — | — | — |
 | Device or other IDs | Yes | FCM device token (`FcmDevice.token`, registered only after the notification permission is granted, `src/notifications/useChatPushTokenRegistration.ts`); Firebase installation ID sent by the Firebase SDK | No | **Founder decides** (see below) | App functionality |
@@ -208,7 +217,7 @@ Deletion: Users can **request deletion**. In the app it is Cabinet > Profile > D
 
 **Founder decides: Approximate location.** Option A is to declare it as collected, optional, for App functionality. That matches the privacy policy, which lists "Location: the region and city you select" (`apps/web/src/app/[locale]/legal/content.ts`, line 33). Option B is not to declare it, treating the city as a fact about the car the seller describes rather than the User's location. Recommended: A. Google rejects mismatches between the privacy policy and the form, and A over-declares only slightly.
 
-**Founder decides: In-app search history.** Option A is to declare it as collected, optional, for App functionality, because search URLs stay in Railway logs. Option B is to stop logging query strings before submission (a code change on its own issue) and declare nothing. Recommended: B, then not declared. Until B ships, A is the truthful answer.
+**Founder decides: In-app search history.** Option A is to declare it as collected, optional, for App functionality, because search URLs stay in Railway logs. Option B is to stop logging query strings before submission (a code change on its own issue) and declare nothing. Recommended: B, then not declared. Until B ships, A is the truthful answer. **Decided: B, and B has shipped** (PR 690, completed by PR 692), so nothing is declared, subject to the Railway edge log check above.
 
 **Founder decides: Device or other IDs, optional or required.** AutoTM registers the token only after the User grants notifications. By default, though, Firebase Messaging may fetch a token and installation ID when the app starts, whatever the permission. Option A is to declare it required, which is true whatever the SDK does. Option B is to declare it optional after the release audit proves the SDK sends nothing before the User grants notifications. Recommended: A unless #325 proves B.
 
@@ -244,7 +253,7 @@ Blocked in `app.config.js`: `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `RECORD_AUD
 2. `com.google.android.gms.permission.AD_ID` is absent. Then the [advertising ID](https://support.google.com/googleplay/android-developer/answer/6048248) answer is "No". If it is present, find which library adds it and remove it with `tools:node="remove"` on its own issue, or answer truthfully.
 3. Name the library that adds `BIND_GET_INSTALL_REFERRER_SERVICE`.
 4. Record whether Firebase Messaging auto-init sends a token request before notification permission is granted. That settles the Device IDs optional question.
-5. `android:allowBackup="true"` is still the Expo default (#325, finding 1). Founder decides whether to keep it. It does not change a Data safety answer, because backup goes to the User's own Google account. **Resolved**: `allowBackup` is now `false` (founder decision, 2026-10-06).
+5. `android:allowBackup="true"` was the Expo default (#325, finding 1). It does not change a Data safety answer, because backup goes to the User's own Google account. **Resolved**: `allowBackup` is now `false` (founder decision, 2026-10-06).
 6. `expo-camera` is installed but no app code imports it (#325, finding 2). It adds `CAMERA`, which `expo-image-picker` needs anyway.
 
 ## 4. App content answers
@@ -292,6 +301,12 @@ The questionnaire asks about the app's content and its interactive features ([ra
 ## 5. URLs
 
 Hosts come from [83-legal](83-legal.md#where-they-live) and `eas.json` (`production` and `production-smoke`: `EXPO_PUBLIC_WEB_URL = https://autotm.bagtyyar.dev`). The app builds the links in `apps/mobile/src/config/publicWebUrl.ts` (`legalPageUrl`).
+
+**Hosts the store build talks to** ([#700](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/700), founder decision 2026-10-06): the production API on `api.autotm.bagtyyar.dev` and media on `media.autotm.bagtyyar.dev`, custom domains on the Railway production services. The `production` build refuses any host outside `autotm.bagtyyar.dev` or `auto.tm`, and any Railway-generated host. Before the first `production` build the founder:
+
+1. Brings the production API up on current `main` ([#375](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/375)). On 2026-10-06 the production `api` and `admin` services had no active deployment, so both API domains answered "Application not found". Then confirms that both custom domains show a valid certificate in Railway, that `https://api.autotm.bagtyyar.dev/readyz` answers 200, and that `https://media.autotm.bagtyyar.dev/minio/health/live` answers 200. The media domain must target MinIO's S3 port 9000, not the console on 9001. `/readyz` reaches MinIO over the private endpoint, so it says nothing about the media host.
+2. Sets `MINIO_PUBLIC_URL=https://media.autotm.bagtyyar.dev` on the Railway **production** API service (the worker does not read it) and redeploys. Presigned uploads are signed against this host, so a wrong value breaks every upload while existing photos still load: after the switch, check that a Listing photo loads, and that one Listing photo and one chat image upload succeed. No CORS change is needed: the API enables no HTTP CORS, and the app's socket is websocket-only, which `SOCKET_IO_CORS_ORIGIN` does not gate.
+3. Sets the EAS `production` environment variables `EXPO_PUBLIC_API_URL=https://api.autotm.bagtyyar.dev/api/v1`, `EXPO_PUBLIC_WS_URL=wss://api.autotm.bagtyyar.dev/ws/chat` and `EXPO_PUBLIC_MEDIA_URL=https://media.autotm.bagtyyar.dev`.
 
 | Console field | URL | Status |
 |---|---|---|
@@ -360,7 +375,7 @@ Do these in order. Record non-secret evidence only: no codes, account values, Co
 6. **Privacy policy URL.** Evidence on **#327**.
 7. **App access.** Enter the section 6 instructions with real values from the secret store, then sign in once with each reserved account by email and by phone from outside Turkmenistan. Evidence on **#327**: pass or fail per account and path, no values. Evidence on **#391**: the email path is the main login and phone is the alternative.
 8. **Ads, content rating, target audience, News, COVID-19, Government, Financial features, Health, Advertising ID.** Enter the section 4 answers. Evidence on **#327**: the rating Console issued, and the answers given.
-9. **Data safety.** Enter section 2, including the Firebase SDK data, and the Delete account URL. Evidence on **#391**: Email address collected yes, shared no, not ephemeral, optional, App functionality and Account management, encrypted, deletable. Evidence on **#327**: the full set of answers as entered.
+9. **Data safety.** First open Railway's HTTP logs for the reviewer production API, find one typed search (`GET /api/v1/catalog/search?q=…`, which the app sends when a User types in Search), and confirm the logged path carries no query string; if it does, declare In-app search history as collected instead. Then enter section 2, including the Firebase SDK data, and the Delete account URL. Evidence on **#391**: Email address collected yes, shared no, not ephemeral, optional, App functionality and Account management, encrypted, deletable. Evidence on **#327**: the full set of answers as entered.
 10. **Testing gate.** Check the account type and any testing requirement before production (the 12-testers-for-14-days rule applies to new personal accounts only, per [#324](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/324)). Evidence on **#327**.
 11. **Candidate freeze.** Upload the signed AAB to the chosen track, check the Console's pre-launch report, and compare the Console's permission list with step 2. Evidence on **#329**: AAB hash, versionCode, track, and that the Console list matches.
 12. **Final review and submit.** The founder reviews the exact listing, binary and declarations together, then submits. Evidence on **#329** and **#327**: submission date and review outcome.
