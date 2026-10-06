@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import {
   S3Client,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
@@ -19,13 +20,14 @@ const BUCKET = "chat-attachments";
 /** The app sends at most 2400 px a side; this bounds the decode on the request path. */
 const MAX_PIXELS = 50_000_000;
 
+/**
+ * A missing key is NotFound on HEAD and NoSuchKey on GET. Any other 404
+ * (a missing bucket reports NoSuchBucket) is a server fault, not an absent
+ * object, and must surface instead of answering "missing".
+ */
 function isNotFound(err: unknown): boolean {
-  const failure = err as { name?: string; $metadata?: { httpStatusCode?: number } };
-  return (
-    failure.name === "NotFound" ||
-    failure.name === "NoSuchKey" ||
-    failure.$metadata?.httpStatusCode === 404
-  );
+  const failure = err as { name?: string };
+  return failure.name === "NotFound" || failure.name === "NoSuchKey";
 }
 
 @Injectable()
@@ -85,14 +87,21 @@ export class SharpChatAttachmentCleaner implements ChatAttachmentCleaner {
     return "clean";
   }
 
-  /** Nothing over the upload cap is read into memory. */
+  /**
+   * The HEAD keeps an over-cap object from being fetched when the store
+   * reports ContentLength; the length guard after the read covers a store
+   * that understates it.
+   */
   private async read(key: string): Promise<Buffer | "too-large" | null> {
     try {
+      const head = await this.s3.send(
+        new HeadObjectCommand({ Bucket: BUCKET, Key: key }),
+      );
+      if ((head.ContentLength ?? 0) > CHAT_ATTACHMENT_MAX_SIZE_BYTES) return "too-large";
       const object = await this.s3.send(
         new GetObjectCommand({ Bucket: BUCKET, Key: key }),
       );
       if (!object.Body) return null;
-      if ((object.ContentLength ?? 0) > CHAT_ATTACHMENT_MAX_SIZE_BYTES) return "too-large";
       const bytes = Buffer.from(await object.Body.transformToByteArray());
       return bytes.length > CHAT_ATTACHMENT_MAX_SIZE_BYTES ? "too-large" : bytes;
     } catch (err) {
