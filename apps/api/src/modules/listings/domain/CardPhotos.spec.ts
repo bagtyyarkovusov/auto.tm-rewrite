@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 
-import { CARD_PHOTO_KEY_LIMIT, toCardPhotos } from "./CardPhotos";
+import { CARD_GALLERY_KEY_LIMIT, CARD_PHOTO_KEY_LIMIT, toCardPhotos } from "./CardPhotos";
 
 describe("toCardPhotos", () => {
   it("returns an empty array and 0 when the Listing has no media", () => {
-    expect(toCardPhotos([])).toEqual({ photoKeys: [], photoCount: 0 });
+    expect(toCardPhotos([])).toEqual({ photoKeys: [], galleryKeys: [], photoCount: 0 });
   });
 
   it("returns the first two photo keys in order and the total photo count", () => {
@@ -27,5 +27,39 @@ describe("toCardPhotos", () => {
     expect(result.coverMediaKey).toBe("clip");
     expect(result.photoKeys).toEqual(["p1"]);
     expect(result.photoCount).toBe(1);
+  });
+
+  it("gives the Results strip the first eight photo keys of a Listing with more", () => {
+    const media = Array.from({ length: 11 }, (_, i) => ({ key: `p${i}`, kind: "image" as const }));
+
+    const result = toCardPhotos(media);
+
+    expect(CARD_GALLERY_KEY_LIMIT).toBe(8);
+    expect(result.galleryKeys).toEqual(["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"]);
+    expect(result.photoKeys).toEqual(["p0", "p1"]);
+    expect(result.photoCount).toBe(11);
+  });
+
+  it("gives the strip every photo and no video when a Listing has fewer than eight", () => {
+    const result = toCardPhotos([
+      { key: "p1", kind: "image" },
+      { key: "clip", kind: "video" },
+      { key: "p2", kind: "image" },
+    ]);
+
+    expect(result.galleryKeys).toEqual(["p1", "p2"]);
+  });
+
+  it("counts every photo when given only the first photos and the Listing's total", () => {
+    const firstEight = Array.from({ length: 8 }, (_, i) => ({ key: `p${i}`, kind: "image" as const }));
+
+    const result = toCardPhotos([{ key: "clip", kind: "video" }, ...firstEight], 20);
+
+    expect(result).toEqual({
+      coverMediaKey: "clip",
+      photoKeys: ["p0", "p1"],
+      galleryKeys: ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"],
+      photoCount: 20,
+    });
   });
 });

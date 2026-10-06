@@ -1,7 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
-import { toCardPhotos, type CardPhotos } from "../domain/CardPhotos";
+import {
+  CARD_GALLERY_KEY_LIMIT,
+  toCardPhotos,
+  type CardPhotos,
+} from "../domain/CardPhotos";
 import { VISIBLE_LISTING_STATUSES } from "../domain/ListingStatus";
 import type {
   Currency,
@@ -54,6 +58,13 @@ type CardRow = {
   media: Array<{ key: string; kind: MediaKind }>;
 };
 
+type CardPhotoRow = {
+  listingId: string;
+  key: string;
+  kind: MediaKind;
+  photoCount: number;
+};
+
 @Injectable()
 export class PrismaListingsReadRepository
   implements ListingsReadPort, ListingCardReadPort
@@ -84,24 +95,53 @@ export class PrismaListingsReadRepository
     return (await this.getVisibleCards(ids)).map(toListingSummary);
   }
 
+  /**
+   * One bounded read for the whole page: per Listing only its first media
+   * item (the cover), its first `CARD_GALLERY_KEY_LIMIT` photos and its photo
+   * total, so the rows sent back stay small whatever a Listing holds.
+   */
   async getCardPhotos(listingIds: string[]): Promise<Map<string, CardPhotos>> {
     if (listingIds.length === 0) return new Map();
 
-    const rows = await this.prisma.listingMedia.findMany({
-      where: { listingId: { in: listingIds } },
-      orderBy: [{ listingId: "asc" }, { sortOrder: "asc" }],
-      select: { listingId: true, key: true, kind: true },
-    });
+    const rows = await this.prisma.$queryRaw<CardPhotoRow[]>`
+      SELECT "listingId", "key", "kind"::text AS "kind", "photoCount"
+      FROM (
+        SELECT
+          m."listingId",
+          m."key",
+          m."kind",
+          m."sortOrder",
+          m."id",
+          ROW_NUMBER() OVER (
+            PARTITION BY m."listingId" ORDER BY m."sortOrder", m."id"
+          ) AS "position",
+          ROW_NUMBER() OVER (
+            PARTITION BY m."listingId", m."kind" ORDER BY m."sortOrder", m."id"
+          ) AS "kindPosition",
+          (COUNT(*) FILTER (WHERE m."kind" = 'image') OVER (PARTITION BY m."listingId"))::int
+            AS "photoCount"
+        FROM "listing_media" m
+        WHERE m."listingId" = ANY(${listingIds}::text[])
+      ) ranked
+      WHERE "position" = 1
+        OR ("kind" = 'image' AND "kindPosition" <= ${CARD_GALLERY_KEY_LIMIT})
+      ORDER BY "listingId", "sortOrder", "id"`;
 
-    const mediaByListing = new Map<string, Array<{ key: string; kind: MediaKind }>>();
+    const byListing = new Map<
+      string,
+      { photoCount: number; media: Array<{ key: string; kind: MediaKind }> }
+    >();
     for (const row of rows) {
-      const media = mediaByListing.get(row.listingId) ?? [];
-      media.push({ key: row.key, kind: row.kind });
-      mediaByListing.set(row.listingId, media);
+      const entry = byListing.get(row.listingId) ?? { photoCount: row.photoCount, media: [] };
+      entry.media.push({ key: row.key, kind: row.kind });
+      byListing.set(row.listingId, entry);
     }
 
     return new Map(
-      [...mediaByListing].map(([listingId, media]) => [listingId, toCardPhotos(media)]),
+      [...byListing].map(([listingId, { media, photoCount }]) => [
+        listingId,
+        toCardPhotos(media, photoCount),
+      ]),
     );
   }
 

@@ -894,6 +894,83 @@ describe("ListingsController e2e", () => {
       expect(bareItem).not.toHaveProperty("engineTypeId");
     });
 
+    it("gives the Results card eight photos, the contact preferences and the seller's name, never the phone", async () => {
+      await seedCatalog();
+      await createUser("user-1");
+      await prisma.user.update({ where: { id: suite.id("user-1") }, data: { displayName: "Aýgül" } });
+      // A seller purged after account deletion keeps the row with no Sign-in Method.
+      await prisma.user.create({ data: { id: suite.id("user-2"), role: "buyer" } });
+      const contactPhone = suite.phone("user-1");
+
+      const gallery = await seedFeedListing({
+        priceAmount: 150000,
+        contactPhone,
+        allowCalls: false,
+        allowChat: true,
+        publishedAt: new Date(Date.now() - 1000),
+      });
+      const noPhotos = await seedFeedListing({
+        sellerId: suite.id("user-2"),
+        priceAmount: 140000,
+        contactPhone,
+        allowCalls: true,
+        allowChat: false,
+        publishedAt: new Date(Date.now() - 2000),
+      });
+      await prisma.listingMedia.createMany({
+        data: [
+          { listingId: gallery.id, kind: "video", key: "g/clip", sortOrder: 0 },
+          ...Array.from({ length: 10 }, (_, i) => ({
+            listingId: gallery.id,
+            kind: "image" as const,
+            key: `g/p${i}`,
+            sortOrder: 10 - i,
+          })),
+        ],
+      });
+
+      const searched = await request
+        .get("/api/v1/listings")
+        .query({ brandId: suite.catalog.brandId, priceMin: 100000, sort: "price_desc" })
+        .expect(200);
+      const plainFeed = await request.get("/api/v1/listings").query({ limit: 50 }).expect(200);
+
+      for (const res of [searched, plainFeed]) {
+        const parsed = ListingsSchemas.FeedResponseSchema.parse(res.body);
+        const byId = new Map(parsed.items.map((item) => [item.id, item]));
+
+        expect(byId.get(gallery.id)).toMatchObject({
+          coverMediaKey: "g/clip",
+          photoKeys: ["g/p9", "g/p8"],
+          galleryKeys: ["g/p9", "g/p8", "g/p7", "g/p6", "g/p5", "g/p4", "g/p3", "g/p2"],
+          photoCount: 10,
+          allowCalls: false,
+          allowChat: true,
+          seller: { displayName: "Aýgül", nameNumber: expect.any(Number), deleted: false },
+        });
+        expect(byId.get(noPhotos.id)).toMatchObject({
+          photoKeys: [],
+          galleryKeys: [],
+          photoCount: 0,
+          allowCalls: true,
+          allowChat: false,
+          seller: { displayName: null, nameNumber: expect.any(Number), deleted: true },
+        });
+
+        const raw = res.body.items.filter((item: { id: string }) =>
+          [gallery.id, noPhotos.id].includes(item.id),
+        );
+        expect(raw).toHaveLength(2);
+        for (const item of raw) {
+          expect(item).not.toHaveProperty("contactPhone");
+          expect(Object.keys(item.seller).sort()).toEqual(["deleted", "displayName", "nameNumber"]);
+        }
+        // No phone-shaped value anywhere in the list payload.
+        expect(res.text).not.toContain(contactPhone.slice(-8));
+        expect(res.text).not.toMatch(/\+993\d{8}/);
+      }
+    });
+
     it("marks isFavorited for a signed-in viewer and omits it for an anonymous one", async () => {
       await seedCatalog();
       await createUser("user-1");
@@ -975,8 +1052,9 @@ describe("ListingsController e2e", () => {
         // Guards against a spy that never fires (0 === 0).
         expect(small).toBeGreaterThan(0);
         expect(large).toBe(small);
-        // listings + cover media include + card photos + exchange rates + favorites.
-        expect(large).toBeLessThanOrEqual(5);
+        // listings + cover media include + card photos + exchange rates +
+        // favorites + card sellers.
+        expect(large).toBeLessThanOrEqual(6);
       } finally {
         querySpy.mockRestore();
       }
