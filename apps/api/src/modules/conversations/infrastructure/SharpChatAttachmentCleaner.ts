@@ -17,7 +17,7 @@ import type {
 } from "../domain/ports/ChatAttachmentCleaner";
 
 const BUCKET = "chat-attachments";
-/** The app sends at most 2400 px a side; this bounds the decode on the request path. */
+/** The app bounds only the width it sends (2400 px); this bounds the decode on the request path. */
 const MAX_PIXELS = 50_000_000;
 
 /**
