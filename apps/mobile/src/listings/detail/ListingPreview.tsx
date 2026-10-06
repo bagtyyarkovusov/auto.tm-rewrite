@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
-import { GalleryBanner } from "../components/GalleryImage";
+import { GalleryBanner, GalleryCounter } from "../components/GalleryImage";
 import { ContactCtaBar } from "../components/ContactCtaBar";
 import { PriceDisplay } from "../components/PriceDisplay";
 import { listingSpecLine } from "../feed/listingSpecLine";
@@ -92,11 +92,7 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
         className="absolute left-0 right-0 top-0 z-20 px-3 py-2"
         style={{ paddingTop: insets.top + 8 }}
       >
-        <BackButton
-          className="bg-background/90"
-          accessibilityLabel={t("back")}
-          onPress={onBack}
-        />
+        <BackButton tone="glass" accessibilityLabel={t("back")} onPress={onBack} />
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bar.space }}>
@@ -110,15 +106,11 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
               onError={() => setUseOriginalImage(true)}
             />
             {summary.photoCount > 0 && (
-              <View
-                className={
-                  bannerKey
-                    ? "absolute right-4 bottom-12 rounded-full bg-black/60 px-3 py-1"
-                    : "absolute right-4 bottom-3 rounded-full bg-black/60 px-3 py-1"
-                }
-              >
-                <Text className="text-callout text-white">{`1 / ${summary.photoCount}`}</Text>
-              </View>
+              <GalleryCounter
+                position={1}
+                total={summary.photoCount}
+                aboveBanner={Boolean(bannerKey)}
+              />
             )}
             {bannerKey && <GalleryBanner label={t(bannerKey)} />}
           </View>

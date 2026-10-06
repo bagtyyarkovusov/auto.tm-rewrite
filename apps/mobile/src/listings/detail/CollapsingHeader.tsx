@@ -12,8 +12,12 @@ import { isClosedForContact } from "./closedListing";
 import { listingTitle } from "./presentation";
 import type { CatalogMaps } from "./useCatalogMaps";
 
-import { BackButton } from "@/components/navigation/StackHeader";
-import { Button } from "@/components/ui/button";
+import {
+  BackButton,
+  HeaderButton,
+  HeaderCircleButton,
+} from "@/components/navigation/StackHeader";
+import { GlassGroup } from "@/components/ui/glass-surface";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import {
@@ -62,11 +66,7 @@ export function CollapsingHeader({
       style={{ paddingTop: topInset }}
     >
       <View className="flex-row items-center gap-1 px-3 py-2">
-        <BackButton
-          className="bg-background/90"
-          accessibilityLabel={t("back")}
-          onPress={onBack}
-        />
+        <BackButton tone="glass" accessibilityLabel={t("back")} onPress={onBack} />
         <View className="min-w-0 flex-1 px-1">
           {collapsed && (
             <>
@@ -86,12 +86,11 @@ export function CollapsingHeader({
           )}
         </View>
         {ownerMenu ?? (
-          <>
+          // Two circles side by side share one glass layer on iOS 26.
+          <GlassGroup className="flex-row items-center gap-2">
             {!closed && (
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-background/90"
+              <HeaderCircleButton
+                tone="glass"
                 accessibilityLabel={t("favorite")}
                 accessibilityState={{ selected: favorite.favorited }}
                 disabled={favorite.pending || isAuthenticated === null}
@@ -109,22 +108,16 @@ export function CollapsingHeader({
                     }
                   />
                 )}
-              </Button>
+              </HeaderCircleButton>
             )}
             {canReport && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="rounded-full bg-background/90"
+                  <HeaderButton
+                    tone="glass"
+                    icon={MoreHorizontal}
                     accessibilityLabel={t("detailOptions")}
-                  >
-                    <Icon
-                      as={MoreHorizontal}
-                      className="size-5 text-foreground"
-                    />
-                  </Button>
+                  />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuItem
@@ -136,7 +129,7 @@ export function CollapsingHeader({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-          </>
+          </GlassGroup>
         )}
       </View>
     </View>

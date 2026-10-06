@@ -27,6 +27,7 @@ import {
 
 import { RelistContactPhoneSheet } from "./RelistContactPhoneSheet";
 
+import { HeaderButton } from "@/components/navigation/StackHeader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -170,14 +171,12 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
       {mode === "menu" && menuActions.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="secondary"
-              size="icon"
-              className="rounded-full bg-background/90"
+            {/* The menu sits in Listing detail's header, over the photo. */}
+            <HeaderButton
+              tone="glass"
+              icon={MoreHorizontal}
               accessibilityLabel={t("detailOptions")}
-            >
-              <Icon as={MoreHorizontal} className="size-5 text-foreground" />
-            </Button>
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             {menuActions.map((action) => (

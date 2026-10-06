@@ -9,7 +9,7 @@ import {
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
-import { GalleryBanner, GalleryImage } from "./GalleryImage";
+import { GalleryBanner, GalleryCounter, GalleryImage } from "./GalleryImage";
 import { PhotoViewer } from "./PhotoViewer";
 
 import { Text } from "@/components/ui/text";
@@ -106,15 +106,11 @@ export function PhotoGallery({
         viewabilityConfig={viewabilityConfig}
       />
 
-      <View
-        className={
-          banner
-            ? "absolute right-4 bottom-12 rounded-full bg-black/60 px-3 py-1"
-            : "absolute right-4 bottom-3 rounded-full bg-black/60 px-3 py-1"
-        }
-      >
-        <Text className="text-callout text-white">{`${activeIndex + 1} / ${media.length}`}</Text>
-      </View>
+      <GalleryCounter
+        position={activeIndex + 1}
+        total={media.length}
+        aboveBanner={Boolean(banner)}
+      />
 
       {banner && <GalleryBanner label={banner} />}
 

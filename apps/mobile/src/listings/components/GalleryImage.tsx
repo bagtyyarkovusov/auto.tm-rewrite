@@ -6,7 +6,10 @@ import type { ComponentProps } from "react";
 
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 
+import { GlassSurface } from "@/components/ui/glass-surface";
 import { Text } from "@/components/ui/text";
+import { tabularFigures } from "@/lib/font";
+import { cn } from "@/lib/utils";
 
 type ListingMedia = ListingsSchemas.ListingMedia;
 type ExpoImageStyle = ComponentProps<typeof Image>["style"];
@@ -19,6 +22,34 @@ export function GalleryBanner({ label }: { label: string }) {
         {label}
       </Text>
     </View>
+  );
+}
+
+/**
+ * The `n / N` photo position at the bottom-right of the Listing detail photo:
+ * a small glass chip, so it floats over the car without a dark box on it.
+ * It sits above the status strip when there is one.
+ */
+export function GalleryCounter({
+  position,
+  total,
+  aboveBanner,
+}: {
+  position: number;
+  total: number;
+  aboveBanner: boolean;
+}) {
+  return (
+    <GlassSurface
+      className={cn(
+        "absolute right-4 h-7 justify-center rounded-full px-3",
+        aboveBanner ? "bottom-12" : "bottom-3",
+      )}
+    >
+      <Text className="text-footnote font-medium text-foreground" style={tabularFigures}>
+        {`${position} / ${total}`}
+      </Text>
+    </GlassSurface>
   );
 }
 

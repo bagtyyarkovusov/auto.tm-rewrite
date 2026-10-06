@@ -176,7 +176,8 @@ A tab screen keeps `useTabBarSpace()` clear at its bottom: either its root is pa
 - Title: inline, `headline` (22/28) in the heading face, semibold, one line, with an optional `caption` second line. A screen that is a destination (Help, About, Notifications, Profile, My listings, Messages list, Brand and Model pickers) uses `large`: the title moves under the button row at `title` size (28/34), bold, up to two lines. Tab roots keep `LargeTitle` at `display` size, so a tab root is always the loudest title.
 - Trailing: `HeaderButton` (the same 44 dp tonal circle with a 20 dp glyph) or one `HeaderTextAction`, medium weight in the text colour (Reset, Change brand); brand red stays with the screen's primary action. Results keeps its named Sort capsule, 44 dp high.
 - The middle can hold something else: the Search field, or the peer's avatar, name and presence in a Conversation.
-- Buttons over a photo (Listing detail) are the same circles on `bg-background/90`.
+- Buttons over a photo or over scrolling content (Listing detail and its preview: Back, Favorite, the ⋯ menu, the owner's ⋯ menu) are the same 44 dp circles in glass (`tone="glass"`): interactive system Liquid Glass on iOS 26, which swells and lights under a finger in place of the press scale; the tuned glass surface with the press scale elsewhere. Favorite and ⋯ stand 8 dp apart in one `GlassGroup`, so on iOS 26 they are one glass layer and a circle swelling under a finger reaches toward its neighbour. Page headers keep the tonal circles: there the header is on the page tone, not over content.
+- The photo position on Listing detail (`n / N`, bottom-right of the photo, above a status strip when there is one) is a 28 dp glass chip with a `footnote` medium label in the text colour and tabular figures.
 
 ### Sticky action bar (`StickyActionBar`, `useStickyActionBar`)
 
@@ -187,6 +188,6 @@ A tab screen keeps `useTabBarSpace()` clear at its bottom: either its root is pa
 
 ### Glass renderings
 
-iOS 26 draws the tab bar and the sticky bar with the system Liquid Glass. Android and older iOS draw a 94% opaque surface with a light hairline edge and the `floating` shadow. Reduce Transparency draws the opaque raised surface. The first two were checked on the iPhone simulator in light and dark (the second by forcing the fallback branch); Reduce Transparency and a real Android device were not.
+iOS 26 draws the tab bar, the sticky bar, the floating filter chips, the glass header circles and the photo position chip with the system Liquid Glass. Android and older iOS draw a 94% opaque surface with a light hairline edge and the `floating` shadow. Reduce Transparency draws the opaque raised surface. The tab bar and sticky bar were checked on the iPhone simulator in light and dark (the fallback by forcing its branch); the header circles and the photo chip were not yet seen on a simulator, and Reduce Transparency and a real Android device were not checked.
 
 See `docs/prd/ui/hifi/mobile-tabs-_layout.md`.

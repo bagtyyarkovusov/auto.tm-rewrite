@@ -3,30 +3,61 @@ import type { ReactNode } from "react";
 import { View, type ViewProps } from "react-native";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
+import { GlassSurface, useSystemGlass } from "@/components/ui/glass-surface";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 
-type HeaderButtonProps = Omit<ButtonProps, "children" | "size"> & {
-  icon: LucideIcon;
-  /** Extra classes for the glyph, for example a state colour. */
-  iconClassName?: string;
-  /** `tonal` is the filled circle; `plain` has no fill, for a row of quiet actions. */
-  tone?: "tonal" | "plain";
+/**
+ * `tonal` is the filled circle on the page. `plain` has no fill, for a row of
+ * quiet actions. `glass` is the floating circle for a header that lies over a
+ * photo or over scrolling content (Listing detail): system Liquid Glass on
+ * iOS 26, the tuned glass surface elsewhere.
+ */
+type HeaderButtonTone = "tonal" | "plain" | "glass";
+
+type HeaderCircleButtonProps = Omit<ButtonProps, "children" | "size"> & {
+  tone?: HeaderButtonTone;
+  children?: ReactNode;
 };
 
 /**
- * A header action: a 44 dp circle on the tonal surface with one glyph. Every
- * header button in the app is this one, so they share a size, a tone and a
- * press response. The caller supplies the accessibility label.
+ * The 44 dp header circle around any glyph, for the rare action whose glyph
+ * changes in place (a favourite that shows a spinner while it saves). Prefer
+ * `HeaderButton`, which draws the glyph too.
+ *
+ * The glass circle is the glass itself, so the whole circle answers a finger:
+ * on iOS 26 the interactive system glass swells and lights under it, and the
+ * button drops its own press scale so nothing moves twice; elsewhere the
+ * button's press scale moves the whole circle.
  */
-export function HeaderButton({
-  icon,
-  iconClassName,
+export function HeaderCircleButton({
   tone = "tonal",
   className,
+  children,
   ...props
-}: HeaderButtonProps) {
+}: HeaderCircleButtonProps) {
+  const systemGlass = useSystemGlass();
+
+  if (tone === "glass") {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        feedback={systemGlass ? "none" : "control"}
+        className={cn(
+          "border-0 bg-transparent active:bg-transparent disabled:border-0 disabled:bg-transparent",
+          className,
+        )}
+        {...props}
+      >
+        <GlassSurface interactive className="size-11 items-center justify-center rounded-full">
+          {children}
+        </GlassSurface>
+      </Button>
+    );
+  }
+
   return (
     <Button
       variant={tone === "tonal" ? "secondary" : "ghost"}
@@ -34,8 +65,28 @@ export function HeaderButton({
       className={className}
       {...props}
     >
-      <Icon as={icon} className={cn("size-5 text-foreground", iconClassName)} />
+      {children}
     </Button>
+  );
+}
+
+type HeaderButtonProps = Omit<HeaderCircleButtonProps, "children"> & {
+  icon: LucideIcon;
+  /** Extra classes for the glyph, for example a state colour. */
+  iconClassName?: string;
+};
+
+/**
+ * A header action: a 44 dp circle with one glyph, tonal on the page and glass
+ * over a photo. Every header button in the app is this one, so they share a
+ * size, a tone and a press response. The caller supplies the accessibility
+ * label.
+ */
+export function HeaderButton({ icon, iconClassName, ...props }: HeaderButtonProps) {
+  return (
+    <HeaderCircleButton {...props}>
+      <Icon as={icon} className={cn("size-5 text-foreground", iconClassName)} />
+    </HeaderCircleButton>
   );
 }
 
