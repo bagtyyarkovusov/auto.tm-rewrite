@@ -123,7 +123,7 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
   const error = contacts.phone.error ?? contacts.conversation.error;
   const retry = contacts.phone.error ? contacts.phone.retry : contacts.conversation.retry;
 
-  return <EnterOnce order={enterOrder} className="mx-4">
+  return <EnterOnce order={enterOrder}>
     <MotionView style={press.style} className="overflow-hidden rounded-3xl bg-card">
       <Pressable onPress={() => onPress(listing.id)} {...press.handlers} accessibilityRole="button" accessibilityLabel={[title, price].filter(Boolean).join(", ")}>
         <ListingPhotoStrip photoKeys={feedCardPhotoKeys(listing)} photoCount={listing.photoCount} condition={listing.condition} />
@@ -162,7 +162,7 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
 /** Skeleton in the card's shape: the photo strip, the price block, two lines, the action row and the seller line. */
 export function ListingLargeCardSkeleton() {
   const { width } = useWindowDimensions();
-  return <View className="mx-4 overflow-hidden rounded-3xl bg-card">
+  return <View className="overflow-hidden rounded-3xl bg-card">
     <View testID="listing-photo-skeleton" style={{ height: Math.round((width - CARD_INSET * 2) * STRIP_HEIGHT_SHARE) }}>
       <Skeleton className="h-full w-full rounded-none" />
     </View>

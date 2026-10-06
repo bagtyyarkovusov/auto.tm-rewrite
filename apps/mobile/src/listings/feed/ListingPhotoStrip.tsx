@@ -9,12 +9,12 @@ import { ListingPhoto, PhotoChip } from "./ListingPhoto";
 import { Text } from "@/components/ui/text";
 import { tabularFigures } from "@/lib/font";
 
-/** The page margin either side of a full-width Listing card (`mx-4`), in dp. */
-export const CARD_INSET = 16;
+/** The page margin either side of a Results card, in dp: none, the card spans the screen as on Auto.ru. */
+export const CARD_INSET = 0;
 /** The share of the card width one photo takes, so the next photo peeks in. */
-export const STRIP_PHOTO_SHARE = 0.62;
-/** The strip height as a share of the card width: about 270 dp on a 402 dp screen. */
-export const STRIP_HEIGHT_SHARE = 0.73;
+export const STRIP_PHOTO_SHARE = 0.8;
+/** The strip height as a share of the card width: a 4:3 photo at 80% of the width, about 240 dp on a 402 dp screen. */
+export const STRIP_HEIGHT_SHARE = 0.6;
 /** The seam between two photos (`gap-0.5`), in dp. */
 export const STRIP_GAP = 2;
 
@@ -37,7 +37,7 @@ interface ListingPhotoStripProps {
 
 /**
  * The photos at the top of a Results card, edge to edge. One photo fills the
- * frame. Two or more scroll sideways: each is 62% of the card wide so the
+ * frame. Two or more scroll sideways: each is 80% of the card wide so the
  * next one peeks in, they snap one photo per swipe, and a "+N photos" tile
  * ends the strip when the Listing has more photos than the feed sent. The
  * tile, like any photo, opens the Listing: a tap falls through to the card.
