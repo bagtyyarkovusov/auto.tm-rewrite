@@ -1,6 +1,6 @@
 import type { PrismaClient } from "../../generated/prisma/client/client";
 
-import { DEMO_ID_PREFIX, DEMO_OBJECT_PREFIX } from "./marker";
+import { DEMO_ID_PREFIX, DEMO_OBJECT_PREFIX, holdsRealSignInMethod } from "./marker";
 import { refused, type DemoInventoryResult } from "./result";
 import type { ObjectStore } from "./storage";
 
@@ -9,16 +9,17 @@ import type { ObjectStore } from "./storage";
  *
  * It starts from the marker (`marker.ts`): the Users whose id is in the demo namespace. From them
  * it reaches their Listings, and from those the media rows, favourites, Conversations with their
- * messages, Inspection Interests and reports. Deleting the sellers cascades to all of these except
- * reports, which have no foreign key and are deleted by target in the same transaction. Then it
- * deletes every stored object under the demo key prefix.
+ * messages, Inspection Interests and Content Reports. Deleting the sellers cascades to all of these
+ * except Content Reports, which have no foreign key and are deleted by target in the same
+ * transaction. Then it deletes every stored object under the demo key prefix.
  *
  * It never matches a row by content, so a real user's Listing, favourite and Conversation are out
  * of reach. A real user's favourite of, or Conversation about, a demo Listing goes with that
  * Listing.
  *
- * It refuses, deleting nothing, when a demo seller has a Sign-in Method: that account may now
- * belong to a person. A second run finds nothing and reports zeros.
+ * It refuses, deleting nothing, when a demo seller holds a Sign-in Method other than the seed's
+ * phone tombstone: that account may now belong to a person. A second run finds nothing and
+ * reports zeros.
  */
 export async function removeDemoInventory(deps: {
   prisma: PrismaClient;
@@ -30,7 +31,7 @@ export async function removeDemoInventory(deps: {
     where: { id: { startsWith: DEMO_ID_PREFIX } },
     select: { id: true, phone: true, email: true },
   });
-  if (sellers.some((seller) => seller.phone !== null || seller.email !== null)) {
+  if (sellers.some(holdsRealSignInMethod)) {
     return refused("remove", "a seeded seller has gained a Sign-in Method; resolve that account by hand first");
   }
   const sellerIds = sellers.map((seller) => seller.id);
@@ -85,7 +86,7 @@ export async function removeDemoInventory(deps: {
     message:
       `Demo inventory removed ${counts.sellers} sellers, ${counts.listings} Listings, ${counts.photos} media rows, ` +
       `${counts.objects} stored objects, ${counts.favorites} favourites, ${counts.conversations} Conversations ` +
-      `(${counts.messages} messages), ${counts.reports} reports and ${counts.inspectionInterests} Inspection Interests`,
+      `(${counts.messages} messages), ${counts.reports} Content Reports and ${counts.inspectionInterests} Inspection Interests`,
     counts,
   };
 }

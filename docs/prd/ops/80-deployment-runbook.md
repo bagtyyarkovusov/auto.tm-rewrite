@@ -230,11 +230,16 @@ Reviewer production starts empty. The demo inventory fills it for store review a
 
 Run the reviewer scenario seed first. The demo inventory adds Listings around it and touches none of its rows. Run it on staging before production.
 
+Before the first run on staging or production, the founder records two decisions on issue #703:
+
+1. **Photo licensing.** 295 of the 297 photographs are CC BY or CC BY-SA and must be credited. Either accept them and link `/<locale>/demo-credits` from the Trust or About page before seeding, or do not seed: the manifest holds only two CC0 photographs.
+2. **Egress.** The seed downloads from `upload.wikimedia.org` inside the API container. ADR-0075 approves fixture downloads for PR environments only, so this run needs the founder's approval as external service egress.
+
 Both modes run inside the API container, where Postgres and MinIO are reachable on Railway's private network. The script refuses a public database proxy or a public MinIO host. It needs the catalog seeded and the media buckets created.
 
 Required environment:
 
-- `APP_ENV=staging` or `APP_ENV=production`
+- `APP_ENV=staging` or `APP_ENV=production`. The script also runs with `APP_ENV=development` or `test`, and then only against a loopback Postgres and MinIO.
 - `DEMO_INVENTORY_AUTHORIZATION=seed-demo-inventory` to seed, `DEMO_INVENTORY_AUTHORIZATION=remove-demo-inventory` to remove. Pass it on the command line as below, so it is not left in the service's variables.
 - `SIGNUPS_ENABLED=false` to seed production. Removal does not check it.
 - `DATABASE_URL`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`, which the API service already has.
@@ -248,9 +253,11 @@ railway ssh --service api --environment <env> -- sh -c \
 
 The seed downloads each photograph from Wikimedia Commons (`upload.wikimedia.org`), one at a time, so the container needs outbound HTTPS and the first run takes a while. It prints one line per Listing and then the counts. A rerun converges: fixed ids, no duplicates, and it keeps each Listing's publication time and views. If it stops part way, run it again.
 
-Demo sellers have no Sign-in Method, so nobody can sign in as one. Their Listings have calls off and chat on and carry no contact phone.
+On failure it prints `Demo inventory seed failed:` and a reason. A failed download names the Commons file and the HTTP status. Any other error is named by its class only, because a driver message can quote a connection string; read the service logs for more.
 
-The photographs are CC BY and CC BY-SA files. `packages/db/scripts/demo-inventory/photos.manifest.json` records each one's author, licence and source, and the web page `/<locale>/demo-credits` shows the same list. Keep that page deployed for as long as the demo Listings are public.
+Nobody can sign in as a demo seller. Each holds one Sign-in Method, a phone tombstone of the form `demo-inventory:<user id>`, which is not a number and which the API never accepts for a sign-in code. It is stored because a User with no phone and no email is shown to buyers as a deleted User. Their Listings have calls off and chat on and carry no contact phone.
+
+The photographs are CC BY and CC BY-SA files. `packages/db/scripts/demo-inventory/photos.manifest.json` records each one's author, licence and source, and the web page `/<locale>/demo-credits` shows the same list. Keep that page deployed and linked for as long as the demo Listings are public.
 
 Remove, after review and testing end:
 
@@ -259,9 +266,9 @@ railway ssh --service api --environment <env> -- sh -c \
   'cd /app && DEMO_INVENTORY_AUTHORIZATION=remove-demo-inventory node --import tsx packages/db/scripts/demo-inventory.ts --mode remove'
 ```
 
-Removal deletes the demo sellers, their Listings and media rows, every stored object under `demo-inventory/` in `listing-photos`, and what reviewers and testers left on those Listings: favourites, Conversations with their messages, Inspection Interests, and reports about a demo Listing, a demo seller or a message in one of those Conversations. It prints the counts. It touches nothing else, and a second run reports zeros.
+Removal deletes the demo sellers, their Listings and media rows, every stored object under `demo-inventory/` in `listing-photos`, and what reviewers and testers left on those Listings: favourites, Conversations with their messages, Inspection Interests, and Content Reports about a demo Listing, a demo seller or a message in one of those Conversations. It prints the counts. It touches nothing else, and a second run reports zeros.
 
-Removal refuses, deleting nothing, if a demo seller has gained a Sign-in Method. That account may now belong to a person; resolve it by hand before running removal again.
+Removal refuses, deleting nothing, if a demo seller holds an email or any phone other than its tombstone. That account may now belong to a person; resolve it by hand before running removal again.
 
 Removal checklist:
 

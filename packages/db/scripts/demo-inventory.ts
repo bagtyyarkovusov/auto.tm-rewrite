@@ -28,6 +28,7 @@ import { PrismaClient } from "../generated/prisma/client/client";
 
 import { createCommonsPhotoSource } from "./demo-inventory/photos";
 import { removeDemoInventory } from "./demo-inventory/remove";
+import { DemoInventoryError } from "./demo-inventory/result";
 import { seedDemoInventory } from "./demo-inventory/seed";
 import { createS3ObjectStore } from "./demo-inventory/storage";
 
@@ -68,8 +69,9 @@ main()
     process.exit(code);
   })
   .catch((error: unknown) => {
-    // A driver error can quote a connection string; print its class of failure only.
-    console.error(`Demo inventory ${MODE} failed: ${error instanceof Error ? error.name : "unknown error"}`);
-    if (process.env["DEMO_INVENTORY_DEBUG"] === "1" && error instanceof Error) console.error(error.message);
+    // A driver error can quote a connection string, so only this script's own messages are printed.
+    const reason =
+      error instanceof DemoInventoryError ? error.message : error instanceof Error ? error.name : "unknown error";
+    console.error(`Demo inventory ${MODE} failed: ${reason}`);
     process.exit(1);
   });

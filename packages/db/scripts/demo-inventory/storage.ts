@@ -5,6 +5,8 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
+import { DemoInventoryError } from "./result";
+
 /** Where Listing photos live. The seed and its removal touch no other bucket. */
 const BUCKET = "listing-photos";
 /** DeleteObjects accepts at most 1,000 keys. */
@@ -57,7 +59,7 @@ export function createS3ObjectStore(options: {
           }),
         );
         if (result.Errors?.length) {
-          throw new Error(`Failed to delete ${result.Errors.length} stored objects`);
+          throw new DemoInventoryError(`Failed to delete ${result.Errors.length} stored objects`);
         }
       }
     },

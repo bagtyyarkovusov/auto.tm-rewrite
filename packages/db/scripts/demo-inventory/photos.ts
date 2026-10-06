@@ -5,6 +5,7 @@ import path from "node:path";
 import sharp from "sharp";
 
 import type { DemoPhoto } from "./manifest";
+import { DemoInventoryError } from "./result";
 
 export interface PhotoSource {
   /** The bytes of one manifest photo, as Commons serves them. */
@@ -34,9 +35,10 @@ export function createCommonsPhotoSource(cacheDir: string): PhotoSource {
       }
       let status = 0;
       for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-        const response = await fetch(photo.url, { headers: { "User-Agent": USER_AGENT } });
-        status = response.status;
-        if (response.ok) {
+        // A network failure counts as status 0 and is retried like a 5xx.
+        const response = await fetch(photo.url, { headers: { "User-Agent": USER_AGENT } }).catch(() => null);
+        status = response?.status ?? 0;
+        if (response?.ok) {
           const body = Buffer.from(await response.arrayBuffer());
           await mkdir(cacheDir, { recursive: true });
           await writeFile(cached, body);
@@ -44,10 +46,12 @@ export function createCommonsPhotoSource(cacheDir: string): PhotoSource {
           return body;
         }
         // 429 and 5xx are Commons asking for a slower client; anything else will not improve.
-        if (status !== 429 && status < 500) break;
+        if (status !== 0 && status !== 429 && status < 500) break;
         await sleep(PAUSE_MS * 4 ** attempt);
       }
-      throw new Error(`Failed to download ${photo.sourceFile}: HTTP ${status}`);
+      throw new DemoInventoryError(
+        `Failed to download ${photo.sourceFile}: ${status === 0 ? "no response from Wikimedia Commons" : `HTTP ${status}`}`,
+      );
     },
   };
 }
@@ -83,7 +87,7 @@ export async function preparePhoto(source: Buffer): Promise<PreparedPhoto> {
   const original = await sharp(source).autoOrient().jpeg({ quality: 85, progressive: true }).toBuffer();
   const meta = await sharp(original).metadata();
   if (meta.exif || meta.xmp || meta.iptc || (meta.orientation ?? 1) !== 1) {
-    throw new Error("A demo photo still carries metadata after cleaning");
+    throw new DemoInventoryError("A demo photo still carries metadata after cleaning");
   }
   const files = [{ name: "original", body: original }];
   for (const variant of VARIANTS) {

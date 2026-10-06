@@ -23,6 +23,7 @@ import {
   DEMO_OBJECT_PREFIX,
   demoListingId,
   demoSellerId,
+  demoSellerPhone,
 } from "../scripts/demo-inventory/marker";
 import type { PhotoSource } from "../scripts/demo-inventory/photos";
 import { removeDemoInventory } from "../scripts/demo-inventory/remove";
@@ -61,6 +62,8 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
   let storage: ObjectStore;
   let downloads: string[];
   let photos: PhotoSource;
+  /** What the first seed drew per Listing, to compare with a seed after a removal. */
+  let firstDraw: { id: string; publishedAt: Date | null; viewCount: number }[];
 
   beforeAll(async () => {
     [postgres, minio] = await Promise.all([
@@ -268,7 +271,11 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     expect(users.length).toBeGreaterThanOrEqual(8);
     expect(users.length).toBeLessThanOrEqual(12);
     for (const user of users) {
-      expect(user).toMatchObject({ phone: null, phoneVerifiedAt: null, email: null, emailVerifiedAt: null, role: "seller" });
+      expect(user).toMatchObject({ phone: demoSellerPhone(user.id), email: null, emailVerifiedAt: null, role: "seller" });
+      // The API signs in only `+993…` mobiles, so nobody can ask for a code for this value. It is
+      // stored because a User with neither phone nor email is shown to buyers as a deleted User.
+      expect(user.phone).not.toMatch(/^\+993[67]\d{7}$/);
+      expect(user.phoneVerifiedAt).toEqual(user.createdAt);
       expect(user.displayName).toBeTruthy();
     }
     expect(new Set(users.map((user) => user.createdAt.toISOString())).size).toBe(users.length);
@@ -332,6 +339,7 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     expect({ width: meta.width, height: meta.height }).toEqual({ width: sample.width, height: sample.height });
 
     expect(new Set(downloads).size).toBe(photoCount);
+    firstDraw = listings.map(({ id, publishedAt, viewCount }) => ({ id, publishedAt, viewCount }));
   });
 
   it("converges on the same rows and objects when run again", async () => {
@@ -363,6 +371,11 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     expect(bucketBefore).toHaveLength(1);
 
     const seeded = await seedDemoInventory({ prisma: db, storage, photos, now: FIRST_RUN });
+    // A fresh seed draws the publication times and view counts the first one drew: the random
+    // choices come from a fixed seed, not from the run.
+    expect(
+      (await seededRows()).listings.map(({ id, publishedAt, viewCount }) => ({ id, publishedAt, viewCount })),
+    ).toEqual(firstDraw);
     expect(seeded.exitCode, seeded.message).toBe(0);
     await createRowsHangingOffDemoContent();
 

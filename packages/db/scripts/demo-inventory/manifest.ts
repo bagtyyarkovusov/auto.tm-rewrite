@@ -41,14 +41,20 @@ export const MAX_PHOTOS = 8;
 
 /** Licences the issue allows, in its order of preference. */
 const ALLOWED_LICENCE = /^(CC0|Public domain|CC BY \d\.\d|CC BY-SA \d\.\d)$/;
-const COMMONS_HOSTS = new Set(["upload.wikimedia.org", "thumb.wikimedia.org"]);
+/** `upload.wikimedia.org` also serves each Wikipedia's local, often non-free, files under other paths. */
+const COMMONS_UPLOAD = { hostname: "upload.wikimedia.org", path: "/wikipedia/commons/" };
+const COMMONS_FILE_PAGE = "https://commons.wikimedia.org/wiki/File:";
 
 export const DEMO_PHOTO_MANIFEST = manifestJson as DemoPhotoManifest;
 
 function isCommonsUpload(url: string): boolean {
   try {
     const parsed = new URL(url);
-    return parsed.protocol === "https:" && COMMONS_HOSTS.has(parsed.hostname);
+    return (
+      parsed.protocol === "https:" &&
+      parsed.hostname === COMMONS_UPLOAD.hostname &&
+      parsed.pathname.startsWith(COMMONS_UPLOAD.path)
+    );
   } catch {
     return false;
   }
@@ -86,6 +92,9 @@ export function validateDemoInventory(cars: readonly DemoCar[], manifest: DemoPh
         else usedBy.set(photo.sourceFile, car.slug);
       }
       if (!isCommonsUpload(photo.url)) problems.push(`${at}: url is not a Wikimedia Commons upload`);
+      if (!photo.sourcePage.startsWith(COMMONS_FILE_PAGE)) {
+        problems.push(`${at}: source page is not a Wikimedia Commons file page`);
+      }
     }
   }
   for (const slug of Object.keys(manifest.listings)) {

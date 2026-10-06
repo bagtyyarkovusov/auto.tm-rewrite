@@ -172,6 +172,27 @@ describe("demo inventory photo manifest", () => {
     ]);
   });
 
+  it("reports a file from a Wikipedia's own uploads or with a source page outside Commons", () => {
+    const [first, second, ...rest] = photos(5) as [DemoPhoto, DemoPhoto, DemoPhoto, DemoPhoto, DemoPhoto];
+    const problems = validateDemoInventory(
+      [car("local")],
+      manifestOf({
+        local: {
+          subject: "x",
+          photos: [
+            { ...first, url: "https://upload.wikimedia.org/wikipedia/en/a/ab/Non-free_car.jpg" },
+            { ...second, sourcePage: "https://en.wikipedia.org/wiki/File:Example_car_(2).jpg" },
+            ...rest,
+          ],
+        },
+      }),
+    );
+    expect(problems).toEqual([
+      "local photo 1: url is not a Wikimedia Commons upload",
+      "local photo 2: source page is not a Wikimedia Commons file page",
+    ]);
+  });
+
   it("reports one Commons file used twice", () => {
     const shared = photos(5);
     expect(

@@ -2,7 +2,14 @@ import type { PrismaClient } from "../../generated/prisma/client/client";
 
 import { DEMO_CARS, DEMO_SELLERS, type DemoCar, type DemoSeller } from "./content";
 import { DEMO_PHOTO_MANIFEST, validateDemoInventory, type DemoPhotoManifest } from "./manifest";
-import { DEMO_ID_PREFIX, DEMO_OBJECT_PREFIX, demoListingId, demoMediaId } from "./marker";
+import {
+  DEMO_ID_PREFIX,
+  DEMO_OBJECT_PREFIX,
+  demoListingId,
+  demoMediaId,
+  demoSellerPhone,
+  holdsRealSignInMethod,
+} from "./marker";
 import { OBJECTS_PER_PHOTO, preparePhoto, type PhotoSource } from "./photos";
 import { refused, type DemoInventoryResult } from "./result";
 import type { ObjectStore } from "./storage";
@@ -131,9 +138,10 @@ function resolveCars(cars: readonly DemoCar[], catalog: Catalog): { resolved: Re
  * leaves `publishedAt` and `viewCount` as the first run set them, so the feed order does not jump
  * and views collected since are kept.
  *
- * Demo sellers have no Sign-in Method, so nobody can sign in as one. Their Listings carry no
- * contact phone and have calls off and chat on: under ADR-0081 a Listing may only show its
- * seller's own verified number, and a demo seller has none.
+ * Nobody can sign in as a demo seller: its only Sign-in Method is a phone tombstone the API never
+ * accepts (`demoSellerPhone`). Their Listings carry no contact phone and have calls off and chat
+ * on: under ADR-0081 a Listing may only show its seller's own verified number, and a demo seller
+ * has none.
  *
  * It writes no audit row, so removal has nothing outside the marker to find.
  */
@@ -160,9 +168,9 @@ export async function seedDemoInventory(deps: {
 
   const held = await prisma.user.findMany({
     where: { id: { startsWith: DEMO_ID_PREFIX } },
-    select: { phone: true, email: true, role: true },
+    select: { id: true, phone: true, email: true, role: true },
   });
-  if (held.some((user) => user.phone !== null || user.email !== null)) {
+  if (held.some(holdsRealSignInMethod)) {
     return refused("seed", "a seeded seller has gained a Sign-in Method");
   }
   if (held.some((user) => user.role !== "seller" && user.role !== "buyer")) {
@@ -177,8 +185,8 @@ export async function seedDemoInventory(deps: {
 
   for (const seller of sellers) {
     const data = {
-      phone: null,
-      phoneVerifiedAt: null,
+      phone: demoSellerPhone(seller.id),
+      phoneVerifiedAt: new Date(seller.memberSince),
       email: null,
       emailVerifiedAt: null,
       displayName: seller.displayName,

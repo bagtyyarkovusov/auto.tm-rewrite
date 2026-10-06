@@ -662,7 +662,7 @@ export const DEMO_CARS: readonly DemoCar[] = [
     regionSlug: "dasoguz",
     citySlug: "kunya-urgench",
     descriptionLocale: "tk",
-    description: "Accent 1.6 awtomat. Ykdysady, ýangyjy az. Ilkinji maşyn üçin gowy.",
+    description: "Accent 1.6 awtomat, Koreýa bazary üçin, şonuň üçin arkasynda Verna ýazylan. Ykdysady, ýangyjy az. Ilkinji maşyn üçin gowy.",
   },
   {
     ...used,
@@ -685,7 +685,7 @@ export const DEMO_CARS: readonly DemoCar[] = [
     descriptionLocale: "ru",
     description:
       "Hyundai Elantra 1.6 Inspiration, цвет Fiery Red. Цифровая панель, большой экран, подогрев руля. " +
-      "Машина из Кореи, растаможена. Пробег подтверждён сервисной историей.",
+      "Машина из Кореи, поэтому на багажнике шильдик Avante. Растаможена, пробег подтверждён сервисной историей.",
   },
   {
     ...used,
@@ -708,7 +708,7 @@ export const DEMO_CARS: readonly DemoCar[] = [
     acceptsExchange: true,
     descriptionLocale: "ru",
     description:
-      "Elantra Sport 1.6 турбо, робот DCT, 204 л.с. Быстрая и при этом экономичная. Сцепление менял на 100 тысячах. " +
+      "Elantra Sport 1.6 турбо (корейская Avante Sport), робот DCT, 204 л.с. Быстрая и при этом экономичная. Сцепление менял на 100 тысячах. " +
       "Обмен на кроссовер интересен.",
   },
   {
@@ -1159,7 +1159,7 @@ export const DEMO_CARS: readonly DemoCar[] = [
     colorEn: "Silver",
     bodyTypeEn: "Sedan",
     engineTypeEn: "Diesel",
-    transmissionEn: "Automatic",
+    transmissionEn: "Robot/AMT-DCT",
     driveTypeEn: "FWD",
     enginePower: 140,
     regionSlug: "ashgabat",
@@ -1167,7 +1167,7 @@ export const DEMO_CARS: readonly DemoCar[] = [
     damaged: true,
     knownIssuesText: "Турбина свистит и не всегда выходит на давление, нужна замена или ремонт.",
     descriptionLocale: "ru",
-    description: "Passat B6 2.0 TDI. Нужен ремонт турбины, в остальном машина живая. Цена с учётом ремонта.",
+    description: "Passat B6 2.0 TDI, коробка DSG. Нужен ремонт турбины, в остальном машина живая. Цена с учётом ремонта.",
   },
   {
     ...used,
@@ -1175,7 +1175,7 @@ export const DEMO_CARS: readonly DemoCar[] = [
     sellerKey: "mary-motor",
     brandSlug: "audi",
     modelSlug: "a6",
-    year: 2013,
+    year: 2014,
     mileageKm: 201_000,
     priceAmount: 215_000,
     priceCurrency: "TMT",
@@ -1188,7 +1188,7 @@ export const DEMO_CARS: readonly DemoCar[] = [
     regionSlug: "mary",
     citySlug: "mary",
     descriptionLocale: "en",
-    description: "Audi A6 C7 2.0 TDI, Ice Silver. Economical on long trips, comfortable cabin.",
+    description: "Audi A6 35 TDI (2.0 diesel), Ice Silver. Economical on long trips, comfortable cabin.",
   },
   {
     ...used,

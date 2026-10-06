@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import { assertDemoInventoryTarget } from "../scripts/demo-inventory/guard";
@@ -150,5 +153,35 @@ describe("demo inventory guard", () => {
       expect(message).not.toContain(SECRET);
       expect(message).not.toContain("db.example.com");
     }
+  });
+});
+
+describe("demo-inventory.ts entry point", () => {
+  const packageDir = fileURLToPath(new URL("..", import.meta.url));
+  const run = (args: string[], env: Record<string, string>) =>
+    spawnSync(process.execPath, ["--import", "tsx", "scripts/demo-inventory.ts", ...args], {
+      cwd: packageDir,
+      // Only these variables: nothing from the developer's shell can authorize a run.
+      env: { PATH: process.env["PATH"] ?? "", ...env },
+      encoding: "utf8",
+    });
+
+  it("refuses an unauthorized run before connecting, and prints no secret", () => {
+    const result = run(["--mode", "seed"], { ...production, DEMO_INVENTORY_AUTHORIZATION: "" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Demo inventory seed refused: set DEMO_INVENTORY_AUTHORIZATION=seed-demo-inventory");
+    expect(result.stdout + result.stderr).not.toContain(SECRET);
+  });
+
+  it("does not let a seed authorization run a removal", () => {
+    const result = run(["--mode", "remove"], production);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Demo inventory remove refused: set DEMO_INVENTORY_AUTHORIZATION=remove-demo-inventory");
+  });
+
+  it("needs a mode", () => {
+    const result = run([], production);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Usage: demo-inventory.ts --mode seed|remove");
   });
 });

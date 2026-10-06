@@ -38,3 +38,19 @@ export function demoMediaId(listingIndex: number, order: number): string {
 export function isDemoId(id: string): boolean {
   return id.startsWith(DEMO_ID_PREFIX);
 }
+
+/**
+ * The value stored as a demo seller's phone. It is a tombstone, not a number: the API accepts only
+ * `+993…` mobiles as a sign-in phone, so nobody can request or confirm a code for it. It is there
+ * because a User with no phone and no email is a deleted User to every reader (`toPublicIdentity`
+ * in the API), who would then see no Display Name on the Listing and "Deleted user" in chat. The
+ * reviewer scenario parks revoked accounts the same way (`revoked:<id>`).
+ */
+export function demoSellerPhone(sellerId: string): string {
+  return `demo-inventory:${sellerId}`;
+}
+
+/** True when a demo seller holds something a person could sign in with. */
+export function holdsRealSignInMethod(seller: { id: string; phone: string | null; email: string | null }): boolean {
+  return seller.email !== null || (seller.phone !== null && seller.phone !== demoSellerPhone(seller.id));
+}
