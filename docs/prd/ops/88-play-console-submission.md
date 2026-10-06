@@ -4,9 +4,9 @@
 
 **The store release updates the existing Play app `com.auto_tm.ynamly`** (founder decision, 2026-10-06, [#697](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/697)). That app, the Flutter build from a year ago, has completed its closed-test requirements and can apply for production; a new app would have to repeat 12 testers for 14 days. The EAS `production` profile therefore builds package `com.auto_tm.ynamly`. The build refuses to start if the `production` profile has any other package, or if another profile sets one (`validate:eas-env`). This also settles checklist steps 10 and 11: the testing requirement is already met on this app, and the track is its existing closed track. **Before the first `production` build (checklist step 2)** the founder:
 
-1. **Firebase.** In the production Firebase project, add an Android app with package `com.auto_tm.ynamly` (no SHA-1 needed; the app uses push only), download its `google-services.json`, and store it as the `GOOGLE_SERVICES_JSON` file variable of the EAS `production` environment. The worker's service account does not change.
-2. **Upload key.** The EAS Android credentials for `com.auto_tm.ynamly` must hold the upload key Play has for the app. Upload the Flutter keystore to EAS, or request an upload key reset in Play Console (Setup, App signing) with a key EAS generates. A reset needs the new key's certificate exported as a PEM file, and Play takes up to about 48 hours to accept the new key, so start this first. Do not run a `production` build before this is settled, or EAS generates a keystore Play does not know.
-3. **Version code.** Find the highest versionCode ever uploaded to the app in Play Console and set the EAS remote version above it (`eas build:version:set --platform android --profile production`). The `production` profile has `autoIncrement`, so each later build takes the next number.
+1. **Firebase.** In the production Firebase project, add an Android app with package `com.auto_tm.ynamly` (no SHA-1 needed; the app uses push only), download its `google-services.json`, and store it as the `GOOGLE_SERVICES_JSON` file variable of the EAS `production` environment. The worker's service account does not change. **Done (2026-10-06):** `GOOGLE_SERVICES_JSON` is stored in the EAS `production` environment.
+2. **Upload key.** The EAS Android credentials for `com.auto_tm.ynamly` must hold the upload key Play has for the app. Upload the Flutter keystore to EAS, or request an upload key reset in Play Console (Setup, App signing) with a key EAS generates. A reset needs the new key's certificate exported as a PEM file, and Play takes up to about 48 hours to accept the new key, so start this first. Do not run a `production` build before this is settled, or EAS generates a keystore Play does not know. **In progress (2026-10-06):** the founder requested an upload key reset in Play Console and is waiting for Google's approval. The new upload certificate's SHA-1 starts `35:AF:4D:C3`. No `production` build runs before Play shows the new key.
+3. **Version code.** Find the highest versionCode ever uploaded to the app in Play Console and set the EAS remote version above it (`eas build:version:set --platform android --profile production`). The `production` profile has `autoIncrement`, so each later build takes the next number. **Done (2026-10-06):** the EAS remote version is set to 4, so the first `production` build takes versionCode 5. The app's version name is 2.0.0.
 4. **Store listing.** Replace the old title, icon, descriptions, screenshots, Data safety answers and privacy URL with this page's.
 5. **Closed track first.** Upload the new build to the existing closed track, let the testers use it for a few days, then apply for production and answer the application's questions about that build.
 
@@ -17,7 +17,7 @@ The founder accepted every recommendation below on 2026-10-06 (recorded on #685)
 - **Developer contact email:** `bagtyyarkowusow.dev@gmail.com` until AutoTM owns a domain (also the privacy and terms contact, PR 689).
 - **Approximate location:** declared: collected, not shared, optional, App functionality (the seller's region and city).
 - **In-app search history:** not collected. Recent searches stay on the device, and the API request log no longer keeps query strings. Subject to the Railway edge log check in checklist step 9.
-- **Device or other IDs (FCM token):** declared: collected, optional, App functionality.
+- **Device or other IDs (FCM token):** declared: collected, optional, App functionality, conditional on release audit item 4 (if the build fetches a token or installation ID before notification permission, declare it required).
 - **Fraud prevention, security, and compliance:** added as a purpose for Phone number and Other in-app messages (code rate limits, moderation of reported messages).
 - **Sign-in code records:** deleted after 30 days, and at purge; the privacy policy says so.
 - **Contact phone on kept Listings:** removed at purge.
@@ -32,7 +32,7 @@ The repository answers for the reviewer-only Google Play submission: store listi
 
 ## How to use this page
 
-- Checked against `origin/main` at `2874fd4c` on 2026-10-06. If the mobile manifest, SDK list, or a data flow changes after that commit, check the affected answers again before entering them.
+- Checked against `origin/main` at `8016387f` on 2026-10-06. If the mobile manifest, SDK list, or a data flow changes after that commit, check the affected answers again before entering them.
 - **Founder decides:** marks an answer the code does not settle, with the options. The page recommends an option where it has one, and the founder chooses.
 - **Release audit:** marks something to confirm on the EAS-built AAB under [#325](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/325) and [#329](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/329). A local build or `app.config.js` does not prove the shipped manifest.
 - This page never holds a reviewer phone number, email address, code, or other credential. Those go only into Play Console's App access form and the operator's secret store.
@@ -63,11 +63,11 @@ What the copy is allowed to say, and where the code shows it:
 
 Do not claim: payments or deals in the app, dealers or dealer pages, VIN decoding or vehicle history ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)), inspection reports (the `InspectionInterestCta` component exists but no screen renders it), sharing (no share code exists in `apps/mobile`, [#495](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/495)), saved searches or alerts, a "phone verified" badge (no such string is in the mobile resources), profile photos (`avatarKey` is never set, per `schema.prisma`), or support chat.
 
-**Founder decides:** the store title. Option A is the brand alone, `AutoTM`. Option B is the brand with a descriptor, as drafted below. Google forbids keyword stuffing in titles. A short descriptor is allowed.
+**Decided (founder, 2026-10-06):** the store title is `AutoTM – Car Marketplace`. The alternative was the brand alone, `AutoTM`. Google forbids keyword stuffing in titles; a short descriptor is allowed.
 
 ### English
 
-- **App name** (28): `AutoTM: cars in Turkmenistan`
+- **App name** (24): `AutoTM – Car Marketplace`
 - **Short description** (75): `Buy and sell cars in Turkmenistan. Message sellers and save your favorites.`
 - **Full description** (1,307):
 
@@ -99,7 +99,7 @@ AutoTM is in Russian, Turkmen and English. AutoTM does not sell cars and does no
 
 ### Russian (needs a native speaker's read)
 
-- **App name** (28): `AutoTM: авто в Туркменистане`
+- **App name** (18): `AutoTM – авторынок`
 - **Short description** (73): `Покупайте и продавайте авто в Туркменистане. Чат с продавцом и избранное.`
 - **Full description** (1,409):
 
@@ -131,7 +131,7 @@ AutoTM работает на русском, туркменском и англ�
 
 ### Turkmen (needs a native speaker's read)
 
-- **App name** (23): `AutoTM: awtoulag bazary`
+- **App name** (24): `AutoTM – awtoulag bazary`
 - **Short description** (72): `Türkmenistanda awtoulag satyň we satyn alyň. Satyjy bilen çat, halanlar.`
 - **Full description** (1,414):
 
@@ -164,8 +164,8 @@ AutoTM rus, türkmen we iňlis dillerinde işleýär. AutoTM maşyn satmaýar we
 ### Graphics
 
 - Icon and feature graphic follow [#323](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/323) (approved red tile with white `a.`).
-- Phone screenshots come from the physical-Android proof in [#345](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/345). **Screenshots and the feature graphic must show no car brand logos** ([#350](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/350), comment on #327). Capture the brand picker and cards from data where brands show the letter mark. Show no Share control, no real phone numbers, and no reviewer account values.
-- **Founder decides:** app category. `Auto & Vehicles` fits a car marketplace. `Shopping` is the alternative.
+- Phone screenshots come from the physical-Android proof in [#345](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/345). **Screenshots and the feature graphic must show no car brand logos** ([#350](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/350), comment on #327). Capture the brand picker and cards from data where brands show the letter mark. The demo inventory seed ([#703](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/703)) uses real photographs of real cars whose badges are visible, so screenshots must be framed or cropped to hide badges, or taken on Listings where none shows. Show no Share control, no real phone numbers, and no reviewer account values.
+- **Decided (founder, 2026-10-06):** the app category is Auto & Vehicles. `Shopping` was the alternative.
 
 ## 2. Data safety answers
 
@@ -197,29 +197,29 @@ Deletion: Users can **request deletion**. In the app it is Cabinet > Profile > D
 | Category → type | Collect? | What and where | Shared | Optional? | Purposes |
 |---|---|---|---|---|---|
 | Personal info → **Email address** | Yes | Email Sign-in Method `User.email` (`schema.prisma`), `app/(auth)/email.tsx`, `app/account/add-email.tsx`; Sign-in Code request rows `OtpRequest.destination` | No (Resend is a service provider) | Optional | App functionality, Account management. Not processed ephemerally. This is the #391 answer, matching ADR-0055. |
-| Personal info → **Phone number** | Yes | Phone Sign-in Method `User.phone`; Verified Contact Phone and `Listing.contactPhone`, shown on the Listing (`schema.prisma`, `app/listings/contact-phone.tsx`); `OtpRequest.destination` | No | Optional (email-only Users exist; publishing a Listing needs a contact phone) | App functionality, Account management. **Founder decides:** also tick Fraud prevention, security, and compliance, because per-number code limits use it (`OtpAttemptLedger.ts`). Recommended: yes. |
+| Personal info → **Phone number** | Yes | Phone Sign-in Method `User.phone`; Verified Contact Phone and `Listing.contactPhone`, shown on the Listing (`schema.prisma`, `app/listings/contact-phone.tsx`); `OtpRequest.destination` | No | Optional (email-only Users exist; publishing a Listing needs a contact phone) | App functionality, Account management. Also tick Fraud prevention, security, and compliance (founder decision, 2026-10-06), because per-number code limits use it (`OtpAttemptLedger.ts`). |
 | Personal info → **Name** | Yes | Display Name the User sets (`app/account/display-name.tsx`, `User.displayName`). A User who sets none shows a Generated Name, which the server makes from a number and is not the person's name. | No | Optional | App functionality |
 | Personal info → **User IDs** | Yes | Account ID (`User.id`) tied to sessions, Listings, Conversations and reports | No | Optional | App functionality, Account management |
 | Personal info → Address, race, beliefs, orientation, other | No | — | — | — | — |
-| Location → **Approximate location** | **Founder decides** | The seller picks the Listing's city and region and may type an area (`Listing.cityId`, `regionId`, free-text `locationText` up to 200 characters, `src/listings/wizard/Step6Location.tsx`). Search sends a chosen city as a filter. The app has no location permission or SDK. IP addresses are stored for rate limiting (`OtpRequest.ip`, `apps/api/src/common/client-ip.ts`) and are not used to infer location. | No | Optional | App functionality |
+| Location → **Approximate location** | Yes (founder decision, 2026-10-06) | The seller picks the Listing's city and region and may type an area (`Listing.cityId`, `regionId`, free-text `locationText` up to 200 characters, `src/listings/wizard/Step6Location.tsx`). Search sends a chosen city as a filter. The app has no location permission or SDK. IP addresses are stored for rate limiting (`OtpRequest.ip`, `apps/api/src/common/client-ip.ts`) and are not used to infer location. | No | Optional | App functionality |
 | Location → Precise location | No | No location permission (section 3). **Release audit:** see the photo metadata item in Gaps. | — | — | — |
 | Photos and videos → **Photos** | Yes | Listing photos (`src/listings/wizard/Step2Photos.tsx`, compressed by `src/listings/uploadStaging/compressor.ts`); chat images (`src/conversations/components/MessageComposer.tsx`, `src/conversations/upload/chatImageUpload.ts`). Stored in MinIO on Railway. | No | Optional | App functionality |
 | Photos and videos → Videos, audio, voice, music | No | `RECORD_AUDIO` is blocked and there is no video upload in the app (`app.config.js`) | — | — | — |
-| Messages → **Other in-app messages** | Yes | `Message.body` and image metadata (`schema.prisma`); copies attached to Message reports (`ContentReport.messageContext`); push preview text | No (FCM is a service provider) | Optional | App functionality. **Founder decides:** also tick Fraud prevention, security, and compliance, because moderators read reported Messages. Recommended: yes. |
+| Messages → **Other in-app messages** | Yes | `Message.body` and image metadata (`schema.prisma`); copies attached to Message reports (`ContentReport.messageContext`); push preview text | No (FCM is a service provider) | Optional | App functionality. Also tick Fraud prevention, security, and compliance (founder decision, 2026-10-06), because moderators read reported Messages. |
 | Messages → Emails, SMS or MMS | No | The app reads no SMS or email. The Sign-in Code emails AutoTM sends are not user messages the app collects. | — | — | — |
 | App activity → **Other user-generated content** | Yes | Listing fields (description, price, mileage, optional VIN, area text), Content Report reason and details (`ContentReport`) | No | Optional | App functionality. Fraud prevention, security, and compliance for reports. |
 | App activity → **Other actions** | Yes | Favorites (`Favorite`), blocks (`BlockedUser`), Conversation read watermarks and mutes (`src/api/conversations/useUpdateWatermark.ts`, `useMuteConversation.ts`) | No | Optional | App functionality |
 | App activity → **In-app search history** | No (founder decision, 2026-10-06) | Recent searches stay on the device ([#344](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344) decision). No table stores searches. The API's request logger (`apps/api/src/common/requestLogging.ts`) writes each request path without its query string or parsed query, so no search term reaches the API request log; `requestLogging.spec.ts` proves it on the Nest Fastify stack. Railway's own edge HTTP log records a path per request and is outside the app: check one typed search, `GET /api/v1/catalog/search?q=…`, there before submission (founder checklist). | No | Optional | — |
 | App activity → App interactions, installed apps | No | No analytics. `Listing.viewCount` is a counter with no User attached. | — | — | — |
 | App info and performance → Crash logs, Diagnostics, other | No | No crash or performance SDK. `components/ErrorBoundary.tsx` only writes to the device console. Play's Android vitals are Google's own collection, not the app's. | — | — | — |
-| Device or other IDs | Yes | FCM device token (`FcmDevice.token`, registered only after the notification permission is granted, `src/notifications/useChatPushTokenRegistration.ts`); Firebase installation ID sent by the Firebase SDK | No | **Founder decides** (see below) | App functionality |
+| Device or other IDs | Yes | FCM device token (`FcmDevice.token`, registered only after the notification permission is granted, `src/notifications/useChatPushTokenRegistration.ts`); Firebase installation ID sent by the Firebase SDK | No | Optional, conditional on release audit item 4 (founder decision, 2026-10-06; see below) | App functionality |
 | Financial info, Health and fitness, Contacts, Calendar, Web browsing, Files and docs | No | No such feature or permission | — | — | — |
 
-**Founder decides: Approximate location.** Option A is to declare it as collected, optional, for App functionality. That matches the privacy policy, which lists "Location: the region and city you select" (`apps/web/src/app/[locale]/legal/content.ts`, line 33). Option B is not to declare it, treating the city as a fact about the car the seller describes rather than the User's location. Recommended: A. Google rejects mismatches between the privacy policy and the form, and A over-declares only slightly.
+**Decided (founder, 2026-10-06): Approximate location is declared: collected, not shared, optional, App functionality** (the seller's region and city). That matches the privacy policy, which lists "Location: the region and city you select" (`apps/web/src/app/[locale]/legal/content.ts`, line 33), and Google rejects mismatches between the privacy policy and the form. The alternative was not to declare it, treating the city as a fact about the car the seller describes rather than the User's location.
 
-**Founder decides: In-app search history.** Option A is to declare it as collected, optional, for App functionality, because search URLs stay in Railway logs. Option B is to stop logging query strings before submission (a code change on its own issue) and declare nothing. Recommended: B, then not declared. Until B ships, A is the truthful answer. **Decided: B, and B has shipped** (PR 690, completed by PR 692), so nothing is declared, subject to the Railway edge log check above.
+**In-app search history (decided, founder, 2026-10-06: not declared).** Option A is to declare it as collected, optional, for App functionality, because search URLs stay in Railway logs. Option B is to stop logging query strings before submission (a code change on its own issue) and declare nothing. Recommended: B, then not declared. Until B ships, A is the truthful answer. **Decided: B, and B has shipped** (PR 690, completed by PR 692), so nothing is declared, subject to the Railway edge log check above.
 
-**Founder decides: Device or other IDs, optional or required.** AutoTM registers the token only after the User grants notifications. By default, though, Firebase Messaging may fetch a token and installation ID when the app starts, whatever the permission. Option A is to declare it required, which is true whatever the SDK does. Option B is to declare it optional after the release audit proves the SDK sends nothing before the User grants notifications. Recommended: A unless #325 proves B.
+**Decided (founder, 2026-10-06): Device or other IDs is optional, conditional on release audit item 4.** AutoTM registers the token only after the User grants notifications. By default, though, Firebase Messaging may fetch a token and installation ID when the app starts, whatever the permission. If the release audit shows a token or installation ID is fetched before the User grants notification permission, the answer must be "required" instead.
 
 Other form questions:
 
@@ -252,9 +252,11 @@ Blocked in `app.config.js`: `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `RECORD_AUD
 1. The merged manifest has none of `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_VISUAL_USER_SELECTED`, `RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`, `ACCESS_*_LOCATION`, `ACCESS_MEDIA_LOCATION`, or any `FOREGROUND_SERVICE*`.
 2. `com.google.android.gms.permission.AD_ID` is absent. Then the [advertising ID](https://support.google.com/googleplay/android-developer/answer/6048248) answer is "No". If it is present, find which library adds it and remove it with `tools:node="remove"` on its own issue, or answer truthfully.
 3. Name the library that adds `BIND_GET_INSTALL_REFERRER_SERVICE`.
-4. Record whether Firebase Messaging auto-init sends a token request before notification permission is granted. That settles the Device IDs optional question.
+4. Record whether Firebase Messaging auto-init sends a token request, or the Firebase SDK sends an installation ID, before notification permission is granted. That settles the Device IDs optional question.
 5. `android:allowBackup="true"` was the Expo default (#325, finding 1). It does not change a Data safety answer, because backup goes to the User's own Google account. **Resolved**: `allowBackup` is now `false` (founder decision, 2026-10-06).
 6. `expo-camera` is installed but no app code imports it (#325, finding 2). It adds `CAMERA`, which `expo-image-picker` needs anyway.
+
+The UI polish PR ([#696](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/696)) may add native packages or upgrade the Expo SDK. If it merges before submission, recheck this section and the release audit on the build that includes it.
 
 ## 4. App content answers
 
@@ -296,7 +298,7 @@ The questionnaire asks about the app's content and its interactive features ([ra
 | Ongoing moderation | Admin app with reports queue, report detail, block or unblock a Listing, suspend or unsuspend a User, audit log. Admin actions need TOTP. | `apps/admin/src/app/(admin)/reports`, `users/[id]`, `listings/[id]`, `audit`; `apps/api/src/modules/admin/application/BanListing.ts`, `SuspendUser.ts`, `DismissReport.ts` |
 | Posting rules URL | Section 5 | — |
 
-**Founder decides:** whether the implicit "By continuing, you agree" line meets "accept the terms" for review, or whether to add a checkbox. 83-legal chose implicit agreement unless legal review asks for recorded acceptance. Google's wording asks only that users accept before creating UGC.
+**Decided (founder, 2026-10-06):** the implicit "By continuing, you agree" line stays, with no checkbox for the reviewer release. 83-legal chose implicit agreement unless legal review asks for recorded acceptance, and Google's wording asks only that users accept before creating UGC.
 
 ## 5. URLs
 
@@ -304,9 +306,9 @@ Hosts come from [83-legal](83-legal.md#where-they-live) and `eas.json` (`product
 
 **Hosts the store build talks to** ([#700](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/700), founder decision 2026-10-06): the production API on `api.autotm.bagtyyar.dev` and media on `media.autotm.bagtyyar.dev`, custom domains on the Railway production services. The `production` build refuses any host outside `autotm.bagtyyar.dev` or `auto.tm`, and any Railway-generated host. Before the first `production` build the founder:
 
-1. Brings the production API up on current `main` ([#375](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/375)). On 2026-10-06 the production `api` and `admin` services had no active deployment, so both API domains answered "Application not found". Then confirms that both custom domains show a valid certificate in Railway, that `https://api.autotm.bagtyyar.dev/readyz` answers 200, and that `https://media.autotm.bagtyyar.dev/minio/health/live` answers 200. The media domain must target MinIO's S3 port 9000, not the console on 9001. `/readyz` reaches MinIO over the private endpoint, so it says nothing about the media host.
-2. Sets `MINIO_PUBLIC_URL=https://media.autotm.bagtyyar.dev` on the Railway **production** API service (the worker does not read it) and redeploys. Presigned uploads are signed against this host, so a wrong value breaks every upload while existing photos still load: after the switch, check that a Listing photo loads, and that one Listing photo and one chat image upload succeed. No CORS change is needed: the API enables no HTTP CORS, and the app's socket is websocket-only, which `SOCKET_IO_CORS_ORIGIN` does not gate.
-3. Sets the EAS `production` environment variables `EXPO_PUBLIC_API_URL=https://api.autotm.bagtyyar.dev/api/v1`, `EXPO_PUBLIC_WS_URL=wss://api.autotm.bagtyyar.dev/ws/chat` and `EXPO_PUBLIC_MEDIA_URL=https://media.autotm.bagtyyar.dev`.
+1. Brings the production API up on current `main` ([#375](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/375)). **Done (2026-10-06):** the production API, worker, web and admin are deployed on current `main`; `https://api.autotm.bagtyyar.dev/readyz` answers 200 and the account deletion page answers 200. Earlier on 2026-10-06 the production `api` and `admin` services had no active deployment, so both API domains answered "Application not found". Then confirm that both custom domains show a valid certificate in Railway and that `https://media.autotm.bagtyyar.dev/minio/health/live` answers 200. The media domain must target MinIO's S3 port 9000, not the console on 9001. `/readyz` reaches MinIO over the private endpoint, so it says nothing about the media host.
+2. Sets `MINIO_PUBLIC_URL=https://media.autotm.bagtyyar.dev` on the Railway **production** API service (the worker does not read it) and redeploys. **Done (2026-10-06):** `MINIO_PUBLIC_URL` is set on the production API. Presigned uploads are signed against this host, so a wrong value breaks every upload while existing photos still load: after the switch, check that a Listing photo loads, and that one Listing photo and one chat image upload succeed. No CORS change is needed: the API enables no HTTP CORS, and the app's socket is websocket-only, which `SOCKET_IO_CORS_ORIGIN` does not gate.
+3. Sets the EAS `production` environment variables `EXPO_PUBLIC_API_URL=https://api.autotm.bagtyyar.dev/api/v1`, `EXPO_PUBLIC_WS_URL=wss://api.autotm.bagtyyar.dev/ws/chat` and `EXPO_PUBLIC_MEDIA_URL=https://media.autotm.bagtyyar.dev`. **Done (2026-10-06):** the three `EXPO_PUBLIC_*` URLs are set in the EAS `production` environment.
 
 | Console field | URL | Status |
 |---|---|---|
@@ -317,11 +319,11 @@ Hosts come from [83-legal](83-legal.md#where-they-live) and `eas.json` (`product
 
 Check the `ru` and `tk` versions of each path the same way. The deletion page must name AutoTM and show the deletion steps prominently ([account deletion](https://support.google.com/googleplay/android-developer/answer/13327111)).
 
-**Founder decides:** the developer contact email and website shown on the store listing. The app's Help screen reads its support contacts from `apps/mobile/src/config/supportContacts.ts`. The store contact should match it or replace it on purpose.
+**Decided (founder, 2026-10-06):** the developer contact email on the store listing is `bagtyyarkowusow.dev@gmail.com` until AutoTM owns a domain (also the privacy and terms contact, PR 689). The app's Help screen reads its support contacts from `apps/mobile/src/config/supportContacts.ts`; the store contact should match it or replace it on purpose.
 
 ## 6. Reviewer access instructions template
 
-Google requires sign-in details that work at all times, from any location, in English, and that get past one-time codes ([sign-in details](https://support.google.com/googleplay/android-developer/answer/15748846)). AutoTM's reviewer bypass does this. With `REVIEW_DEMO_ACCOUNT_ENABLED`, `REVIEW_DEMO_ACCOUNTS_JSON` holds three to five reserved accounts. Each has a `+993` phone, an email and a fixed six-digit code (`apps/api/src/env.schema.ts`, lines 226–308).
+Google requires sign-in details that work at all times, from any location, in English, and that get past one-time codes ([sign-in details](https://support.google.com/googleplay/android-developer/answer/15748846)). AutoTM's reviewer bypass does this. With `REVIEW_DEMO_ACCOUNT_ENABLED`, `REVIEW_DEMO_ACCOUNTS_JSON` holds three to five reserved accounts. Each has a `+993` phone, an email and a fixed six-digit code (`apps/api/src/env.schema.ts`, lines 226–308). Production has five reserved accounts (2026-10-06). The template lists three roles — buyer, seller and a deletion test — and the remaining reserved accounts are spares that are not listed for reviewers.
 
 - For a reserved **email**, the API stores a request with the fixed code and sends no email (`RequestOtp.ts`, lines 108–139). The request still counts against the limit of **5 code requests per address per 24 hours** and 10 per IP address per hour, and the email code expires after 10 minutes (`OtpAttemptLedger.ts`, `SignInCodeDestination.ts`). Reserved emails have no exemption ([ADR-0055](../../adr/0055-resend-sends-sign-in-codes-from-the-worker.md)).
 - For a reserved **phone**, the request returns without a row or a limit, and the fixed code signs in (`RequestOtp.ts`, lines 69–74; `VerifyOtp.ts`, lines 184–209).
@@ -336,16 +338,16 @@ AutoTM is a car marketplace for Turkmenistan. Browsing needs no account. Selling
 MAIN SIGN-IN: EMAIL
 1. Open the Cabinet tab and tap Sign in (or tap any action that needs an account).
 2. Choose Email and enter: <REVIEWER_BUYER_EMAIL>
-3. Tap Send code. No email is sent to this reserved address. Enter the code: <REVIEWER_CODE>
-Please reuse this same code. Each "Send code" counts toward a limit of 5 per address per 24 hours, so do not tap Resend repeatedly. If the limit is reached, use the phone sign-in below for the same account.
+3. Tap Send code. No email is sent to this reserved address. Enter the code: <REVIEWER_BUYER_CODE>
+Please reuse this account's code for its later sign-ins; each account has its own code. Each "Send code" counts toward a limit of 5 per address per 24 hours, so do not tap Resend repeatedly. If the limit is reached, use the phone sign-in below for the same account.
 
 ALTERNATIVE SIGN-IN: PHONE
-Choose Phone and enter <REVIEWER_BUYER_PHONE> (Turkmenistan +993). Enter the code <REVIEWER_CODE>. This path has no daily limit.
+Choose Phone and enter <REVIEWER_BUYER_PHONE> (Turkmenistan +993). Enter the code <REVIEWER_BUYER_CODE>. This path has no daily limit.
 
 ACCOUNTS
-- Buyer: email <REVIEWER_BUYER_EMAIL>, phone <REVIEWER_BUYER_PHONE>, code <REVIEWER_CODE>
-- Seller: email <REVIEWER_SELLER_EMAIL>, phone <REVIEWER_SELLER_PHONE>, code <REVIEWER_CODE>
-- Account deletion test: email <REVIEWER_DELETION_EMAIL>, phone <REVIEWER_DELETION_PHONE>, code <REVIEWER_CODE>
+- Buyer: email <REVIEWER_BUYER_EMAIL>, phone <REVIEWER_BUYER_PHONE>, code <REVIEWER_BUYER_CODE>
+- Seller: email <REVIEWER_SELLER_EMAIL>, phone <REVIEWER_SELLER_PHONE>, code <REVIEWER_SELLER_CODE>
+- Account deletion test: email <REVIEWER_DELETION_EMAIL>, phone <REVIEWER_DELETION_PHONE>, code <REVIEWER_DELETION_CODE>
 
 WHAT TO TRY
 - As the buyer: search for a car, open a listing, add it to Favorites, tap Message and send text and a photo.
@@ -357,25 +359,25 @@ WHAT TO TRY
 Public sign-up is closed during review, so a new email or phone will not create an account. Legal pages: <PRIVACY_URL>, <TERMS_URL>. Account deletion on the web: <DELETE_ACCOUNT_URL>.
 ```
 
-**Founder decides:**
+**Founder decisions (2026-10-06):**
 
-- Use one shared code for all accounts or one code per account. The config allows either. The template assumes one shared `<REVIEWER_CODE>` and works with per-account codes if each line gets its own.
-- Reserve a third account for deletion testing. The config allows three to five accounts. Without one, a reviewer who deletes the buyer or seller account schedules the deletion of an account the instructions still offer.
-- Verify that "Public sign-up is closed" is true in reviewer production (`SIGNUPS_ENABLED=false`, checked in `VerifyOtp.ts`, line 121) before keeping that sentence.
+- **Decided:** one fixed code per reserved account, only in Play Console notes. The config allows either that or one shared code; the template uses the per-account placeholders above.
+- **Decided:** a separate reserved account is kept for deletion testing. Without one, a reviewer who deletes the buyer or seller account schedules the deletion of an account the instructions still offer.
+- Verify that "Public sign-up is closed" is true in reviewer production (`SIGNUPS_ENABLED=false`, checked in `VerifyOtp.ts`, line 121) before keeping that sentence. A staging probe on 2026-10-06 returned 403 FEATURE_DISABLED, which confirms it on staging only; production is still to check.
 
 ## 7. Founder checklist
 
 Do these in order. Record non-secret evidence only: no codes, account values, Console screenshots with secrets, or signing material.
 
 1. **Hosting and URLs.** From a network outside the workstation proxy, load the four URLs in section 5 in `en`, `ru` and `tk` over valid TLS. Evidence on **#496**: date, network, HTTP status, certificate issuer.
-2. **Release audit.** Build the EAS `production` AAB and run the release audit items in section 3. Evidence on **#325**: AAB hash, versionCode, targetSdk, merged permission list, AD_ID result, install referrer source, Firebase auto-init result.
+2. **Release audit.** Build the EAS `production` AAB and run the release audit items in section 3. If the audit shows a token or installation ID is fetched before the notification permission is granted, the Device or other IDs answer must be "required" instead of optional. Evidence on **#325**: AAB hash, versionCode, targetSdk, merged permission list, AD_ID result, install referrer source, Firebase auto-init result.
 3. **Founder decisions.** Settle every "Founder decides" item on this page. Evidence on **#327**: one line per decision.
 4. **Native reads.** Get the RU and TK listing text read by native speakers. Evidence on **#327**: who read it (role, not contact details), date, and the edits.
 5. **Store listing.** Enter the name, short and full descriptions in EN, RU and TK, the category, contact details, icon, feature graphic and screenshots (no brand logos). Evidence on **#327**: confirmation that the text matches this page or a link to the edited text.
 6. **Privacy policy URL.** Evidence on **#327**.
 7. **App access.** Enter the section 6 instructions with real values from the secret store, then sign in once with each reserved account by email and by phone from outside Turkmenistan. Evidence on **#327**: pass or fail per account and path, no values. Evidence on **#391**: the email path is the main login and phone is the alternative.
 8. **Ads, content rating, target audience, News, COVID-19, Government, Financial features, Health, Advertising ID.** Enter the section 4 answers. Evidence on **#327**: the rating Console issued, and the answers given.
-9. **Data safety.** First open Railway's HTTP logs for the reviewer production API, find one typed search (`GET /api/v1/catalog/search?q=…`, which the app sends when a User types in Search), and confirm the logged path carries no query string; if it does, declare In-app search history as collected instead. Then enter section 2, including the Firebase SDK data, and the Delete account URL. Evidence on **#391**: Email address collected yes, shared no, not ephemeral, optional, App functionality and Account management, encrypted, deletable. Evidence on **#327**: the full set of answers as entered.
+9. **Data safety.** First open Railway's HTTP logs for the reviewer production API, find one typed search (`GET /api/v1/catalog/search?q=…`, which the app sends when a User types in Search), and confirm the logged path carries no query string; if it does, declare In-app search history as collected instead. If the release audit showed a token or installation ID fetched before the notification permission, answer Device or other IDs as "required" instead of optional. Then enter section 2, including the Firebase SDK data, and the Delete account URL. Evidence on **#391**: Email address collected yes, shared no, not ephemeral, optional, App functionality and Account management, encrypted, deletable. Evidence on **#327**: the full set of answers as entered.
 10. **Testing gate.** The release updates the existing app `com.auto_tm.ynamly`, whose closed-test requirement is already met (founder decisions above); the 12-testers-for-14-days rule would apply only to a new app ([#324](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/324)). Confirm in Play Console that the app shows no outstanding testing requirement before applying for production. Evidence on **#327**.
 11. **Candidate freeze.** Upload the signed AAB to the app's existing closed track (founder decisions above, step 5), check the Console's pre-launch report, and compare the Console's permission list with step 2. Evidence on **#329**: AAB hash, versionCode, track, and that the Console list matches.
 12. **Final review and submit.** The founder reviews the exact listing, binary and declarations together, then submits. Evidence on **#329** and **#327**: submission date and review outcome.
