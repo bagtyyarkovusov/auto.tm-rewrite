@@ -137,3 +137,7 @@ Using shadcn `Tabs`:
 - ❌ Tab labels with > 12 characters (gets truncated)
 - ❌ Tabs that change underlying URL without preserving state (use `<Link>` or `router.push` carefully)
 - ❌ Auto-rotating tabs (no!)
+
+## Mobile rendering
+
+The mobile tab bar is a floating pill on the glass surface: 60 dp high, radius 28, 12 dp from the side edges, partly inside the bottom inset. Content scrolls underneath it. The selected tab sits in a capsule that slides between tabs with the `settle` spring; its icon fills and its label is medium weight in the foreground colour. Unselected tabs are outline icons with secondary-colour labels. Sell is a brand-red circle level with its neighbours' icons. Screen headers use a large bold title on tab roots and circular tonal buttons for back and header actions. See `docs/prd/ui/hifi/mobile-tabs-_layout.md`.
