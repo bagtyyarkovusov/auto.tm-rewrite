@@ -498,20 +498,18 @@ function TabFace({
 }
 
 /**
- * What the lens is made of: the selected capsule's own tone, a shade clearer,
- * with a bright rim, so the capsule reads as lifting off the bar into a drop
- * of glass. It is nearly solid on purpose: the quiet row under it must not
- * show through its enlarged drawing.
+ * What the lens is made of: the bar's own glass tone with a bright rim and a
+ * soft floating shadow, so it reads as a clear drop of glass raised off the
+ * bar. It is nearly solid on purpose: the quiet row under it must not show
+ * through its enlarged drawing.
  */
 function LensMaterial() {
   const reduceTransparency = useReduceTransparency();
   return (
     <View
       className={cn(
-        "absolute inset-0 rounded-full border-hairline border-glass-edge/60 dark:border-glass-edge/20",
-        reduceTransparency
-          ? "bg-secondary dark:bg-accent"
-          : "bg-secondary/95 dark:bg-accent/95",
+        "absolute inset-0 rounded-full border-hairline border-glass-edge dark:border-glass-edge/25 shadow-floating",
+        reduceTransparency ? "bg-card dark:bg-accent" : "bg-glass/95",
       )}
     />
   );
