@@ -60,11 +60,14 @@ describe("stripImageMetadata", () => {
   });
 
   it("keeps every frame of an animated WebP while dropping its EXIF", async () => {
-    const frames = [
-      { create: { width: 60, height: 40, channels: 3 as const, background: { r: 220, g: 10, b: 10 } } },
-      { create: { width: 60, height: 40, channels: 3 as const, background: { r: 10, g: 10, b: 220 } } },
-    ];
-    const input = await sharp(frames, { join: { animated: true } })
+    const frame = (background: { r: number; g: number; b: number }) =>
+      sharp({ create: { width: 60, height: 40, channels: 3 as const, background } })
+        .png()
+        .toBuffer();
+    const input = await sharp(
+      [await frame({ r: 220, g: 10, b: 10 }), await frame({ r: 10, g: 10, b: 220 })],
+      { join: { animated: true } },
+    )
       .webp()
       .withExif({ IFD0: { Make: "TestCam" } })
       .toBuffer();

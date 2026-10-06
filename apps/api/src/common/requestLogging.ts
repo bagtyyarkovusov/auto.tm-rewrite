@@ -51,7 +51,9 @@ export function requestLoggingOptions(level: string): Options {
           delete req.remoteAddress;
           delete req.remotePort;
           if (req.headers) {
-            for (const header of FORWARDING_HEADERS) delete req.headers[header];
+            req.headers = Object.fromEntries(
+              Object.entries(req.headers).filter(([name]) => !FORWARDING_HEADERS.includes(name)),
+            );
           }
         }
         return req;

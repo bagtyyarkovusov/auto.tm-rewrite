@@ -22,7 +22,8 @@ function jpegHasCommentSegment(input: Buffer): boolean {
   let offset = 2;
   while (offset + 4 <= input.length) {
     if (input[offset] !== 0xff) return false;
-    const marker = input[offset + 1]!;
+    const marker = input[offset + 1];
+    if (marker === undefined) return false;
     if (marker === JPEG_COMMENT_MARKER) return true;
     if (marker === JPEG_SCAN_START_MARKER) return false;
     // Standalone markers (RSTn, TEM) carry no length; padding bytes are 0xff.
