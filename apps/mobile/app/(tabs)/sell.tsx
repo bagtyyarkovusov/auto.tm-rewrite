@@ -1,9 +1,7 @@
-import { PlusCircle } from "lucide-react-native";
 import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { NavigationContext } from "@react-navigation/native";
 import { useContext, useEffect, useReducer, useState, useCallback, useMemo, useRef } from "react";
-import { BackHandler, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { BackHandler } from "react-native";
 import { useTranslation } from "react-i18next";
 import { ListingsSchemas, type WizardSchemas } from "@auto-tm/contracts";
 
@@ -46,11 +44,12 @@ import Step7DescContact from "../../src/listings/wizard/Step7DescContact";
 import CheckAndPublish from "../../src/listings/wizard/CheckAndPublish";
 import { publishBlockerLines } from "../../src/listings/wizard/publishBlockers";
 import { publishFailureMessage, publishFailureOf } from "../../src/listings/wizard/publishFailure";
-
+import { LargeTitle } from "../../components/navigation/ScreenHeader";
+import { TabScreen } from "../../components/navigation/TabScreen";
 
 import { useToast } from "@/components/ui/toast";
 import { Text } from "@/components/ui/text";
-import { Icon } from "@/components/ui/icon";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 
 // What is saved and published: only photos that have a key, since the API treats
@@ -748,12 +747,8 @@ export default function SellScreen() {
 
   // ── Entry screen ──
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
-      <View className="px-5 pt-3">
-        <Text className="text-3xl font-heading leading-tight tracking-tight text-foreground">
-          {t("sell")}
-        </Text>
-      </View>
+    <TabScreen>
+      <LargeTitle title={t("sell")} />
 
       {isAuthenticated ? (
         <SellEntry
@@ -771,23 +766,11 @@ export default function SellScreen() {
           onLimitSheetOpenChange={setDraftLimitOpen}
         />
       ) : (
-        <View className="flex-1 items-center justify-center px-9">
-          <Icon as={PlusCircle} className="size-8 text-muted-foreground" />
-          <Text className="mt-4 text-lg font-semibold text-foreground">
-            {t("sellYourCar")}
-          </Text>
-          <Text className="mt-1 text-center text-sm text-muted-foreground">
-            {t("listYourVehicle")}
-          </Text>
-          <Button
-            variant="default"
-            size="pill"
-            className="mt-6 self-stretch"
-            onPress={handleStartListing}
-          >
+        <EmptyState illustration="sell" title={t("sellYourCar")} hint={t("listYourVehicle")}>
+          <Button variant="brand" size="pill" onPress={handleStartListing}>
             <Text>{t("startListing")}</Text>
           </Button>
-        </View>
+        </EmptyState>
       )}
 
       <SignInDialog
@@ -797,6 +780,6 @@ export default function SellScreen() {
         title={t("signInToSellTitle")}
         onOpenChange={setShowSignIn}
       />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

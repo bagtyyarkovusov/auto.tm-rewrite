@@ -109,11 +109,11 @@ function EditSaveErrorBanner({
   }, [message]);
   return (
     <View className="gap-2 rounded-lg bg-destructive/10 p-3">
-      <Text accessibilityRole="alert" className="text-sm font-medium text-destructive">
+      <Text accessibilityRole="alert" className="text-callout font-medium text-destructive">
         {message}
       </Text>
       {Object.entries(opStates).map(([opId, state]) => (
-        <Text key={opId} className="text-xs text-muted-foreground">
+        <Text key={opId} className="text-caption text-muted-foreground">
           {state === "succeeded"
             ? "✓"
             : state === "failed"

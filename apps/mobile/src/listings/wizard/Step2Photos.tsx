@@ -315,7 +315,7 @@ function FailedPhotoList({
             className="flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2"
           >
             <Icon as={AlertCircle} className="size-4 text-destructive shrink-0" />
-            <Text className="flex-1 text-sm text-destructive">
+            <Text className="flex-1 text-callout text-destructive">
               {`#${index + 1} · ${photoFailureReason(t, photo)}`}
             </Text>
             <Button
@@ -341,8 +341,8 @@ function EmptyState() {
         <Icon as={ImageIcon} className="size-6 text-muted-foreground" />
       </View>
       <View className="items-center gap-1">
-        <Text className="text-sm font-medium text-foreground">{t("noPhotos")}</Text>
-        <Text className="text-xs text-muted-foreground text-center px-8">
+        <Text className="text-callout font-medium text-foreground">{t("noPhotos")}</Text>
+        <Text className="text-caption text-muted-foreground text-center px-8">
           {t("tapCameraOrLibrary")}
         </Text>
       </View>
@@ -354,7 +354,7 @@ function InlineError({ message }: { message: string }) {
   return (
     <View className="flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
       <Icon as={AlertCircle} className="size-4 text-destructive shrink-0" />
-      <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+      <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
         {message}
       </Text>
     </View>
@@ -373,7 +373,7 @@ function StatusIndicator({
   return (
     <View className="flex-row items-center gap-2">
       <ActivityIndicator size="small" />
-      <Text className="text-sm text-muted-foreground">
+      <Text className="text-callout text-muted-foreground">
         {isCompressing ? t("compressing") : t("uploading")}
       </Text>
     </View>
@@ -417,14 +417,14 @@ export default function Step2Photos({
 
   return (
     <View className="gap-5 py-5">
-      <Text className="text-sm text-muted-foreground leading-relaxed">
+      <Text className="text-callout text-muted-foreground leading-relaxed">
         {t("photosUnder5MB")}
       </Text>
 
-      <Text className="text-sm font-medium text-foreground">
+      <Text className="text-callout font-medium text-foreground">
         {t("photosGoalCounter", { count: photos.length, goal: ListingsSchemas.RECOMMENDED_LISTING_PHOTOS })}
       </Text>
-      <Text className="text-sm text-muted-foreground">
+      <Text className="text-callout text-muted-foreground">
         {photos.length < ListingsSchemas.MIN_LISTING_PHOTOS
           ? t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS })
           : photos.length < ListingsSchemas.RECOMMENDED_LISTING_PHOTOS
@@ -442,7 +442,7 @@ export default function Step2Photos({
       {photosError && photosError !== t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS }) && <InlineError message={photosError} />}
 
       {maxReached && (
-        <Text className="text-sm text-muted-foreground">
+        <Text className="text-callout text-muted-foreground">
           {t("maxPhotosReached")}
         </Text>
       )}
@@ -460,14 +460,14 @@ export default function Step2Photos({
               if (!disabled) setActionsPhotoId(photoId);
             }}
           />
-          <Text className="text-xs text-muted-foreground">{t("photoTip")}</Text>
+          <Text className="text-caption text-muted-foreground">{t("photoTip")}</Text>
           <FailedPhotoList
             photos={photos}
             onRetry={onRetryPhoto}
             onRemove={removePhoto}
           />
           {stillUploading && continuesWhileUploading && photos.length >= ListingsSchemas.MIN_LISTING_PHOTOS && (
-            <Text className="text-sm text-muted-foreground">
+            <Text className="text-callout text-muted-foreground">
               {t("photosKeepUploading")}
             </Text>
           )}

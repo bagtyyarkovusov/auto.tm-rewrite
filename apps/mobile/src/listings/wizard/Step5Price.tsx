@@ -65,7 +65,7 @@ function PriceInput({
   const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("amount")} *</Text>
+      <Text className="text-callout font-medium text-foreground">{t("amount")} *</Text>
       {wrapDisabled(
         <Input
           ref={inputRef}
@@ -89,7 +89,7 @@ function PriceInput({
         disabled,
       )}
       {error && (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
           {error}
         </Text>
       )}
@@ -114,7 +114,7 @@ function CurrencyButtons({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("currency")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("currency")}</Text>
       <View
         accessibilityRole="radiogroup"
         accessibilityLabel={t("currency")}
@@ -145,7 +145,7 @@ function CurrencyButtons({
             >
               <Text
                 className={
-                  isSelected ? "text-base font-semibold text-foreground" : "text-base text-muted-foreground"
+                  isSelected ? "text-body font-semibold text-foreground" : "text-body text-muted-foreground"
                 }
               >
                 {currency.label}
@@ -161,7 +161,7 @@ function CurrencyButtons({
 function TmtEquivalent({ amount }: { amount: number | null }) {
   if (amount === null) return null;
   return (
-    <Text className="text-xs text-muted-foreground">
+    <Text className="text-caption text-muted-foreground">
       ≈ {amount.toLocaleString()} TMT
     </Text>
   );
@@ -179,13 +179,13 @@ function SellerTerms({
   const { t } = useTranslation();
   return (
     <View className="rounded-xl border border-border p-4 gap-1">
-      <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+      <Text className="text-caption font-medium uppercase tracking-widest text-muted-foreground mb-3">
         {t("sellerTerms")}
       </Text>
       <View className="flex-row items-center justify-between py-2">
         <View className="gap-0.5">
-          <Text className="text-base text-foreground">{t("exchangePossible")}</Text>
-          <Text className="text-xs text-muted-foreground">{t("willingToTrade")}</Text>
+          <Text className="text-body text-foreground">{t("exchangePossible")}</Text>
+          <Text className="text-caption text-muted-foreground">{t("willingToTrade")}</Text>
         </View>
         <Switch
           checked={payload.acceptsExchange ?? false}
@@ -196,8 +196,8 @@ function SellerTerms({
       <View className="h-px bg-border" />
       <View className="flex-row items-center justify-between py-2">
         <View className="gap-0.5">
-          <Text className="text-base text-foreground">{t("installmentAvailableLabel")}</Text>
-          <Text className="text-xs text-muted-foreground">{t("buyerCanPayInstallments")}</Text>
+          <Text className="text-body text-foreground">{t("installmentAvailableLabel")}</Text>
+          <Text className="text-caption text-muted-foreground">{t("buyerCanPayInstallments")}</Text>
         </View>
         <Switch
           checked={payload.installmentAvailable ?? false}

@@ -58,15 +58,15 @@ function ReviewSummary({
 
   return (
     <View className="gap-1 rounded-lg border-l-4 border-l-primary bg-muted/60 p-3">
-      <Text className="text-sm font-medium text-foreground">
+      <Text className="text-callout font-medium text-foreground">
         {brandName} {modelName} {payload.year}
       </Text>
-      <Text className="text-sm text-foreground">
+      <Text className="text-callout text-foreground">
         {payload.priceAmount
           ? `${payload.priceAmount.toLocaleString()} ${payload.priceCurrency}`
           : "—"}
       </Text>
-      <Text className="text-sm text-muted-foreground">{cityName}</Text>
+      <Text className="text-callout text-muted-foreground">{cityName}</Text>
     </View>
   );
 }
@@ -88,7 +88,7 @@ function ContactMethods({
   return (
     <>
       <View className="rounded-xl border border-border p-4 gap-1">
-        <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+        <Text className="text-caption font-medium uppercase tracking-widest text-muted-foreground mb-3">
           {t("contactMethods")}
         </Text>
 
@@ -98,8 +98,8 @@ function ContactMethods({
               <Icon as={Phone} className="size-4 text-foreground" />
             </View>
             <View className="gap-0.5">
-              <Text className="text-base text-foreground">{t("phoneCalls")}</Text>
-              <Text className="text-xs text-muted-foreground">{t("callsAllowed")}</Text>
+              <Text className="text-body text-foreground">{t("phoneCalls")}</Text>
+              <Text className="text-caption text-muted-foreground">{t("callsAllowed")}</Text>
             </View>
           </View>
           <Switch
@@ -117,8 +117,8 @@ function ContactMethods({
               <Icon as={MessageSquare} className="size-4 text-foreground" />
             </View>
             <View className="gap-0.5">
-              <Text className="text-base text-foreground">{t("inAppChat")}</Text>
-              <Text className="text-xs text-muted-foreground">{t("chatAllowed")}</Text>
+              <Text className="text-body text-foreground">{t("inAppChat")}</Text>
+              <Text className="text-caption text-muted-foreground">{t("chatAllowed")}</Text>
             </View>
           </View>
           <Switch
@@ -130,7 +130,7 @@ function ContactMethods({
       </View>
 
       {!hasContactMethod && (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
           {t("chooseAtLeastOneContact")}
         </Text>
       )}

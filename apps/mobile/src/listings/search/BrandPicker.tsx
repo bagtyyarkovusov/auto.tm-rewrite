@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { ActivityIndicator, Pressable, SectionList, View } from "react-native";
+import { Pressable, SectionList, View } from "react-native";
 import { ChevronRight, History } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -10,10 +10,12 @@ import type { PickerActions } from "./pickerActions";
 import { useBrandPicker, type RecentRow } from "./useBrandPicker";
 
 import { ErrorState } from "@/components/ErrorState";
+import { StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
+import { GroupedItem } from "@/components/ui/grouped-list";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GroupedListSkeleton, ListNote } from "@/components/ui/list-states";
+import { SearchField } from "@/components/ui/search-field";
 import { Text } from "@/components/ui/text";
 
 interface BrandPickerProps {
@@ -22,6 +24,11 @@ interface BrandPickerProps {
   filters?: ListingsSchemas.ListingFilter;
   /** Back (a pushed screen) or Close (inside Search parameters). */
   leading: ReactNode;
+  /**
+   * The space the list keeps clear after its last row. A pushed screen runs
+   * under the floating tab bar and passes the bar's space; a sheet needs none.
+   */
+  bottomSpace?: number;
 }
 
 type Item =
@@ -43,7 +50,7 @@ interface Section {
  * field in any spelling, then Recent (where it can open Results), Popular
  * with counts, and A to Z. Every row shows its logo or letter fallback.
  */
-export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
+export function BrandPicker({ actions, filters, leading, bottomSpace = 0 }: BrandPickerProps) {
   const { t } = useTranslation();
   const picker = useBrandPicker({ filters, showRecent: !!actions.pickRecent });
   const { content } = picker;
@@ -93,28 +100,18 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
 
   let body: ReactNode;
   if (content.kind === "loading") {
-    body = (
-      <View className="gap-3 px-4 py-2" accessibilityLabel={t("loadingEllipsis")}>
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-12" />
-        ))}
-      </View>
-    );
+    body = <GroupedListSkeleton rows={8} className="mt-4" accessibilityLabel={t("loadingEllipsis")} />;
   } else if (content.kind === "error") {
     body = <ErrorState error={content.error} onRetry={picker.retry} />;
   } else if (content.kind === "matches" && content.rows.length === 0) {
     body = content.searching ? (
-      <View className="items-center py-8">
-        <ActivityIndicator accessibilityLabel={t("loadingEllipsis")} />
-      </View>
+      <GroupedListSkeleton rows={3} className="mt-4" accessibilityLabel={t("loadingEllipsis")} />
     ) : content.failed ? (
       <View className="px-4 py-4">
         <ErrorState error={content.error} onRetry={picker.retry} compact />
       </View>
     ) : (
-      <Text className="px-4 py-8 text-center text-base text-muted-foreground">
-        {t("noBrandsMatch")}
-      </Text>
+      <ListNote>{t("noBrandsMatch")}</ListNote>
     );
   } else {
     body = (
@@ -129,44 +126,55 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
         keyboardDismissMode="on-drag"
         stickySectionHeadersEnabled={false}
         className="min-h-0 flex-1"
-        contentContainerClassName="pb-6"
+        contentContainerStyle={{ paddingBottom: bottomSpace + 24 }}
+        showsVerticalScrollIndicator={false}
         renderSectionHeader={({ section }) => (
-          <View className="bg-background px-4 pt-4 pb-1">
+          <View className="px-5 pb-2 pt-6">
             {section.intro ? (
-              <Text className="pb-2 text-base font-semibold text-foreground">
+              <Text className="pb-4 font-heading text-subhead font-semibold text-foreground">
                 {section.intro}
               </Text>
             ) : null}
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-medium text-muted-foreground">
+            <View className="min-h-6 flex-row items-center justify-between">
+              <Text
+                className={
+                  section.key.startsWith("letter-")
+                    ? "text-footnote font-semibold text-muted-foreground"
+                    : "font-heading text-subhead font-semibold text-foreground"
+                }
+              >
                 {section.title}
               </Text>
               {section.clearable ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-9 px-2"
+                  // The heading row is 24 dp tall; the slop makes the target 44 dp.
+                  className="-mr-2 h-6 px-2"
+                  hitSlop={10}
                   onPress={picker.clearRecent}
                   accessibilityLabel={t("clearRecent")}
                 >
-                  <Text className="text-sm font-medium text-primary">{t("clear")}</Text>
+                  <Text className="text-callout font-medium text-foreground">{t("clear")}</Text>
                 </Button>
               ) : null}
             </View>
           </View>
         )}
-        renderItem={({ item }) =>
-          item.type === "recent" ? (
-            <RecentItem
-              row={item.row}
-              onPress={() => actions.pickRecent?.(item.row.choice)}
-            />
-          ) : (
-            <BrandItem row={item.row} onPress={() => pick(item.row)} />
-          )
-        }
+        renderItem={({ item, index, section }) => (
+          <GroupedItem index={index} count={section?.data.length}>
+            {item.type === "recent" ? (
+              <RecentItem
+                row={item.row}
+                onPress={() => actions.pickRecent?.(item.row.choice)}
+              />
+            ) : (
+              <BrandItem row={item.row} onPress={() => pick(item.row)} />
+            )}
+          </GroupedItem>
+        )}
         ListFooterComponent={
-          <Text className="px-4 pt-6 text-xs text-muted-foreground">
+          <Text className="px-5 pt-5 text-caption text-muted-foreground">
             {t("brandLogosNotice")}
           </Text>
         }
@@ -176,12 +184,9 @@ export function BrandPicker({ actions, filters, leading }: BrandPickerProps) {
 
   return (
     <View className="min-h-0 flex-1">
-      <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
-        {leading}
-        <Text className="text-2xl font-heading text-foreground">{t("brand")}</Text>
-      </View>
-      <View className="px-4 pb-2">
-        <Input
+      <StackHeader large title={t("brand")} leading={leading} />
+      <View className="px-4 pb-1 pt-1">
+        <SearchField
           value={picker.query}
           onChangeText={picker.setQuery}
           placeholder={t("searchBrandAnySpelling")}
@@ -202,14 +207,14 @@ function BrandItem({ row, onPress }: { row: BrandRow; onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-muted/60"
+      className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-secondary"
     >
-      <CarBrandLogo name={row.name} logoUrl={row.logoUrl} />
-      <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+      <CarBrandLogo name={row.name} logoUrl={row.logoUrl} size={36} />
+      <Text className="min-w-0 flex-1 text-body font-medium text-foreground" numberOfLines={1}>
         {row.name}
       </Text>
       {row.count !== undefined && row.count > 0 ? (
-        <Text className="text-sm text-muted-foreground">{row.count}</Text>
+        <Text className="text-callout text-muted-foreground">{row.count}</Text>
       ) : null}
       <Icon as={ChevronRight} className="size-4 text-muted-foreground" />
     </Pressable>
@@ -227,10 +232,10 @@ function RecentItem({ row, onPress }: { row: RecentRow; onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-muted/60"
+      className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-secondary"
     >
-      <CarBrandLogo name={row.brandName} logoUrl={row.logoUrl} />
-      <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+      <CarBrandLogo name={row.brandName} logoUrl={row.logoUrl} size={36} />
+      <Text className="min-w-0 flex-1 text-body font-medium text-foreground" numberOfLines={1}>
         {label}
       </Text>
       <Icon as={History} className="size-4 text-muted-foreground" />

@@ -31,7 +31,7 @@ function ActionItem({
       onPress={onPress}
       className="min-h-[44px] justify-center rounded-lg px-4 active:bg-muted"
     >
-      <Text className={`text-base ${destructive ? "text-destructive" : "text-foreground"}`}>
+      <Text className={`text-body ${destructive ? "text-destructive" : "text-foreground"}`}>
         {label}
       </Text>
     </Pressable>

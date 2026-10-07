@@ -87,20 +87,20 @@ export function OwnerListingCard({
           />
         ) : (
           <View className="h-full w-full items-center justify-center">
-            <Text className="text-xs text-muted-foreground">{t("noPhoto")}</Text>
+            <Text className="text-caption text-muted-foreground">{t("noPhoto")}</Text>
           </View>
         )}
       </View>
 
       <View className="min-w-0 flex-1 gap-1 py-0.5">
         <Text
-          className="text-base font-semibold leading-5 text-foreground"
+          className="text-body font-semibold leading-5 text-foreground"
           numberOfLines={2}
         >
           {title}
         </Text>
         <Text
-          className={cn("text-lg font-heading", isActive ? "text-primary" : "text-muted-foreground")}
+          className={cn("text-subhead font-heading", isActive ? "text-primary" : "text-muted-foreground")}
           numberOfLines={1}
         >
           {formatPrice(listing.displayPriceTmt, i18n.language)}
@@ -108,17 +108,17 @@ export function OwnerListingCard({
         <View className="flex-row flex-wrap items-center gap-x-2">
           {labelKey ? (
             <Text
-              className={cn("text-xs font-semibold", isBlocked ? "text-destructive" : "text-foreground")}
+              className={cn("text-caption font-semibold", isBlocked ? "text-destructive" : "text-foreground")}
             >
               {t(labelKey)}
             </Text>
           ) : null}
-          <Text className="min-w-0 flex-1 text-xs text-muted-foreground" numberOfLines={1}>
+          <Text className="min-w-0 flex-1 text-caption text-muted-foreground" numberOfLines={1}>
             {cityName ?? listing.cityId}
           </Text>
         </View>
         {isBlocked ? (
-          <Text className="text-xs text-muted-foreground">{t("myListingsBlockedNote")}</Text>
+          <Text className="text-caption text-muted-foreground">{t("myListingsBlockedNote")}</Text>
         ) : null}
       </View>
     </View>

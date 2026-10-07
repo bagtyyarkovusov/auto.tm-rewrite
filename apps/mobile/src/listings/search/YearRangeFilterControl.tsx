@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { FilterLabel, FilterRange } from "./FilterSection";
 import { parseYearInput } from "./yearRangeFilterLogic";
 import type { ListingFilter, UseListingFiltersReturn } from "./useListingFilters";
 
@@ -49,10 +50,11 @@ export function YearRangeFilterControl({
     draft.yearMin != null && draft.yearMax != null && draft.yearMin > draft.yearMax;
 
   return (
-    <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("yearRange")}</Text>
-      <View className="flex-row gap-3">
-        <View className="flex-1">
+    <View className="gap-2">
+      <FilterLabel>{t("yearRange")}</FilterLabel>
+      {/* flex-row: the two fields sit side by side on one raised surface. */}
+      <FilterRange>
+        <View className="min-w-0 flex-1">
           <Input
             value={minText}
             onChangeText={handleMinChange}
@@ -60,9 +62,10 @@ export function YearRangeFilterControl({
             keyboardType="number-pad"
             maxLength={4}
             accessibilityLabel={t("from")}
+            className={isInvalid ? "border-destructive" : undefined}
           />
         </View>
-        <View className="flex-1">
+        <View className="min-w-0 flex-1">
           <Input
             value={maxText}
             onChangeText={handleMaxChange}
@@ -70,11 +73,12 @@ export function YearRangeFilterControl({
             keyboardType="number-pad"
             maxLength={4}
             accessibilityLabel={t("to")}
+            className={isInvalid ? "border-destructive" : undefined}
           />
         </View>
-      </View>
+      </FilterRange>
       {isInvalid && (
-        <Text className="text-sm text-destructive">
+        <Text className="px-1 text-callout text-destructive">
           {t("minYearExceedsMax")}
         </Text>
       )}

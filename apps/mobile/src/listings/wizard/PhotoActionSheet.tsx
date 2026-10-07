@@ -102,7 +102,7 @@ export function PhotoActionSheet({
             {/* No photo while the sheet closes: a position then would read "Photo 0 of N". */}
             <SheetTitle numberOfLines={1}>{photo ? photoPosition(t, index, total) : ""}</SheetTitle>
             {photo && needsAttention ? (
-              <Text className="text-sm text-destructive">{photoFailureReason(t, photo)}</Text>
+              <Text className="text-callout text-destructive">{photoFailureReason(t, photo)}</Text>
             ) : null}
           </SheetHeader>
           {rows.map((row) => (
@@ -117,7 +117,7 @@ export function PhotoActionSheet({
                 as={row.icon}
                 className={cn("size-5", row.destructive ? "text-destructive" : "text-foreground")}
               />
-              <Text className={cn("text-base", row.destructive ? "text-destructive" : "text-foreground")}>
+              <Text className={cn("text-body", row.destructive ? "text-destructive" : "text-foreground")}>
                 {row.label}
               </Text>
             </Pressable>

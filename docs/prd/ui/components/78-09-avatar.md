@@ -87,3 +87,7 @@ Small dot or icon overlay (12×12) on the bottom-right corner:
 - ❌ Avatars over busy/colorful backgrounds without a border ring
 - ❌ Initials in lower-case (always uppercase)
 - ❌ Round dealership logos (use rounded-square — distinguishes user from dealership)
+
+## Mobile rendering
+
+The fallback is a tonal circle with the initial in medium weight. Sizes used on mobile: 40 dp in rows, 48 dp in the seller block, 72 dp on Profile.

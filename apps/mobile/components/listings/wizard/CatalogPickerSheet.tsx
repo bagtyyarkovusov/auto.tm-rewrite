@@ -1,11 +1,12 @@
-import { Check, X } from "lucide-react-native";
+import { Check, CircleAlert, X } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
+import { ListNote } from "@/components/ui/list-states";
+import { SearchField } from "@/components/ui/search-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
@@ -14,6 +15,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 interface CatalogItem {
   id: string;
@@ -38,6 +40,9 @@ function sheetRows(items: CatalogItem[] = [], sections?: CatalogSection[]): Shee
   ]);
 }
 
+/** Bar widths that differ from row to row, so the loading block reads as names. */
+const SKELETON_WIDTHS = ["w-2/5", "w-3/5", "w-1/3", "w-1/2", "w-2/5", "w-3/5"];
+
 interface CatalogPickerSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,6 +65,13 @@ interface CatalogPickerSheetProps {
   footer?: ReactNode;
 }
 
+/**
+ * One choice from a catalog list, in a sheet. The rows are the sheet's own
+ * surface: the chosen row sits on the tonal tone with a brand check and a
+ * heavier name, the same as the Sort sheet, and every row takes that tone
+ * under a finger. Rows run a little past the sheet's text edge so the
+ * highlight has room around the name.
+ */
 export function CatalogPickerSheet({
   open,
   onOpenChange,
@@ -86,7 +98,7 @@ export function CatalogPickerSheet({
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>{title}</SheetTitle>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="icon"
             onPress={() => onOpenChange(false)}
             accessibilityLabel="Close"
@@ -95,27 +107,25 @@ export function CatalogPickerSheet({
           </Button>
         </SheetHeader>
         {searchable && (
-          <Input
+          <SearchField
             placeholder={searchPlaceholder}
             value={search}
             onChangeText={onSearchChange}
-            className="mb-2"
+            autoCorrect={false}
           />
         )}
         {isLoading ? (
-          <View className="gap-3 py-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-10" />
+          <View className="gap-0.5">
+            {SKELETON_WIDTHS.map((width, row) => (
+              <View key={row} className="h-control-md justify-center">
+                <Skeleton className={cn("h-3", width)} />
+              </View>
             ))}
           </View>
         ) : isError ? (
-          <Text className="py-4 text-center text-sm text-destructive">
-            {t("actionFailed")}
-          </Text>
+          <ListNote icon={CircleAlert}>{t("actionFailed")}</ListNote>
         ) : isEmpty ? (
-          <Text className="py-4 text-center text-sm text-muted-foreground">
-            {emptyMessage}
-          </Text>
+          <ListNote>{emptyMessage}</ListNote>
         ) : (
           <FlatList
             // One sheet serves several pickers; a new list per title starts at the top.
@@ -123,14 +133,15 @@ export function CatalogPickerSheet({
             data={rows}
             keyExtractor={(row) => row.key}
             keyboardShouldPersistTaps="handled"
-            className="min-h-0 flex-1"
-            contentContainerClassName="pb-2"
+            className="-mx-3 min-h-0 flex-1"
+            contentContainerClassName="gap-0.5 pb-2"
+            showsVerticalScrollIndicator={false}
             renderItem={({ item: row }) => {
               if (row.kind === "header") {
                 return (
                   <Text
                     accessibilityRole="header"
-                    className="px-2 pb-1 pt-4 text-sm font-medium text-muted-foreground"
+                    className="px-3 pb-1 pt-4 text-footnote font-semibold text-muted-foreground"
                   >
                     {row.title}
                   </Text>
@@ -142,17 +153,21 @@ export function CatalogPickerSheet({
                   onPress={() => onSelect(item.id)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: item.id === selectedId }}
-                  className={`min-h-12 flex-row items-center justify-between rounded-md px-2 py-3 ${
-                    item.id === selectedId ? "bg-muted" : ""
-                  }`}
+                  className={cn(
+                    "min-h-control-md flex-row items-center justify-between gap-3 rounded-lg px-3 py-2 active:bg-secondary",
+                    item.id === selectedId && "bg-secondary",
+                  )}
                 >
                   <Text
-                    className={`text-base ${item.id === selectedId ? "font-medium text-foreground" : "text-foreground"}`}
+                    className={cn(
+                      "min-w-0 flex-1 text-body text-foreground",
+                      item.id === selectedId && "font-semibold",
+                    )}
                   >
                     {item.name}
                   </Text>
                   {item.id === selectedId && (
-                    <Icon as={Check} className="size-4 text-primary" />
+                    <Icon as={Check} className="size-5 text-primary" strokeWidth={2.4} />
                   )}
                 </Pressable>
               );

@@ -135,17 +135,93 @@ vi.mock("react-native-gesture-handler", async () => {
 });
 vi.mock("react-native-reanimated", async () => {
   const { View } = await import("react-native");
+  // An animated component is its plain host here: `createAnimatedComponent(Pressable)`
+  // stays a Pressable a spec can press, and nothing animates.
+  const createAnimatedComponent = <T,>(component: T) => component;
+  // Entering and exiting layout animations, chainable like `FadeInUp.duration(200).delay(40)`.
+  const layoutAnimation = (): unknown => {
+    const animation: unknown = new Proxy({}, { get: () => () => animation });
+    return animation;
+  };
   return {
-    default: { View },
+    default: { View, createAnimatedComponent },
+    createAnimatedComponent,
     useSharedValue: <T,>(value: T) => ({ value }),
+    useDerivedValue: <T,>(derive: () => T) => ({ value: derive() }),
     useAnimatedStyle: () => ({}),
+    useAnimatedProps: () => ({}),
+    useAnimatedScrollHandler: () => () => undefined,
+    useReducedMotion: () => false,
     withTiming: <T,>(value: T) => value,
     withSpring: <T,>(value: T) => value,
-    // Entering and exiting layout animations, chainable like `FadeInUp.duration(200)`.
-    ...Object.fromEntries(["FadeIn", "FadeOut", "FadeInUp", "FadeOutUp", "FadeInDown", "FadeOutDown"].map((name) => {
-      const animation: { duration: () => unknown } = { duration: () => animation };
-      return [name, animation];
-    })),
+    withDelay: <T,>(_delay: number, value: T) => value,
+    withSequence: <T,>(...values: T[]) => values[values.length - 1],
+    withRepeat: <T,>(value: T) => value,
+    cancelAnimation: () => undefined,
+    interpolate: (value: number) => value,
+    interpolateColor: (_value: number, _input: number[], output: string[]) => output[0],
+    Extrapolation: { CLAMP: "clamp", EXTEND: "extend", IDENTITY: "identity" },
+    ReduceMotion: { System: "system", Always: "always", Never: "never" },
+    Easing: new Proxy({}, { get: () => () => (value: number) => value }),
+    ...Object.fromEntries(
+      ["FadeIn", "FadeOut", "FadeInUp", "FadeOutUp", "FadeInDown", "FadeOutDown",
+        "SlideInDown", "SlideOutDown", "ZoomIn", "ZoomOut", "LinearTransition"]
+        .map((name) => [name, layoutAnimation()]),
+    ),
+  };
+});
+// The app's motion modules are the only callers of the newer Reanimated APIs.
+// They are replaced whole, so a spec that brings its own narrow Reanimated
+// stub (a sheet or a results screen) still renders buttons and cards. The
+// stand-ins keep every prop, role and handler and run no animation.
+vi.mock("@/lib/motion", async () => {
+  const tokens = await import("@auto-tm/ui/tokens");
+  return {
+    duration: tokens.mobileDuration,
+    pressScale: tokens.mobilePressScale,
+    glassOpacity: tokens.mobileGlassOpacity,
+    spring: tokens.mobileSpring,
+    easing: {},
+    timing: (token: keyof typeof tokens.mobileDuration) => ({ duration: tokens.mobileDuration[token] }),
+    useReduceMotion: () => false,
+    useReduceTransparency: () => false,
+  };
+});
+vi.mock("@/components/ui/motion", async () => {
+  const React = await import("react");
+  const { View } = await import("react-native");
+  // Drops the motion-only props and passes every other prop through.
+  const Plain = ({ order: _order, active: _active, index: _index, slot: _slot, visible: _visible, ...props }: Record<string, unknown>) =>
+    React.createElement(View, props as never);
+  // Renders the drawing that is showing, so a spec sees one icon, not both.
+  const CrossFade = ({ active, on, off, ...props }: Record<string, unknown>) =>
+    React.createElement(View, props as never, (active ? on : off) as never);
+  return {
+    CrossFade, Enter: Plain, EnterOnce: Plain, MotionView: Plain, Pop: Plain, Presence: Plain, Pulse: Plain, SlideIndicator: Plain,
+    useListEntrance: () => () => undefined,
+    usePressScale: () => ({ style: undefined, handlers: {} }),
+  };
+});
+// Empty-state compositions are decoration built from icons. They are replaced
+// whole, so a spec with its own narrow icon stub still renders the state.
+vi.mock("@/components/ui/illustration", async () => {
+  const React = await import("react");
+  const { View } = await import("react-native");
+  return {
+    Illustration: ({ name }: { name: string }) =>
+      React.createElement(View, { testID: `illustration-${name}` } as never),
+  };
+});
+// expo-glass-effect ships JSX in its build output, which Node cannot load, and
+// draws through a native view. Off iOS 26 it is a plain View; that is what a
+// spec renders.
+vi.mock("expo-glass-effect", async () => {
+  const { View } = await import("react-native");
+  return {
+    GlassView: View,
+    GlassContainer: View,
+    isLiquidGlassAvailable: () => false,
+    isGlassEffectAPIAvailable: () => false,
   };
 });
 // The portal package ships JSX in its `.mjs`, which Node cannot load. Portal
@@ -165,5 +241,14 @@ vi.mock("react-native-svg", async () => {
   const host = (name: string) =>
     ({ children, ...props }: { children?: unknown; [key: string]: unknown }) =>
       React.createElement(name, props, children as never);
-  return { default: host("Svg"), Svg: host("Svg"), Path: host("Path"), Circle: host("Circle") };
+  return {
+    default: host("Svg"),
+    Svg: host("Svg"),
+    Path: host("Path"),
+    Circle: host("Circle"),
+    Defs: host("Defs"),
+    LinearGradient: host("LinearGradient"),
+    Stop: host("Stop"),
+    Rect: host("Rect"),
+  };
 });

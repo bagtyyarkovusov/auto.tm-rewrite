@@ -149,7 +149,7 @@ export default function Step6Location({
         disabled={disabled}
       />
 
-      <Text className="pt-2 text-sm text-muted-foreground">{t("placeSection")}</Text>
+      <Text className="pt-2 text-callout text-muted-foreground">{t("placeSection")}</Text>
 
       {/* Picking a city also sets its region, so the Region error is never shown on its own. */}
       <CityPicker
@@ -161,7 +161,7 @@ export default function Step6Location({
       />
 
       <View className="gap-1.5">
-        <Text className="text-sm font-medium text-foreground">
+        <Text className="text-callout font-medium text-foreground">
           {t("area")}
         </Text>
         {wrapDisabled(
@@ -185,11 +185,11 @@ export default function Step6Location({
           disabled,
         )}
         {areaError ? (
-          <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
             {areaError}
           </Text>
         ) : (
-          <Text className="text-sm text-muted-foreground">{t("areaHelper")}</Text>
+          <Text className="text-callout text-muted-foreground">{t("areaHelper")}</Text>
         )}
       </View>
     </View>

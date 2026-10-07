@@ -138,3 +138,16 @@ Specs:
 - ❌ Error messages that say only "Invalid input" — be specific
 - ❌ Auto-submit on enter when there's only one input (confusing on mobile)
 - ❌ Number inputs with `type="number"` for phone numbers — use `type="tel"`
+
+## Mobile rendering
+
+The mobile `Input` (`apps/mobile/components/ui/input.tsx`) is a filled field: 52 dp high, radius 16, the tonal surface, no visible border at rest, body-size text and a secondary-colour placeholder. It reads as a control on the page and on a raised card without a drawn box.
+
+| State | Look |
+|---|---|
+| Default | Tonal fill, transparent edge |
+| Focused | A 1 dp edge in the foreground colour |
+| Error | The caller adds `border-destructive`; the message sits under the field in the destructive colour |
+| Read-only | 50% opacity |
+
+A field that opens a picker (a row with a chevron) is a raised surface with radius 16, so a typed field and a tap-to-choose field are told apart at a glance.

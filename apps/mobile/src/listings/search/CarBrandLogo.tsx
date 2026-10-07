@@ -46,7 +46,7 @@ export function CarBrandLogo({ name, logoUrl, size = 32 }: CarBrandLogoProps) {
           transition={100}
         />
       ) : (
-        <Text className="text-sm font-semibold text-muted-foreground">
+        <Text className="text-callout font-semibold text-muted-foreground">
           {brandInitial(name)}
         </Text>
       )}

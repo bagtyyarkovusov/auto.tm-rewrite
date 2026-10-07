@@ -10,6 +10,8 @@ import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import { BadRequestException } from "@nestjs/common";
 import { ListingsSchemas } from "@auto-tm/contracts";
 import type { FeedCursor, FeedSort, ListingFilterCriteria } from "../domain/types";
+import type { SellerProfile } from "../domain/ports/SellerProfilePort";
+import { InMemorySellerProfiles } from "./testing/InMemorySellerProfiles";
 
 class FakeFeedRankingPort implements FeedRankingPort {
   items: Listing[] = [];
@@ -132,6 +134,7 @@ function makeUseCase(
   storage?: FakeMediaStoragePort,
   favorites?: FakeFavoriteRepository,
   cards?: FakeListingCardReadPort,
+  sellers?: InMemorySellerProfiles,
 ) {
   return new ListFeed(
     ranking ?? new FakeFeedRankingPort(),
@@ -139,7 +142,20 @@ function makeUseCase(
     storage ?? new FakeMediaStoragePort(),
     favorites ?? new FakeFavoriteRepository(),
     cards ?? new FakeListingCardReadPort(),
+    sellers ?? new InMemorySellerProfiles(),
   );
+}
+
+function sellerProfile(overrides: Partial<SellerProfile> = {}): SellerProfile {
+  return {
+    displayName: null,
+    nameNumber: 2057,
+    avatarIndex: 7,
+    avatarKey: "avatars/seller/a.jpg",
+    deleted: false,
+    memberSince: new Date("2025-01-01T00:00:00.000Z"),
+    ...overrides,
+  };
 }
 
 describe("ListFeed", () => {
@@ -324,25 +340,33 @@ describe("ListFeed", () => {
       new FakeMediaStoragePort(),
       new FakeFavoriteRepository(),
       new FakeListingCardReadPort(),
+      new InMemorySellerProfiles(),
     );
     await uc.execute({ filters: { brandId: "brand-x", priceMin: 50000 } });
 
     expect(receivedFilters).toEqual({ brandId: "brand-x", priceMin: 50000 });
   });
 
-  it("returns photoKeys and photoCount from one batched photo read", async () => {
+  it("returns the photo and gallery keys and photoCount from one batched photo read, none for a Listing without photos", async () => {
     ranking.items = [seedListing({ id: "l1" }), seedListing({ id: "l2" })];
     const cards = new FakeListingCardReadPort();
-    cards.photos.set("l1", { coverMediaKey: "a", photoKeys: ["a", "b"], photoCount: 5 });
+    cards.photos.set("l1", {
+      coverMediaKey: "a",
+      photoKeys: ["a", "b"],
+      galleryKeys: ["a", "b", "c", "d", "e"],
+      photoCount: 5,
+    });
 
     const uc = makeUseCase(ranking, exchangeRates, undefined, undefined, cards);
     const result = await uc.execute({});
 
     expect(cards.photoLookups).toBe(1);
-    expect(result.items[0]!.photoKeys).toEqual(["a", "b"]);
-    expect(result.items[0]!.photoCount).toBe(5);
-    expect(result.items[1]!.photoKeys).toEqual([]);
-    expect(result.items[1]!.photoCount).toBe(0);
+    expect(result.items[0]).toMatchObject({
+      photoKeys: ["a", "b"],
+      galleryKeys: ["a", "b", "c", "d", "e"],
+      photoCount: 5,
+    });
+    expect(result.items[1]).toMatchObject({ photoKeys: [], galleryKeys: [], photoCount: 0 });
   });
 
   it("returns mileageKm, condition, transmissionId, and engineTypeId when set", async () => {
@@ -401,5 +425,70 @@ describe("ListFeed", () => {
 
     expect(result.items[0]).not.toHaveProperty("isFavorited");
     expect(favorites.lookups).toBe(0);
+  });
+
+  it("tells the card whether the seller takes calls and chat messages", async () => {
+    ranking.items = [
+      seedListing({ id: "l1", allowCalls: true, allowChat: false }),
+      seedListing({ id: "l2", allowCalls: false, allowChat: true }),
+    ];
+
+    const result = await makeUseCase(ranking, exchangeRates).execute({});
+
+    expect(result.items.map((i) => [i.allowCalls, i.allowChat])).toEqual([
+      [true, false],
+      [false, true],
+    ]);
+  });
+
+  it("names every seller on the page from one identity read, without avatar fields", async () => {
+    ranking.items = [
+      seedListing({ id: "l1", sellerId: "seller-a" }),
+      seedListing({ id: "l2", sellerId: "seller-b" }),
+      seedListing({ id: "l3", sellerId: "seller-a" }),
+    ];
+    const sellers = new InMemorySellerProfiles([
+      ["seller-a", sellerProfile({ displayName: "Aýgül", nameNumber: 3310 })],
+      ["seller-b", sellerProfile({ nameNumber: 4821 })],
+    ]);
+
+    const result = await makeUseCase(
+      ranking, exchangeRates, undefined, undefined, undefined, sellers,
+    ).execute({});
+
+    expect(result.items.map((i) => i.seller)).toEqual([
+      { displayName: "Aýgül", nameNumber: 3310, deleted: false },
+      { displayName: null, nameNumber: 4821, deleted: false },
+      { displayName: "Aýgül", nameNumber: 3310, deleted: false },
+    ]);
+    expect(sellers.cardSellerReads).toBe(1);
+  });
+
+  it("marks a seller purged after account deletion as deleted with no name", async () => {
+    ranking.items = [seedListing({ id: "l1", sellerId: "gone" })];
+    const sellers = new InMemorySellerProfiles([["gone", sellerProfile({ deleted: true })]]);
+
+    const result = await makeUseCase(
+      ranking, exchangeRates, undefined, undefined, undefined, sellers,
+    ).execute({});
+
+    expect(result.items[0]!.seller).toEqual({ displayName: null, nameNumber: 2057, deleted: true });
+  });
+
+  it("omits the seller when identity has no such User", async () => {
+    ranking.items = [seedListing({ id: "l1", sellerId: "unknown" })];
+
+    const result = await makeUseCase(ranking, exchangeRates).execute({});
+
+    expect(result.items[0]).not.toHaveProperty("seller");
+  });
+
+  it("never puts the seller's contact phone in a feed item", async () => {
+    ranking.items = [seedListing({ id: "l1", contactPhone: "+99365123456" })];
+
+    const result = await makeUseCase(ranking, exchangeRates).execute({});
+
+    expect(result.items[0]).not.toHaveProperty("contactPhone");
+    expect(JSON.stringify(result)).not.toContain("65123456");
   });
 });

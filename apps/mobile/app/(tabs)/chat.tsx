@@ -1,6 +1,4 @@
-import { MessageSquare } from "lucide-react-native";
 import { ActivityIndicator, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 
@@ -8,9 +6,11 @@ import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { ConversationList } from "../../src/conversations/components/ConversationList";
 import { useChatPushTokenRegistration } from "../../src/notifications/useChatPushTokenRegistration";
+import { LargeTitle } from "../../components/navigation/ScreenHeader";
+import { TabScreen } from "../../components/navigation/TabScreen";
 
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Text } from "@/components/ui/text";
 
 function AnonymousChatEntry() {
@@ -24,17 +24,11 @@ function AnonymousChatEntry() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center gap-4 px-6 py-12">
-      <View className="size-16 items-center justify-center rounded-full bg-muted">
-        <Icon as={MessageSquare} className="size-8 text-muted-foreground" />
-      </View>
-      <Text className="text-center text-lg font-semibold text-foreground">
-        {t("messagesSignedOutTitle")}
-      </Text>
+    <EmptyState illustration="messages" title={t("messagesSignedOutTitle")}>
       <Button variant="brand" size="pill" onPress={handleSignIn}>
         <Text>{t("signIn")}</Text>
       </Button>
-    </View>
+    </EmptyState>
   );
 }
 
@@ -54,7 +48,7 @@ function ChatContent({ isAuthenticated }: { isAuthenticated: boolean | null }) {
   return (
     <View className="flex-1 items-center justify-center gap-3">
       <ActivityIndicator />
-      <Text className="text-sm text-muted-foreground">{t("loading")}</Text>
+      <Text className="text-callout text-muted-foreground">{t("loading")}</Text>
     </View>
   );
 }
@@ -64,12 +58,10 @@ export default function ChatScreen() {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
-      <View className="px-4 pt-6 pb-3">
-        <Text className="text-2xl font-heading text-foreground">{t("messages")}</Text>
-      </View>
+    <TabScreen>
+      <LargeTitle title={t("messages")} />
 
       <ChatContent isAuthenticated={isAuthenticated} />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

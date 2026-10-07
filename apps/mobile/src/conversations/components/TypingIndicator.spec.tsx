@@ -28,7 +28,7 @@ describe("TypingIndicator", () => {
   });
 
   it("styles the label as muted secondary text", () => {
-    expect(source).toContain('className="text-xs text-muted-foreground"');
+    expect(source).toContain('className="text-caption text-muted-foreground"');
   });
 
   it("truncates long typing labels to one line", () => {

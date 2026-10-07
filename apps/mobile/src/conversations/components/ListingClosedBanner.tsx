@@ -46,7 +46,7 @@ export function ListingClosedBanner({
     >
       <View className="flex-row items-start gap-2">
         <Icon as={Info} className="mt-0.5 size-4 text-muted-foreground" />
-        <Text className="flex-1 text-sm text-foreground">
+        <Text className="flex-1 text-callout text-foreground">
           {tConv(closed === "sold" ? "closedBannerSold" : "closedBannerRemoved")}
         </Text>
       </View>

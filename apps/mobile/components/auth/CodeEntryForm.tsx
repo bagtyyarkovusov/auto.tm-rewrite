@@ -177,13 +177,13 @@ export function CodeEntryForm({
   return (
     <View className="gap-6">
       <View className="gap-2">
-        <Text className="text-2xl font-semibold leading-snug text-foreground">
+        <Text className="text-headline font-semibold leading-snug text-foreground">
           {t("otpTitle")}
         </Text>
-        <Text className="text-base leading-normal text-muted-foreground">
+        <Text className="text-body leading-normal text-muted-foreground">
           {t("otpSent", { destination: displayedDestination })}
         </Text>
-        <Text className="text-sm leading-normal text-muted-foreground">
+        <Text className="text-callout leading-normal text-muted-foreground">
           {t(method === "email" ? "emailCodeExpiry" : "phoneCodeExpiry")}
         </Text>
         <Button
@@ -211,7 +211,7 @@ export function CodeEntryForm({
           <Icon as={AlertCircle} className="size-4 text-destructive" />
           <Text
             accessibilityLiveRegion="polite"
-            className="flex-1 text-sm leading-snug text-destructive"
+            className="flex-1 text-callout leading-snug text-destructive"
           >
             {error}
           </Text>
@@ -249,7 +249,7 @@ export function CodeEntryForm({
 
       {showEmailHint ? (
         <View className="gap-1">
-          <Text className="text-sm leading-normal text-muted-foreground">
+          <Text className="text-callout leading-normal text-muted-foreground">
             {t("emailNotArriving")}
           </Text>
           {onUsePhoneInstead ? (
@@ -269,7 +269,7 @@ export function CodeEntryForm({
           <ActivityIndicator
             color={`hsl(${THEME[isDark ? "dark" : "light"].primary})`}
           />
-          <Text className="text-sm text-muted-foreground">
+          <Text className="text-callout text-muted-foreground">
             {t("loading")}
           </Text>
         </View>

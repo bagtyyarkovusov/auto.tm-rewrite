@@ -11,6 +11,22 @@ Platform: mobile
 Mode: light + dark
 ==============================================
 
+## Current look (issue 695)
+
+The tab bar's look changed in issue 695; what it does is unchanged (five tabs, their order, routes, labels, test IDs, the unread badge and its refresh). The current look is specified in [78-07, Mobile rendering](../components/78-07-tabs-nav.md#mobile-rendering) and implemented in `apps/mobile/components/navigation/AutoTmTabBar.tsx`:
+
+- A floating full capsule on the glass surface, 64 dp high, 12 dp from the side edges, with no top border. Content scrolls underneath.
+- The selected tab sits in one lighter, opaque capsule that encloses its icon and its label: the full slot width, 56 dp high, 4 dp inside the bar on every side and concentric with it. All five labels share one size and keep at least 10 dp from its edges in RU, TK and EN, measured in their semibold face.
+- Switching tabs, the capsule stretches toward the new tab (its leading edge on the `glide` spring, its trailing edge on `settle`) and settles into it without a bounce, while the icon cross-fades from outline to filled and the label from medium to semibold.
+- Under a finger a tab, and the capsule when the tab is selected, grows to 1.08 on the `snappy` spring and returns without a wobble; the whole bar swells to 1.03 with it.
+- Press and slide (founder decision, issue 695, 2026-10-06): a finger that rests on the bar or slides along it lifts the capsule into a lens that follows the finger and shows the icons and labels under it 1.18 times larger, in their selected look. Letting go opens the tab under the lens. A tap works as before.
+- The bar is see-through: content scrolling under it shows through, softened.
+- Sell is a 56 by 32 dp brand-red pill (not black or white), level with the other icons. The capsule steps aside while Sell is selected.
+- Reduce Motion makes every change instant; Reduce Transparency makes the bar opaque.
+- Bottom position follows the inset: partly inside a gesture handle's inset, wholly above Android three-button navigation.
+
+The layout sketch, token list, sizes and code sample below describe the earlier flat bar and are kept as history. Where they disagree with this section, this section is current.
+
 ## Purpose
 
 Provide the primary navigation chrome for the mobile app: five tabs with a distinctive central sell action pill. This is the single most recognizable chrome surface.

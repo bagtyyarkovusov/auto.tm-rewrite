@@ -4,6 +4,8 @@ import { resolve } from "path";
 import { describe, expect, it } from "vitest";
 
 const source = readFileSync(resolve(__dirname, "./ListingGridCard.tsx"), "utf-8");
+// The heart on the photo is shared by every Listing card.
+const photo = readFileSync(resolve(__dirname, "./ListingPhoto.tsx"), "utf-8");
 
 describe("ListingGridCard", () => {
   it("renders the text from the pure card rules", () => {
@@ -41,15 +43,17 @@ describe("ListingGridCard", () => {
   });
 
   it("puts ♡ on the rounded photo and routes it through useListingFavorite", () => {
-    expect(source).toContain("rounded-xl");
-    expect(source).toContain("absolute right-1 top-1");
+    expect(source).toContain("rounded-2xl");
+    expect(source).toContain("<PhotoFavoriteButton");
+    expect(photo).toContain("absolute right-0 top-0");
     expect(source).toContain("useListingFavorite({");
     expect(source).toContain("onPress={toggle}");
     expect(source).toContain("accessibilityState={{ selected: favorited");
   });
 
   it("fills the saved ♥ with an explicit colour, since currentColor does not resolve natively", () => {
-    expect(source).toContain("fill-brand-500");
+    expect(photo).toContain("fill-brand-500");
+    expect(photo).not.toContain("fill-current");
     expect(source).not.toContain("fill-current");
   });
 
@@ -59,6 +63,6 @@ describe("ListingGridCard", () => {
 
   it("exports a skeleton with the same photo shape", () => {
     expect(source).toContain("export function ListingGridCardSkeleton");
-    expect(source.match(/aspect-\[3\/2\] w-full/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(source.match(/aspect-photo w-full/g)?.length).toBeGreaterThanOrEqual(2);
   });
 });

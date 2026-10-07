@@ -103,12 +103,12 @@ export function DraftCard({
           <View className="min-w-0 flex-1 justify-between gap-2 py-0.5">
             <View className="gap-1">
               <Text
-                className="text-base font-semibold text-foreground leading-5"
+                className="text-body font-semibold text-foreground leading-5"
                 numberOfLines={2}
               >
                 {identity}
               </Text>
-              <Text className="text-xs text-muted-foreground">
+              <Text className="text-caption text-muted-foreground">
                 {t("updated")} {formatDate(draft.updatedAt, i18n.language)}
                 {photoCount > 0 ? ` · ${t("photoCount", { count: photoCount })}` : ""}
               </Text>
@@ -116,10 +116,10 @@ export function DraftCard({
 
             <View className="gap-1.5">
               <View className="flex-row items-center justify-between">
-                <Text className="text-xs text-muted-foreground">
+                <Text className="text-caption text-muted-foreground">
                   {t("draftStepsFilled", { filled, total })}
                 </Text>
-                <Text className="text-xs text-muted-foreground">
+                <Text className="text-caption text-muted-foreground">
                   {progressPercent}%
                 </Text>
               </View>
