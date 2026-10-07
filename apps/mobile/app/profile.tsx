@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import {
+  Camera,
   LogOut,
   Mail,
   Pencil,
@@ -27,6 +28,7 @@ import {
   MenuRow,
   MenuSectionLabel,
 } from "@/components/account/MenuRow";
+import { ProfilePhotoSheet } from "@/components/identity/ProfilePhotoSheet";
 import { UserAvatar } from "@/components/identity/UserAvatar";
 import {
   AlertDialog,
@@ -232,6 +234,7 @@ function SignedInProfile() {
   const { t } = useTranslation("account");
   const { data, isPending, isError, error, refetch } = useMe();
   const displayNameOf = useDisplayName();
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
 
   if (isPending) return <LoadingState />;
 
@@ -256,12 +259,22 @@ function SignedInProfile() {
           pencil, opens the name editor; a screen reader hears "Edit
           name" and the name as its value. The photo editor attaches here later. */}
       <View className="items-center gap-1 px-4 pb-6 pt-2">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("changePhoto")}
+          className="relative active:opacity-70"
+          onPress={() => setPhotoSheetOpen(true)}
+        >
         <UserAvatar
           size={AVATAR_SIZE}
           avatarIndex={data.avatarIndex}
           avatarKey={data.avatarKey}
           avatarUrl={data.avatarUrl}
         />
+          <View className="absolute bottom-0 right-0 items-center justify-center rounded-full border-2 border-background bg-muted p-1">
+            <Icon as={Camera} className="size-4 text-foreground" />
+          </View>
+        </Pressable>
         <Pressable
           accessibilityLabel={t("editName")}
           accessibilityValue={{ text: displayNameOf(data) }}
@@ -282,6 +295,14 @@ function SignedInProfile() {
       <SignInMethods phone={data.phone} email={data.email} />
 
       <AccountActions />
+      <ProfilePhotoSheet
+        open={photoSheetOpen}
+        onOpenChange={setPhotoSheetOpen}
+        hasPhoto={Boolean(data.avatarKey)}
+        onTakePhoto={() => {}}
+        onChoosePhoto={() => {}}
+        onRemovePhoto={() => {}}
+      />
     </ScrollView>
   );
 }
