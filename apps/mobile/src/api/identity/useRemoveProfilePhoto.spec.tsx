@@ -11,7 +11,7 @@ import { queryKeys } from "../queryKeys";
 import { useRemoveProfilePhoto } from "./useRemoveProfilePhoto";
 
 vi.mock("expo-secure-store", async () => {
-  const { photoApiStorage } = await import("../../../test/profile-photo-api");
+  const { photoApiStorage } = await import("../../../test/profile-photo-storage");
   return { getItemAsync: async (key: string) => photoApiStorage.get(key) ?? null,
     setItemAsync: async (key: string, value: string) => { photoApiStorage.set(key, value); },
     deleteItemAsync: async (key: string) => { photoApiStorage.delete(key); } };

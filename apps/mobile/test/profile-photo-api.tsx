@@ -7,7 +7,8 @@ import type { AuthSchemas } from "@auto-tm/contracts";
 import { storeAuthSession } from "../src/auth/session";
 import { queryKeys } from "../src/api/queryKeys";
 
-export const photoApiStorage = new Map<string, string>();
+import { photoApiStorage } from "./profile-photo-storage";
+export { photoApiStorage } from "./profile-photo-storage";
 export const PHOTO_ME = {
   id: "00000000-0000-4000-8000-00000000000a", phone: "+99365123456", email: null,
   phoneVerified: true, displayName: "Aman", nameNumber: 4821, avatarIndex: 7,
