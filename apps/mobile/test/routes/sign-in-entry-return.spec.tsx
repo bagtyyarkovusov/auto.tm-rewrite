@@ -50,6 +50,8 @@ it("Use phone instead returns to a mounted email entry in place, retaining its h
 });
 
 it("Change email returns to the selected method with its typed value and no intent cleanup", () => {
+  useAuthIntentStore.getState().requireSignIn(routerMock, { returnTo: "/(tabs)/favorites" });
+  routeParams.authRoot = "1";
   const entry = renderMobile(<PhoneScreen />);
   fireEvent.press(entry.getByText("Email"));
   fireEvent.changeText(entry.getByPlaceholderText("name@example.com"), "held@example.com");
@@ -57,6 +59,7 @@ it("Change email returns to the selected method with its typed value and no inte
   fireEvent.press(code.getByRole("button", { name: "Change email" }));
   expect(routerMock.back).toHaveBeenCalledOnce();
   expect(entry.getByDisplayValue("held@example.com")).toBeTruthy();
+  expect(useAuthIntentStore.getState().intent).not.toBeNull();
 });
 
 
@@ -67,7 +70,7 @@ it("Code header Back returns to the held selected method without abandoning inte
   fireEvent.press(entry.getByText("Email"));
   fireEvent.changeText(entry.getByPlaceholderText("name@example.com"), "held@example.com");
   const code = openEmailCode();
-  fireEvent.press(code.getByRole("button", { name: /^[Bb]ack$/ }));
+  fireEvent.press(code.getByRole("button", { name: "Back" }));
   expect(routerMock.back).toHaveBeenCalledOnce();
   expect(routerMock.dismissTo).not.toHaveBeenCalled();
   expect(entry.getByDisplayValue("held@example.com")).toBeTruthy();

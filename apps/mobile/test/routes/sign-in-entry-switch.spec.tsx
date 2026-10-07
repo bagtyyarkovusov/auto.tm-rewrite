@@ -50,6 +50,7 @@ it("switches in place, retains both values and keeps the same native field for k
   fireEvent.changeText(email, "held@example.com");
   fireEvent.press(view.getByText("Phone"));
   expect(view.getByDisplayValue("61 23-45-67").props.keyboardType).toBe("phone-pad");
+  native.focus.mockClear();
   fireEvent.press(view.getByText("Email"));
   expect(view.getByDisplayValue("held@example.com")).toBeTruthy();
   expect(native.focus).toHaveBeenCalled();
@@ -62,7 +63,7 @@ it("keeps pending intent through a switch and cancels it exactly once on close/u
   fireEvent.press(view.getByText("Email"));
   expect(cancel).not.toHaveBeenCalled();
   expect(useAuthIntentStore.getState().intent).not.toBeNull();
-  fireEvent.press(view.getByRole("button", { name: /^[Cc]lose$/ }));
+  fireEvent.press(view.getByRole("button", { name: "Close" }));
   view.unmount();
   expect(cancel).toHaveBeenCalledOnce();
   expect(routerMock.dismissTo).toHaveBeenCalledWith("/(tabs)/favorites");
