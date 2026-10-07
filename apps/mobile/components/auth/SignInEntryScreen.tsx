@@ -20,6 +20,7 @@ import type { SignInMethod } from "./SignInMethodTabs";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { timing } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -30,6 +31,8 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
   const params = useLocalSearchParams<{ phone?: string; email?: string; authRoot?: string }>();
   const [isAuthRoot] = useState(() => firstParam(params.authRoot) === "1");
   const [method, setMethod] = useState(initialMethod);
+  const [previousMethod, setPreviousMethod] = useState(initialMethod);
+  const methodRef = useRef(initialMethod);
   const { t } = useTranslation("auth");
   const phone = usePhoneField(t, firstParam(params.phone));
   const [email, setEmail] = useState(firstParam(params.email) ?? "");
@@ -43,7 +46,12 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
   const reduceMotion = useReducedMotion();
   const opacity = useSharedValue(1);
 
-  const selectMethod = useCallback((next: SignInMethod) => setMethod(next), []);
+  const selectMethod = useCallback((next: SignInMethod) => {
+    if (next === methodRef.current) return;
+    setPreviousMethod(methodRef.current);
+    methodRef.current = next;
+    setMethod(next);
+  }, []);
   useEffect(() => registerSignInEntryReturn(selectMethod), [selectMethod]);
 
   useEffect(() => {
@@ -56,6 +64,7 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
     opacity.value = withTiming(1, timing("fast"));
   }, [method, opacity, reduceMotion]);
   const fieldStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const previousFieldStyle = useAnimatedStyle(() => ({ opacity: 1 - opacity.value }));
 
   const leave = useCallback(() => {
     if (leaving.current) return;
@@ -87,6 +96,9 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
   const showError = isPhone ? phone.showError : emailTouched && canonicalEmail === null || emailError !== null;
   const emailShowError = emailTouched && canonicalEmail === null || emailError !== null;
   const emailHelper = emailError ?? (emailShowError ? t("emailFormatError") : t("emailInputHelper"));
+  const previousIsPhone = previousMethod === "phone";
+  const previousError = previousIsPhone ? phone.showError : emailShowError;
+  const previousValue = previousIsPhone ? phone.display : email;
 
   async function submit() {
     if (isPhone) phone.touch(); else setEmailTouched(true);
@@ -123,6 +135,7 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
       onClose={leave}
       onSubmit={submit}
     >
+      <View className="relative">
       <Animated.View style={fieldStyle} className="gap-2">
         <Text className="text-callout font-medium text-foreground">{t(isPhone ? "phoneLabel" : "emailLabel")}</Text>
         <View className={showError ? "h-control-md flex-row overflow-hidden rounded-lg border-2 border-destructive bg-card" : "h-control-md flex-row overflow-hidden rounded-lg border border-input bg-card"}>
@@ -155,6 +168,20 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
           email={<Text className={emailShowError ? "text-callout leading-snug text-destructive" : "text-callout leading-snug text-muted-foreground"}>{emailHelper}</Text>}
         />
       </Animated.View>
+      {/* A drawing of the outgoing field cross-fades; the single native input
+          above stays mounted, interactive and focused throughout. */}
+      <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+        className="absolute inset-0 gap-2 bg-background" style={previousFieldStyle}>
+        <Text className="text-callout font-medium text-foreground">{t(previousIsPhone ? "phoneLabel" : "emailLabel")}</Text>
+        <View className={cn("h-control-md flex-row items-center overflow-hidden rounded-lg bg-card", previousError ? "border-2 border-destructive" : "border border-input")}>
+          {previousIsPhone ? <View className="h-full justify-center border-r border-border px-3.5"><Text className="text-body font-mono text-foreground">+993</Text></View> : null}
+          <Text className={cn("min-w-0 flex-1 px-3.5 text-body", previousIsPhone && "font-mono", previousValue ? "text-foreground" : "text-muted-foreground")} numberOfLines={1}>
+            {previousValue || t(previousIsPhone ? "phonePlaceholder" : "emailPlaceholder")}
+          </Text>
+        </View>
+        <Text className={previousError ? "text-callout leading-snug text-destructive" : "text-callout leading-snug text-muted-foreground"}>{previousIsPhone ? phone.helperText : emailHelper}</Text>
+      </Animated.View>
+      </View>
     </AuthEntryScreen>
   );
 }

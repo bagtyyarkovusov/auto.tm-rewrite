@@ -611,7 +611,8 @@ keyboard type change; focus is retained/refreshed without Keyboard.dismiss.
 The common close/language header, wordmark, segmented control, Get code and
 legal line remain in place. Title/helper text reserves the taller measured
 localized copy and cross-fades; method helpers do the same. The field changes
-opacity quickly, with no slide. The segmented capsule uses the existing snappy
+opacity quickly against an inaccessible, non-interactive drawing of the outgoing
+field, with no slide; the same native input remains interactive and focused. The segmented capsule uses the existing snappy
 180ms critically damped spring with overshoot clamped; labels cross-fade.
 Motion uses the system reduction policy. A changed method gives one best-effort
 selection tick (Android system Clock_Tick, elsewhere selectionAsync); choosing
