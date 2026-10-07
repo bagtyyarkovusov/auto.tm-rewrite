@@ -20,6 +20,7 @@ import { UnbanListing } from "./application/UnbanListing";
 import { SuspendUser } from "./application/SuspendUser";
 import { UnsuspendUser } from "./application/UnsuspendUser";
 import { DismissReport } from "./application/DismissReport";
+import { RemoveUserPhoto } from "./application/RemoveUserPhoto";
 import { RecordReviewerAuthBypassAudit } from "./application/RecordReviewerAuthBypassAudit";
 import { PrismaContentReportRepository } from "./infrastructure/PrismaContentReportRepository";
 import { PrismaAuditLogRepository } from "./infrastructure/PrismaAuditLogRepository";
@@ -50,6 +51,8 @@ import { AUDIT_LOG_REPOSITORY } from "./domain/ports/AuditLogRepository";
     SuspendUser,
     UnsuspendUser,
     DismissReport,
+    // PROFILE_PHOTO_PORT comes from ListingsModule, which serves identity's port.
+    RemoveUserPhoto,
     RecordReviewerAuthBypassAudit,
   ],
 })

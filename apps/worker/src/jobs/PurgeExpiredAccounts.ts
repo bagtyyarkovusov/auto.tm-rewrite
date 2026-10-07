@@ -30,17 +30,16 @@ export class PurgeExpiredAccounts {
     });
 
     for (const user of expiredUsers) {
-      await this.purgeUser(user);
+      await this.purgeUser(user, input.now);
     }
 
     return { purgedCount: expiredUsers.length };
   }
 
-  private async purgeUser(user: {
-    id: string;
-    phone: string | null;
-    email: string | null;
-  }): Promise<void> {
+  private async purgeUser(
+    user: { id: string; phone: string | null; email: string | null },
+    now: Date,
+  ): Promise<void> {
     const userId = user.id;
     // Code requests are matched by User, and by the purged phone and email
     // for a request made before sign-in, which carries no User id. A request
@@ -56,6 +55,30 @@ export class PurgeExpiredAccounts {
         : []),
     ];
     await this.prisma.$transaction([
+      // The User row lock comes before any upload lock, the order every writer
+      // of a Profile Photo uses (ADR-0088).
+      this.prisma.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`,
+
+      // Retire the Profile Photo's upload and record its storage deletion, in
+      // the transaction that clears the photo below. The API's claim does the
+      // same on removal; the purge runs here, so the rule is repeated. The
+      // sweep deletes the bytes of fenced uploads and retries on failure; a
+      // legacy upload is recorded and its bytes stay.
+      this.prisma.$executeRaw`
+        WITH retired AS (
+          UPDATE media_uploads SET "state" = 'RETIRED', "retiredAt" = ${now}::timestamp,
+            "claimToken" = NULL, "claimDeadline" = NULL
+          WHERE id = (SELECT "avatarUploadId" FROM users WHERE id = ${userId})
+            AND "state" NOT IN ('RETIRED', 'DELETED')
+          RETURNING id, "key", "objectKeys", "writeProtocol"
+        )
+        INSERT INTO media_upload_cleanups ("uploadId", "key", "objectKeys", "writeProtocol", "status", "nextAttemptAt")
+        SELECT id, "key", "objectKeys", "writeProtocol",
+          CASE WHEN "writeProtocol" = 'conditional-v1' THEN 'PENDING' ELSE 'LEGACY_PENDING' END,
+          ${now}::timestamp
+        FROM retired
+        ON CONFLICT ("uploadId") DO NOTHING`,
+
       // Free both Sign-in Methods and clear profile PII (ADR-0054). The name
       // number and avatar index stay; they identify nobody (#638).
       this.prisma.user.update({
@@ -67,6 +90,7 @@ export class PurgeExpiredAccounts {
           emailVerifiedAt: null,
           displayName: null,
           avatarKey: null,
+          avatarUploadId: null,
           avatarUrl: null,
           deletionScheduledAt: null,
         },

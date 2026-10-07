@@ -23,6 +23,10 @@ export {
   type IdentityReadPort,
   type IdentityUserSummary,
 } from "./domain/ports/IdentityReadPort";
+export {
+  PROFILE_PHOTO_PORT,
+  type ProfilePhotoPort,
+} from "./domain/ports/ProfilePhotoPort";
 export type { PublicIdentity } from "./domain/ports/PublicIdentity";
 export {
   SELLER_PROFILE_READ_PORT,

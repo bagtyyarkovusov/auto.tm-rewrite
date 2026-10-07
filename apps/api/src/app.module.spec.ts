@@ -6,6 +6,7 @@ import { AppModule } from "./app.module";
 import { AccountDeletionPendingGuard } from "./common/account-deletion-pending.guard";
 import { ClientIpThrottlerGuard } from "./common/client-ip-throttler.guard";
 import { JwtAuthGuard } from "./common/jwt-auth.guard";
+import { ProfilePhotoModule } from "./modules/identity/profile-photo.module";
 
 // ConfigModule.forRoot validates the environment when AppModule is imported.
 // This test reads decorator metadata only, so it must not need a real one.
@@ -17,6 +18,14 @@ interface ProviderEntry {
   provide?: unknown;
   useClass?: unknown;
 }
+
+describe("AppModule composition", () => {
+  it("serves the Profile Photo routes", () => {
+    const imports: unknown[] = Reflect.getMetadata(MODULE_METADATA.IMPORTS, AppModule) ?? [];
+
+    expect(imports).toContain(ProfilePhotoModule);
+  });
+});
 
 describe("AppModule global guards", () => {
   it("runs JwtAuthGuard, then ClientIpThrottlerGuard, then AccountDeletionPendingGuard", () => {

@@ -11,6 +11,7 @@ import type { ListingMediaRepository } from "../../domain/ports/ListingMediaRepo
 import type { MediaObjectInspector } from "../../domain/ports/MediaObjectInspector";
 import type { MediaStoragePort } from "../../domain/ports/MediaStoragePort";
 import type { MediaUploadRepository } from "../../domain/ports/MediaUploadRepository";
+import type { ProfilePhotoLinkPort } from "../../domain/ports/ProfilePhotoLinkPort";
 import type {
   UploadClaimPort,
   UploadClaimTarget,
@@ -218,6 +219,37 @@ export class InMemoryMediaWorld {
       return { removed: true };
     },
     updateSortOrder: async () => {},
+  };
+
+  /** The Profile Photo link of each User, as `users.avatarUploadId` and `avatarKey` hold it. */
+  profilePhotos = new Map<string, { uploadId: string; key: string }>();
+  /** Users the link refuses when it rechecks them, such as one suspended meanwhile. */
+  ineligibleUsers = new Set<string>();
+  /** Every `tx` handed to `unbind`, so a test can see the caller's transaction arrive. */
+  unbindTransactions: unknown[] = [];
+
+  readonly photoLink: ProfilePhotoLinkPort = {
+    bind: async ({ userId, uploadId, key, token }) => {
+      await yieldToOtherCallers();
+      if (this.ineligibleUsers.has(userId)) throw new Error("User may not change their profile");
+      const outcome = await this.claims.finalize(null, {
+        token,
+        uploadIds: [uploadId],
+        target: { type: "profile", id: userId },
+      });
+      if (outcome === "already") return;
+      const previous = this.profilePhotos.get(userId);
+      if (previous && previous.uploadId !== uploadId) this.retireRecord(previous.uploadId);
+      this.profilePhotos.set(userId, { uploadId, key });
+    },
+    unbind: async (userId, tx) => {
+      this.unbindTransactions.push(tx);
+      const current = this.profilePhotos.get(userId);
+      if (!current) return null;
+      this.retireRecord(current.uploadId);
+      this.profilePhotos.delete(userId);
+      return current.key;
+    },
   };
 
   /** Seeds what a legitimate presign, PUT and attach leave behind. */

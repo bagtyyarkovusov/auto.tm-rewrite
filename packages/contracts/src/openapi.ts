@@ -31,7 +31,9 @@ import {
   AdminTotpEnrollResponseSchema,
   AdminTotpVerifyRequestSchema,
   AdminTotpVerifyResponseSchema,
+  MeResponseSchema,
 } from "./schemas/auth";
+import { SetProfilePhotoRequestSchema } from "./schemas/identity";
 import {
   BrandSummarySchema,
   BrandDetailSchema,
@@ -119,6 +121,8 @@ import {
   UnbanListingResponseSchema,
   SuspendUserRequestSchema,
   SuspendUserResponseSchema,
+  RemoveUserPhotoRequestSchema,
+  RemoveUserPhotoResponseSchema,
   UnsuspendUserRequestSchema,
   UnsuspendUserResponseSchema,
   AuditLogListItemSchema,
@@ -331,6 +335,49 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("UnbanListingResponse", UnbanListingResponseSchema);
   registry.register("SuspendUserRequest", SuspendUserRequestSchema);
   registry.register("SuspendUserResponse", SuspendUserResponseSchema);
+  registry.register("RemoveUserPhotoRequest", RemoveUserPhotoRequestSchema);
+  registry.register("RemoveUserPhotoResponse", RemoveUserPhotoResponseSchema);
+
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/admin/users/{id}/remove-photo",
+    summary: "Remove a User's Profile Photo as a moderator",
+    description:
+      "Shows the User's Assigned Avatar again. With reportId, a pending report on that User becomes actioned in the same transaction. Writes a USER_PHOTO_REMOVE audit entry.",
+    tags: ["Admin"],
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+      body: {
+        content: { "application/json": { schema: S(RemoveUserPhotoRequestSchema) } },
+      },
+    },
+    responses: {
+      200: {
+        description: "Photo removed",
+        content: { "application/json": { schema: S(RemoveUserPhotoResponseSchema) } },
+      },
+      400: {
+        description: "Invalid request, or the report is not about this User",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      401: {
+        description: "Authentication required",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      403: {
+        description: "Not an elevated admin, moderation actions disabled, or the target cannot be moderated",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "User or report not found",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      409: {
+        description: "The User has no photo, or the report is already resolved",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
   registry.register("UnsuspendUserRequest", UnsuspendUserRequestSchema);
   registry.register("UnsuspendUserResponse", UnsuspendUserResponseSchema);
 
@@ -640,6 +687,79 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
       },
       409: {
         description: "Sign-in Method belongs to another User",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  // Profile Photo (#642, ADR-0088)
+  registry.register("MeResponse", MeResponseSchema);
+  registry.register("SetProfilePhotoRequest", SetProfilePhotoRequestSchema);
+
+  registry.registerPath({
+    method: "put",
+    path: "/api/v1/me/photo",
+    summary: "Set the signed-in User's Profile Photo",
+    description:
+      "The key comes from POST /api/v1/uploads/presign with kind image and writeProtocol conditional-v1, after the file reached storage. A second photo replaces the first. Sending the current photo's key again changes nothing.",
+    tags: ["Identity"],
+    request: {
+      body: {
+        content: { "application/json": { schema: S(SetProfilePhotoRequestSchema) } },
+      },
+    },
+    responses: {
+      200: {
+        description: "The updated /me, with avatarKey set",
+        content: { "application/json": { schema: S(MeResponseSchema) } },
+      },
+      400: {
+        description:
+          "UPLOAD_NOT_AVAILABLE (not this User's unused fenced image upload), UPLOAD_OBJECT_INVALID (stored file missing, empty, over 5 MB or of another type), or VALIDATION_FAILED",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      401: {
+        description: "Authentication required",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      403: {
+        description: "The User is suspended or their deletion is scheduled",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "Signed-in User no longer exists",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      409: {
+        description:
+          "UPLOAD_ALREADY_ATTACHED, with details.reason UPLOAD_ATTACHED_TO_LISTING (the upload belongs to a Listing) or UPLOAD_PREPARING (another request is still setting it; send the same key again later)",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: "delete",
+    path: "/api/v1/me/photo",
+    summary: "Remove the signed-in User's Profile Photo",
+    description:
+      "The Assigned Avatar shows again; avatarIndex never changes. Succeeds when the User has no photo.",
+    tags: ["Identity"],
+    responses: {
+      200: {
+        description: "The updated /me, with avatarKey null",
+        content: { "application/json": { schema: S(MeResponseSchema) } },
+      },
+      401: {
+        description: "Authentication required",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      403: {
+        description: "The User is suspended or their deletion is scheduled",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      404: {
+        description: "Signed-in User no longer exists",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },
