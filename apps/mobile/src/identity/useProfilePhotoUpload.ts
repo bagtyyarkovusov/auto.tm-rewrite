@@ -62,10 +62,15 @@ export function useProfilePhotoUpload() {
         kind: "image", contentType: "image/jpeg", sizeBytes: compressed.fileSize, writeProtocol: "conditional-v1",
       } satisfies UploadsSchemas.PresignRequest, UploadsSchemas.PresignResponseSchema, { accessToken: credentials.accessToken });
       await photo.session.current();
+      if (!presign.headers || !Object.entries(presign.headers).some(([name, value]) => name.toLowerCase() === "if-match" && value.length > 0)) {
+        throw new ApiError("CONTRACT_VIOLATION", 502, "Conditional upload headers are missing");
+      }
+      let lastPercent = 0;
       const task = FileSystem.createUploadTask(presign.uploadUrl, compressed.uri, {
         httpMethod: "PUT", uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT, headers: presign.headers,
       }, ({ totalBytesSent, totalBytesExpectedToSend }) => {
-        const percent = totalBytesExpectedToSend > 0 ? Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend)) : 0;
+        const percent = Math.max(lastPercent, totalBytesExpectedToSend > 0 ? Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend)) : 0);
+        lastPercent = percent;
         if (selected === photo) profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent } });
       });
       const result = await task.uploadAsync();
