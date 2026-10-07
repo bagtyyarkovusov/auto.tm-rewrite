@@ -113,6 +113,11 @@ async function openEdit({ locale = "en", heading = "Edit listing" } = {}) {
   const screen = renderMobile(<ToastProvider><EditListingScreen /></ToastProvider>, { locale });
   await screen.findByRole("header", { name: heading });
   await screen.findByText(/^Photos: 2$|^Фото: 2$|^Suratlar: 2$/);
+  // The count comes from the upload queue; the row's action follows one render
+  // later, once the queue's photos reach the wizard payload. Wait for that too.
+  await screen.findByRole("button", {
+    name: /Photos: 2, Change$|Фото: 2, Изменить$|Suratlar: 2, Üýtget$/,
+  });
   return screen;
 }
 
