@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProfileScreen from "../../app/profile";
 import { clearAuthSession, storeAuthSession } from "../../src/auth/session";
 import { server } from "../msw";
+import { profilePhotoCopy } from "../profile-photo-copy";
 import { choosePhoto, photoDevice as picker, resetPhotoDevice } from "../profile-photo-device";
 import CabinetScreen from "../../app/(tabs)/services";
 import { act, fireEvent, renderMobile } from "../render";
@@ -17,6 +18,9 @@ import { act, fireEvent, renderMobile } from "../render";
 import { ToastProvider } from "@/components/ui/toast";
 
 vi.mock("expo-linking", () => ({ openSettings: vi.fn(async () => {}) }));
+
+const theme = vi.hoisted(() => ({ colorScheme: "light" as "light" | "dark" }));
+vi.mock("nativewind", () => ({ cssInterop: vi.fn(), remapProps: vi.fn(), useColorScheme: () => ({ colorScheme: theme.colorScheme }) }));
 
 const storage = vi.hoisted(() => new Map<string, string>());
 vi.mock("expo-secure-store", () => ({
@@ -52,6 +56,7 @@ const requests = { presigns: [] as unknown[], sets: [] as unknown[] };
 beforeEach(async () => {
   storage.clear();
   resetPhotoDevice();
+  theme.colorScheme = "light";
   currentMe = me;
   requests.presigns = [];
   requests.sets = [];
@@ -447,6 +452,79 @@ describe("Profile photo", () => {
     expect(await view.findByText("Couldn't upload the photo.")).toBeTruthy();
     expect(picker.sent).toEqual([]);
     expect(requests.sets).toEqual([]);
+  });
+
+  const states = ["idle", "camera denied", "uploading", "failed", "offline", "too large", "unsupported", "success", "removed", "remove failed", "preparing", "attached to listing"] as const;
+  const matrix = (["en", "ru", "tk"] as const).flatMap((locale) => (["light", "dark"] as const).flatMap((mode) => states.map((state) => ({ locale, mode, state }))));
+  it.each(matrix)("renders $state in $locale and $mode with translated controls", async ({ locale, mode, state }) => {
+    theme.colorScheme = mode;
+    const copy = profilePhotoCopy[locale];
+    choosePhoto();
+    if (state === "too large") picker.size = 5242881;
+    if (state === "unsupported") picker.readable = false;
+    const removing = state === "removed" || state === "remove failed";
+    if (removing) {
+      currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
+      server.use(http.delete("*/me/photo", () => {
+        if (state === "remove failed") return HttpResponse.json({ code: "INTERNAL" }, { status: 500 });
+        currentMe = { ...me };
+        return HttpResponse.json(currentMe);
+      }));
+    }
+    let attachAttempts = 0;
+    if (state === "preparing" || state === "attached to listing") server.use(http.put("*/me/photo", () => {
+      attachAttempts += 1;
+      if (attachAttempts > 1) return HttpResponse.json({ ...me, avatarKey: "pending/new1/original.jpg" });
+      return HttpResponse.json({ code: "UPLOAD_ALREADY_ATTACHED", details: { reason: state === "preparing" ? "UPLOAD_PREPARING" : "UPLOAD_ATTACHED_TO_LISTING" } }, { status: 409 });
+    }));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>, { locale });
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: copy.changePhoto }));
+    if (state === "idle") {
+      expect(view.getByText(copy.photoT)).toBeTruthy();
+      expect(view.getByRole("button", { name: copy.takePhoto })).toBeTruthy();
+      expect(view.getByRole("button", { name: copy.chooseLib })).toBeTruthy();
+      expect(view.queryByRole("button", { name: copy.removePhoto })).toBeNull();
+      return;
+    }
+    if (state === "camera denied") {
+      fireEvent.press(view.getByRole("button", { name: copy.takePhoto }));
+      expect(await view.findByText(copy.permT)).toBeTruthy();
+      expect(view.getByText(copy.permD)).toBeTruthy();
+      expect(view.getByRole("button", { name: copy.openSettings })).toBeTruthy();
+      fireEvent.press(view.getByRole("button", { name: copy.cancel }));
+      expect(view.queryByText(copy.permT)).toBeNull();
+      return;
+    }
+    if (removing) {
+      fireEvent.press(view.getByRole("button", { name: copy.removePhoto }));
+      expect(await view.findByText(state === "removed" ? copy.photoRemoved : copy.photoRmFail)).toBeTruthy();
+      if (state === "remove failed") expect(view.getByRole("button", { name: copy.retry })).toBeTruthy();
+      return;
+    }
+    if (state === "offline") onlineManager.setOnline(false);
+    fireEvent.press(view.getByRole("button", { name: copy.chooseLib }));
+    if (state === "too large" || state === "unsupported" || state === "offline") {
+      expect(await view.findByText(state === "too large" ? copy.photoBig : state === "unsupported" ? copy.photoType : copy.offline)).toBeTruthy();
+      expect(view.getByRole("button", { name: state === "offline" ? copy.retry : copy.chooseOther })).toBeTruthy();
+      fireEvent.press(view.getByRole("button", { name: copy.cancel }));
+      return;
+    }
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    if (state === "uploading") {
+      act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
+      expect(view.getByText(copy.uploading)).toBeTruthy();
+      expect(view.getByRole("button", { name: copy.changePhoto }).props.accessibilityState.disabled).toBe(true);
+    }
+    await act(async () => { picker.finish(state === "failed" ? 500 : 200); });
+    if (state === "failed" || state === "attached to listing") {
+      expect(await view.findByText(state === "failed" ? copy.photoFail : copy.attached)).toBeTruthy();
+      expect(view.getByRole("button", { name: copy.retry })).toBeTruthy();
+      fireEvent.press(view.getByRole("button", { name: copy.cancel }));
+    } else {
+      if (state === "preparing") expect(await view.findByText(copy.preparing)).toBeTruthy();
+      expect(await view.findByText(copy.photoSaved, {}, { timeout: 3000 })).toBeTruthy();
+    }
   });
 
 });
