@@ -497,7 +497,7 @@ export const postingRules: Record<Locale, LegalDocument> = {
       {
         title: "2. Photos",
         body: `- Use photos of the actual vehicle you are selling. Do not use photos of another vehicle, stock images, or photos copied from other listings.
-- A listing needs at least 1 and up to 20 photos.
+- A listing needs at least 3 and up to 20 photos.
 - Photos must be JPEG or WebP, up to 5 MB each. The app resizes and compresses your photos before upload.`,
       },
       {
@@ -553,7 +553,7 @@ To contact support:
       {
         title: "2. Фотографии",
         body: `- Используйте фотографии именно того автомобиля, который продаёте. Не используйте фотографии другого автомобиля, стоковые изображения или фотографии из чужих объявлений.
-- В объявлении должно быть от 1 до 20 фотографий.
+- В объявлении должно быть от 3 до 20 фотографий.
 - Фотографии — в формате JPEG или WebP, не больше 5 МБ каждая. Приложение само уменьшает и сжимает фотографии перед загрузкой.`,
       },
       {
@@ -609,7 +609,7 @@ To contact support:
       {
         title: "2. Suratlar",
         body: `- Satýan ulagyňyzyň öz suratlaryny ulanyň. Başga ulagyň suratlaryny, stok suratlary ýa-da başga bildirişlerden göçürilen suratlary ulanmaň.
-- Bildirişde azyndan 1, iň köp 20 surat bolmaly.
+- Bildirişde azyndan 3, iň köp 20 surat bolmaly.
 - Suratlar JPEG ýa-da WebP görnüşinde, her biri 5 MB-dan köp bolmaly däl. Programma suratlary ýüklemezden öň özi kiçeldýär we gysýar.`,
       },
       {
