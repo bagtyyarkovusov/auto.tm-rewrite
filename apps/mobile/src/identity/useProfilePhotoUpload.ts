@@ -10,6 +10,7 @@ import { useRemoveProfilePhoto } from "../api/identity/useRemoveProfilePhoto";
 import { useSetProfilePhoto } from "../api/identity/useSetProfilePhoto";
 import { compressPhoto, CompressionError, type CompressionResult } from "../listings/uploadStaging/compressor";
 
+import { capturePhotoSession, PhotoSessionEnded, type ProfilePhotoSession } from "./profilePhotoSession";
 import { profileNoticeStore } from "./profileNotice";
 
 type PhotoUploadState =
@@ -17,7 +18,8 @@ type PhotoUploadState =
   | { status: "uploading"; uri: string; percent: number; preparing?: boolean }
   | { status: "removing" }
   | { status: "failed" | "offline" | "too_large" | "unsupported"; operation?: "remove"; reason?: "listing" | "suspended" };
-let selected: { asset: ImagePicker.ImagePickerAsset; compressed?: CompressionResult } | null = null;
+let selected: { asset: ImagePicker.ImagePickerAsset; compressed?: CompressionResult; session: ProfilePhotoSession } | null = null;
+let removalSession: ProfilePhotoSession | null = null;
 const MAX_BYTES = 5 * 1024 * 1024;
 
 // Route dismissal removes observers, not the job or its result.
@@ -35,6 +37,7 @@ export function useProfilePhotoUpload() {
     if (!photo) return;
     profilePhotoUploadStore.setState({ state: { status: "uploading", uri: photo.compressed?.uri ?? photo.asset.uri, percent: 0 } });
     try {
+      await photo.session.current();
       const { asset } = photo;
       if ((asset.mimeType && !["image/jpeg", "image/png", "image/webp"].includes(asset.mimeType)) || asset.width <= 0 || asset.height <= 0) {
         profilePhotoUploadStore.setState({ state: { status: "unsupported" } });
@@ -54,20 +57,22 @@ export function useProfilePhotoUpload() {
         profilePhotoUploadStore.setState({ state: { status: "offline" } });
         return;
       }
+      const credentials = await photo.session.current();
       const presign = await apiClient.post("/uploads/presign", {
         kind: "image", contentType: "image/jpeg", sizeBytes: compressed.fileSize, writeProtocol: "conditional-v1",
-      } satisfies UploadsSchemas.PresignRequest, UploadsSchemas.PresignResponseSchema);
+      } satisfies UploadsSchemas.PresignRequest, UploadsSchemas.PresignResponseSchema, { accessToken: credentials.accessToken });
+      await photo.session.current();
       const task = FileSystem.createUploadTask(presign.uploadUrl, compressed.uri, {
         httpMethod: "PUT", uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT, headers: presign.headers,
       }, ({ totalBytesSent, totalBytesExpectedToSend }) => {
         const percent = totalBytesExpectedToSend > 0 ? Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend)) : 0;
-        profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent } });
+        if (selected === photo) profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent } });
       });
       const result = await task.uploadAsync();
       if (!result || result.status < 200 || result.status >= 300) throw new Error("Photo upload failed");
       for (;;) {
         try {
-          await setPhoto.mutateAsync({ key: presign.key });
+          await setPhoto.mutateAsync({ request: { key: presign.key }, session: photo.session });
           break;
         } catch (error) {
           if (conflictReason(error) !== IdentitySchemas.ProfilePhotoConflictReason.UploadPreparing) throw error;
@@ -77,10 +82,12 @@ export function useProfilePhotoUpload() {
           await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
+      await photo.session.current();
       profilePhotoUploadStore.setState({ state: { status: "idle" } });
       profileNoticeStore.getState().show({ kind: "photoSaved" });
       await discard();
     } catch (error) {
+      if (error instanceof PhotoSessionEnded) { cancel(); return; }
       const status = error instanceof CompressionError ? "unsupported"
         : !onlineManager.isOnline() || (error instanceof ApiError && (error.status === 0 || error.code === "NETWORK_ERROR")) ? "offline" : "failed";
       profilePhotoUploadStore.setState({ state: { status, reason: refusalReason(error) } });
@@ -90,10 +97,15 @@ export function useProfilePhotoUpload() {
   async function remove() {
     profilePhotoUploadStore.setState({ state: { status: "removing" } });
     try {
-      await removePhoto.mutateAsync();
+      removalSession ??= await capturePhotoSession();
+      await removePhoto.mutateAsync(removalSession);
+      await removalSession.current();
       profilePhotoUploadStore.setState({ state: { status: "idle" } });
       profileNoticeStore.getState().show({ kind: "photoRemoved" });
+      removalSession.dispose();
+      removalSession = null;
     } catch (error) {
+      if (error instanceof PhotoSessionEnded) { cancel(); return; }
       const status = !onlineManager.isOnline() || (error instanceof ApiError && error.status === 0) ? "offline" : "failed";
       profilePhotoUploadStore.setState({ state: { status, operation: "remove", reason: refusalReason(error) } });
     }
@@ -101,20 +113,26 @@ export function useProfilePhotoUpload() {
 
   async function discard() {
     const uri = selected?.compressed?.uri;
+    selected?.session.dispose();
     selected = null;
     if (uri) await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
   }
 
   function cancel() {
+    removalSession?.dispose();
+    removalSession = null;
     profilePhotoUploadStore.setState({ state: { status: "idle" } });
     void discard();
   }
 
   async function pick(source: "camera" | "library") {
+    let owner: ProfilePhotoSession;
+    try { owner = await capturePhotoSession(); } catch { return; }
     if (source === "camera") {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
         setCameraDenied(true);
+        owner.dispose();
         return;
       }
     }
@@ -123,12 +141,15 @@ export function useProfilePhotoUpload() {
     };
     try {
       const result = source === "camera" ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+      await owner.current();
       if (!result.canceled && result.assets[0]) {
         await discard();
-        selected = { asset: result.assets[0] };
+        selected = { asset: result.assets[0], session: owner };
         await upload();
-      }
-    } catch {
+      } else owner.dispose();
+    } catch (error) {
+      owner.dispose();
+      if (error instanceof PhotoSessionEnded) { cancel(); return; }
       profilePhotoUploadStore.setState({ state: { status: "unsupported" } });
     }
   }
