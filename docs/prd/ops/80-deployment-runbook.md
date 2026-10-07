@@ -236,7 +236,7 @@ The founder runs the following steps while present. Keep the list only in the op
 1. With the original tester list loaded into the API container's command environment, run the seed on the private database connection. Set `TESTER_ACCOUNTS_AUTHORIZATION=seed-tester-accounts`. The script accepts staging/production only on a private Railway PostgreSQL host, or development/test on loopback. Production seed requires `SIGNUPS_ENABLED=false`.
 
    ```sh
-   node --import tsx packages/db/scripts/tester-accounts.ts --mode seed
+   node --import tsx /app/packages/db/scripts/tester-accounts.ts --mode seed
    ```
 
    Seed creates buyer Users with both verified methods, generated identity defaults, and ids in `de300712-0000-4000-8000-…`. It owns only the deterministic id derived from each configured phone. A repeat with the same list reports zero new Users and preserves profiles/roles. It refuses unrelated Users found by phone or email, privileged Users, changed tester methods, and scheduled or purged tester Users before any write. It creates no Sessions, Listings or sends. Do not edit phones or emails in the list to repurpose an account. A refusal needs operator investigation; it never prints the conflicting value.
@@ -245,7 +245,7 @@ The founder runs the following steps while present. Keep the list only in the op
 3. Once the founder says the test passed, set the API's `TESTER_ACCOUNTS_JSON` to `[]` and wait for that deployment, so new fixed-code sign-ins stop. Keep the original list loaded only in the removal process. Set `TESTER_ACCOUNTS_AUTHORIZATION=remove-tester-accounts` and run:
 
    ```sh
-   node --import tsx packages/db/scripts/tester-accounts.ts --mode remove
+   node --import tsx /app/packages/db/scripts/tester-accounts.ts --mode remove
    ```
 
    Removal preflights every entry's ownership and buyer/seller role, schedules deletion now, revokes all refresh Sessions and archives active Listings in one database transaction. The existing worker purge clears personal data on its next run and retains history under the normal deletion policy. Already-scheduled timestamps are not postponed, missing/purged Users are skipped, and a second run reports zeros. Existing access tokens expire under the ordinary deletion rules; disabling the list first prevents a new bypass session racing removal. Keep the original list until count-only checks confirm purge, then retire the secret file. Neither mode prints phones, emails, codes, connection strings or raw database errors.
