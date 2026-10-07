@@ -228,6 +228,8 @@ describe("MinioMediaStorageAdapter", () => {
 
     expect(result).toMatchObject({ headers: { "if-match": '"placeholder"' } });
     expect(awsMocks.signedCommand?.input).toMatchObject({ IfMatch: '"placeholder"' });
+    expect(awsMocks.signedCommand?.input["CacheControl"]).toBe("no-store");
+    expect(result.headers?.["cache-control"]).toBe("no-store");
   });
 
   it("initializes the fixed original and eight variants before issuing conditional upload authority (#725)", async () => {
