@@ -426,7 +426,7 @@ describe("Profile photo", () => {
     await view.findByText("Merdan");
     await act(async () => { complete(); });
     expect(view.queryByRole("alert")).toBeNull();
-    expect(picker.deletes).toHaveLength(1);
+    expect(picker.deletes).toContainEqual(expect.stringMatching(/^file:\/\/\/cache\/profile-photo-\d+\.jpg$/));
     expect(requests.presigns).toHaveLength(0);
     expect(requests.sets).toHaveLength(0);
     expect(view.getByText("Merdan")).toBeTruthy();

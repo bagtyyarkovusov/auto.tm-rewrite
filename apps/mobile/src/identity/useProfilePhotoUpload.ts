@@ -45,6 +45,7 @@ export function useProfilePhotoUpload() {
         return;
       }
       photo.compressed ??= await compressPhoto(asset.uri, `${FileSystem.cacheDirectory}profile-photo-${Date.now()}.jpg`, { maxDimension: 512, width: asset.width, height: asset.height });
+      await photo.session.current();
       const compressed = photo.compressed;
       if (compressed.fileSize > MAX_BYTES) {
         profilePhotoUploadStore.setState({ state: { status: "too_large" } });
@@ -159,14 +160,14 @@ export function useProfilePhotoUpload() {
       mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 1,
     };
     try {
-    if (source === "camera") {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        setCameraDenied(true);
-        owner.dispose();
-        return;
+      if (source === "camera") {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          setCameraDenied(true);
+          owner.dispose();
+          return;
+        }
       }
-    }
       const result = source === "camera" ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       await owner.current();
       if (!result.canceled && result.assets[0]) {
