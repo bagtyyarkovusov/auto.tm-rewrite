@@ -1296,6 +1296,32 @@ describe("VerifyOtp", () => {
       );
     });
 
+    it("signs in a tester by email after an issued fixed-code request and preserves pending deletion", async () => {
+      const scheduledAt = new Date("2026-06-01T00:00:00.000Z");
+      const existingUser = makeUser({ phone: tester.phone, email: tester.email, emailVerifiedAt: NOW, role: "seller", deletionScheduledAt: scheduledAt });
+      userRepo.users.push(existingUser);
+      otpRepo.addRecord(makeOtpRequest({ channel: "email", destination: tester.email, codeHash: hashCode(tester.code), expiresAt: new Date(NOW.getTime() + 10 * 60_000) }));
+      const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, eventBus, reviewerBypassConfig: testerConfig, constantTimeComparator });
+      await expect(uc.execute({ email: tester.email, code: "000000" })).rejects.toThrow();
+      const result = await uc.execute({ email: tester.email, code: tester.code });
+      expect(result.user).toMatchObject({ id: existingUser.id, deletionScheduledAt: scheduledAt.toISOString() });
+      expect(sessionRepo.sessions).toHaveLength(1);
+      expect(eventBus.emit).toHaveBeenCalledWith("ReviewerOtpBypassAuthenticated", expect.objectContaining({ userId: existingUser.id, role: "seller" }));
+    });
+
+    for (const channel of ["phone", "email"] as const) {
+      for (const role of ["admin", "moderator", "absent"] as const) {
+        it(`refuses tester ${channel} authentication for ${role} Users`, async () => {
+          if (role !== "absent") userRepo.users.push(makeUser({ phone: tester.phone, email: tester.email, role }));
+          if (channel === "email") otpRepo.addRecord(makeOtpRequest({ channel, destination: tester.email, codeHash: hashCode(tester.code), expiresAt: new Date(NOW.getTime() + 10 * 60_000) }));
+          const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, eventBus, reviewerBypassConfig: testerConfig, constantTimeComparator });
+          await expect(uc.execute(channel === "phone" ? { phone: tester.phone, code: tester.code } : { email: tester.email, code: tester.code })).rejects.toThrow();
+          expect(sessionRepo.sessions).toHaveLength(0);
+          expect(eventBus.emit).not.toHaveBeenCalledWith("ReviewerOtpBypassAuthenticated", expect.anything());
+        });
+      }
+    }
+
     it("fails a tester phone with the wrong code", async () => {
       const existingUser = makeUser({ phone: tester.phone, role: "buyer" });
       userRepo.users.push(existingUser);

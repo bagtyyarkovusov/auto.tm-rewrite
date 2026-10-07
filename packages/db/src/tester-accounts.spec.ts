@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { runTesterAccounts, type TesterAccountStore, type TesterTransaction, type TesterUser } from "./tester-accounts";
 
+function must<T>(value: T | undefined): T {
+  if (value === undefined) throw new Error("Expected fixture value");
+  return value;
+}
+
 const NOW = new Date("2026-10-07T00:00:00.000Z");
 const account = (index = 1) => ({ phone: `+99370${String(index).padStart(6, "0")}`, email: `tester${index}@example.invalid`, code: "765432" });
 const OWNED_IDS = ['de300712-0000-4000-8000-ba0da55a0d17', 'de300712-0000-4000-8000-e8f71e923960'];
-const ownedUser = (index = 1): TesterUser => ({ id: OWNED_IDS[index - 1]!, phone: account(index).phone, email: account(index).email, role: "buyer", phoneVerifiedAt: NOW, emailVerifiedAt: NOW, deletionScheduledAt: null });
+const ownedUser = (index = 1): TesterUser => ({ id: must(OWNED_IDS[index - 1]), phone: account(index).phone, email: account(index).email, role: "buyer", phoneVerifiedAt: NOW, emailVerifiedAt: NOW, deletionScheduledAt: null });
 const options = (mode: "seed" | "remove" = "seed", entries = [account()]) => ({ mode, testerAccountsJson: JSON.stringify(entries), reviewerAccountsJson: "[]", now: NOW });
 
 class FakeStore implements TesterAccountStore {
@@ -72,7 +77,7 @@ describe("temporary tester operator behavior", () => {
         it(`${mode} refuses a ${role} User's ${conflict} before changing any tester`, async () => {
           const store = new FakeStore();
           store.users.push(ownedUser());
-          const first = store.users[0]!;
+          const first = must(store.users[0]);
           store.sessionUsers.push(first.id);
           store.users.push({ id: "unrelated", phone: conflict === "phone" ? account(2).phone : "+99371000000", email: conflict === "email" ? account(2).email : "other@example.invalid", role, phoneVerifiedAt: NOW, emailVerifiedAt: NOW, deletionScheduledAt: null });
           const before = structuredClone(store.users);
@@ -87,10 +92,10 @@ describe("temporary tester operator behavior", () => {
   it("removes owned buyer/seller testers now, revokes their Sessions, archives active Listings, and repeats as a no-op", async () => {
     const store = new FakeStore();
     store.users.push(ownedUser(), ownedUser(2));
-    store.users[1]!.role = "seller";
-    store.users[1]!.deletionScheduledAt = new Date("2026-10-20T00:00:00.000Z");
+    must(store.users[1]).role = "seller";
+    must(store.users[1]).deletionScheduledAt = new Date("2026-10-20T00:00:00.000Z");
     store.sessionUsers = store.users.map((u) => u.id);
-    store.activeListingUsers = [store.users[1]!.id];
+    store.activeListingUsers = [must(store.users[1]).id];
     expect(await runTesterAccounts(store, options("remove", [account(), account(2)]))).toEqual({ created: 0, scheduled: 2, sessionsDeleted: 2, listingsArchived: 1 });
     expect(store.users.map((u) => u.deletionScheduledAt)).toEqual([NOW, NOW]);
     expect(store.sessionUsers).toEqual([]);
@@ -102,10 +107,10 @@ describe("temporary tester operator behavior", () => {
     it(`refuses an owned tester elevated to ${role}`, async () => {
       const store = new FakeStore();
       store.users.push(ownedUser());
-      store.users[0]!.role = role;
+      must(store.users[0]).role = role;
       await expect(runTesterAccounts(store, options("remove"))).rejects.toThrow(/refused/);
       await expect(runTesterAccounts(store, options("seed"))).rejects.toThrow(/refused/);
-      expect(store.users[0]!.deletionScheduledAt).toBeNull();
+      expect(must(store.users[0]).deletionScheduledAt).toBeNull();
     });
   }
 
@@ -113,7 +118,7 @@ describe("temporary tester operator behavior", () => {
     const store = new FakeStore();
     store.users.push({ ...ownedUser(), deletionScheduledAt: NOW });
     await expect(runTesterAccounts(store, options())).rejects.toThrow(/refused/);
-    const user = store.users[0]!;
+    const user = must(store.users[0]);
     user.phone = null; user.email = null; user.deletionScheduledAt = null;
     await expect(runTesterAccounts(store, options())).rejects.toThrow(/refused/);
     expect(await runTesterAccounts(store, options("remove"))).toMatchObject({ scheduled: 0 });

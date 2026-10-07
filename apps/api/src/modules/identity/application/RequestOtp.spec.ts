@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { createHash } from "node:crypto";
 import type {
   OtpRequest,
   SignInCodeChannel,
@@ -393,7 +392,7 @@ describe("RequestOtp", () => {
     expect(repo.records[0]).toMatchObject({
       channel: "email",
       destination: "tester1@example.com",
-      codeHash: createHash("sha256").update("765432").digest("hex"),
+      codeHash: "8829920baa578a546740437dc0e56671c749d93d6fbcfec2d9ecf3b30a87577b",
     });
     expect(sms.sent).toHaveLength(0);
     expect(email.jobs).toHaveLength(0);

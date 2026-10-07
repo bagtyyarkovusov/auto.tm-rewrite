@@ -227,7 +227,30 @@ pnpm --filter @auto-tm/db reviewer:scenario -- --mode revoke
 
 Revocation rewrites reserved reviewer user phones to non-login `revoked:<id>` tombstones, clears their reserved emails, deletes their sessions, invalidates push tokens, and writes a `REVIEWER_SCENARIO_REVOKE` audit row. Remove or disable `REVIEW_DEMO_ACCOUNTS_JSON` / `REVIEW_DEMO_ACCOUNT_ENABLED` in the same operator change when store review is no longer in flight.
 
-### Demo inventory seed and removal
+### Tester accounts
+
+ADR-0086 allows up to 30 temporary testers in `TESTER_ACCOUNTS_JSON`, separate from the unchanged 3–5 reviewer entries. Each `{ phone, email, code }` uses a unique `+993` E.164 phone, normalized email and exactly six numeric digits. Neither method may overlap a reviewer. The reviewer flag controls only reviewers; an empty or unset tester list disables tester fixed codes. Both phone and email sign-in require an existing ordinary User. Email sign-in still starts with a rate-limited request, then accepts the fixed code without sending mail. Phone requests do not issue or send a code.
+
+The founder runs the following steps while present. Keep the list only in the operator secret store with mode 600. Never paste its values into git, shell arguments, terminal history, logs or evidence. Load it into the operator process environment through the existing secret-store procedure and give each tester only their own entry privately. The commands below contain no credential values.
+
+1. With the original tester list loaded into the API container's command environment, run the seed on the private database connection. Set `TESTER_ACCOUNTS_AUTHORIZATION=seed-tester-accounts`. The script accepts staging/production only on a private Railway PostgreSQL host, or development/test on loopback. Production seed requires `SIGNUPS_ENABLED=false`.
+
+   ```sh
+   node --import tsx packages/db/scripts/tester-accounts.ts --mode seed
+   ```
+
+   Seed creates buyer Users with both verified methods, generated identity defaults, and ids in `de300712-0000-4000-8000-…`. It owns only the deterministic id derived from each configured phone. A repeat with the same list reports zero new Users and preserves profiles/roles. It refuses unrelated Users found by phone or email, privileged Users, changed tester methods, and scheduled or purged tester Users before any write. It creates no Sessions, Listings or sends. Do not edit phones or emails in the list to repurpose an account. A refusal needs operator investigation; it never prints the conflicting value.
+
+2. Configure the production or staging API with that same secret list, then verify both phone and email sign-in using the operator smoke procedure. Preserve the exact list until removal is confirmed; the reviewer scenario seed does not provision testers.
+3. Once the founder says the test passed, set the API's `TESTER_ACCOUNTS_JSON` to `[]` and wait for that deployment, so new fixed-code sign-ins stop. Keep the original list loaded only in the removal process. Set `TESTER_ACCOUNTS_AUTHORIZATION=remove-tester-accounts` and run:
+
+   ```sh
+   node --import tsx packages/db/scripts/tester-accounts.ts --mode remove
+   ```
+
+   Removal preflights every entry's ownership and buyer/seller role, schedules deletion now, revokes all refresh Sessions and archives active Listings in one database transaction. The existing worker purge clears personal data on its next run and retains history under the normal deletion policy. Already-scheduled timestamps are not postponed, missing/purged Users are skipped, and a second run reports zeros. Existing access tokens expire under the ordinary deletion rules; disabling the list first prevents a new bypass session racing removal. Keep the original list until count-only checks confirm purge, then retire the secret file. Neither mode prints phones, emails, codes, connection strings or raw database errors.
+
+## Demo inventory seed and removal
 
 Reviewer production starts empty. The demo inventory fills it for store review and closed testing: about 50 active car Listings, each with 5 to 8 photographs of that car, spread over demo sellers. It is temporary and one command removes it. It is operator work, not a boot side effect, and an agent runs it against staging or production only on the founder's go-ahead in chat.
 

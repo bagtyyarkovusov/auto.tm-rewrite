@@ -22,6 +22,9 @@ The demo inventory for reviewer production (`scripts/demo-inventory.ts`, `--mode
 
 `listings.priceTmt` is a stored TMT price derived from `priceAmount` and the `<currency> -> TMT` rate; feed price sort and price-range counts read it ([ADR-0061](../../docs/adr/0061-stored-tmt-listing-price-for-feed-sort-and-range.md)). The conversion expression is shared between `src/listing-prices.ts` (`recomputeListingPricesTmt`) and the `20260928000000_add_listing_price_tmt` backfill — keep them identical. After any `exchange_rates` change, run `pnpm --filter @auto-tm/db listing-prices:recompute` against that environment's database.
 
+
+Temporary tester provisioning and removal live in `scripts/tester-accounts.ts`, under ADR-0086. The seed owns only Users whose deterministic ids start with `de300712-0000-4000-8000-`, separate from demo inventory and reviewer scenarios. It refuses to claim existing unrelated phone/email holders, or privileged Users. Removal preflights ownership, schedules deletion now, revokes Sessions and archives active Listings atomically for the existing worker purge. Keep the original secret list until removal; the script refuses changed Sign-in Methods and never reseeds a scheduled or purged User. See the deployment runbook's Tester accounts section. Never create unrelated Users in that id namespace.
+
 ## Start here
 
 - [Schema](prisma/schema.prisma)

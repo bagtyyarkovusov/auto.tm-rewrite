@@ -336,6 +336,10 @@ describe("EnvSchema tester accounts (ADR-0086)", () => {
     ).toThrow(/TESTER_ACCOUNTS_JSON/);
   });
 
+  it("refuses reviewer overlap while the reviewer flag is off", () => {
+    expect(() => EnvSchema.parse({ ...deployedEnv, REVIEW_DEMO_ACCOUNT_ENABLED: "false", REVIEW_DEMO_ACCOUNTS_JSON: JSON.stringify([reviewerDemoAccount(1)]), TESTER_ACCOUNTS_JSON: JSON.stringify([{ ...testerAccount(1), email: reviewerDemoAccount(1).email }]) })).toThrow(/TESTER_ACCOUNTS_JSON/);
+  });
+
   it("refuses non-JSON and non-array tester lists", () => {
     expect(() =>
       EnvSchema.parse({ ...deployedEnv, TESTER_ACCOUNTS_JSON: "not-json" }),
