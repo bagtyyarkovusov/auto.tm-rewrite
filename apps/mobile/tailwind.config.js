@@ -3,16 +3,29 @@
  * Extends @auto-tm/ui/theme/tailwind with shadcn-style semantic colors
  * resolving via CSS vars from global.css. Locked to v3 due to NativeWind +
  * Metro constraints. Web/admin use v4 in a different config shape.
- * Rules: docs/agents/nativewind-v4.md (component and theme conventions).
+ *
+ * The mobile surface system (issue #695) comes from
+ * packages/ui/tokens/mobile.ts through `mobileTailwindTheme`: radii, type
+ * roles, one font family per bundled face, control heights and elevation.
+ * Surface colours are CSS variables in global.css so they follow the theme.
+ * Rules: docs/agents/nativewind-v4.md (component and theme conventions) and
+ * docs/prd/ui/71-design-tokens.md.
  */
 const { hairlineWidth } = require("nativewind/theme");
-const { tailwindTheme } = require("@auto-tm/ui/theme/tailwind");
+const {
+  tailwindTheme,
+  mobileTailwindTheme,
+} = require("@auto-tm/ui/theme/tailwind");
+
+/** A semantic colour that takes an opacity modifier, such as `bg-glass/90`. */
+const themed = (name) => `hsl(var(--${name}) / <alpha-value>)`;
 
 module.exports = {
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
+    "./lib/**/*.{ts,tsx}",
   ],
   darkMode: "class",
   presets: [require("nativewind/preset")],
@@ -54,18 +67,29 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Floating navigation and controls above scrolling content.
+        glass: {
+          DEFAULT: themed("glass"),
+          edge: themed("glass-edge"),
+        },
+        // Dimming behind sheets and dialogs.
+        scrim: themed("scrim"),
+        // Chips and controls that sit on a photo, and what is drawn on them.
+        media: {
+          scrim: themed("media-scrim"),
+          foreground: themed("media-foreground"),
+        },
       },
-      borderRadius: {
-        ...tailwindTheme.borderRadius,
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-      },
-      fontFamily: {
-        sans: ["UberMoveText-Regular", "system-ui", "sans-serif"],
-        heading: ["UberMove-Medium", "system-ui", "sans-serif"],
-        mono: ["UberMoveMono-Regular", "Menlo", "monospace"],
-      },
+      borderRadius: mobileTailwindTheme.borderRadius,
+      fontSize: mobileTailwindTheme.fontSize,
+      fontFamily: mobileTailwindTheme.fontFamily,
+      boxShadow: mobileTailwindTheme.boxShadow,
+      opacity: mobileTailwindTheme.opacity,
+      aspectRatio: mobileTailwindTheme.aspectRatio,
+      scale: mobileTailwindTheme.scale,
+      transitionDuration: mobileTailwindTheme.transitionDuration,
+      height: mobileTailwindTheme.height,
+      minHeight: mobileTailwindTheme.height,
       borderWidth: {
         hairline: hairlineWidth(),
       },

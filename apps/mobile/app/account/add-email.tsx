@@ -84,7 +84,7 @@ export default function AddEmailScreen() {
       onSubmit={handleSubmit}
     >
       <View className="gap-2">
-        <Text className="text-sm font-medium text-foreground">
+        <Text className="text-callout font-medium text-foreground">
           {tAuth("emailLabel")}
         </Text>
         <Input
@@ -111,8 +111,8 @@ export default function AddEmailScreen() {
         <Text
           className={
             showError || requestError
-              ? "text-sm leading-snug text-destructive"
-              : "text-sm leading-snug text-muted-foreground"
+              ? "text-callout leading-snug text-destructive"
+              : "text-callout leading-snug text-muted-foreground"
           }
         >
           {requestError ??

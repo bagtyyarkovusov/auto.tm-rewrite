@@ -63,7 +63,7 @@ export function PeerPresenceLabel({ presence, locale }: PeerPresenceLabelProps) 
   }
 
   return (
-    <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+    <Text className="text-caption text-muted-foreground" numberOfLines={1}>
       {label}
     </Text>
   );

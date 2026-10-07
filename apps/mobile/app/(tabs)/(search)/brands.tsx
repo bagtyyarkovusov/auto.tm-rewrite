@@ -1,6 +1,4 @@
 import { useLocalSearchParams } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { readPickerResultsFilters } from "../../../src/listings/search/resultsRouteState";
@@ -8,9 +6,10 @@ import { BrandPicker } from "../../../src/listings/search/BrandPicker";
 import { useRoutePickerActions } from "../../../src/listings/search/useRoutePickerActions";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
 import { HOME_HREF } from "../../../src/navigation/homeHref";
+import { TabScreen } from "../../../components/navigation/TabScreen";
+import { useTabBarSpace } from "../../../components/navigation/tabBarHeight";
 
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { BackButton } from "@/components/navigation/StackHeader";
 
 /**
  * Brand picker, opened from Home's "Brand, model" card (and later the
@@ -22,24 +21,17 @@ export default function BrandPickerScreen() {
   const goBack = useSafeBack(HOME_HREF);
   const actions = useRoutePickerActions();
   const params = useLocalSearchParams<{ returnToResults?: string; resultsState?: string }>();
+  const tabBarSpace = useTabBarSpace();
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    // The list runs under the floating tab bar and ends clear of it.
+    <TabScreen underTabBar>
       <BrandPicker
+        bottomSpace={tabBarSpace}
         actions={actions}
         filters={readPickerResultsFilters(params)}
-        leading={
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
-            onPress={goBack}
-            accessibilityLabel={t("back")}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-        }
+        leading={<BackButton onPress={goBack} accessibilityLabel={t("back")} />}
       />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

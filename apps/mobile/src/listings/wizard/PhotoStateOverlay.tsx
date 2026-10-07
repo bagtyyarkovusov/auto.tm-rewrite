@@ -34,7 +34,7 @@ export function PhotoStateOverlay({ photo }: PhotoStateOverlayProps) {
     return (
       <View className="absolute inset-0 items-center justify-center bg-black/40">
         <ActivityIndicator color="white" />
-        <Text className="mt-1 text-xs text-white">{t("photoStateQueued")}</Text>
+        <Text className="mt-1 text-caption text-white">{t("photoStateQueued")}</Text>
       </View>
     );
   }
@@ -43,7 +43,7 @@ export function PhotoStateOverlay({ photo }: PhotoStateOverlayProps) {
     return (
       <View className="absolute inset-0 items-center justify-center bg-black/40">
         <ActivityIndicator color="white" />
-        <Text className="mt-1 text-xs text-white">{t("uploading")}</Text>
+        <Text className="mt-1 text-caption text-white">{t("uploading")}</Text>
       </View>
     );
   }
@@ -59,16 +59,16 @@ export function PhotoStateOverlay({ photo }: PhotoStateOverlayProps) {
           {photo.error?.retryable === false ? (
             <>
               <Icon as={X} className="size-6 text-destructive" />
-              <Text className="text-xs text-destructive">{t("failed")}</Text>
+              <Text className="text-caption text-destructive">{t("failed")}</Text>
             </>
           ) : (
             <>
               <Icon as={RefreshCw} className="size-6 text-white" />
-              <Text className="text-xs text-white">{t("retry")}</Text>
+              <Text className="text-caption text-white">{t("retry")}</Text>
             </>
           )}
           {photo.error && (
-            <Text className="px-2 text-center text-[10px] text-white">
+            <Text className="px-2 text-center text-micro text-white">
               {photo.error.message}
             </Text>
           )}
@@ -82,7 +82,7 @@ export function PhotoStateOverlay({ photo }: PhotoStateOverlayProps) {
       <View className="absolute inset-0 items-center justify-center bg-warning-500/10">
         <View className="items-center gap-1 rounded-md bg-background/90 px-2 py-1.5">
           <Icon as={WifiOff} className="size-5 text-warning-500" />
-          <Text className="text-center text-[10px] font-medium text-muted-foreground">
+          <Text className="text-center text-micro font-medium text-muted-foreground">
             {t("waitingForNetwork")}
           </Text>
         </View>
@@ -94,7 +94,7 @@ export function PhotoStateOverlay({ photo }: PhotoStateOverlayProps) {
     return (
       <View className="absolute inset-0 items-center justify-center bg-black/40">
         <Icon as={AlertTriangle} className="size-6 text-warning-500" />
-        <Text className="mt-1 text-xs text-white">{t("lost")}</Text>
+        <Text className="mt-1 text-caption text-white">{t("lost")}</Text>
       </View>
     );
   }

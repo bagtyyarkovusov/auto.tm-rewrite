@@ -173,7 +173,7 @@ export function MessageReportSheet({
                   >
                     <Text
                       className={cn(
-                        "text-base",
+                        "text-body",
                         selected ? "font-medium text-primary" : "text-foreground",
                       )}
                     >
@@ -189,7 +189,7 @@ export function MessageReportSheet({
 
             {showDetailsInput && (
               <View className="gap-2">
-                <Text className="text-sm text-muted-foreground">
+                <Text className="text-callout text-muted-foreground">
                   {t("pleaseProvideDetails")}
                 </Text>
                 <Input
@@ -202,14 +202,14 @@ export function MessageReportSheet({
                   onChangeText={setDetails}
                   maxLength={1000}
                 />
-                <Text className="text-right text-xs text-muted-foreground">
+                <Text className="text-right text-caption text-muted-foreground">
                   {details.length}/1000
                 </Text>
               </View>
             )}
 
             {createReport.isError && (
-              <Text className="text-center text-sm text-destructive">
+              <Text className="text-center text-callout text-destructive">
                 {getErrorCopy(createReport.error, t)}
               </Text>
             )}

@@ -30,8 +30,26 @@
 - Brand red (`#E60000`) on white: 5.39:1 ✓
 - Brand red on neutral.950: 4.96:1 ✓
 - Light/dark mode versions of the same screen should feel like the same app, not two different apps
-- Avoid pure black (`#000000`) on dark mode — use `neutral.950` (`#0A0A0A`) for depth
-- Avoid pure white (`#FFFFFF`) on light mode for elevated surfaces — use `neutral.50` (`#FAFAF9`) for warmth
+- Avoid pure black (`#000000`) for the page in dark mode. Web and admin use `neutral.950` (`#0A0A0A`); mobile uses `#0F0F10`
+- On web and admin, avoid pure white (`#FFFFFF`) for elevated surfaces in light mode — use `neutral.50` (`#FAFAF9`) for warmth. On mobile the warmth is in the page (`#F3F3F1`) and raised surfaces are white, so a card reads as lifted without a border
+
+## Mobile surface levels in each mode
+
+Both modes use the same five levels ([71-design-tokens.md](71-design-tokens.md#surface-levels)); neither is an inversion of the other.
+
+| Level | Light | Dark | How it reads |
+|---|---|---|---|
+| Page | `#F3F3F1`, a warm off-white | `#0F0F10`, near black with a cool cast | The quietest surface |
+| Raised | `#FFFFFF` | `#1B1B1D` | Lighter than the page in both modes |
+| Overlay | `#FFFFFF` with the `overlay` shadow | `#232325` | One step above raised in dark, where shadow does not show |
+| Tonal | `#E7E7E4` | `#2A2A2D` | Darker than a card in light, lighter than a card in dark: visible on the page and on a card |
+| Glass | white at 94% | `#252528` at 94% | Floating navigation; system Liquid Glass on iOS 26 |
+
+In light, depth comes from the white card on the off-white page and from shadow under what floats. In dark, shadow is invisible on a near-black page, so depth comes from each level being lighter than the one below it.
+
+Text on a photo and on the photo viewer is white on a black scrim in both modes (`text-media-foreground` on `bg-media-scrim/45`), because a photo does not follow the theme.
+
+Reduce Transparency replaces glass with the opaque raised surface in both modes.
 
 ## Mode-specific token resolution
 
@@ -56,7 +74,7 @@ Or with Tailwind classnames:
 
 ## What stays the same across modes
 
-- Brand red `#E60000` is the same in both modes (we don't adjust brand hue based on mode)
+- Brand red keeps its hue in both modes. Light is `#E60000`; mobile dark uses the slightly lighter `hsl(0 90% 52%)` so red text stays readable on the dark page
 - Status colors (success / warning / error / info) are the same hex
 - Spacing, radius, shadow, motion tokens — same
 - Icons — same Lucide stroke; color resolves via context

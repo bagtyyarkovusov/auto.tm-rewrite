@@ -1,4 +1,3 @@
-import { ChevronLeft } from "lucide-react-native";
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -12,8 +11,8 @@ import { useTranslation } from "react-i18next";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { THEME } from "@/lib/theme";
 
@@ -46,26 +45,13 @@ export function SignInMethodEntryScreen({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <View className="px-4 pb-3 flex-row items-center gap-2">
-          <Button
-            accessibilityLabel={t("common:back")}
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
-            onPress={goBack}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-          <Text
-            className="flex-1 text-2xl font-heading text-foreground"
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
-        </View>
+        <StackHeader
+          title={title}
+          leading={<BackButton accessibilityLabel={t("common:back")} onPress={goBack} />}
+        />
 
         <View className="flex-1 px-4 pt-4 gap-8">
-          <Text className="text-base leading-normal text-muted-foreground">
+          <Text className="text-body leading-normal text-muted-foreground">
             {helper}
           </Text>
 

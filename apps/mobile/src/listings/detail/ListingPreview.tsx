@@ -1,14 +1,13 @@
 import { useMemo, useState } from "react";
 import { ScrollView, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
-import { ArrowLeft } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useEngineTypes } from "../../api/catalog/useEngineTypes";
 import { useTransmissions } from "../../api/catalog/useTransmissions";
-import { GalleryBanner } from "../components/GalleryImage";
+import { GalleryBanner, GalleryCounter } from "../components/GalleryImage";
 import { ContactCtaBar } from "../components/ContactCtaBar";
 import { PriceDisplay } from "../components/PriceDisplay";
 import { listingSpecLine } from "../feed/listingSpecLine";
@@ -19,8 +18,8 @@ import { closedListingBannerKey, isClosedForContact } from "./closedListing";
 import { DetailSkeletonBody } from "./DetailSkeleton";
 import { detailDate } from "./presentation";
 
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { BackButton } from "@/components/navigation/StackHeader";
+import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { Text } from "@/components/ui/text";
 
 export interface ListingPreviewProps {
@@ -41,6 +40,7 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
   const { t, i18n } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const bar = useStickyActionBar("screen");
   const [useOriginalImage, setUseOriginalImage] = useState(false);
   const listings = useMemo(() => [summary], [summary]);
   const names = useFeedCatalogMaps(listings);
@@ -92,18 +92,10 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
         className="absolute left-0 right-0 top-0 z-20 px-3 py-2"
         style={{ paddingTop: insets.top + 8 }}
       >
-        <Button
-          variant="secondary"
-          size="icon"
-          className="rounded-full bg-background/90"
-          accessibilityLabel={t("back")}
-          onPress={onBack}
-        >
-          <Icon as={ArrowLeft} className="size-5 text-foreground" />
-        </Button>
+        <BackButton tone="glass" accessibilityLabel={t("back")} onPress={onBack} />
       </View>
 
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bar.space }}>
         {imageUri ? (
           <View style={{ width, height: width * 0.65 }}>
             <Image
@@ -114,27 +106,23 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
               onError={() => setUseOriginalImage(true)}
             />
             {summary.photoCount > 0 && (
-              <View
-                className={
-                  bannerKey
-                    ? "absolute right-4 bottom-12 rounded-full bg-black/60 px-3 py-1"
-                    : "absolute right-4 bottom-3 rounded-full bg-black/60 px-3 py-1"
-                }
-              >
-                <Text className="text-sm text-white">{`1 / ${summary.photoCount}`}</Text>
-              </View>
+              <GalleryCounter
+                position={1}
+                total={summary.photoCount}
+                aboveBanner={Boolean(bannerKey)}
+              />
             )}
             {bannerKey && <GalleryBanner label={t(bannerKey)} />}
           </View>
         ) : (
           <View className="h-[240px] w-full items-center justify-center bg-muted">
-            <Text className="text-sm text-muted-foreground">{t("noPhotos")}</Text>
+            <Text className="text-callout text-muted-foreground">{t("noPhotos")}</Text>
             {bannerKey && <GalleryBanner label={t(bannerKey)} />}
           </View>
         )}
 
         <View className="gap-4 px-5 py-5">
-          <Text className="text-2xl font-heading text-foreground" numberOfLines={2}>
+          <Text className="text-headline font-heading font-semibold text-foreground" numberOfLines={2}>
             {title || t("listing")}
           </Text>
           <PriceDisplay
@@ -146,18 +134,19 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
             muted={closed}
           />
           {specLine.length > 0 && (
-            <Text className="text-sm text-foreground">{specLine}</Text>
+            <Text className="text-callout text-foreground">{specLine}</Text>
           )}
           {dateAndCity.length > 0 && (
-            <Text className="text-sm text-muted-foreground">{dateAndCity}</Text>
+            <Text className="text-callout text-muted-foreground">{dateAndCity}</Text>
           )}
           <DetailSkeletonBody />
         </View>
       </ScrollView>
 
       {!isOwner && !closed && (
-        <View className="border-t border-border" style={{ paddingBottom: insets.bottom }}>
+        <StickyActionBar {...bar.barProps}>
           <ContactCtaBar
+            variant="floating"
             listingId={summary.id}
             allowCalls={false}
             allowChat={false}
@@ -165,7 +154,7 @@ export function ListingPreview({ summary, isOwner, onBack }: ListingPreviewProps
             pending
             replayAuth={false}
           />
-        </View>
+        </StickyActionBar>
       )}
     </View>
   );

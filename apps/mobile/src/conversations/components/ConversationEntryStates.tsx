@@ -17,7 +17,7 @@ export function ConversationSignedOutState({ onPress }: EntryStateProps) {
   return (
     <View className="flex-1 items-center justify-center gap-4 px-6">
       <Icon as={Lock} className="size-8 text-muted-foreground" />
-      <Text className="text-center text-base text-foreground">
+      <Text className="text-center text-body text-foreground">
         {t("signInToViewMessages")}
       </Text>
       <Button
@@ -42,7 +42,7 @@ export function ConversationNotFoundState({ onPress }: EntryStateProps) {
   return (
     <View className="flex-1 items-center justify-center gap-4 px-6">
       <Icon as={MessageSquareOff} className="size-8 text-muted-foreground" />
-      <Text className="text-center text-base text-foreground">
+      <Text className="text-center text-body text-foreground">
         {t("conversationNotFound")}
       </Text>
       <Button

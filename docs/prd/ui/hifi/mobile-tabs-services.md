@@ -20,33 +20,37 @@ Cabinet is a plain menu in Auto.ru's manner. Rows never block on the network: th
 ```text
 ┌────────────────────────────────────────────┐
 │ safe-top                                   │
-│ Cabinet                                    │
-├────────────────────────────────────────────┤
-│ (A)  Display Name                     >    │  large row, 76px; avatar 48pt
-│      +993 6X XX-XX-42                      │  masked Sign-in Method
-│░░░░░░░░░░░░░░░░ gap 8px ░░░░░░░░░░░░░░░░░░░│
-│ ▣  Notifications                      >    │  signed in only
-│ ── divider ──────────────────────────────  │
-│ ▣  My listings                        5 >  │  signed in only; total of
-│                                            │  Listings + drafts, no 0
-│░░░░░░░░░░░░░░░░ gap 8px ░░░░░░░░░░░░░░░░░░░│
-│ ▣  Language                    English     │
-│ ── divider ──────────────────────────────  │
-│ ▣  Theme                        System     │
-│ ── divider ──────────────────────────────  │
-│ ▣  Help                                    │
-│ ── divider ──────────────────────────────  │
-│ ▣  Terms of Service                        │
-│ ── divider ──────────────────────────────  │
-│ ▣  Privacy Policy                          │
-│ ── divider ──────────────────────────────  │
-│ ▣  Posting rules                           │
-│ ── divider ──────────────────────────────  │
-│ ▣  About the app                           │
+│ Cabinet                                    │  large title on the page tone
+│                                            │
+│  ╭──────────────────────────────────────╮  │  raised card, radius 24
+│  │ (A)  Display Name                 >  │  │  large row, 80 pt; avatar 48 pt
+│  │      +993 6X XX-XX-42                │  │  masked Sign-in Method
+│  ╰──────────────────────────────────────╯  │
+│                 24 pt of page              │
+│  ╭──────────────────────────────────────╮  │
+│  │ (◦)  Notifications                >  │  │  signed in only
+│  │      ─────────────────────────────── │  │  inset hairline
+│  │ (◦)  My listings                5 >  │  │  signed in only; total of
+│  ╰──────────────────────────────────────╯  │  Listings + drafts, no 0
+│                                            │
+│  ╭──────────────────────────────────────╮  │
+│  │ (◦)  Language           English   >  │  │
+│  │      ─────────────────────────────── │  │
+│  │ (◦)  Theme               System   >  │  │
+│  ╰──────────────────────────────────────╯  │
+│                                            │
+│  ╭──────────────────────────────────────╮  │
+│  │ (◦)  Help                         >  │  │  opens an app screen
+│  │ (◦)  Terms of Service             ↗  │  │  opens the web page
+│  │ (◦)  Privacy Policy               ↗  │  │
+│  │ (◦)  Posting rules                ↗  │  │
+│  │ (◦)  About the app                >  │  │
+│  ╰──────────────────────────────────────╯  │  (hairlines between each row)
+│        clear of the floating tab bar       │
 └────────────────────────────────────────────┘
 ```
 
-Every row within a group is separated by a divider; groups are separated by a gap.
+Groups are raised cards on the page tone, 16 pt from the screen edges and separated by 24 pt of page; there are no lines across the page. Inside a card, rows are separated by hairlines inset to where the label starts. The groups carry no section labels: each card's rows name it, and Cabinet has no copy for such labels.
 
 Signed out, the large row reads "Sign in" / "By phone or email" with a neutral person avatar (a `User` icon, never a car), and the Notifications and My listings group is absent.
 
@@ -57,30 +61,30 @@ The My listings value is the total of the User's Listings and drafts. Before the
 ## Token map
 
 ### Backgrounds + surfaces
-- Root: `bg-background`
-- Row press feedback: `active:bg-secondary`
-- Group gap: `h-2 bg-secondary`
+- Root: `bg-background` (the page tone)
+- Group: `MenuGroup`, `mx-4 overflow-hidden rounded-2xl bg-card` (radius 24); groups are spaced `gap-6` in the scroll content
+- Row press feedback: `active:bg-secondary`, clipped to the card's corners
+- Icon disc: `size-9 rounded-full bg-secondary`
 
 ### Borders + dividers
-- Row divider: `h-px bg-border`, inset `ml-[54px]` to the label after the icon
+- Row divider: `MenuDivider`, `h-px bg-border`, inset `ml-16` to the label after the icon disc; only inside a card
 
 ### Typography
-- Screen title: `text-2xl font-heading text-foreground`
-- Row label: `text-base text-foreground`
-- Large-row label: `text-lg font-semibold text-foreground`
-- Large-row second line: `text-[13px] text-muted-foreground`, one line
-- Row value (Language, Theme, My listings total): `text-[15px] text-muted-foreground`
+- Screen title: `LargeTitle`, `font-heading text-display font-bold text-foreground`
+- Row label: `text-body text-foreground`
+- Large-row label: `font-heading text-subhead font-semibold text-foreground`, one line on the profile row
+- Large-row second line: `text-footnote text-muted-foreground` with tabular figures, one line
+- Row value (Language, Theme, My listings total): `text-body text-muted-foreground` with tabular figures
 
 ### Spacing
-- Title: `px-4 pt-6 pb-3`
-- Row: `flex-row items-center gap-3.5 px-4 py-2`; `min-h-14`, large row `min-h-[76px]`
-- Scroll bottom padding: `pb-6`
+- Row: `flex-row items-center gap-3 px-4 py-2`; `min-h-14` (56 pt), large row `min-h-20 py-3` (80 pt)
+- Scroll content: `gap-6 pt-1`, bottom padding the tab bar's height plus 16 pt, so the last card scrolls clear of the floating bar
 
 ### Icons
-- Row icon: Lucide, `size-6 text-muted-foreground` — `Bell` (Notifications), `List` (My listings), `Globe` (Language), `Contrast` (Theme), `CircleHelp` (Help), `ShieldCheck` (Terms of Service), `FileText` (Privacy Policy), `ScrollText` (Posting rules), `Info` (About the app)
+- Row icon: Lucide `size-5 text-foreground` on the `bg-secondary` disc, one tone for every row — `Bell` (Notifications), `List` (My listings), `Globe` (Language), `Contrast` (Theme), `CircleHelp` (Help), `ShieldCheck` (Terms of Service), `FileText` (Privacy Policy), `ScrollText` (Posting rules), `Info` (About the app)
 - Large row signed in: `UserAvatar` at 48 pt — the profile photo, or the assigned car mark on a tinted circle (`apps/mobile/components/identity/UserAvatar.tsx`)
 - Large row signed out or failed: neutral person `Avatar` `size-12` with a `User` icon; never a car
-- Chevron: `ChevronRight`, `size-[18px] text-muted-foreground opacity-60`, on the large row, Notifications and My listings only. Language, Theme, Help, the legal rows and About have none, including Help and About, which also open app screens
+- Trailing mark, `size-4 text-muted-foreground`: `ChevronRight` on every row that opens a screen or a sheet inside the app (the large row, Notifications, My listings, Language, Theme, Help, About the app); `ArrowUpRight` on the three legal rows, which open the web page outside the app
 
 ## Component shape
 
@@ -88,10 +92,10 @@ The screen composes the shared account rows; it adds no new primitive.
 
 | Component | File | Use |
 |---|---|---|
-| `MenuRow`, `MenuDivider`, `MenuGap` | `apps/mobile/components/account/MenuRow.tsx` | Every row, divider and group gap; shared with Profile |
+| `MenuRow`, `MenuGroup`, `MenuDivider` | `apps/mobile/components/account/MenuRow.tsx` | Every row, raised group card and inset divider; shared with Profile, Notifications and Help |
 | `MyListingsRow` | `apps/mobile/components/account/MyListingsRow.tsx` | My listings row with the Listings + drafts total; refetches on focus |
 | `UserAvatar` | `apps/mobile/components/identity/UserAvatar.tsx` | The signed-in large-row avatar at 48 pt; Profile reuses it at 72 pt |
-| `LanguageRow`, `ThemeRow` | `apps/mobile/components/account/` | Rows with the current value; each opens `OptionPickerSheet` |
+| `LanguageRow`, `ThemeRow` | `apps/mobile/components/account/` | Rows with the current value; each opens `OptionPickerSheet`, whose `OptionList` draws one 56 pt row per option with inset hairlines and a checkmark in the text colour on the chosen row, and a tonal circular close button |
 | `Avatar`, `Skeleton`, `Button` | `apps/mobile/components/ui/` | Neutral signed-out avatar, the profile row's loading state and its Retry |
 
 ## States
@@ -100,10 +104,10 @@ The screen composes the shared account rows; it adds no new primitive.
 Rows as in the layout for the session state.
 
 ### Loading
-Only the large row loads: a `size-12 rounded-full` skeleton with two text bars (`h-4 w-40`, `h-3 w-28`). Every other row stays visible and usable. The My listings row shows no number until its count arrives.
+Only the large row loads, inside its card: a `size-12 rounded-full` skeleton with two rounded text bars (`h-4 w-40`, `h-3 w-28`). Every other row stays visible and usable. The My listings row shows no number until its count arrives.
 
 ### Error
-Only the large row fails: neutral person avatar, "Something went wrong" in `text-muted-foreground`, and an outline `Button` `size="sm"` `min-h-11` reading Retry. Every other row stays visible and usable. The My listings row shows no number when its count fails.
+Only the large row fails: neutral person avatar, "Something went wrong" in `text-muted-foreground`, and a tonal `secondary` `Button` `size="sm"` `min-h-11` reading Retry, all inside the card. Every other row stays visible and usable. The My listings row shows no number when its count fails.
 
 ### Empty
 N/A — the menu is static.
@@ -122,7 +126,7 @@ Reduced motion: the sheet follows the system setting.
 
 ## Accessibility
 
-- **Tap targets**: rows are at least 56px high; the large row 76px; Retry 44px.
+- **Tap targets**: rows are at least 56 pt high; the large row 80 pt; Retry 44 pt.
 - **Screen reader**: each row is a button whose label reads the label, then the second line, then the value (for example "Language, English"). On the signed-in large row the avatar carries no label of its own — the name beside it is what the screen reader hears.
 - **Loading**: the large-row skeleton is one element labelled with `common:loading`.
 - **Error**: the failed large row has the `alert` role.
@@ -154,3 +158,4 @@ Reduced motion: the sheet follows the system setting.
 - Legal rows open the localized web page for the current language; they do not deep-link into the app.
 - Help is the release's only support entry. The code screen links to it only at the daily Sign-in Code limit ([mobile OTP login flow](mobile-otp-login-flow.md)).
 - Log out and a finished account deletion land on Cabinet, signed out.
+- The screens Cabinet opens share its grouped look: Profile puts the Sign-in methods under a quiet tracked label (`MenuSectionLabel`, `text-footnote font-medium tracking-wide text-muted-foreground`) on one card and Log out with Delete account on another, Delete account in the `destructive` token; Notifications, Help and Delete account set their rows on cards with notes under them aligned to the row text (`MenuFooter`, `px-8`).

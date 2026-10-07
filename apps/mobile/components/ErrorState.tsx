@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useErrorCopy } from "@/src/api/useErrorCopy";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Illustration } from "@/components/ui/illustration";
 import { Text } from "@/components/ui/text";
 
 interface ErrorStateProps {
@@ -21,15 +22,15 @@ export function ErrorState({ error, onRetry, compact = false }: ErrorStateProps)
     return (
       <View
         accessibilityRole="alert"
-        className="flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2"
+        className="flex-row items-center gap-2 rounded-lg bg-destructive/10 px-4 py-2.5"
       >
         <Icon as={AlertTriangle} className="size-4 shrink-0 text-destructive" />
-        <Text className="flex-1 text-sm text-destructive" numberOfLines={2}>
+        <Text className="flex-1 text-callout text-destructive" numberOfLines={2}>
           {copy.title}
         </Text>
         {copy.retryable && onRetry && (
           <Button variant="ghost" size="sm" onPress={onRetry}>
-            <Text className="text-sm text-destructive">{t("retry")}</Text>
+            <Text className="text-callout text-destructive">{t("retry")}</Text>
           </Button>
         )}
       </View>
@@ -39,21 +40,17 @@ export function ErrorState({ error, onRetry, compact = false }: ErrorStateProps)
   return (
     <View
       accessibilityRole="alert"
-      className="flex-1 items-center justify-center px-6 gap-4"
+      className="flex-1 items-center justify-center px-8 pb-12 pt-6"
     >
-      <View className="size-16 items-center justify-center rounded-full bg-destructive/10">
-        <Icon as={AlertTriangle} className="size-8 text-destructive" />
-      </View>
-      <View className="items-center gap-1">
-        <Text className="text-center text-base font-semibold text-foreground" numberOfLines={2}>
-          {copy.title}
-        </Text>
-        <Text className="text-center text-sm text-muted-foreground" numberOfLines={3}>
-          {copy.description}
-        </Text>
-      </View>
+      <Illustration name="error" className="mb-6" />
+      <Text className="text-center font-heading text-headline font-semibold text-foreground" numberOfLines={2}>
+        {copy.title}
+      </Text>
+      <Text className="mt-2 text-center text-body text-muted-foreground" numberOfLines={3}>
+        {copy.description}
+      </Text>
       {copy.retryable && onRetry && (
-        <Button variant="outline" size="pill" onPress={onRetry}>
+        <Button variant="secondary" size="pill" className="mt-7 self-stretch" onPress={onRetry}>
           <Text>{t("retry")}</Text>
         </Button>
       )}

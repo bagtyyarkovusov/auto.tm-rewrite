@@ -74,6 +74,32 @@ export const ListingSummarySchema = z.object({
 });
 export type ListingSummary = z.infer<typeof ListingSummarySchema>;
 
+// ── Feed item (ListingSummary + what the Results card needs) ──
+
+/**
+ * A public feed item (`GET /api/v1/listings`, Home and Results). The added
+ * fields are optional so a client tolerates an older API that sends none.
+ * The contact phone is never in a feed item: a caller reads it from Listing
+ * detail.
+ */
+export const FeedListingSummarySchema = ListingSummarySchema.extend({
+  /**
+   * Keys of the first eight photos by `sortOrder` for the Results photo strip;
+   * empty when the Listing has no photos. Absent from older APIs, so a client
+   * falls back to `photoKeys`.
+   */
+  galleryKeys: z.array(z.string()).max(8).optional(),
+  /** Whether the seller takes calls and chat messages. */
+  allowCalls: z.boolean().optional(),
+  allowChat: z.boolean().optional(),
+  /**
+   * What the card needs to name the seller: compose it with
+   * `formatDisplayName`; a `deleted` seller has no name. No avatar fields.
+   */
+  seller: PublicIdentitySchema.pick({ displayName: true, nameNumber: true, deleted: true }).optional(),
+});
+export type FeedListingSummary = z.infer<typeof FeedListingSummarySchema>;
+
 // ── Favorites item (ListingSummary + contact preferences) ──
 
 export const FavoriteListingSummarySchema = ListingSummarySchema.extend({
@@ -443,7 +469,7 @@ export const FeedQuerySchema = refineListingFilter(
 export type FeedQuery = z.infer<typeof FeedQuerySchema>;
 
 export const FeedResponseSchema = z.object({
-  items: z.array(ListingSummarySchema),
+  items: z.array(FeedListingSummarySchema),
   nextCursor: z.string().nullable(),
 });
 export type FeedResponse = z.infer<typeof FeedResponseSchema>;

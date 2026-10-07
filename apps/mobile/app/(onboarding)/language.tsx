@@ -16,10 +16,10 @@ export default function LanguagePickerScreen() {
     <SafeScreen className="px-6 py-8">
       <View className="flex-1 justify-center gap-8">
         <View className="gap-3">
-          <Text className="text-3xl font-heading text-foreground">
+          <Text className="text-title font-heading text-foreground">
             {t("chooseLanguage")}
           </Text>
-          <Text className="text-base text-muted-foreground">
+          <Text className="text-body text-muted-foreground">
             {t("languageSubtitle")}
           </Text>
         </View>

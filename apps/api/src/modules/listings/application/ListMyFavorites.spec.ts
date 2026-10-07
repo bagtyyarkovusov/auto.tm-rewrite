@@ -151,6 +151,7 @@ describe("ListMyFavorites", () => {
       cityId: "city-1",
       publishedAt: new Date("2026-05-01T00:00:00Z"),
       photoKeys: [],
+      galleryKeys: [],
       photoCount: 0,
       allowCalls: true,
       allowChat: true,

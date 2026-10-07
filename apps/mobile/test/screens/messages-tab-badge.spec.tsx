@@ -96,7 +96,7 @@ describe("Messages tab unread badge", () => {
 
   it("labels the count in Russian and Turkmen", async () => {
     expect((await renderBar(3, { locale: "ru" })).getByRole("tab", { name: "Сообщения, непрочитанных: 3" })).toBeTruthy();
-    expect((await renderBar(3, { locale: "tk" })).getByRole("tab", { name: "Habarlar, okalmadyk: 3" })).toBeTruthy();
+    expect((await renderBar(3, { locale: "tk" })).getByRole("tab", { name: "Çat, okalmadyk: 3" })).toBeTruthy();
   });
 
   it("leaves the other tabs unchanged", async () => {

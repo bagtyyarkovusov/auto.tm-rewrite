@@ -96,3 +96,7 @@ Small, pill-shaped label that communicates status, count, or category. Visual em
 - ❌ Multiple badges on the same item (max 2 — primary + secondary)
 - ❌ Badges that are clickable (they look static; use a Button instead)
 - ❌ Badges in colors that conflict with their semantic meaning (e.g., red badge for "Sold")
+
+## Mobile rendering
+
+A mobile badge is a full-radius pill with 10 dp horizontal and 4 dp vertical padding and `caption` medium text. The default variant is the tonal fill. A badge that sits on a photo uses the media scrim (black at 45%) with white text, never a literal colour.

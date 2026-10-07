@@ -14,6 +14,6 @@ describe("ListingCard seller signal", () => {
 
   it("keeps the sold badge compact so it does not shift price/title hierarchy", () => {
     expect(source).toContain("px-2 py-0.5");
-    expect(source).toContain("text-xs");
+    expect(source).toContain("text-caption");
   });
 });

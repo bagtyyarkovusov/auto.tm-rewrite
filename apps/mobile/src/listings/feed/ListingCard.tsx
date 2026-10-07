@@ -1,14 +1,14 @@
-import { Pressable, View } from "react-native";
-import { Image } from "expo-image";
+import { View } from "react-native";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { formatPrice } from "../formatPrice";
 
+import { ListingPhoto } from "./ListingPhoto";
+
 import { Badge } from "@/components/ui/badge";
+import { PressableScale } from "@/components/ui/pressable-scale";
 import { Text } from "@/components/ui/text";
 
 type ListingSummary = ListingsSchemas.ListingSummary;
@@ -21,6 +21,12 @@ interface ListingCardProps {
   cityName?: string;
 }
 
+/**
+ * The row card: the same raised object as the grid and large cards, laid on
+ * its side. A 3:2 thumbnail sits inside the card's padding, so its 16 dp
+ * corners are concentric with the card's 24 dp; beside it the price is the
+ * loudest line, the title a step quieter and the city quietest.
+ */
 export function ListingCard({
   listing,
   onPress,
@@ -29,13 +35,6 @@ export function ListingCard({
   cityName,
 }: ListingCardProps) {
   const { t, i18n } = useTranslation();
-  const imageUrl = listing.coverMediaKey
-    ? buildVariantUrl(listing.coverMediaKey, "list")
-    : null;
-  const fallbackImageUrl = listing.coverMediaKey
-    ? buildOriginalUrl(listing.coverMediaKey)
-    : null;
-  const [useOriginalImage, setUseOriginalImage] = useState(false);
 
   const titleParts = [
     listing.year ? String(listing.year) : null,
@@ -44,51 +43,36 @@ export function ListingCard({
   ].filter(Boolean);
 
   return (
-    <Pressable
-      className="active:opacity-90"
+    <PressableScale
+      feedback="surface"
+      className="mx-4 flex-row gap-3 rounded-2xl bg-card p-2"
       onPress={() => onPress(listing.id)}
     >
-      <View className="flex-row gap-3 px-4 py-3">
-        {/* Cover image */}
-        <View className="h-[100px] w-[140px] shrink-0 overflow-hidden rounded-lg bg-muted">
-          {imageUrl ? (
-            <Image
-              source={{ uri: useOriginalImage && fallbackImageUrl ? fallbackImageUrl : imageUrl }}
-              className="h-[100px] w-[140px]"
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              onError={() => setUseOriginalImage(true)}
-            />
-          ) : (
-            <View className="h-full w-full items-center justify-center">
-              <Text className="text-xs text-muted-foreground">{t("noPhoto")}</Text>
-            </View>
-          )}
+      <View className="aspect-photo w-32 shrink-0 overflow-hidden rounded-lg bg-secondary">
+        <ListingPhoto mediaKey={listing.coverMediaKey} emptyLabel={t("noPhoto")} compact />
+      </View>
+
+      <View className="min-w-0 flex-1 justify-between py-1 pr-2">
+        <View className="gap-0.5">
+          <Text className="font-heading text-subhead font-bold text-foreground" numberOfLines={1}>
+            {formatPrice(listing.displayPriceTmt, i18n.language)}
+          </Text>
+          <Text className="text-callout font-medium text-foreground" numberOfLines={2}>
+            {titleParts.join(" ")}
+          </Text>
         </View>
 
-        {/* Text content */}
-        <View className="min-w-0 flex-1 justify-between py-0.5">
-          <View className="gap-1">
-            <Text className="text-base font-semibold text-foreground leading-5" numberOfLines={2}>
-              {titleParts.join(" ")}
-            </Text>
-            <Text className="text-lg font-heading text-primary" numberOfLines={1}>
-              {formatPrice(listing.displayPriceTmt, i18n.language)}
-            </Text>
-          </View>
-
-          <View className="flex-row flex-wrap items-center gap-2">
-            {listing.status === Enums.ListingStatus.Sold && (
-              <Badge variant="secondary" className="shrink-0 px-2 py-0.5">
-                <Text className="text-xs text-secondary-foreground">{t("sold")}</Text>
-              </Badge>
-            )}
-            <Text className="min-w-0 flex-1 text-xs text-muted-foreground" numberOfLines={1}>
-              {cityName ?? t("loading")}
-            </Text>
-          </View>
+        <View className="flex-row flex-wrap items-center gap-2">
+          {listing.status === Enums.ListingStatus.Sold && (
+            <Badge variant="secondary" className="shrink-0 px-2 py-0.5">
+              <Text className="text-caption text-secondary-foreground">{t("sold")}</Text>
+            </Badge>
+          )}
+          <Text className="min-w-0 flex-1 text-footnote text-muted-foreground" numberOfLines={1}>
+            {cityName ?? t("loading")}
+          </Text>
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }

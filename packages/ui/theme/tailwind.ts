@@ -1,4 +1,18 @@
-import { palette, radius, spacing } from "../tokens";
+import {
+  mobileAspect,
+  mobileControl,
+  mobileDuration,
+  mobileElevation,
+  mobileFontFaces,
+  mobileGlassOpacity,
+  mobileMediaOpacity,
+  mobilePressScale,
+  mobileRadius,
+  mobileType,
+  palette,
+  radius,
+  spacing,
+} from "../tokens";
 
 export const tailwindTheme = {
   colors: {
@@ -24,5 +38,63 @@ export const tailwindTheme = {
       k,
       typeof v === "number" ? `${v}px` : v,
     ]),
+  ),
+} as const;
+
+/**
+ * Mobile-only additions (issue #695): rounder radii, named type roles, one
+ * font family per bundled face, control heights and elevation.
+ * `apps/mobile/tailwind.config.js` layers these over `tailwindTheme`; web and
+ * admin do not read them.
+ */
+export const mobileTailwindTheme = {
+  borderRadius: {
+    ...Object.fromEntries(
+      Object.entries(mobileRadius).map(([k, v]) => [k, `${v}px`]),
+    ),
+    DEFAULT: `${mobileRadius.sm}px`,
+  },
+  fontSize: Object.fromEntries(
+    Object.entries(mobileType).map(([k, [size, lineHeight, letterSpacing]]) => [
+      k,
+      [
+        `${size}px`,
+        { lineHeight: `${lineHeight}px`, letterSpacing: `${letterSpacing}px` },
+      ],
+    ]),
+  ),
+  fontFamily: {
+    sans: [mobileFontFaces.sans.regular],
+    "sans-light": [mobileFontFaces.sans.light],
+    "sans-medium": [mobileFontFaces.sans.medium],
+    "sans-semibold": [mobileFontFaces.sans.semibold],
+    "sans-bold": [mobileFontFaces.sans.bold],
+    heading: [mobileFontFaces.heading.medium],
+    "heading-semibold": [mobileFontFaces.heading.semibold],
+    "heading-bold": [mobileFontFaces.heading.bold],
+    mono: [mobileFontFaces.mono.regular, "Menlo", "monospace"],
+    "mono-medium": [mobileFontFaces.mono.medium, "Menlo", "monospace"],
+  },
+  boxShadow: { ...mobileElevation },
+  // `bg-glass/glass`: the glass tone where no blur is drawn behind it.
+  // `bg-glass/glass-tint`: the tone inside the system glass.
+  opacity: {
+    glass: String(mobileGlassOpacity.fallback),
+    "glass-tint": String(mobileGlassOpacity.tint),
+    // `bg-media-scrim/on-photo`: the scrim behind a control on a photo.
+    "on-photo": String(mobileMediaOpacity["on-photo"]),
+  },
+  // `aspect-photo`, `aspect-photo-wide`.
+  aspectRatio: { ...mobileAspect },
+  // `active:scale-press-control`, `active:scale-press-surface`.
+  scale: Object.fromEntries(
+    Object.entries(mobilePressScale).map(([k, v]) => [`press-${k}`, String(v)]),
+  ),
+  // `duration-press`, `duration-fast`, `duration-base`, `duration-slow`.
+  transitionDuration: Object.fromEntries(
+    Object.entries(mobileDuration).map(([k, v]) => [k, `${v}ms`]),
+  ),
+  height: Object.fromEntries(
+    Object.entries(mobileControl).map(([k, v]) => [`control-${k}`, `${v}px`]),
   ),
 } as const;

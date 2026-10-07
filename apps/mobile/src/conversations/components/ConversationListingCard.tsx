@@ -58,7 +58,7 @@ export function ConversationListingCard(props: ConversationListingCardProps) {
     return (
       <View className="flex-row items-center gap-3 px-4 py-2.5 border-b border-border">
         <View className="h-14 w-14 rounded-lg bg-muted" />
-        <Text className="flex-1 text-sm text-muted-foreground">
+        <Text className="flex-1 text-callout text-muted-foreground">
           {tConv("listingUnavailable")}
         </Text>
       </View>
@@ -101,17 +101,17 @@ export function ConversationListingCard(props: ConversationListingCardProps) {
           />
         ) : (
           <View className="w-full h-full items-center justify-center">
-            <Text className="text-xs text-muted-foreground">{t("noImage")}</Text>
+            <Text className="text-caption text-muted-foreground">{t("noImage")}</Text>
           </View>
         )}
       </View>
 
       <View className="flex-1 gap-0.5">
-        <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
+        <Text className="text-callout font-semibold text-foreground" numberOfLines={1}>
           {title}
         </Text>
         <Text
-          className={`text-sm ${closedKey ? "text-muted-foreground" : "text-foreground"}`}
+          className={`text-callout ${closedKey ? "text-muted-foreground" : "text-foreground"}`}
         >
           {priceText}
         </Text>
@@ -121,7 +121,7 @@ export function ConversationListingCard(props: ConversationListingCardProps) {
           </Badge>
         ) : (
           listing.status !== Enums.ListingStatus.Active && (
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-caption text-muted-foreground">
               {listingStatusLabel(listing.status, t)}
             </Text>
           )

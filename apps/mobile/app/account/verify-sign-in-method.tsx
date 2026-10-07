@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import { useEffect, useMemo, useRef } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { CodeEntryForm } from "../../components/auth/CodeEntryForm";
@@ -15,8 +14,7 @@ import { HELP_HREF } from "../../src/navigation/helpHref";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -113,17 +111,9 @@ export default function VerifySignInMethodScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <View className="px-4 pb-3 flex-row items-center">
-          <Button
-            accessibilityLabel={t("common:back")}
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
-            onPress={goBack}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-        </View>
+        <StackHeader
+          leading={<BackButton accessibilityLabel={t("common:back")} onPress={goBack} />}
+        />
 
         <ScrollView
           className="flex-1"

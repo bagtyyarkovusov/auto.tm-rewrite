@@ -5,7 +5,6 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { MessageSquare } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useConversations } from "../../api/conversations/useConversations";
@@ -16,7 +15,7 @@ import { useConversationCatalogMaps } from "./useConversationCatalogMaps";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { EmptyState as EmptyStateView } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 
@@ -40,16 +39,11 @@ function EmptyState() {
   const { t } = useTranslation();
   const router = useRouter();
   return (
-    <View className="flex-1 items-center justify-center gap-4 px-6 py-12">
-      <View className="size-16 items-center justify-center rounded-full bg-muted">
-        <Icon as={MessageSquare} className="size-8 text-muted-foreground" />
-      </View>
-      <Text className="text-center text-lg font-semibold text-foreground">{t("noConversationsYet")}</Text>
-      <Text className="text-center text-sm text-muted-foreground">{t("startByMessaging")}</Text>
+    <EmptyStateView illustration="messages" title={t("noConversationsYet")} hint={t("startByMessaging")}>
       <Button variant="secondary" size="pill" onPress={() => router.navigate(HOME_HREF)}>
         <Text>{t("browseListings")}</Text>
       </Button>
-    </View>
+    </EmptyStateView>
   );
 }
 
