@@ -189,7 +189,7 @@ export default function OtpScreen() {
           <View className="flex-1 px-4">
             <StackHeader
               className="px-0"
-              leading={<BackButton accessibilityLabel={t("back")} onPress={cancelAuth} />}
+              leading={<BackButton accessibilityLabel={t("common:back")} onPress={cancelAuth} />}
               trailing={<LocaleSwitcher />}
             />
 
