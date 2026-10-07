@@ -38,7 +38,7 @@ describe("useProfilePhotoUpload", () => {
   it("contains a native permission request failure instead of rejecting a press handler", async () => {
     photoDevice.permission.mockRejectedValueOnce(new Error("Camera unavailable"));
     const { result } = setupPhotoHook(useProfilePhotoUpload);
-    await expect(act(() => result.current.pick("camera"))).resolves.toBeUndefined();
+    await act(async () => { await result.current.pick("camera"); });
     expect(result.current.state.status).toBe("failed");
   });
 });
