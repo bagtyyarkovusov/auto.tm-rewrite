@@ -54,6 +54,8 @@ class FakeListingRepository implements ListingRepository {
 }
 
 class FakePrisma {
+  photoCount = 3;
+  listingMedia = { count: async () => this.photoCount };
   auditLogs: Array<{
     actorId: string;
     action: string;
@@ -130,6 +132,15 @@ describe("RepublishListing", () => {
     prisma = new FakePrisma();
     contactPhones = new InMemoryContactPhones();
     clock = { now: () => new Date() };
+  });
+
+  it("refuses two photos without changing the stored Listing", async () => {
+    seedListing(repo, "archived");
+    prisma.photoCount = 2;
+    const error = await makeUseCase(repo, prisma).execute({ listingId: "listing-1", userId: "user-1" }).catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({ code: "PHOTO_MINIMUM_REQUIRED", details: { minimum: 3 } });
+    expect(repo.priceTmtWrites).toEqual([]);
   });
 
   describe("stored contact phone (ADR-0081)", () => {

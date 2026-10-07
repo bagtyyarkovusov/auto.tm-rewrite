@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 
 import { Listing } from "../domain/Listing";
 import { ListingMedia } from "../domain/ListingMedia";
@@ -159,6 +159,18 @@ describe("RemoveMedia", () => {
     repo = new FakeListingRepository();
     mediaRepo = new FakeListingMediaRepository();
     storage = new FakeMediaStorage();
+  });
+
+  it("keeps all three photos when removal would leave a published Listing with two", async () => {
+    seedActiveListing(repo);
+    for (let i = 0; i < 3; i++) mediaRepo.media.push(ListingMedia.create({
+      id: `floor-${i}`, listingId: "listing-1", kind: "image", key: `floor-${i}.jpg`, sortOrder: i,
+    }));
+    await expect(makeUseCase(repo, mediaRepo, storage).execute({
+      listingId: "listing-1", mediaId: "floor-0", userId: "user-1",
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(mediaRepo.media).toHaveLength(3);
+    expect(storage.deletedKeys).toEqual([]);
   });
 
   it("deletes media row and all variant MinIO objects", async () => {
