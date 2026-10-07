@@ -243,6 +243,19 @@ export async function cleanSuiteFixtures(
   // Cascades listing_media + conversations (+participants/messages).
   await prisma.listing.deleteMany({ where: { seller: userScope } });
   // Uploads go after the listings: a listing_media row references its upload.
+  // A Profile Photo references its upload too, and deletion work has no
+  // foreign key, so both are cleared by hand first.
+  await prisma.user.updateMany({
+    where: userScope,
+    data: { avatarUploadId: null, avatarKey: null },
+  });
+  const uploads = await prisma.mediaUpload.findMany({
+    where: { user: userScope },
+    select: { id: true },
+  });
+  await prisma.mediaUploadCleanup.deleteMany({
+    where: { uploadId: { in: uploads.map((upload) => upload.id) } },
+  });
   await prisma.mediaUpload.deleteMany({ where: { user: userScope } });
   await prisma.listingDraft.deleteMany({ where: { user: userScope } });
   if (options.exchangeRatePairs) {

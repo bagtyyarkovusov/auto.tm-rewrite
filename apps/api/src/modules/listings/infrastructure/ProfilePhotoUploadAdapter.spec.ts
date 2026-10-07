@@ -242,15 +242,22 @@ describe("ProfilePhotoUploadAdapter", () => {
       expect(world.cleanups).toEqual([]);
     });
 
-    it("answers two concurrent requests for one key with one photo and no retirement", async () => {
+    it("prepares one key once when two requests for it overlap, and refuses the second", async () => {
       const uploadId = presignedUpload(KEY);
 
-      const results = await Promise.all([
+      const [first, second] = await Promise.allSettled([
         photos.adopt({ userId: "user-1", key: KEY }),
         photos.adopt({ userId: "user-1", key: KEY }),
       ]);
 
-      expect(results).toEqual([{ key: KEY }, { key: KEY }]);
+      // Two generators writing the same objects would fail each other's
+      // conditional writes, and the failure would retire the upload.
+      expect(first).toEqual({ status: "fulfilled", value: { key: KEY } });
+      expect(second).toMatchObject({
+        status: "rejected",
+        reason: { status: 409, response: { code: "UPLOAD_ALREADY_ATTACHED" } },
+      });
+      expect(generator.calls).toHaveLength(1);
       expect(world.profilePhotos.get("user-1")).toEqual({ uploadId, key: KEY });
       expect(world.cleanups).toEqual([]);
     });
@@ -324,24 +331,19 @@ describe("ProfilePhotoUploadAdapter", () => {
       expect(world.cleanups).toEqual([uploadId]);
     });
 
-    it("does not retire a claim another attempt of the same request is still preparing", async () => {
+    it("does not retire a claim another request for the same key is still preparing", async () => {
       const uploadId = presignedUpload(KEY);
-      let attempts = 0;
-      let joinedOutcome: Promise<unknown> | undefined;
+      let overlapping: unknown;
       generator.during = async () => {
-        attempts += 1;
-        if (attempts === 1) {
-          // The retry joins the first attempt's claim, fails, and must leave it alone.
-          joinedOutcome = photos.adopt({ userId: "user-1", key: KEY }).catch((err: unknown) => err);
-          await joinedOutcome;
-          return;
-        }
-        throw new Error("Sharp failed in the joined attempt");
+        // A second request arrives, once, while the first one is generating.
+        generator.during = undefined;
+        overlapping = await photos.adopt({ userId: "user-1", key: KEY }).catch((err: unknown) => err);
       };
 
       await expect(photos.adopt({ userId: "user-1", key: KEY })).resolves.toEqual({ key: KEY });
 
-      expect(await joinedOutcome).toMatchObject({ message: "Sharp failed in the joined attempt" });
+      expect(overlapping).toMatchObject({ status: 409, response: { code: "UPLOAD_ALREADY_ATTACHED" } });
+      expect(generator.calls).toHaveLength(1);
       expect(world.profilePhotos.get("user-1")).toEqual({ uploadId, key: KEY });
       expect(world.cleanups).toEqual([]);
     });
