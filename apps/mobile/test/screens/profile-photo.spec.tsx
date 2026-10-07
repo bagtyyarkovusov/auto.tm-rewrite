@@ -7,7 +7,7 @@ import { AuthSchemas } from "@auto-tm/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProfileScreen from "../../app/profile";
-import { storeAuthSession } from "../../src/auth/session";
+import { clearAuthSession, storeAuthSession } from "../../src/auth/session";
 import { server } from "../msw";
 import { choosePhoto, photoDevice as picker, resetPhotoDevice } from "../profile-photo-device";
 import CabinetScreen from "../../app/(tabs)/services";
@@ -332,6 +332,58 @@ describe("Profile photo", () => {
     expect(view.queryByRole("button", { name: "Retry" })).toBeNull();
     expect(view.getByRole("button", { name: "Cancel" })).toBeTruthy();
     expect(view.UNSAFE_queryAllByType("Image" as never)[0]?.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/pending/old/thumbnail.jpg" });
+  });
+
+  it("finishes after leaving Profile and shows the result on return", async () => {
+    choosePhoto();
+    server.use(http.get("*/me/listings/counts", () => HttpResponse.json({ active: 0, sold: 0, archived: 0, banned: 0, drafts: 0, total: 0 })));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    view.rerender(<ToastProvider><CabinetScreen /></ToastProvider>);
+    await view.findByText("Cabinet");
+    await act(async () => { picker.finish(); });
+    await vi.waitFor(() => expect(requests.sets).toHaveLength(1));
+    view.rerender(<ToastProvider><ProfileScreen /></ToastProvider>);
+    expect(await view.findByText("Photo updated")).toBeTruthy();
+    expect(view.UNSAFE_queryAllByType("Image" as never)[0]?.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/pending/new1/thumbnail.jpg" });
+  });
+
+  it.each(["storage", "attachment"])("never attaches or caches the previous User's photo when signing out during %s", async (phase) => {
+    choosePhoto();
+    let complete: ((response: Response) => void) | undefined;
+    const sentTo: string[] = [];
+    server.use(http.put("*/me/photo", ({ request }) => {
+      sentTo.push(request.headers.get("authorization") ?? "");
+      if (phase === "attachment") return new Promise<Response>((resolve) => { complete = resolve; });
+      return HttpResponse.json({ ...me, avatarKey: "pending/new1/original.jpg" });
+    }));
+    const content = <ToastProvider><ProfileScreen /></ToastProvider>;
+    const view = renderMobile(content);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    if (phase === "attachment") {
+      await act(async () => { picker.finish(); });
+      await vi.waitFor(() => expect(complete).toBeDefined());
+    }
+    // Log out clears the QueryClient in the root session flow.
+    await act(async () => { await clearAuthSession(); view.queryClient.clear(); });
+    currentMe = { ...me, id: "00000000-0000-4000-8000-00000000000b", displayName: "Merdan", avatarIndex: 2 };
+    await act(async () => { await storeAuthSession({ accessToken: "merdan", refreshToken: "refresh-merdan", user: { id: currentMe.id, phone: me.phone, email: null, displayName: "Merdan", role: "buyer" } }); });
+    await view.findByText("Merdan");
+    await act(async () => {
+      if (phase === "attachment") complete?.(HttpResponse.json({ ...me, avatarKey: "pending/new1/original.jpg" }));
+      else picker.finish();
+    });
+    await vi.waitFor(() => expect(view.queryByText("Uploading photo... 0%")).toBeNull());
+    expect(sentTo).toEqual(phase === "attachment" ? ["Bearer aman"] : []);
+    expect(view.getByText("Merdan")).toBeTruthy();
+    expect(view.queryByText("Photo updated")).toBeNull();
+    expect(view.UNSAFE_queryAllByType("Image" as never)).toHaveLength(0);
   });
 
 });
