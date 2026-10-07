@@ -187,6 +187,79 @@ describe("AttachMedia", () => {
       expect(world.media).toHaveLength(0);
     });
 
+    it("a joined retry that fails generation does not abandon the creator's in-flight claim", async () => {
+      let calls = 0;
+      let releaseCreator!: () => void;
+      let creatorInside!: () => void;
+      let joinerInside!: () => void;
+      const gate = new Promise<void>((done) => { releaseCreator = done; });
+      const creatorSignal = new Promise<void>((done) => { creatorInside = done; });
+      const joinerSignal = new Promise<void>((done) => { joinerInside = done; });
+      variantGen.generate = async (originalKey: string) => {
+        calls += 1;
+        if (calls === 1) {
+          creatorInside();
+          await gate;
+          return {
+            variants: {
+              thumbnail: `${originalKey}/thumbnail.jpg`,
+              list: `${originalKey}/list.jpg`,
+              detail: `${originalKey}/detail.jpg`,
+              fullscreen: `${originalKey}/fullscreen.jpg`,
+            },
+          };
+        }
+        joinerInside();
+        throw new Error("Sharp failed");
+      };
+
+      const creator = uc.execute(input);
+      await creatorSignal;
+      const joiner = uc.execute(input);
+      await joinerSignal;
+
+      await expect(joiner).rejects.toThrow("Sharp failed");
+      // Only the attempt that created the token may abandon it: the creator is
+      // still preparing, so the shared claim stays in flight and no retirement
+      // work is recorded for it.
+      expect(world.stateOfKey(key)).toBe("PREPARING");
+      expect(world.cleanups).toEqual([]);
+
+      releaseCreator();
+      await expect(creator).resolves.toMatchObject({ media: { uploadId: `upload-${key}` } });
+      expect(world.stateOfKey(key)).toBe("ADOPTED");
+      expect(world.media).toHaveLength(1);
+      expect(world.cleanups).toEqual([]);
+    });
+
+    it("the creator's own failure still abandons the shared claim", async () => {
+      let calls = 0;
+      let release!: () => void;
+      let creatorInside!: () => void;
+      let joinerInside!: () => void;
+      const gate = new Promise<void>((done) => { release = done; });
+      const creatorSignal = new Promise<void>((done) => { creatorInside = done; });
+      const joinerSignal = new Promise<void>((done) => { joinerInside = done; });
+      variantGen.generate = async () => {
+        calls += 1;
+        if (calls === 1) creatorInside();
+        else joinerInside();
+        await gate;
+        throw new Error("Sharp failed");
+      };
+
+      const creator = uc.execute(input);
+      await creatorSignal;
+      const joiner = uc.execute(input);
+      await joinerSignal;
+      release();
+
+      await expect(creator).rejects.toThrow("Sharp failed");
+      await expect(joiner).rejects.toThrow("Sharp failed");
+      expect(world.stateOfKey(key)).toBe("RETIRED");
+      expect(world.cleanups).toEqual([`upload-${key}`]);
+    });
+
     it("writes no media row when the reservation was retired during generation", async () => {
       variantGen.during = async () => {
         // What the storage scanner does to a stranded preparation.
