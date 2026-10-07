@@ -670,6 +670,8 @@ export const resources: Resource = {
       signInToManageDescription: "Войдите, чтобы управлять объявлениями и черновиками.",
     },
     account: {
+      uploading: "Загрузка фото... {{p}}%",
+      photoSaved: "Фото обновлено",
       permT: "Нет доступа к камере",
       permD: "Чтобы сделать фото, разрешите AutoTM доступ к камере в настройках системы.",
       openSettings: "Открыть настройки",
@@ -1480,6 +1482,8 @@ export const resources: Resource = {
       signInToManageDescription: "Bildirişleri we garalamalary dolandyrmak üçin giriň.",
     },
     account: {
+      uploading: "Surat ýüklenýär... {{p}}%",
+      photoSaved: "Surat täzelendi",
       permT: "Kamera rugsady ýok",
       permD: "Surata almak üçin ulgam sazlamalarynda AutoTM-e kamera rugsadyny beriň.",
       openSettings: "Sazlamalary aç",
@@ -2288,6 +2292,8 @@ export const resources: Resource = {
       signInToManageDescription: "Sign in to manage your listings and drafts.",
     },
     account: {
+      uploading: "Uploading photo... {{p}}%",
+      photoSaved: "Photo updated",
       permT: "Camera access is off",
       permD: "To take a photo, allow camera access for AutoTM in system settings.",
       openSettings: "Open settings",

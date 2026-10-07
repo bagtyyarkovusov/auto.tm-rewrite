@@ -1,5 +1,6 @@
 import * as Linking from "expo-linking";
 import { http, HttpResponse } from "msw";
+import { AuthSchemas } from "@auto-tm/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ProfileScreen from "../../app/profile";
@@ -40,12 +41,14 @@ const me = {
   phoneVerified: true, displayName: "Aman", nameNumber: 4821, avatarIndex: 7,
   avatarKey: null, avatarUrl: null, role: "buyer", locale: "ru",
   createdAt: "2026-01-15T00:00:00.000Z", deletionScheduledAt: null,
-};
+} satisfies AuthSchemas.MeResponse;
+let currentMe: AuthSchemas.MeResponse = me;
 
 beforeEach(async () => {
   storage.clear();
   resetPhotoDevice();
-  server.use(http.get("*/me", () => HttpResponse.json(me)));
+  currentMe = me;
+  server.use(http.get("*/me", () => HttpResponse.json(currentMe)));
   await storeAuthSession({
     accessToken: "aman", refreshToken: "refresh-aman",
     user: { id: me.id, phone: me.phone, email: null, displayName: me.displayName, role: "buyer" },
@@ -102,7 +105,8 @@ describe("Profile photo", () => {
       }),
       http.put("*/me/photo", async ({ request }) => {
         attached = await request.json();
-        return HttpResponse.json({ ...me, avatarKey: "pending/new/original.jpg" });
+        currentMe = { ...me, avatarKey: "pending/new/original.jpg" };
+        return HttpResponse.json(currentMe);
       }),
       http.get("*/me/listings/counts", () => HttpResponse.json({ active: 0, sold: 0, archived: 0, banned: 0, drafts: 0, total: 0 })),
     );

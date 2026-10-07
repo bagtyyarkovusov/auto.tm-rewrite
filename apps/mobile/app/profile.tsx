@@ -1,3 +1,5 @@
+import { Image } from "expo-image";
+import Svg, { Circle } from "react-native-svg";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import * as Linking from "expo-linking";
@@ -162,8 +164,8 @@ function ProfileNoticeLine() {
           className="text-footnote text-muted-foreground"
           numberOfLines={1}
         >
-          {notice.kind === "nameSaved"
-            ? t("nameSaved")
+          {notice.kind === "nameSaved" || notice.kind === "photoSaved"
+            ? t(notice.kind)
             : t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })}
         </Text>
       ) : null}
@@ -265,18 +267,30 @@ function SignedInProfile() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t("changePhoto")}
+          disabled={photo.state.status === "uploading"}
+          accessibilityState={{ disabled: photo.state.status === "uploading" }}
           className="relative active:opacity-70"
           onPress={() => setPhotoSheetOpen(true)}
         >
-        <UserAvatar
+        {photo.state.status === "uploading" ? (
+          <View className="items-center justify-center overflow-hidden rounded-full" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}>
+            <Image source={{ uri: photo.state.uri }} contentFit="cover" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }} />
+            <View className="absolute inset-0 items-center justify-center bg-scrim/50">
+              <Svg width={44} height={44} viewBox="0 0 36 36" accessible={false}>
+                <Circle cx={18} cy={18} r={15} fill="none" stroke="white" opacity={0.35} strokeWidth={3} />
+                <Circle cx={18} cy={18} r={15} fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeDasharray={`${94.25 * photo.state.percent / 100} 94.25`} rotation={-90} origin="18, 18" />
+              </Svg>
+            </View>
+          </View>
+        ) : <UserAvatar
           size={AVATAR_SIZE}
           avatarIndex={data.avatarIndex}
           avatarKey={data.avatarKey}
           avatarUrl={data.avatarUrl}
-        />
-          <View className="absolute bottom-0 right-0 items-center justify-center rounded-full border-2 border-background bg-muted p-1">
+        />}
+          {photo.state.status !== "uploading" ? <View className="absolute bottom-0 right-0 items-center justify-center rounded-full border-2 border-background bg-muted p-1">
             <Icon as={Camera} className="size-4 text-foreground" />
-          </View>
+          </View> : null}
         </Pressable>
         <Pressable
           accessibilityLabel={t("editName")}
@@ -294,6 +308,13 @@ function SignedInProfile() {
           <Icon as={Pencil} className="size-4 text-muted-foreground" />
         </Pressable>
       </View>
+
+      {photo.state.status === "uploading" ? <Text
+        accessibilityRole="progressbar"
+        accessibilityLiveRegion="polite"
+        accessibilityValue={{ min: 0, max: 100, now: photo.state.percent }}
+        className="px-4 pb-3 text-center text-footnote text-muted-foreground"
+      >{t("uploading", { p: photo.state.percent })}</Text> : null}
 
       <SignInMethods phone={data.phone} email={data.email} />
 
