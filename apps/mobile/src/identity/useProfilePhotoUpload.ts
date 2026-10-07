@@ -6,6 +6,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { UploadsSchemas } from "@auto-tm/contracts";
 
 import { ApiError, apiClient } from "../api/client";
+import { useRemoveProfilePhoto } from "../api/identity/useRemoveProfilePhoto";
 import { useSetProfilePhoto } from "../api/identity/useSetProfilePhoto";
 import { compressPhoto, CompressionError, type CompressionResult } from "../listings/uploadStaging/compressor";
 
@@ -14,7 +15,8 @@ import { profileNoticeStore } from "./profileNotice";
 type PhotoUploadState =
   | { status: "idle" }
   | { status: "uploading"; uri: string; percent: number }
-  | { status: "failed" | "offline" | "too_large" | "unsupported" };
+  | { status: "removing" }
+  | { status: "failed" | "offline" | "too_large" | "unsupported"; operation?: "remove" };
 let selected: { asset: ImagePicker.ImagePickerAsset; compressed?: CompressionResult } | null = null;
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -26,6 +28,7 @@ export function useProfilePhotoUpload() {
   const state = profilePhotoUploadStore((store) => store.state);
   const [cameraDenied, setCameraDenied] = useState(false);
   const setPhoto = useSetProfilePhoto();
+  const removePhoto = useRemoveProfilePhoto();
 
   async function upload() {
     const photo = selected;
@@ -73,6 +76,18 @@ export function useProfilePhotoUpload() {
     }
   }
 
+  async function remove() {
+    profilePhotoUploadStore.setState({ state: { status: "removing" } });
+    try {
+      await removePhoto.mutateAsync();
+      profilePhotoUploadStore.setState({ state: { status: "idle" } });
+      profileNoticeStore.getState().show({ kind: "photoRemoved" });
+    } catch (error) {
+      const status = !onlineManager.isOnline() || (error instanceof ApiError && error.status === 0) ? "offline" : "failed";
+      profilePhotoUploadStore.setState({ state: { status, operation: "remove" } });
+    }
+  }
+
   async function discard() {
     const uri = selected?.compressed?.uri;
     selected = null;
@@ -107,5 +122,5 @@ export function useProfilePhotoUpload() {
     }
   }
 
-  return { state, pick, retry: upload, cancel, cameraDenied, dismissCameraDenied: () => setCameraDenied(false) };
+  return { state, pick, remove, retry: () => "operation" in state && state.operation === "remove" ? remove() : upload(), cancel, cameraDenied, dismissCameraDenied: () => setCameraDenied(false) };
 }

@@ -10,7 +10,7 @@ export type ProfileNotice =
       /** The new value, masked as Profile shows it. */
       value: string;
     }
-  | { kind: "nameSaved" | "photoSaved" };
+  | { kind: "nameSaved" | "photoSaved" | "photoRemoved" };
 
 interface ProfileNoticeStore {
   notice: ProfileNotice | null;

@@ -670,6 +670,9 @@ export const resources: Resource = {
       signInToManageDescription: "Войдите, чтобы управлять объявлениями и черновиками.",
     },
     account: {
+      photoRemoved: "Фото удалено",
+      photoRmFail: "Не удалось удалить фото.",
+      photoRemoving: "Удаление фото...",
       photoFail: "Не удалось загрузить фото.",
       photoBig: "Фото слишком большое. Выберите фото до 5 МБ.",
       photoType: "Этот файл не подходит. Выберите фото в формате JPEG, PNG или WebP.",
@@ -1486,6 +1489,9 @@ export const resources: Resource = {
       signInToManageDescription: "Bildirişleri we garalamalary dolandyrmak üçin giriň.",
     },
     account: {
+      photoRemoved: "Surat aýryldy",
+      photoRmFail: "Suraty aýryp bolmady.",
+      photoRemoving: "Surat aýrylýar...",
       photoFail: "Suraty ýükläp bolmady.",
       photoBig: "Surat gaty uly. 5 MB-dan uly bolmadyk surat saýlaň.",
       photoType: "Bu faýl ýaramaýar. JPEG, PNG ýa-da WebP surat saýlaň.",
@@ -2300,6 +2306,9 @@ export const resources: Resource = {
       signInToManageDescription: "Sign in to manage your listings and drafts.",
     },
     account: {
+      photoRemoved: "Photo removed",
+      photoRmFail: "Couldn't remove the photo.",
+      photoRemoving: "Removing photo...",
       photoFail: "Couldn't upload the photo.",
       photoBig: "This photo is too large. Choose one up to 5 MB.",
       photoType: "This file can't be used. Choose a JPEG, PNG or WebP photo.",

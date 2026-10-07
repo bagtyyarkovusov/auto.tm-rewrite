@@ -165,7 +165,7 @@ function ProfileNoticeLine() {
           className="text-footnote text-muted-foreground"
           numberOfLines={1}
         >
-          {notice.kind === "nameSaved" || notice.kind === "photoSaved"
+          {notice.kind === "nameSaved" || notice.kind === "photoSaved" || notice.kind === "photoRemoved"
             ? t(notice.kind)
             : t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })}
         </Text>
@@ -268,8 +268,8 @@ function SignedInProfile() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t("changePhoto")}
-          disabled={photo.state.status === "uploading"}
-          accessibilityState={{ disabled: photo.state.status === "uploading" }}
+          disabled={photo.state.status === "uploading" || photo.state.status === "removing"}
+          accessibilityState={{ disabled: photo.state.status === "uploading" || photo.state.status === "removing" }}
           className="relative active:opacity-70"
           onPress={() => setPhotoSheetOpen(true)}
         >
@@ -317,9 +317,10 @@ function SignedInProfile() {
         className="px-4 pb-3 text-center text-footnote text-muted-foreground"
       >{t("uploading", { p: photo.state.percent })}</Text> : null}
 
-      {photo.state.status !== "idle" && photo.state.status !== "uploading" ? <View className="mx-4 mb-4 gap-2 rounded-2xl bg-destructive/10 px-4 py-3">
+      {photo.state.status === "removing" ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoRemoving")}</Text> : null}
+      {photo.state.status !== "idle" && photo.state.status !== "uploading" && photo.state.status !== "removing" ? <View className="mx-4 mb-4 gap-2 rounded-2xl bg-destructive/10 px-4 py-3">
         <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" className="text-body text-destructive">
-          {photo.state.status === "offline" ? t("common:offline") : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : "photoFail")}
+          {photo.state.status === "offline" ? t("common:offline") : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail")}
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {photo.state.status === "failed" || photo.state.status === "offline" ?
@@ -352,7 +353,7 @@ function SignedInProfile() {
         hasPhoto={Boolean(data.avatarKey)}
         onTakePhoto={() => void photo.pick("camera")}
         onChoosePhoto={() => void photo.pick("library")}
-        onRemovePhoto={() => {}}
+        onRemovePhoto={() => void photo.remove()}
       />
     </ScrollView>
   );
