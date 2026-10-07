@@ -143,3 +143,14 @@ Using `@gorhom/bottom-sheet`:
 - ❌ Modal forms with > 7 fields — use a dedicated screen
 - ❌ Auto-dismiss after timeout (user must explicitly choose)
 - ❌ Modals on top of toasts — toasts always dismiss first
+
+## Mobile rendering
+
+| Surface | Look |
+|---|---|
+| Sheet | Overlay surface, top radius 28, no border, the `overlay` shadow, a 36 by 4 dp grabber in the pressed tone, title in the `headline` role |
+| Dialog and alert dialog | Overlay surface, radius 28, 24 dp padding, the `overlay` shadow, title in the `headline` role, description in `callout` |
+| Dropdown menu | Overlay surface, radius 24, 6 dp padding; items are at least 44 dp high with radius 16 and take the pressed tone |
+| Scrim | Black at 50%, the `scrim` token |
+
+A sheet slides up in 380 ms and leaves in 250 ms; a dialog fades with its scrim. Under Reduce Motion both fade.

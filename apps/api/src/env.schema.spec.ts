@@ -228,6 +228,128 @@ describe("EnvSchema reviewer-era safety (fail-closed outside CI)", () => {
   });
 });
 
+function testerAccount(index: number): { phone: string; email: string; code: string } {
+  return {
+    phone: `+99370${String(index).padStart(6, "0")}`,
+    email: `tester${index}@example.com`,
+    code: `9${String(index).padStart(5, "0")}`.slice(-6),
+  };
+}
+
+describe("EnvSchema tester accounts (ADR-0086)", () => {
+  it("defaults to an empty tester list", () => {
+    const env = EnvSchema.parse(deployedEnv);
+
+    expect(env.TESTER_ACCOUNTS_JSON).toBe("[]");
+  });
+
+  it("accepts 0 and 30 tester entries with the reviewer flag off", () => {
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, TESTER_ACCOUNTS_JSON: "[]" }),
+    ).not.toThrow();
+
+    const thirty = JSON.stringify(
+      Array.from({ length: 30 }, (_, index) => testerAccount(index + 1)),
+    );
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, TESTER_ACCOUNTS_JSON: thirty }),
+    ).not.toThrow();
+  });
+
+  it("refuses 31 tester entries", () => {
+    const thirtyOne = JSON.stringify(
+      Array.from({ length: 31 }, (_, index) => testerAccount(index + 1)),
+    );
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, TESTER_ACCOUNTS_JSON: thirtyOne }),
+    ).toThrow(/TESTER_ACCOUNTS_JSON/);
+  });
+
+  it("refuses a bad tester phone, email, or code", () => {
+    const bad = [
+      { ...testerAccount(1), phone: "+15551234567" },
+      { ...testerAccount(1), email: "Tester1@Example.com" },
+      { ...testerAccount(1), email: "not-an-email" },
+      { ...testerAccount(1), code: "12345" },
+      { ...testerAccount(1), code: "1234567" },
+      { phone: testerAccount(1).phone, email: testerAccount(1).email },
+    ];
+    for (const entry of bad) {
+      expect(() =>
+        EnvSchema.parse({
+          ...deployedEnv,
+          TESTER_ACCOUNTS_JSON: JSON.stringify([entry]),
+        }),
+      ).toThrow(/TESTER_ACCOUNTS_JSON/);
+    }
+  });
+
+  it("refuses a duplicate phone or email within the tester list", () => {
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        TESTER_ACCOUNTS_JSON: JSON.stringify([
+          testerAccount(1),
+          { ...testerAccount(2), phone: testerAccount(1).phone },
+        ]),
+      }),
+    ).toThrow(/TESTER_ACCOUNTS_JSON/);
+
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        TESTER_ACCOUNTS_JSON: JSON.stringify([
+          testerAccount(1),
+          { ...testerAccount(2), email: testerAccount(1).email },
+        ]),
+      }),
+    ).toThrow(/TESTER_ACCOUNTS_JSON/);
+  });
+
+  it("refuses a tester phone or email that repeats a reviewer account", () => {
+    const reviewers = JSON.stringify([
+      reviewerDemoAccount(1),
+      reviewerDemoAccount(2),
+      reviewerDemoAccount(3),
+    ]);
+
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+        REVIEW_DEMO_ACCOUNTS_JSON: reviewers,
+        TESTER_ACCOUNTS_JSON: JSON.stringify([
+          { ...testerAccount(1), phone: reviewerDemoAccount(1).phone },
+        ]),
+      }),
+    ).toThrow(/TESTER_ACCOUNTS_JSON/);
+
+    expect(() =>
+      EnvSchema.parse({
+        ...deployedEnv,
+        REVIEW_DEMO_ACCOUNT_ENABLED: "true",
+        REVIEW_DEMO_ACCOUNTS_JSON: reviewers,
+        TESTER_ACCOUNTS_JSON: JSON.stringify([
+          { ...testerAccount(1), email: reviewerDemoAccount(2).email },
+        ]),
+      }),
+    ).toThrow(/TESTER_ACCOUNTS_JSON/);
+  });
+
+  it("refuses reviewer overlap while the reviewer flag is off", () => {
+    expect(() => EnvSchema.parse({ ...deployedEnv, REVIEW_DEMO_ACCOUNT_ENABLED: "false", REVIEW_DEMO_ACCOUNTS_JSON: JSON.stringify([reviewerDemoAccount(1)]), TESTER_ACCOUNTS_JSON: JSON.stringify([{ ...testerAccount(1), email: reviewerDemoAccount(1).email }]) })).toThrow(/TESTER_ACCOUNTS_JSON/);
+  });
+
+  it("refuses non-JSON and non-array tester lists", () => {
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, TESTER_ACCOUNTS_JSON: "not-json" }),
+    ).toThrow(/TESTER_ACCOUNTS_JSON/);
+    expect(() =>
+      EnvSchema.parse({ ...deployedEnv, TESTER_ACCOUNTS_JSON: "{}" }),
+    ).toThrow(/TESTER_ACCOUNTS_JSON/);
+  });
+});
+
 describe("EnvSchema deployed-environment endpoint rules", () => {
   it("accepts a coherent production configuration", () => {
     const env = EnvSchema.parse(deployedEnv);

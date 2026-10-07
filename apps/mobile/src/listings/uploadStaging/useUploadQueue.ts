@@ -50,11 +50,12 @@ const UPLOAD_TIMEOUT_MS = 60_000;
 async function uploadFileToPresignedUrl(
   uploadUrl: string,
   localUri: string,
+  headers?: Record<string, string>,
 ): Promise<void> {
   const uploadPromise = FileSystem.uploadAsync(uploadUrl, localUri, {
     httpMethod: "PUT",
     uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-    headers: {
+    headers: headers ?? {
       "Content-Type": "image/jpeg",
     },
   });
@@ -269,6 +270,7 @@ export function useUploadQueue(
           contentType: "image/jpeg",
           // A photo restored from staging has no recorded size; its file does.
           sizeBytes: photo.fileSize ?? fileInfo.size,
+          writeProtocol: "conditional-v1",
         });
 
         if (!networkAvailable.current) {
@@ -283,7 +285,7 @@ export function useUploadQueue(
         }
 
         transitionToUploading(photoId, presignResult.uploadUrl);
-        await uploadFileToPresignedUrl(presignResult.uploadUrl, photo.localUri);
+        await uploadFileToPresignedUrl(presignResult.uploadUrl, photo.localUri, presignResult.headers);
         transitionToUploaded(photoId, presignResult.key);
       } catch (err) {
         const uploadError = buildUploadError(err, t);

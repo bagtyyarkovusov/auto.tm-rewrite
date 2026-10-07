@@ -34,7 +34,7 @@ export function PriceDisplay({
     <View className="gap-2">
       <Text
         className={cn(
-          "text-3xl font-heading",
+          "text-title font-heading",
           muted ? "text-muted-foreground" : "text-primary",
         )}
         numberOfLines={1}
@@ -43,7 +43,7 @@ export function PriceDisplay({
       </Text>
 
       {showOriginal && (
-        <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+        <Text className="text-callout text-muted-foreground" numberOfLines={1}>
           {priceAmount.toLocaleString(localeTag(i18n.language))} {priceCurrency}
         </Text>
       )}
@@ -52,14 +52,14 @@ export function PriceDisplay({
         <View className="flex-row flex-wrap gap-2">
           {acceptsExchange && (
             <Badge variant="secondary" className="px-2 py-0.5">
-              <Text className="text-xs text-secondary-foreground">
+              <Text className="text-caption text-secondary-foreground">
                 {t("exchangePossible")}
               </Text>
             </Badge>
           )}
           {installmentAvailable && (
             <Badge variant="secondary" className="px-2 py-0.5">
-              <Text className="text-xs text-secondary-foreground">
+              <Text className="text-caption text-secondary-foreground">
                 {t("installmentPossible")}
               </Text>
             </Badge>

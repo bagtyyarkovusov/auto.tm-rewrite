@@ -144,10 +144,10 @@ export function SellEntry({
     return (
       <View>
         <View className="gap-1.5 px-5 pb-5 pt-6">
-          <Text className="text-[22px] font-heading font-semibold text-foreground">
+          <Text className="text-headline font-heading font-semibold text-foreground">
             {t("sellEntryTitle")}
           </Text>
-          <Text className="mb-3 text-sm text-muted-foreground">{t("sellEntryBody")}</Text>
+          <Text className="mb-3 text-callout text-muted-foreground">{t("sellEntryBody")}</Text>
           <Button variant="default" size="pill" disabled={isCreating} onPress={onCreate}>
             <Icon as={Plus} className="size-[18px] text-primary-foreground" />
             <Text>{t("listACar")}</Text>
@@ -169,7 +169,7 @@ export function SellEntry({
 
   return (
     <View>
-      <Text className="px-5 pb-1 pt-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <Text className="px-5 pb-1 pt-4 text-caption font-medium uppercase tracking-widest text-muted-foreground">
         {t("latestDraft")}
       </Text>
       <MenuRow

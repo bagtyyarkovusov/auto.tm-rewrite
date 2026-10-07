@@ -491,22 +491,25 @@ class DelayedPrismaAuditLogRepository extends PrismaAuditLogRepository {
   }
 }
 
-describe("AuthController e2e — reviewer OTP bypass audit", () => {
+describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag %s", (reviewEnabled) => {
   let app: NestFastifyApplication;
   let request: ReturnType<typeof supertest>;
   let prisma: PrismaService;
   let previousReviewEnabled: string | undefined;
   let previousReviewAccounts: string | undefined;
-  const account1 = reviewerDemoAccount(1);
+  let previousTesterAccounts: string | undefined;
+  const account1 = reviewEnabled ? reviewerDemoAccount(1) : { phone: "+99370000001", email: "tester1@example.invalid", code: "765432" };
   const account2 = reviewerDemoAccount(2);
   const account3 = reviewerDemoAccount(3);
 
   beforeAll(async () => {
     previousReviewEnabled = process.env["REVIEW_DEMO_ACCOUNT_ENABLED"];
     previousReviewAccounts = process.env["REVIEW_DEMO_ACCOUNTS_JSON"];
-    process.env["REVIEW_DEMO_ACCOUNT_ENABLED"] = "true";
+    previousTesterAccounts = process.env["TESTER_ACCOUNTS_JSON"];
+    process.env["TESTER_ACCOUNTS_JSON"] = reviewEnabled ? "[]" : JSON.stringify([account1]);
+    process.env["REVIEW_DEMO_ACCOUNT_ENABLED"] = String(reviewEnabled);
     process.env["REVIEW_DEMO_ACCOUNTS_JSON"] = JSON.stringify([
-      account1,
+      reviewerDemoAccount(1),
       account2,
       account3,
     ]);
@@ -552,6 +555,8 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
     } else {
       process.env["REVIEW_DEMO_ACCOUNTS_JSON"] = previousReviewAccounts;
     }
+    if (previousTesterAccounts === undefined) delete process.env["TESTER_ACCOUNTS_JSON"];
+    else process.env["TESTER_ACCOUNTS_JSON"] = previousTesterAccounts;
     await app?.close();
   });
 
@@ -562,7 +567,7 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
     await prisma.otpRequest.deleteMany();
   });
 
-  it("authenticates a pre-existing reviewer buyer without OTP issuance and writes a durable audit row without the code", async () => {
+  it.each(["phone", "email"] as const)("authenticates a pre-existing ordinary User by %s and persists a code-free audit row", async (channel) => {
     const user = await prisma.user.create({
       data: {
         phone: account1.phone,
@@ -573,13 +578,14 @@ describe("AuthController e2e — reviewer OTP bypass audit", () => {
       },
     });
 
+    await request.post("/api/v1/auth/otp/request").send({ [channel]: account1[channel] }).expect(201);
     const res = await request
       .post("/api/v1/auth/otp/verify")
-      .send({ phone: account1.phone, code: account1.code })
+      .send({ [channel]: account1[channel], code: account1.code })
       .expect(201);
 
     expect(res.body.user.id).toBe(user.id);
-    expect(await prisma.otpRequest.count()).toBe(0);
+    expect(await prisma.otpRequest.count()).toBe(channel === "phone" ? 0 : 1);
 
     const auditLog = await eventually(
       () =>

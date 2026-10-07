@@ -242,7 +242,7 @@ describe("WizardLayout upload chip", () => {
   it("sits in the header, with the step title and progress bar", () => {
     const screen = renderMobile(layout("Price", 4, { uploadStatus: counts, onUploadStatusPress: () => {} }));
     let node = screen.getByText("2 uploading").parent;
-    while (node && !node.props.className?.includes("border-b")) node = node.parent;
+    while (node && node.props.testID !== "wizard-header") node = node.parent;
 
     expect(node).toBeTruthy();
   });

@@ -1,6 +1,5 @@
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
-import { X } from "lucide-react-native";
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -19,8 +18,8 @@ import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 import { type SignInMethod, SignInMethodTabs } from "./SignInMethodTabs";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { THEME } from "@/lib/theme";
 
@@ -58,18 +57,17 @@ export function AuthEntryScreen({
         className="flex-1"
       >
         <View className="flex-1 px-4">
-          <View className="flex-row items-center justify-between py-4">
-            <Button
-              accessibilityLabel={t("close")}
-              className="h-11 w-11"
-              size="icon"
-              variant="ghost"
-              onPress={() => closeAuth(router)}
-            >
-              <Icon as={X} className="size-5 text-foreground" />
-            </Button>
-            <LocaleSwitcher />
-          </View>
+          <StackHeader
+            className="px-0"
+            leading={
+              <BackButton
+                kind="close"
+                accessibilityLabel={t("close")}
+                onPress={() => closeAuth(router)}
+              />
+            }
+            trailing={<LocaleSwitcher />}
+          />
 
           <View className="flex-1">
             <View className="mt-8 gap-8">
@@ -87,10 +85,10 @@ export function AuthEntryScreen({
               />
 
               <View className="gap-2">
-                <Text className="text-2xl font-semibold leading-snug text-foreground">
+                <Text className="text-headline font-semibold leading-snug text-foreground">
                   {title}
                 </Text>
-                <Text className="text-base leading-normal text-muted-foreground">
+                <Text className="text-body leading-normal text-muted-foreground">
                   {helper}
                 </Text>
               </View>
@@ -113,7 +111,7 @@ export function AuthEntryScreen({
               </Button>
             </View>
 
-            <Text className="mt-auto pb-6 text-xs leading-normal text-muted-foreground">
+            <Text className="mt-auto pb-6 text-caption leading-normal text-muted-foreground">
               {t("legalPrefix")} {" "}
               <Text
                 className="font-medium text-info-500 underline"

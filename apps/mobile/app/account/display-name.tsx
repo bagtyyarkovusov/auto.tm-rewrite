@@ -1,5 +1,4 @@
 import { router } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -26,8 +25,8 @@ import { useDisplayName } from "../../src/identity/useDisplayName";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { THEME } from "@/lib/theme";
@@ -121,26 +120,13 @@ export default function DisplayNameScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <View className="px-4 pb-3 flex-row items-center gap-2">
-          <Button
-            accessibilityLabel={t("common:back")}
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
-            onPress={goBack}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-          <Text
-            className="flex-1 text-2xl font-heading text-foreground"
-            numberOfLines={1}
-          >
-            {t("nameTitle")}
-          </Text>
-        </View>
+        <StackHeader
+          title={t("nameTitle")}
+          leading={<BackButton accessibilityLabel={t("common:back")} onPress={goBack} />}
+        />
 
         <View className="flex-1 px-4 pt-4 gap-4">
-          <Text className="text-base leading-normal text-muted-foreground">
+          <Text className="text-body leading-normal text-muted-foreground">
             {t("nameHelper")}
           </Text>
 
@@ -170,18 +156,18 @@ export default function DisplayNameScreen() {
                 <Text
                   accessibilityLiveRegion="polite"
                   accessibilityRole="alert"
-                  className="flex-1 text-[13px] leading-snug text-destructive"
+                  className="flex-1 text-footnote leading-snug text-destructive"
                 >
                   {message}
                 </Text>
               ) : (
-                <Text className="flex-1 text-[13px] leading-snug text-muted-foreground">
+                <Text className="flex-1 text-footnote leading-snug text-muted-foreground">
                   {t("nameRule")}
                 </Text>
               )}
               <Text
                 className={cn(
-                  "text-[13px] leading-snug",
+                  "text-footnote leading-snug",
                   field.count > IdentitySchemas.DISPLAY_NAME_MAX ? "text-destructive" : "text-muted-foreground",
                 )}
               >

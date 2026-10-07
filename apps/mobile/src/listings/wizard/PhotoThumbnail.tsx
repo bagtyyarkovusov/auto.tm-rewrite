@@ -115,7 +115,7 @@ export function PhotoThumbnail({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <Text className="text-[10px] font-medium text-white">{t("cover")}</Text>
+          <Text className="text-micro font-medium text-white">{t("cover")}</Text>
         </View>
       )}
 

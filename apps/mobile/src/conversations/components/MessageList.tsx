@@ -81,7 +81,7 @@ function OlderMessagesRow({
   if (failed) {
     return (
       <View className="flex-row items-center justify-center gap-2 px-4 py-2">
-        <Text className="text-xs text-muted-foreground">
+        <Text className="text-caption text-muted-foreground">
           {t("conversations:olderMessagesFailed")}
         </Text>
         {onRetry && (
@@ -92,7 +92,7 @@ function OlderMessagesRow({
             style={{ minHeight: 44, minWidth: 44 }}
             className="items-center justify-center px-2"
           >
-            <Text className="text-xs font-semibold text-primary underline">{t("retry")}</Text>
+            <Text className="text-caption font-semibold text-primary underline">{t("retry")}</Text>
           </Pressable>
         )}
       </View>
@@ -104,7 +104,7 @@ function OlderMessagesRow({
 function DaySeparator({ label }: { label: string }) {
   return (
     <View className="items-center py-2" accessibilityRole="header">
-      <Text className="text-xs text-muted-foreground">{label}</Text>
+      <Text className="text-caption text-muted-foreground">{label}</Text>
     </View>
   );
 }
@@ -213,7 +213,7 @@ export function MessageList({
           style={{ transform: [{ scaleY: -1 }] }}
           className="flex-1 items-center justify-center px-6 py-12"
         >
-          <Text className="text-sm text-muted-foreground">
+          <Text className="text-callout text-muted-foreground">
             {t("noMessagesYet")}
           </Text>
         </View>

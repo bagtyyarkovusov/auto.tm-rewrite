@@ -111,16 +111,16 @@ function SpecPickerSheet({
         {isLoading ? (
           <View className="py-4 items-center">
             <ActivityIndicator size="small" />
-            <Text className="mt-2 text-sm text-muted-foreground">{t("savingEllipsis")}</Text>
+            <Text className="mt-2 text-callout text-muted-foreground">{t("savingEllipsis")}</Text>
           </View>
         ) : isError ? (
           <View className="py-4 items-center">
             <Icon as={AlertCircle} className="size-6 text-destructive" />
-            <Text className="mt-2 text-sm text-destructive">{t("failedToLoadOptions")}</Text>
+            <Text className="mt-2 text-callout text-destructive">{t("failedToLoadOptions")}</Text>
           </View>
         ) : items.length === 0 ? (
           <View className="py-4 items-center">
-            <Text className="text-sm text-muted-foreground">{t("noOptionsAvailable")}</Text>
+            <Text className="text-callout text-muted-foreground">{t("noOptionsAvailable")}</Text>
           </View>
         ) : (
           <ScrollView>
@@ -135,7 +135,7 @@ function SpecPickerSheet({
                 {item.id === selectedId && (
                   <View className="mr-2 h-2 w-2 rounded-full bg-primary" />
                 )}
-                <Text className="text-base text-foreground">{item.name}</Text>
+                <Text className="text-body text-foreground">{item.name}</Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -173,16 +173,16 @@ function ColorPickerSheet({
         {isLoading ? (
           <View className="py-4 items-center">
             <ActivityIndicator size="small" />
-            <Text className="mt-2 text-sm text-muted-foreground">{t("savingEllipsis")}</Text>
+            <Text className="mt-2 text-callout text-muted-foreground">{t("savingEllipsis")}</Text>
           </View>
         ) : isError ? (
           <View className="py-4 items-center">
             <Icon as={AlertCircle} className="size-6 text-destructive" />
-            <Text className="mt-2 text-sm text-destructive">{t("failedToLoadColors")}</Text>
+            <Text className="mt-2 text-callout text-destructive">{t("failedToLoadColors")}</Text>
           </View>
         ) : colors.length === 0 ? (
           <View className="py-4 items-center">
-            <Text className="text-sm text-muted-foreground">{t("noColorsAvailable")}</Text>
+            <Text className="text-callout text-muted-foreground">{t("noColorsAvailable")}</Text>
           </View>
         ) : (
           <ScrollView>
@@ -202,7 +202,7 @@ function ColorPickerSheet({
                 ) : (
                   <View className="h-6 w-6 rounded-full border border-border bg-muted" />
                 )}
-                <Text className="text-base text-foreground">{c.name}</Text>
+                <Text className="text-body text-foreground">{c.name}</Text>
                 {c.id === selectedId && (
                   <View className="ml-auto mr-2 h-2 w-2 rounded-full bg-primary" />
                 )}
@@ -438,7 +438,7 @@ export default function Step4Specs({
       <View className="gap-5 rounded-xl border border-border p-4">
         <Text
           accessibilityRole="header"
-          className="text-xs font-medium uppercase tracking-widest text-muted-foreground"
+          className="text-caption font-medium uppercase tracking-widest text-muted-foreground"
         >
           {t("moreDetails")}
         </Text>
@@ -497,7 +497,7 @@ function ConditionToggle({
   const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("condition")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("condition")}</Text>
       <View className="flex-row rounded-lg bg-muted p-1">
         <Pressable
           onPress={() => {
@@ -520,7 +520,7 @@ function ConditionToggle({
         >
           <Text
             className={cn(
-              "text-sm font-medium",
+              "text-callout font-medium",
               condition === Enums.ListingCondition.New
                 ? "text-foreground"
                 : "text-muted-foreground",
@@ -555,7 +555,7 @@ function ConditionToggle({
         >
           <Text
             className={cn(
-              "text-sm font-medium",
+              "text-callout font-medium",
               condition === Enums.ListingCondition.Used
                 ? "text-foreground"
                 : "text-muted-foreground",
@@ -566,7 +566,7 @@ function ConditionToggle({
         </Pressable>
       </View>
       {error && (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
           {error}
         </Text>
       )}
@@ -591,7 +591,7 @@ function MileageInput({
   const [touched, setTouched] = useState(false);
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">
+      <Text className="text-callout font-medium text-foreground">
         {t("mileage")} *
       </Text>
       {wrapDisabled(
@@ -612,7 +612,7 @@ function MileageInput({
         disabled,
       )}
       {(showErrors || touched) && fieldErrors?.mileageKm && (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
           {fieldErrors.mileageKm}
         </Text>
       )}
@@ -632,7 +632,7 @@ function ColorPicker({
   const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("color")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("color")}</Text>
       {wrapDisabled(
         <Button
           variant="outline"
@@ -672,7 +672,7 @@ function BodyTypePicker({
   const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("bodyType")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("bodyType")}</Text>
       {wrapDisabled(
         <Button
           variant="outline"
@@ -706,7 +706,7 @@ function TransmissionPicker({
   const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">
+      <Text className="text-callout font-medium text-foreground">
         {t("transmission")}
       </Text>
       {wrapDisabled(
@@ -744,7 +744,7 @@ function DriveTypePicker({
   const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("driveType")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("driveType")}</Text>
       {wrapDisabled(
         <Button
           variant="outline"
@@ -778,7 +778,7 @@ function EngineTypePicker({
   const { t } = useTranslation();
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">{t("engineType")}</Text>
+      <Text className="text-callout font-medium text-foreground">{t("engineType")}</Text>
       {wrapDisabled(
         <Button
           variant="outline"
@@ -817,7 +817,7 @@ function EnginePowerInput({
   const [touched, setTouched] = useState(false);
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">
+      <Text className="text-callout font-medium text-foreground">
         {t("enginePower")}
       </Text>
       {wrapDisabled(
@@ -838,7 +838,7 @@ function EnginePowerInput({
         disabled,
       )}
       {(showErrors || touched) && fieldErrors?.enginePower && (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
           {fieldErrors.enginePower}
         </Text>
       )}
@@ -878,13 +878,13 @@ function ConditionDisclosureSection({
 
   return (
     <View className="gap-5 rounded-xl border border-border p-4">
-      <Text className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <Text className="text-caption font-medium uppercase tracking-widest text-muted-foreground">
         {t("conditionDisclosure")}
       </Text>
 
       {!isNew && (
         <View className="gap-1.5">
-          <Text className="text-sm font-medium text-foreground">{t("damaged")}</Text>
+          <Text className="text-callout font-medium text-foreground">{t("damaged")}</Text>
           <View className="flex-row rounded-lg bg-muted p-1" accessibilityRole="radiogroup">
             {([true, false] as const).map((answer) => {
               const selected = disclosure?.damaged === answer;
@@ -908,7 +908,7 @@ function ConditionDisclosureSection({
                 >
                   <Text
                     className={cn(
-                      "text-sm font-medium",
+                      "text-callout font-medium",
                       selected ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
@@ -919,7 +919,7 @@ function ConditionDisclosureSection({
             })}
           </View>
           {(showErrors || damagedTouched) && errors.damaged && (
-            <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+            <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
               {errors.damaged}
             </Text>
           )}
@@ -927,7 +927,7 @@ function ConditionDisclosureSection({
       )}
 
       <View className="gap-1.5">
-        <Text className="text-sm font-medium text-foreground">
+        <Text className="text-callout font-medium text-foreground">
           {t("knownIssuesText")}
         </Text>
         {wrapDisabled(
@@ -949,7 +949,7 @@ function ConditionDisclosureSection({
           disabled,
         )}
         {(showErrors || knownIssuesTouched) && errors.knownIssuesText && (
-          <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+          <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
             {errors.knownIssuesText}
           </Text>
         )}

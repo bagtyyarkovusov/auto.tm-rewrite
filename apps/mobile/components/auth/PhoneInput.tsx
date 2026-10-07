@@ -24,14 +24,14 @@ const PhoneInput = forwardRef<TextInput, PhoneInputProps>(
         )}
       >
         <View className="h-full justify-center border-r border-border px-3.5">
-          <Text className="text-base text-foreground" style={{ fontFamily: "UberMoveMono-Medium" }}>
+          <Text className="text-body text-foreground" style={{ fontFamily: "GeistMono-Medium" }}>
             {prefix}
           </Text>
         </View>
         <TextInput
           ref={ref}
-          className="h-full min-w-0 flex-1 bg-transparent px-3.5 text-base text-foreground placeholder:text-muted-foreground/50"
-          style={{ paddingTop: 0, paddingBottom: 0, lineHeight: 20, fontFamily: "UberMoveMono-Regular" }}
+          className="h-full min-w-0 flex-1 bg-transparent px-3.5 text-body text-foreground placeholder:text-muted-foreground/50"
+          style={{ paddingTop: 0, paddingBottom: 0, lineHeight: 20, fontFamily: "GeistMono-Regular" }}
           {...props}
         />
       </View>

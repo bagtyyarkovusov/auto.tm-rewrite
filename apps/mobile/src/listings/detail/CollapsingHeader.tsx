@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { ArrowLeft, Heart, MoreHorizontal } from "lucide-react-native";
+import { Heart, MoreHorizontal } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
@@ -12,7 +12,12 @@ import { isClosedForContact } from "./closedListing";
 import { listingTitle } from "./presentation";
 import type { CatalogMaps } from "./useCatalogMaps";
 
-import { Button } from "@/components/ui/button";
+import {
+  BackButton,
+  HeaderButton,
+  HeaderCircleButton,
+} from "@/components/navigation/StackHeader";
+import { GlassGroup } from "@/components/ui/glass-surface";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import {
@@ -56,45 +61,36 @@ export function CollapsingHeader({
     <View
       className={cn(
         "absolute top-0 left-0 right-0 z-20",
-        collapsed && "bg-background border-b border-border",
+        collapsed && "bg-background",
       )}
       style={{ paddingTop: topInset }}
     >
       <View className="flex-row items-center gap-1 px-3 py-2">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="rounded-full bg-background/90"
-          accessibilityLabel={t("back")}
-          onPress={onBack}
-        >
-          <Icon as={ArrowLeft} className="size-5 text-foreground" />
-        </Button>
+        <BackButton tone="glass" accessibilityLabel={t("back")} onPress={onBack} />
         <View className="min-w-0 flex-1 px-1">
           {collapsed && (
             <>
               <Text
                 className={cn(
-                  "text-sm font-bold",
+                  "text-callout font-bold",
                   closed ? "text-muted-foreground" : "text-foreground",
                 )}
                 numberOfLines={1}
               >
                 {formatPrice(listing.displayPriceTmt, i18n.language)}
               </Text>
-              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              <Text className="text-caption text-muted-foreground" numberOfLines={1}>
                 {listingTitle(listing, maps, false)}
               </Text>
             </>
           )}
         </View>
         {ownerMenu ?? (
-          <>
+          // Two circles side by side share one glass layer on iOS 26.
+          <GlassGroup className="flex-row items-center gap-2">
             {!closed && (
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-background/90"
+              <HeaderCircleButton
+                tone="glass"
                 accessibilityLabel={t("favorite")}
                 accessibilityState={{ selected: favorite.favorited }}
                 disabled={favorite.pending || isAuthenticated === null}
@@ -112,22 +108,16 @@ export function CollapsingHeader({
                     }
                   />
                 )}
-              </Button>
+              </HeaderCircleButton>
             )}
             {canReport && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="rounded-full bg-background/90"
+                  <HeaderButton
+                    tone="glass"
+                    icon={MoreHorizontal}
                     accessibilityLabel={t("detailOptions")}
-                  >
-                    <Icon
-                      as={MoreHorizontal}
-                      className="size-5 text-foreground"
-                    />
-                  </Button>
+                  />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuItem
@@ -139,7 +129,7 @@ export function CollapsingHeader({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-          </>
+          </GlassGroup>
         )}
       </View>
     </View>

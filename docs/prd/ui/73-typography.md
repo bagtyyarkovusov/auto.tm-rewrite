@@ -6,9 +6,11 @@ Typography is platform-specific behind shared semantic names:
 
 | Semantic use | Web + admin | Mobile |
 |---|---|---|
-| Body / `font-sans` | Inter | UberMoveText Regular |
-| Heading / `font-heading` | Inter with heading weight | UberMove Medium |
-| Mono / `font-mono` | Menlo, monospace | UberMove Mono on iOS; Menlo/system monospace fallback on Android |
+| Body / `font-sans` | Inter | Geist (Light, Regular, Medium, SemiBold, Bold) |
+| Heading / `font-heading` | Inter with heading weight | Geist (Medium, SemiBold, Bold) |
+| Mono / `font-mono` | Menlo, monospace | Geist Mono (Regular, Medium) |
+
+Mobile uses one family, Geist (SIL Open Font License), for text and headings. It was chosen on 2026-10-06 (issue 695) to replace Uber Move, which has no Cyrillic: Russian text used to fall back to the system font. Geist covers Turkmen Latin and Russian Cyrillic, carries tabular figures, and gives a real SemiBold. Hierarchy comes from size and weight inside the one family.
 
 The shared defaults live in `packages/ui/tokens/type.ts`. Mobile deliberately overrides the family mappings in `apps/mobile/tailwind.config.js` and bundles fonts through `apps/mobile/app/_layout.tsx`. Current mobile usage is documented in `apps/mobile/CONTEXT.md`; a mobile design must not specify Inter from the shared default.
 
@@ -27,6 +29,45 @@ xl   20   Section headings
 ```
 
 The shared scale uses a 15px base. Platform implementations must preserve readable rendered size and dynamic-text behavior rather than assuming a CSS pixel maps identically on native.
+
+## Mobile type roles
+
+Mobile names its sizes by role (`packages/ui/tokens/mobile.ts`, `mobileType`). Screens use these utilities instead of bracketed sizes.
+
+| Utility | Size / line (dp) | Tracking | Use | Usual face |
+|---|---|---|---|---|
+| `text-display` | 34 / 40 | -0.4 | Large screen titles, the detail price | Geist Bold |
+| `text-title` | 28 / 34 | -0.3 | Compact screen titles, hero numbers | Geist Bold |
+| `text-headline` | 22 / 28 | -0.2 | Card prices, sheet titles, empty-state titles | Geist Bold |
+| `text-subhead` | 18 / 24 | -0.1 | Section titles, large row titles | Geist SemiBold |
+| `text-body` | 16 / 22 | 0 | Reading and control text | Geist Regular or Medium |
+| `text-callout` | 15 / 20 | 0 | Dense rows, the line beside a title | Geist Regular |
+| `text-footnote` | 13 / 18 | 0 | Helper text, metadata | Geist Regular |
+| `text-caption` | 12 / 16 | 0 | Captions, timestamps, chips on photos | Geist Medium |
+| `text-micro` | 11 / 14 | 0.1 | Tab labels, count badges | Geist Medium |
+
+### Weight on mobile
+
+React Native draws a custom font from exactly one file; a weight class on top of the Regular file does not pick the Bold file. Each bundled file is therefore its own family utility:
+
+| Family class | Weight class | Face |
+|---|---|---|
+| `font-sans` | `font-light` | Geist Light |
+| `font-sans` | none, `font-normal` | Geist Regular |
+| `font-sans` | `font-medium` | Geist Medium |
+| `font-sans` | `font-semibold` | Geist SemiBold |
+| `font-sans` | `font-bold` | Geist Bold |
+| `font-heading` | none, `font-medium` | Geist Medium |
+| `font-heading` | `font-semibold` | Geist SemiBold |
+| `font-heading` | `font-bold` | Geist Bold |
+| `font-mono` | none | Geist Mono Regular |
+| `font-mono` | `font-medium` and heavier | Geist Mono Medium |
+
+The `Text` primitive does this mapping (`apps/mobile/lib/font.ts`), so a call site writes `font-heading font-semibold` and gets the SemiBold file on both platforms. Hierarchy on mobile comes from four steps: Regular, Medium, SemiBold, Bold. Bold is for the price and the largest titles; SemiBold carries section titles and emphasis.
+
+Numbers that should line up (prices, mileage, years, counts) take `tabularFigures` from `apps/mobile/lib/font.ts`; Geist carries the `tnum` feature.
+
+A raw React Native `Text` or `TextInput` does not go through the primitive; give it the face utility directly (`font-sans-medium`, `font-sans-semibold`, `font-sans-bold`, `font-heading-semibold`, `font-heading-bold`).
 
 ## Usage map
 
@@ -49,7 +90,8 @@ The shared scale uses a 15px base. Platform implementations must preserve readab
 
 ## Hierarchy rules
 
-- **Max 3 type sizes per screen.** If you need a 4th, you're over-designing.
+- **Few sizes per screen.** Web and admin: at most 3. Mobile: one title role, one emphasis role (a price or a section title), body, and one quiet role; a fifth needs a reason.
+- **On mobile the price is the loudest text on a card and on Listing detail**, and screen titles are large and heavy.
 - **Weight, not size, for emphasis** within body text (use `medium`, not jump to `lg`)
 - **Headings never use more than `bold`** — no extra-bold or black weights
 - **All-caps reserved for labels only** (badges, tabs) — never for headings or body

@@ -44,7 +44,7 @@ function MenuItem({
       className="min-h-11 flex-row items-center gap-3 rounded-lg px-2 py-3 active:bg-muted disabled:opacity-50"
     >
       <Icon as={icon} className={cn("size-5", color)} />
-      <Text className={cn("text-base", color)}>{label}</Text>
+      <Text className={cn("text-body", color)}>{label}</Text>
     </Pressable>
   );
 }

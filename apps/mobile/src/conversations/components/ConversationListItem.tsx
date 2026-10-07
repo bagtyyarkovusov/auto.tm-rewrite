@@ -166,7 +166,7 @@ export function ConversationListItem({
       <View className="flex-1 gap-0.5 min-w-0">
         <View className="flex-row items-center gap-2">
           <View className="flex-row items-center gap-1 flex-1 min-w-0">
-            <Text className="text-base font-semibold text-foreground shrink" numberOfLines={1} ellipsizeMode="tail">
+            <Text className="text-body font-semibold text-foreground shrink" numberOfLines={1} ellipsizeMode="tail">
               {peerName}
             </Text>
             {conversation.mutedAt ? (
@@ -181,13 +181,13 @@ export function ConversationListItem({
                 <Icon as={tick === "sent" ? Check : CheckCheck} className="size-3.5 text-muted-foreground" />
               </View>
             ) : null}
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-caption text-muted-foreground">
               {formatConversationTime(conversation.updatedAt, i18n.language)}
             </Text>
           </View>
         </View>
 
-        <Text className="text-sm text-foreground" numberOfLines={1}>
+        <Text className="text-callout text-foreground" numberOfLines={1}>
           {listingLine}
         </Text>
 
@@ -198,7 +198,7 @@ export function ConversationListItem({
             ) : null}
             <Text
               className={cn(
-                "text-sm flex-1",
+                "text-callout flex-1",
                 isUnread ? "font-semibold text-foreground" : "text-muted-foreground",
                 conversation.lastMessage?.deletedAt && !conversation.blockedByMe && "italic",
               )}
@@ -212,7 +212,7 @@ export function ConversationListItem({
               testID="conversation-row-unread"
               className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary items-center justify-center"
             >
-              <Text className="text-xs text-primary-foreground font-medium">
+              <Text className="text-caption text-primary-foreground font-medium">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </Text>
             </View>
@@ -226,7 +226,7 @@ export function ConversationListItem({
             >
               <Text
                 className={cn(
-                  "text-xs font-medium",
+                  "text-caption font-medium",
                   isSold ? "text-background" : "text-secondary-foreground",
                 )}
               >

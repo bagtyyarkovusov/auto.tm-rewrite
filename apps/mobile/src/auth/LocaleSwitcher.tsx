@@ -33,8 +33,8 @@ export function LocaleSwitcher() {
             <Text
               className={
                 active
-                  ? "text-sm font-medium uppercase text-foreground"
-                  : "text-sm font-medium uppercase text-muted-foreground"
+                  ? "text-callout font-medium uppercase text-foreground"
+                  : "text-callout font-medium uppercase text-muted-foreground"
               }
             >
               {l}

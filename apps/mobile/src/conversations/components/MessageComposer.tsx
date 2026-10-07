@@ -211,7 +211,7 @@ export function MessageComposer({
 
       {compressionError && (
         <View className="px-4 pt-1 pb-1 bg-background">
-          <Text className="text-xs text-destructive">{compressionError}</Text>
+          <Text className="text-caption text-destructive">{compressionError}</Text>
         </View>
       )}
 
@@ -219,7 +219,7 @@ export function MessageComposer({
         <View className="px-4 py-2 bg-background border-t border-border">
           <View className="flex-row items-center gap-2">
             <Icon as={AlertCircle} className="size-4 text-destructive shrink-0" />
-            <Text className="text-xs text-muted-foreground flex-1">
+            <Text className="text-caption text-muted-foreground flex-1">
               {t("photoPermissionDenied")}
             </Text>
             <Button
@@ -252,7 +252,7 @@ export function MessageComposer({
 
         <View className="flex-1 rounded-2xl bg-muted px-4 py-2.5">
           <TextInput
-            className="text-base text-foreground max-h-[120px]"
+            className="text-body text-foreground max-h-[120px]"
             placeholder={t("messageComposerPlaceholder")}
             placeholderTextColor={placeholderColor}
             value={text}
@@ -266,7 +266,7 @@ export function MessageComposer({
           />
           {isOverLimit && (
             <View className="pt-1">
-              <Text className="text-xs text-destructive">
+              <Text className="text-caption text-destructive">
                 {t("messageTooLong", { max: MAX_CHARS })}
               </Text>
             </View>

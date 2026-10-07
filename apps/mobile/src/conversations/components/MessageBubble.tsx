@@ -158,7 +158,7 @@ function BubbleContent({
     return (
       <View className="flex-row items-center gap-1.5">
         <Icon as={Trash2} className="size-4 text-muted-foreground" />
-        <Text className="text-sm italic text-muted-foreground">
+        <Text className="text-callout italic text-muted-foreground">
           {t("conversations:messageDeleted")}
         </Text>
       </View>
@@ -201,7 +201,7 @@ function BubbleContent({
 
   return (
     <Text
-      className={`text-base leading-5 ${
+      className={`text-body leading-5 ${
         isMine ? "text-primary-foreground" : "text-foreground"
       }`}
     >
@@ -317,7 +317,7 @@ export function MessageBubble({
 
           {isPending ? (
             <View className="flex-row items-center justify-end mt-1">
-              <Text className={`text-xs ${metaColorClass}`}>{t("sending")}</Text>
+              <Text className={`text-caption ${metaColorClass}`}>{t("sending")}</Text>
             </View>
           ) : !isFailed ? (
             <View
@@ -329,7 +329,7 @@ export function MessageBubble({
                 isMine ? "justify-end" : "justify-start"
               }`}
             >
-              <Text className={`text-xs ${metaColorClass}`}>{time}</Text>
+              <Text className={`text-caption ${metaColorClass}`}>{time}</Text>
               {isMine && !isDeleted && <StatusTick status={status} />}
             </View>
           ) : null}
@@ -341,7 +341,7 @@ export function MessageBubble({
               }`}
             >
               <Icon as={Flag} className={`size-3.5 ${metaColorClass}`} />
-              <Text className={`text-xs ${metaColorClass}`}>{t("reported")}</Text>
+              <Text className={`text-caption ${metaColorClass}`}>{t("reported")}</Text>
             </View>
           )}
         </Pressable>
@@ -349,7 +349,7 @@ export function MessageBubble({
         {isFailed && (
           <View className="flex-row items-center justify-end gap-1 mt-1">
             <Text
-              className={`text-xs ${isMine ? "text-primary-foreground" : "text-destructive"}`}
+              className={`text-caption ${isMine ? "text-primary-foreground" : "text-destructive"}`}
             >
               {t("failedToSend")}
             </Text>
@@ -366,7 +366,7 @@ export function MessageBubble({
                   className={`size-3.5 ${isMine ? "text-primary-foreground" : "text-destructive"}`}
                 />
                 <Text
-                  className={`text-xs font-semibold underline ${
+                  className={`text-caption font-semibold underline ${
                     isMine ? "text-primary-foreground" : "text-destructive"
                   }`}
                 >
@@ -379,7 +379,7 @@ export function MessageBubble({
       </View>
 
       {showReadLabel && (
-        <Text className="mx-1 mt-0.5 text-xs text-muted-foreground">
+        <Text className="mx-1 mt-0.5 text-caption text-muted-foreground">
           {t("conversations:messageRead")}
         </Text>
       )}

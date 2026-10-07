@@ -32,23 +32,23 @@ export function SellerBlock({
   const location = [cityName, locationText].filter(Boolean).join(" · ");
   return (
     <View className="gap-3">
-      <Text className="text-lg font-semibold">{t("seller")}</Text>
+      <Text className="text-subhead font-semibold">{t("seller")}</Text>
       <View className="flex-row gap-3 items-center">
         <PublicUserAvatar size={44} user={seller} />
         <View className="min-w-0 flex-1 gap-1">
           <Text
-            className="text-base font-semibold"
+            className="text-body font-semibold"
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {name ?? t("privateSeller")}
           </Text>
           {name && (
-            <Text className="text-sm text-muted-foreground">
+            <Text className="text-callout text-muted-foreground">
               {t("privateSeller")}
             </Text>
           )}
-          <Text className="text-sm text-muted-foreground">
+          <Text className="text-callout text-muted-foreground">
             {t("sellerSince", { date: joined })}
           </Text>
         </View>
@@ -56,7 +56,7 @@ export function SellerBlock({
       {!!location && (
         <View className="flex-row gap-2">
           <Icon as={MapPin} className="size-4 text-muted-foreground" />
-          <Text className="flex-1 text-sm text-muted-foreground">
+          <Text className="flex-1 text-callout text-muted-foreground">
             {location}
           </Text>
         </View>

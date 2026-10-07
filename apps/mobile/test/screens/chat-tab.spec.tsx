@@ -69,7 +69,7 @@ describe("Messages tab", () => {
   it("is headed Messages in every language", async () => {
     expect((await renderScreen("en")).getByText("Messages")).toBeTruthy();
     expect((await renderScreen("ru")).getByText("Сообщения")).toBeTruthy();
-    expect((await renderScreen("tk")).getByText("Habarlar")).toBeTruthy();
+    expect((await renderScreen("tk")).getByText("Çat")).toBeTruthy();
   });
 
   it("lists the viewer's Conversations", async () => {
@@ -132,7 +132,7 @@ describe("Messages tab", () => {
   it("shows signed-out copy in Russian and Turkmen", async () => {
     state.auth = false;
     expect((await renderScreen("ru")).getByText("Войдите, чтобы увидеть сообщения")).toBeTruthy();
-    expect((await renderScreen("tk")).getByText("Habarlary görmek üçin giriň")).toBeTruthy();
+    expect((await renderScreen("tk")).getByText("Satyja ýüz tutmak üçin giriň")).toBeTruthy();
   });
 
   it("refetches when the tab gains focus again, so read Conversations lose their badge", async () => {
@@ -224,9 +224,9 @@ describe("Messages tab button", () => {
     return renderMobile(<AutoTmTabBar {...props} />, { locale });
   }
 
-  it("reads Messages / Сообщения / Habarlar", () => {
+  it("reads Messages / Сообщения / Çat", () => {
     expect(renderTabBar("en").getByRole("tab", { name: "Messages" })).toBeTruthy();
     expect(renderTabBar("ru").getByRole("tab", { name: "Сообщения" })).toBeTruthy();
-    expect(renderTabBar("tk").getByRole("tab", { name: "Habarlar" })).toBeTruthy();
+    expect(renderTabBar("tk").getByRole("tab", { name: "Çat" })).toBeTruthy();
   });
 });

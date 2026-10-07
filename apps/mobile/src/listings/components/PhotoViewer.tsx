@@ -149,7 +149,7 @@ function ViewerContent({
         >
           <Icon as={X} className="size-6 text-white" />
         </Button>
-        <Text className="flex-1 text-center text-base font-semibold text-white">
+        <Text className="flex-1 text-center text-body font-semibold text-white">
           {`${index + 1} / ${media.length}`}
         </Text>
         <View className="h-11 w-11 items-center justify-center">

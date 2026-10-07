@@ -8,10 +8,8 @@ import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import type { FavoriteRepository } from "../domain/ports/FavoriteRepository";
 import type { VinDecoderPort } from "../domain/ports/VinDecoderPort";
-import type {
-  SellerProfile,
-  SellerProfilePort,
-} from "../domain/ports/SellerProfilePort";
+import type { SellerProfile } from "../domain/ports/SellerProfilePort";
+import { InMemorySellerProfiles } from "./testing/InMemorySellerProfiles";
 
 class FakeListingRepository implements ListingRepository {
   listings: Listing[] = [];
@@ -146,14 +144,8 @@ function sellerProfile(overrides: Partial<SellerProfile> = {}): SellerProfile {
   };
 }
 
-class FakeSellerProfilePort implements SellerProfilePort {
-  profiles = new Map<string, SellerProfile>([
-    ["user-1", sellerProfile({ displayName: "Seller" })],
-  ]);
-
-  async getSellerProfile(userId: string): Promise<SellerProfile | null> {
-    return this.profiles.get(userId) ?? null;
-  }
+function seededSellerProfiles(): InMemorySellerProfiles {
+  return new InMemorySellerProfiles([["user-1", sellerProfile({ displayName: "Seller" })]]);
 }
 
 function makeUseCase(
@@ -163,7 +155,7 @@ function makeUseCase(
   storage?: FakeMediaStoragePort,
   favorites?: FakeFavoriteRepository,
   vinDecoder?: FakeVinDecoder,
-  sellerProfiles?: FakeSellerProfilePort,
+  sellerProfiles?: InMemorySellerProfiles,
 ) {
   return new GetListingDetail(
     repo ?? new FakeListingRepository(),
@@ -172,7 +164,7 @@ function makeUseCase(
     storage ?? new FakeMediaStoragePort(),
     favorites ?? new FakeFavoriteRepository(),
     vinDecoder ?? new FakeVinDecoder(),
-    sellerProfiles ?? new FakeSellerProfilePort(),
+    sellerProfiles ?? seededSellerProfiles(),
   );
 }
 
@@ -233,7 +225,7 @@ describe("GetListingDetail", () => {
 
   it("returns a named seller, join date, and public number from persisted data", async () => {
     seedListing();
-    const profiles = new FakeSellerProfilePort();
+    const profiles = seededSellerProfiles();
     profiles.profiles.set("user-1", sellerProfile({
       displayName: "Aýgül",
       nameNumber: 3310,
@@ -259,7 +251,7 @@ describe("GetListingDetail", () => {
 
   it("returns a null display name and the number for an unnamed seller", async () => {
     seedListing();
-    const profiles = new FakeSellerProfilePort();
+    const profiles = seededSellerProfiles();
     profiles.profiles.set("user-1", sellerProfile({
       memberSince: new Date("2024-06-10T12:00:00Z"),
     }));
@@ -280,7 +272,7 @@ describe("GetListingDetail", () => {
 
   it("marks a seller purged after account deletion, keeping the number and index", async () => {
     seedListing({ status: "archived" });
-    const profiles = new FakeSellerProfilePort();
+    const profiles = seededSellerProfiles();
     profiles.profiles.set("user-1", sellerProfile({ deleted: true }));
 
     const result = await makeUseCase(

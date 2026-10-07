@@ -44,10 +44,10 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, State> {
       }
       return (
         <View className="flex-1 items-center justify-center px-6 gap-4 bg-background">
-          <Text className="text-lg font-semibold text-foreground">
+          <Text className="text-subhead font-semibold text-foreground">
             {t("somethingWentWrong")}
           </Text>
-          <Text className="text-center text-sm text-muted-foreground">
+          <Text className="text-center text-callout text-muted-foreground">
             {this.state.error?.message ?? t("unexpectedError")}
           </Text>
           <Button variant="brand" size="pill" onPress={this.handleReload}>

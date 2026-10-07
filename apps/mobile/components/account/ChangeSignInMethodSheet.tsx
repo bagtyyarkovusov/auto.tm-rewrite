@@ -33,7 +33,7 @@ export function ChangeSignInMethodSheet({ method, open, onOpenChange, onContinue
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent closeOnBackdropPress style={{ height: sheetHeight }}>
         <SheetHeader className="flex-row items-start justify-between gap-3">
-          <SheetTitle className="flex-1 text-xl font-bold">
+          <SheetTitle className="flex-1 text-headline font-bold">
             {t(method === "phone" ? "changePhoneConfirmTitle" : "changeEmailConfirmTitle")}
           </SheetTitle>
           <Button
@@ -46,7 +46,7 @@ export function ChangeSignInMethodSheet({ method, open, onOpenChange, onContinue
             <Icon as={X} className="size-5 text-foreground" />
           </Button>
         </SheetHeader>
-        <SheetDescription className="text-base leading-normal">
+        <SheetDescription className="text-body leading-normal">
           {t("changeMethodConfirmBody")}
         </SheetDescription>
         <View className="mt-auto gap-2 pb-2">

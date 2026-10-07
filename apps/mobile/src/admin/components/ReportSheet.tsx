@@ -192,7 +192,7 @@ export function ReportSheet({
                   >
                     <Text
                       className={cn(
-                        "text-base",
+                        "text-body",
                         selected
                           ? "font-medium text-primary"
                           : "text-foreground",
@@ -211,7 +211,7 @@ export function ReportSheet({
             {/* Details input for "other" */}
             {showDetailsInput && (
               <View className="gap-2">
-                <Text className="text-sm text-muted-foreground">
+                <Text className="text-callout text-muted-foreground">
                   {t("pleaseProvideDetails")}
                 </Text>
                 <Input
@@ -224,7 +224,7 @@ export function ReportSheet({
                   onChangeText={setDetails}
                   maxLength={1000}
                 />
-                <Text className="text-xs text-muted-foreground text-right">
+                <Text className="text-caption text-muted-foreground text-right">
                   {details.length}/1000
                 </Text>
               </View>
@@ -232,7 +232,7 @@ export function ReportSheet({
 
             {/* Error */}
             {createReport.isError && (
-              <Text className="text-center text-sm text-destructive">
+              <Text className="text-center text-callout text-destructive">
                 {getErrorCopy(createReport.error, t)}
               </Text>
             )}

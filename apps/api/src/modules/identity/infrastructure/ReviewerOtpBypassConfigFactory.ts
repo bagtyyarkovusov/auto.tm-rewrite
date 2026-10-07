@@ -9,14 +9,15 @@ interface RawReviewerOtpBypassAccount {
 export function parseReviewerOtpBypassConfig(env: {
   REVIEW_DEMO_ACCOUNT_ENABLED?: boolean;
   REVIEW_DEMO_ACCOUNTS_JSON?: string;
+  TESTER_ACCOUNTS_JSON?: string;
 }): ReviewerOtpBypassConfig {
-  if (!env.REVIEW_DEMO_ACCOUNT_ENABLED) {
-    return { enabled: false, accounts: [] };
-  }
-
-  const raw = JSON.parse(env.REVIEW_DEMO_ACCOUNTS_JSON ?? "[]") as RawReviewerOtpBypassAccount[];
+  const reviewers = env.REVIEW_DEMO_ACCOUNT_ENABLED
+    ? JSON.parse(env.REVIEW_DEMO_ACCOUNTS_JSON ?? "[]") as RawReviewerOtpBypassAccount[]
+    : [];
+  const testers = JSON.parse(env.TESTER_ACCOUNTS_JSON ?? "[]") as RawReviewerOtpBypassAccount[];
+  const raw = [...reviewers, ...testers];
   return {
-    enabled: true,
+    enabled: raw.length > 0,
     accounts: raw.map((entry) => ({
       phone: String(entry.phone),
       email: String(entry.email),

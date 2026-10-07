@@ -202,3 +202,12 @@ Rarely used; mostly for "number of guests" type inputs which we don't have. Skip
 ## References
 
 - [78-02-input.md](78-02-input.md) — for combined Form layouts
+
+## Mobile rendering
+
+| Control | Look |
+|---|---|
+| Switch | 48 by 28 dp track; the pressed tone when off, the foreground colour when on; a 24 dp thumb with the `raised` shadow that slides (`transition-transform`) |
+| Checkbox | 24 dp, radius 8, a 2 dp edge in the pressed tone; brand red fill and a white check when on |
+| Progress | A 6 dp track in the pressed tone; the fill slides by transform with the `settle` spring, never by animating width |
+| Segmented control | A tonal track with radius 16 and 4 dp padding; the selected segment is a raised surface with radius 12 and medium-weight text |

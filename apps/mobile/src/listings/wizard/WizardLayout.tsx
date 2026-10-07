@@ -1,4 +1,4 @@
-import { ChevronLeft, AlertCircle, RefreshCw, X } from "lucide-react-native";
+import { AlertCircle, RefreshCw } from "lucide-react-native";
 import { useEffect } from "react";
 import {
   AccessibilityInfo,
@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
+import { BackButton } from "@/components/navigation/StackHeader";
+import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
@@ -113,12 +115,12 @@ function SaveStatusLine({
           className="self-start"
           onPress={onRetrySave}
         >
-          <Text className="text-xs text-destructive">{text}</Text>
+          <Text className="text-caption text-destructive">{text}</Text>
         </Pressable>
       ) : text ? (
         <Text
           className={cn(
-            "text-xs",
+            "text-caption",
             saveStatus === "saved" ? "text-success-500" : "text-muted-foreground",
           )}
         >
@@ -173,77 +175,62 @@ function WizardHeader({
   // each time a step opens.
   const stepAnnouncement = isEdit || sectionList ? stepTitle : `${stepTitle}, ${stepPosition}`;
   const closeButton = (
-    <Button
-      variant="ghost"
-      size="icon"
-      // Left on the section list of an edit, right in the create wizard; a mounted button is only ever one of them.
-      className={sectionList ? "-ml-3" : "-mr-3"}
+    // Left on the section list of an edit, right in the create wizard; a mounted button is only ever one of them.
+    <BackButton
+      kind="close"
       onPress={onClose}
       disabled={isClosing}
       accessibilityLabel={t("close")}
-    >
-      <Icon as={X} className="size-5 text-foreground" />
-    </Button>
+    />
   );
   useEffect(() => {
     AccessibilityInfo.announceForAccessibility(stepAnnouncement);
   }, [stepAnnouncement]);
 
   return (
-    <View className="border-b border-border px-5 py-3 gap-2">
+    <View testID="wizard-header" className="gap-2 px-4 pb-3 pt-1">
       {/* Row 1: nav + position marker + close */}
-      <View className="flex-row items-center justify-between">
+      <View className="min-h-11 flex-row items-center justify-between">
         {sectionList ? (
           closeButton
         ) : canGoBack ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-10 px-0 -ml-1"
-            onPress={onBack}
-            accessibilityLabel={t("back")}
-          >
-            <View className="flex-row items-center gap-0.5">
-              <Icon as={ChevronLeft} className="size-5 text-foreground" />
-              <Text className="text-sm font-medium text-foreground">{t("back")}</Text>
-            </View>
-          </Button>
+          <BackButton onPress={onBack} accessibilityLabel={t("back")} />
         ) : (
-          <View className="w-16" />
+          <View className="w-11" />
         )}
 
         <View className="flex-row items-center gap-1 flex-1 justify-center">
           {/* The heading below already reads the position, so this row reads only the route. */}
           {sectionList ? null : isEdit ? (
             <View className="items-center">
-              <Text className="text-xs font-medium text-foreground">{routeTitle}</Text>
+              <Text className="text-caption font-medium text-foreground">{routeTitle}</Text>
               {subtitle ? (
-                <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                <Text className="text-caption text-muted-foreground" numberOfLines={1}>
                   {subtitle}
                 </Text>
               ) : null}
             </View>
           ) : (
-            <Text className="text-xs text-muted-foreground" accessibilityLabel={routeTitle}>
+            <Text className="text-caption text-muted-foreground" accessibilityLabel={routeTitle}>
               {routeTitle} · {stepPosition}
             </Text>
           )}
         </View>
 
         {/* An edit is left from its section list; a step opened from it has Back only. */}
-        {mode === "create" ? closeButton : <View className="w-16" />}
+        {mode === "create" ? closeButton : <View className="w-11" />}
       </View>
 
       {/* Row 2: the prominent step title — the ONE title */}
       <Text
-        className="text-2xl font-heading text-foreground"
+        className="text-headline font-heading font-semibold text-foreground"
         accessibilityRole="header"
         accessibilityLabel={stepAnnouncement}
       >
         {stepTitle}
       </Text>
       {sectionList && subtitle ? (
-        <Text className="-mt-1 text-sm text-muted-foreground">{subtitle}</Text>
+        <Text className="-mt-1 text-callout text-muted-foreground">{subtitle}</Text>
       ) : null}
 
       {/* Row 3: progress, in the create wizard only */}
@@ -286,13 +273,13 @@ function UploadStatusChipRow({
       {uploadStatus.inflight > 0 && (
         <View className="flex-row items-center gap-1.5">
           <ActivityIndicator size="small" />
-          <Text className="text-xs text-muted-foreground">{uploadingText}</Text>
+          <Text className="text-caption text-muted-foreground">{uploadingText}</Text>
         </View>
       )}
       {uploadStatus.failed > 0 && (
         <View className="flex-row items-center gap-1.5">
           <Icon as={AlertCircle} className="size-3.5 text-destructive" />
-          <Text className="text-xs text-destructive">{failedText}</Text>
+          <Text className="text-caption text-destructive">{failedText}</Text>
         </View>
       )}
     </View>
@@ -330,7 +317,7 @@ function SaveErrorBanner({
   return (
     <View className="mx-5 mt-3 flex-row items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2">
       <Icon as={AlertCircle} className="size-4 text-destructive" />
-      <Text className="flex-1 text-sm text-destructive">{saveError}</Text>
+      <Text className="flex-1 text-callout text-destructive">{saveError}</Text>
       <Button variant="ghost" size="sm" onPress={onRetrySave}>
         <Icon as={RefreshCw} className="size-4 text-destructive" />
       </Button>
@@ -356,7 +343,7 @@ function PublishErrorAlert({ message }: { message: string }) {
       className="flex-row items-start gap-2 rounded-lg border border-destructive px-3 py-2"
     >
       <Icon as={AlertCircle} className="mt-0.5 size-4 text-destructive" />
-      <Text className="flex-1 text-sm text-destructive">{message}</Text>
+      <Text className="flex-1 text-callout text-destructive">{message}</Text>
     </View>
   );
 }
@@ -403,69 +390,69 @@ function WizardFooter({
 
   if (editDetourActive) {
     return (
-      <View className="border-t border-border px-5 py-3 gap-2">
+      <>
         {showDisabledReason && (
-          <Text className="text-xs text-muted-foreground">
+          <Text className="px-2 pt-1 text-caption text-muted-foreground">
             {disabledReason}
           </Text>
         )}
         <Button
           variant="default"
-          size="pill"
+          size="lg"
           className="w-full"
           onPress={onReturnToReview}
           disabled={primaryDisabled || !onReturnToReview}
         >
           <Text>{t("done")}</Text>
         </Button>
-      </View>
+      </>
     );
   }
 
   if (isEditReview) {
     return (
-      <View className="border-t border-border px-5 py-3 gap-2">
+      <>
         {showDisabledReason && (
-          <Text className="text-xs text-muted-foreground">
+          <Text className="px-2 pt-1 text-caption text-muted-foreground">
             {disabledReason}
           </Text>
         )}
         <Button
           variant="brand"
-          size="pill"
+          size="lg"
           className="w-full"
           onPress={onPublish}
           disabled={!canPublish}
         >
           <Text>{publishLabel ?? t("publish")}</Text>
         </Button>
-      </View>
+      </>
     );
   }
 
   return (
-    <View className="border-t border-border px-5 py-3 gap-2">
+    <>
       {showDisabledReason && (
-        <Text className="text-xs text-muted-foreground">
+        <Text className="px-2 pt-1 text-caption text-muted-foreground">
           {disabledReason}
         </Text>
       )}
       {isLastStep && publishBlockers && publishBlockers.length > 0 ? (
         // One line each, so a screen reader reads them in this order before Publish.
-        <View testID="publish-blockers" className="gap-0.5">
+        <View testID="publish-blockers" className="gap-0.5 px-2 pt-1">
           {publishBlockers.map((line) => (
-            <Text key={line} className="text-xs text-destructive">
+            <Text key={line} className="text-caption text-destructive">
               {line}
             </Text>
           ))}
         </View>
       ) : null}
       {isLastStep && publishError && !isPublishing ? <PublishErrorAlert message={publishError} /> : null}
-      <View className="flex-row gap-3">
+      <View className="flex-row gap-2">
         {canGoBack ? (
           <Button
             variant="outline"
-            size="pill"
+            size="lg"
             className="flex-1"
             onPress={onBack}
           >
@@ -474,7 +461,7 @@ function WizardFooter({
         ) : secondaryAction ? (
           <Button
             variant="outline"
-            size="pill"
+            size="lg"
             className="flex-1"
             onPress={secondaryAction.onPress}
             disabled={secondaryAction.disabled}
@@ -488,7 +475,7 @@ function WizardFooter({
         {isLastStep ? (
           <Button
             variant="brand"
-            size="pill"
+            size="lg"
             className="flex-1"
             onPress={onPublish}
             // Disabled while publishing, so a second tap cannot publish twice.
@@ -500,7 +487,7 @@ function WizardFooter({
         ) : (
           <Button
             variant="default"
-            size="pill"
+            size="lg"
             className="flex-1"
             onPress={onContinue}
             disabled={!canContinue}
@@ -517,12 +504,12 @@ function WizardFooter({
           onPress={secondaryAction.onPress}
           disabled={secondaryAction.disabled}
         >
-          <Text className="text-sm text-foreground underline">
+          <Text className="text-callout text-foreground underline">
             {secondaryAction.label}
           </Text>
         </Button>
       )}
-    </View>
+    </>
   );
 }
 
@@ -559,6 +546,7 @@ export function WizardLayout({
   uploadStatus,
   onUploadStatusPress,
 }: WizardLayoutProps) {
+  const bar = useStickyActionBar();
   return (
     <SafeAreaView className="flex-1 bg-background">
       <WizardHeader
@@ -586,14 +574,13 @@ export function WizardLayout({
         onRetrySave={onRetrySave}
       />
 
-      {/* Content area: flex-1 so footer sticks to bottom when content is short,
-          ScrollView without flex-1 so it shrinks to content height with no gap */}
+      {/* The step scrolls under the floating action bar and ends clear of it. */}
       <View className="flex-1">
-        <ScrollView>
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bar.space }}>
           <View className="w-full px-5">{children}</View>
         </ScrollView>
 
-        <View className="mt-auto">
+        <StickyActionBar {...bar.barProps}>
           <WizardFooter
             isLastStep={isLastStep}
             canContinue={canContinue}
@@ -612,7 +599,7 @@ export function WizardLayout({
             secondaryAction={secondaryAction}
             publishLabel={publishLabel}
           />
-        </View>
+        </StickyActionBar>
       </View>
 
     </SafeAreaView>

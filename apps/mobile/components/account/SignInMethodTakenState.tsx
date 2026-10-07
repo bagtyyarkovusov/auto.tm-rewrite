@@ -1,13 +1,12 @@
 import { router } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 
 /**
@@ -21,24 +20,16 @@ export function SignInMethodTakenState({ method }: { method: "phone" | "email" }
 
   return (
     <SafeScreen>
-      <View className="px-4 pb-3 flex-row items-center">
-        <Button
-          accessibilityLabel={t("common:back")}
-          variant="ghost"
-          size="icon"
-          className="h-11 w-11"
-          onPress={goBack}
-        >
-          <Icon as={ChevronLeft} className="size-6 text-foreground" />
-        </Button>
-      </View>
+      <StackHeader
+        leading={<BackButton accessibilityLabel={t("common:back")} onPress={goBack} />}
+      />
 
       <View className="px-4 pt-3.5 gap-5">
         <View className="gap-2">
-          <Text className="text-xl font-semibold leading-snug text-foreground">
+          <Text className="text-headline font-semibold leading-snug text-foreground">
             {t(method === "email" ? "auth:emailTaken" : "auth:phoneTaken")}
           </Text>
-          <Text className="text-[13px] text-muted-foreground">
+          <Text className="text-footnote text-muted-foreground">
             {t("accountsNeverMerged")}
           </Text>
         </View>

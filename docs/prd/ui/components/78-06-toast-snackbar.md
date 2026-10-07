@@ -114,3 +114,7 @@ toast.error("Failed to send message", {
 - ❌ Toasts that block other UI (it's non-blocking by definition)
 - ❌ Auto-redirect to another screen from a toast tap (use the action button)
 - ❌ Toasts during full-screen flows (camera, photo viewer) — defer the toast
+
+## Mobile rendering
+
+The mobile toast is a raised surface with radius 24, the `floating` shadow and a faint edge in its status colour. The title is `callout` medium, the description `footnote`. It fades and rises from the edge it sits on in 250 ms and leaves in 150 ms. The action is a 44 dp target in brand red.

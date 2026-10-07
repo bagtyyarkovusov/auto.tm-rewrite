@@ -28,7 +28,7 @@ export function HideSoldToggle({ hideSold, onChange, hiddenCount }: HideSoldTogg
         onPress={() => onChange(!hideSold)}
         className="min-h-11 flex-row items-center justify-between px-4 py-2 active:bg-muted"
       >
-        <Text className="text-base text-foreground">{t("hideSold")}</Text>
+        <Text className="text-body text-foreground">{t("hideSold")}</Text>
         <View
           className={cn(
             "h-6 w-10 flex-row items-center rounded-full px-0.5",
@@ -39,7 +39,7 @@ export function HideSoldToggle({ hideSold, onChange, hiddenCount }: HideSoldTogg
         </View>
       </Pressable>
       {hideSold && hiddenCount > 0 ? (
-        <Text className="px-4 pb-2 text-xs text-muted-foreground">
+        <Text className="px-4 pb-2 text-caption text-muted-foreground">
           {t("favoritesHiddenCount", { count: hiddenCount })}
         </Text>
       ) : null}

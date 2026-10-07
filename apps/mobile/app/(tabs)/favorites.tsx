@@ -1,8 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Heart } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../src/auth/useAuth";
@@ -10,29 +8,24 @@ import { useViewer } from "../../src/auth/useViewer";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { useEngineTypes } from "../../src/api/catalog/useEngineTypes";
 import { useTransmissions } from "../../src/api/catalog/useTransmissions";
-import { ListingLargeCard, ListingLargeCardSkeleton } from "../../src/listings/feed/ListingLargeCard";
+import { FavoriteListingCard, FavoriteListingCardSkeleton } from "../../src/listings/favorites/FavoriteListingCard";
 import { useFeedCatalogMaps } from "../../src/listings/feed/useFeedCatalogMaps";
 import { HideSoldToggle } from "../../src/listings/favorites/HideSoldToggle";
 import { useFavoritesView } from "../../src/listings/favorites/useFavoritesView";
 import { HOME_HREF } from "../../src/navigation/homeHref";
+import { LargeTitle } from "../../components/navigation/ScreenHeader";
+import { TabScreen } from "../../components/navigation/TabScreen";
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Text } from "@/components/ui/text";
 
 function CenteredMessage({ title, hint, children, icon = true }: { title: string; hint: string; children?: ReactNode; icon?: boolean }) {
   return (
-    <View className="flex-1 items-center justify-center gap-4 px-6 py-12">
-      {icon ? (
-        <View className="size-16 items-center justify-center rounded-full bg-muted">
-          <Icon as={Heart} className="size-8 text-muted-foreground" />
-        </View>
-      ) : null}
-      <Text className="text-center text-lg font-semibold text-foreground">{title}</Text>
-      <Text className="text-center text-sm text-muted-foreground">{hint}</Text>
+    <EmptyState illustration={icon ? "favorites" : undefined} title={title} hint={hint}>
       {children}
-    </View>
+    </EmptyState>
   );
 }
 
@@ -103,7 +96,7 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
       <>
         {toggle}
         <View accessibilityLabel={t("loading")} className="gap-2">
-          {[0, 1, 2].map((id) => <ListingLargeCardSkeleton key={id} withActions />)}
+          {[0, 1, 2].map((id) => <FavoriteListingCardSkeleton key={id} />)}
         </View>
       </>
     );
@@ -132,7 +125,7 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
       data={items}
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
-        <ListingLargeCard
+        <FavoriteListingCard
           listing={item}
           onPress={handlePress}
           brandName={catalogMaps.brandName(item.brandId)}
@@ -191,14 +184,16 @@ function SignedInFavorites() {
 function Title({ count }: { count?: number }) {
   const { t } = useTranslation();
   return (
-    <View className="flex-row items-baseline gap-2 px-4 pt-6 pb-3">
-      <Text className="text-2xl font-heading text-foreground">{t("favorites")}</Text>
-      {count ? (
-        <Text testID="favorites-count" className="text-base text-muted-foreground">
-          {count}
-        </Text>
-      ) : null}
-    </View>
+    <LargeTitle
+      title={t("favorites")}
+      accessory={
+        count ? (
+          <Text testID="favorites-count" className="text-headline font-medium text-muted-foreground">
+            {count}
+          </Text>
+        ) : null
+      }
+    />
   );
 }
 
@@ -207,7 +202,7 @@ export default function FavoritesScreen() {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    <TabScreen>
       {isAuthenticated === true ? (
         <SignedInFavorites />
       ) : (
@@ -218,11 +213,11 @@ export default function FavoritesScreen() {
           ) : (
             <View className="flex-1 items-center justify-center gap-3">
               <ActivityIndicator />
-              <Text className="text-sm text-muted-foreground">{t("loading")}</Text>
+              <Text className="text-callout text-muted-foreground">{t("loading")}</Text>
             </View>
           )}
         </>
       )}
-    </SafeAreaView>
+    </TabScreen>
   );
 }

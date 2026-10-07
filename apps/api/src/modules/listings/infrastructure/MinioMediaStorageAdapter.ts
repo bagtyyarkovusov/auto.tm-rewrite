@@ -12,11 +12,14 @@ import type { StoredObjectInfo } from "../domain/MediaUpload";
 import type { MediaObjectInspector } from "../domain/ports/MediaObjectInspector";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
 import type { Env } from "../../../env.schema";
+import { imageUploadObjectKeys } from "../domain/imageUploadObjectKeys";
+import { ConditionalImageStorage } from "./ConditionalImageStorage";
 
 @Injectable()
 export class MinioMediaStorageAdapter implements MediaStoragePort, MediaObjectInspector {
   private readonly s3: S3Client;
   private readonly signingS3: S3Client;
+  private conditionalSigner: S3Client | undefined;
   private readonly publicUrl: string;
 
   constructor(
@@ -54,21 +57,40 @@ export class MinioMediaStorageAdapter implements MediaStoragePort, MediaObjectIn
     contentType: string;
     sizeBytes: number;
     expirySeconds?: number;
-  }): Promise<{ url: string; key: string }> {
+    writeProtocol?: "conditional-v1";
+  }): Promise<{ url: string; key: string; headers?: Record<string, string>; objectKeys?: string[] }> {
     const bucket = this.inferBucket(data.key);
+    const objectKeys = data.writeProtocol ? imageUploadObjectKeys(data.key) : undefined;
+    const match = objectKeys ? await new ConditionalImageStorage(this.s3).initialize(objectKeys) : undefined;
 
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: data.key,
       ContentType: data.contentType,
       ContentLength: data.sizeBytes,
+      ...(match ? { IfMatch: match, CacheControl: "no-store" } : {}),
     });
 
-    const url = await getSignedUrl(this.signingS3, command, {
+    // The caller supplies the body later. Do not sign a checksum of an empty body.
+    // Keep the installed clients' legacy signer unchanged.
+    if (match) this.conditionalSigner ??= new S3Client({
+      endpoint: this.publicUrl, region: this.config.get("MINIO_REGION", { infer: true }),
+      credentials: {
+        accessKeyId: this.config.get("MINIO_ACCESS_KEY", { infer: true }),
+        secretAccessKey: this.config.get("MINIO_SECRET_KEY", { infer: true }),
+      },
+      forcePathStyle: true, requestChecksumCalculation: "WHEN_REQUIRED",
+    });
+    const signer = match ? this.conditionalSigner : this.signingS3;
+    if (!signer) throw new Error("Conditional signer was not initialized");
+    const url = await getSignedUrl(signer, command, {
       expiresIn: data.expirySeconds ?? 600,
+      ...(match ? { signableHeaders: new Set(["if-match", "cache-control"]) } : {}),
     });
 
-    return { url, key: data.key };
+    return { url, key: data.key, ...(match && objectKeys ? {
+      headers: { "if-match": match, "content-type": data.contentType, "cache-control": "no-store" }, objectKeys,
+    } : {}) };
   }
 
   resolvePublicUrl(key: string): string {
