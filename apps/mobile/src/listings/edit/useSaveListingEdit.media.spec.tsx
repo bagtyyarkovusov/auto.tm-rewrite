@@ -121,6 +121,7 @@ function createMediaApi(initial: ListingsSchemas.ListingMedia[], enforceFloor = 
     http.post("*/listings/:id/media/attach", async ({ request }) => {
       const body = (await request.json()) as ListingsSchemas.AttachMediaRequest;
       requests.attach.push(body);
+      if (enforceFloor && rows.size >= 20) return HttpResponse.json({ code: "MEDIA_LIMIT_EXCEEDED" }, { status: 400 });
       if (failures.attachKeys.delete(body.key)) {
         return HttpResponse.json({ message: "storage unavailable" }, { status: 500 });
       }
@@ -226,6 +227,16 @@ describe("useSaveListingEdit server media IDs", () => {
     await result.current.save().catch(() => undefined);
     await waitFor(() => expect(result.current.status).toBe("succeeded"));
     expect(api.requests.edit.at(-1)?.description).toBe("Repaired Listing");
+  });
+
+  it("replaces a photo at the twenty-photo cap without crossing either limit", async () => {
+    const seed = Array.from({ length: 20 }, (_, i) => persisted(`550e8400-e29b-41d4-a716-${String(i + 100).padStart(12, "0")}`, i));
+    const api = createMediaApi(seed, true);
+    const photos = [...seed.slice(1).map((m, i) => staged(m.id, m.key, i)), staged(LOCAL_NEW_1, "pending/replacement/original.jpg", 19)];
+    const { result } = renderSave({ photos, seed, payload: { description: "Replaced photo" } });
+    await result.current.save().catch(() => undefined);
+    await waitFor(() => expect(result.current.status).toBe("succeeded"));
+    expect(api.requests.remove).toEqual([seed[0]!.id]);
   });
 
   it("reorders a new attachment by the ID attach returned, not its local staging UUID", async () => {
