@@ -65,11 +65,17 @@ export class ProfilePhotoUploadAdapter implements ProfilePhotoPort {
     // Only a User's current photo is adopted for their profile; a replaced or
     // removed one is retired and was refused above.
     if ("alreadyAdopted" in reservation) return { key: upload.key };
+    // Another request for this key is still preparing it. Joining would run a
+    // second generator over the same objects: their conditional writes fail
+    // each other, and that failure retires the upload. This request prepares
+    // nothing and leaves the claim alone; sent again later it answers the photo.
+    if (reservation.joined) {
+      throw new ConflictException({
+        code: LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
+        message: "Upload is already being set as the profile photo",
+      });
+    }
 
-    // Only the attempt that created the token abandons it. A joined retry
-    // shares a claim another attempt is still preparing.
-    const abandon = () =>
-      reservation.joined ? Promise.resolve() : this.claims.abandon(reservation.token);
     try {
       const classification = await this.classifier.classify(upload.key);
       if (!classification.isAcceptable) {
@@ -90,7 +96,7 @@ export class ProfilePhotoUploadAdapter implements ProfilePhotoPort {
       // A failed preparation is terminal: the upload is retired and the User
       // presigns again. If that cannot be recorded now, the storage scanner
       // retires the stranded preparation after its deadline.
-      await abandon().catch(() => undefined);
+      await this.claims.abandon(reservation.token).catch(() => undefined);
       throw this.rejection(err);
     }
   }

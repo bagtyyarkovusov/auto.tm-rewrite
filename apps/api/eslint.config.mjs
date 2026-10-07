@@ -35,6 +35,25 @@ export default [
     },
   },
   {
+    // Identity reaches uploads only through its own ProfilePhotoPort (#642).
+    // The one Listings import it may hold is the Nest module, for composition.
+    files: ["src/modules/identity/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^\\.\\.?/(\\.\\./)*(src/)?(modules/)?listings/(?!listings\\.module(\\.js)?$)",
+              message:
+                "Identity uses uploads through domain/ports/ProfilePhotoPort (or listings.module for Nest composition).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.spec.ts", "**/*.e2e.spec.ts"],
     rules: {
       "@typescript-eslint/consistent-type-imports": "off",

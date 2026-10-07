@@ -240,6 +240,10 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     IDENTITY_TOKENS.SessionRepository,
     IDENTITY_TOKENS.ClockPort,
     IDENTITY_ADMIN_PORT,
+    // For ProfilePhotoModule, identity's own composition above Listings. Other
+    // contexts cannot name these classes: lint keeps them to identity.public.
+    GetMe,
+    PrismaUserRepository,
   ],
 })
 export class IdentityModule {}
