@@ -670,6 +670,10 @@ export const resources: Resource = {
       signInToManageDescription: "Войдите, чтобы управлять объявлениями и черновиками.",
     },
     account: {
+      photoFail: "Не удалось загрузить фото.",
+      photoBig: "Фото слишком большое. Выберите фото до 5 МБ.",
+      photoType: "Этот файл не подходит. Выберите фото в формате JPEG, PNG или WebP.",
+      chooseOther: "Выбрать другое фото",
       uploading: "Загрузка фото... {{p}}%",
       photoSaved: "Фото обновлено",
       permT: "Нет доступа к камере",
@@ -1482,6 +1486,10 @@ export const resources: Resource = {
       signInToManageDescription: "Bildirişleri we garalamalary dolandyrmak üçin giriň.",
     },
     account: {
+      photoFail: "Suraty ýükläp bolmady.",
+      photoBig: "Surat gaty uly. 5 MB-dan uly bolmadyk surat saýlaň.",
+      photoType: "Bu faýl ýaramaýar. JPEG, PNG ýa-da WebP surat saýlaň.",
+      chooseOther: "Başga surat saýla",
       uploading: "Surat ýüklenýär... {{p}}%",
       photoSaved: "Surat täzelendi",
       permT: "Kamera rugsady ýok",
@@ -2292,6 +2300,10 @@ export const resources: Resource = {
       signInToManageDescription: "Sign in to manage your listings and drafts.",
     },
     account: {
+      photoFail: "Couldn't upload the photo.",
+      photoBig: "This photo is too large. Choose one up to 5 MB.",
+      photoType: "This file can't be used. Choose a JPEG, PNG or WebP photo.",
+      chooseOther: "Choose another photo",
       uploading: "Uploading photo... {{p}}%",
       photoSaved: "Photo updated",
       permT: "Camera access is off",

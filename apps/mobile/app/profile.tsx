@@ -44,6 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -315,6 +316,18 @@ function SignedInProfile() {
         accessibilityValue={{ min: 0, max: 100, now: photo.state.percent }}
         className="px-4 pb-3 text-center text-footnote text-muted-foreground"
       >{t("uploading", { p: photo.state.percent })}</Text> : null}
+
+      {photo.state.status !== "idle" && photo.state.status !== "uploading" ? <View className="mx-4 mb-4 gap-2 rounded-2xl bg-destructive/10 px-4 py-3">
+        <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" className="text-body text-destructive">
+          {photo.state.status === "offline" ? t("common:offline") : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : "photoFail")}
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {photo.state.status === "failed" || photo.state.status === "offline" ?
+            <Button variant="ghost" className="min-h-11" onPress={() => void photo.retry()}><Text>{t("common:retry")}</Text></Button> :
+            <Button variant="ghost" className="min-h-11" onPress={() => { photo.cancel(); setPhotoSheetOpen(true); }}><Text>{t("chooseOther")}</Text></Button>}
+          <Button variant="ghost" className="min-h-11" onPress={photo.cancel}><Text>{t("common:cancel")}</Text></Button>
+        </View>
+      </View> : null}
 
       <SignInMethods phone={data.phone} email={data.email} />
 
