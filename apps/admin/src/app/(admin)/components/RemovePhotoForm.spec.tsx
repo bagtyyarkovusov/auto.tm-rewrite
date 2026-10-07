@@ -114,6 +114,16 @@ describe("RemovePhotoForm", () => {
     await waitFor(() => expect(mockState.refresh).toHaveBeenCalled());
   });
 
+  it("shows a generic failure without reporting success", async () => {
+    mockState.removeUserPhoto.mockResolvedValue({ ok: false, error: "Ошибка сервера" });
+    renderForm();
+    fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
+    fireEvent.change(screen.getByLabelText("Причина действия"), { target: { value: "Причина" } });
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Ошибка сервера");
+    expect(screen.queryByText("Фото удалено.")).toBeNull();
+  });
+
   it("tells the moderator the action is unavailable when the feature is disabled", async () => {
     mockState.removeUserPhoto.mockResolvedValue({
       ok: false,
