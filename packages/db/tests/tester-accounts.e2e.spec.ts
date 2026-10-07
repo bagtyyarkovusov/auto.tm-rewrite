@@ -51,7 +51,7 @@ describe("tester operator Prisma transaction integration", () => {
     const region = await db.region.create({ data: { slug: "tester-region", ...names } });
     const city = await db.city.create({ data: { slug: "tester-city", regionId: region.id, ...names } });
     const listing = await db.listing.create({ data: { sellerId: first.id, brandId: brand.id, modelId: model.id, cityId: city.id, regionId: region.id, year: 2020, mileageKm: 1000, priceAmount: 100, status: "active" } });
-    const other = await db.user.create({ data: { phone: "+99371000000", role: "buyer" } });
+    const other = await db.user.create({ data: { phone: "+99371000000", phoneVerifiedAt: NOW, role: "buyer" } });
     for (const user of [first, other]) await db.session.create({ data: { userId: user.id, refreshTokenHash: "fixture-hash", expiresAt: new Date("2026-12-01T00:00:00Z") } });
     expect(await runTesterAccounts(store, input("remove"))).toMatchObject({ scheduled: 30, sessionsDeleted: 1, listingsArchived: 1 });
     expect(await db.user.findUniqueOrThrow({ where: { id: first.id } })).toMatchObject({ deletionScheduledAt: NOW });
@@ -62,7 +62,7 @@ describe("tester operator Prisma transaction integration", () => {
   });
 
   it("refuses a conflict at the end of the list before creating any User", async () => {
-    const conflicting = await db.user.create({ data: { email: must(accounts[29]).email, role: "admin" } });
+    const conflicting = await db.user.create({ data: { email: must(accounts[29]).email, emailVerifiedAt: NOW, role: "admin" } });
     await expect(runTesterAccounts(store, input())).rejects.toThrow(/refused/);
     expect(await db.user.count()).toBe(1);
     expect(await db.user.findUniqueOrThrow({ where: { id: conflicting.id } })).toMatchObject({ deletionScheduledAt: null, role: "admin" });
