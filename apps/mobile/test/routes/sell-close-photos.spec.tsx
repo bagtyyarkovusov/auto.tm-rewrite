@@ -10,14 +10,19 @@ import { act, fireEvent, renderMobile } from "../render";
 const fixture = vi.hoisted(() => {
   const draft = (id: string, photoId: string) => {
     const savedPhoto = { photoId, key: `${photoId}.jpg`, sortOrder: 0 };
+    const savedPhotos = [savedPhoto, ...[1, 2].map((index) => ({
+      ...savedPhoto, photoId: `${photoId.slice(0, -12)}${String(900 + index).padStart(12, "0")}`,
+      key: `support-${photoId}-${index}.jpg`, sortOrder: index,
+    }))];
     return {
       id,
       photoId,
       savedPhoto,
+    savedPhotos,
       payload: {
         brandId: id, modelId: id, year: 2020,
         condition: "used", mileageKm: 10000, conditionDisclosure: { damaged: false },
-        photos: [savedPhoto],
+        photos: savedPhotos,
         priceAmount: 100000, priceCurrency: "TMT", description: "One owner", regionId: id, cityId: id,
         contactPhone: "+99365000000", allowCalls: true, allowChat: true,
       } as Record<string, unknown>,
@@ -138,7 +143,7 @@ function expectDraftAsSaved(screen: Screen, draft: typeof a) {
   // Every save carried the photo and the completed steps.
   expect(savedPayloads(draft.id).length).toBeGreaterThan(0);
   for (const payload of savedPayloads(draft.id)) {
-    expect(payload.photos).toEqual([draft.savedPhoto]);
+    expect(payload.photos).toEqual(draft.savedPhotos);
     expect(payload.validatedSteps).toEqual(expect.arrayContaining(LATER_STEPS));
   }
 }
@@ -169,7 +174,7 @@ describe("Sell wizard, closing a draft with ✕ and opening one again in the sam
     expectDraftAsSaved(screen, a);
     fireEvent.press(publishButton(screen));
     await waitFor(() => expect(fixture.mutation.mutateAsync).toHaveBeenCalledWith(a.id));
-    for (const payload of savedPayloads(a.id)) expect(payload.photos).toEqual([a.savedPhoto]);
+    for (const payload of savedPayloads(a.id)) expect(payload.photos).toEqual(a.savedPhotos);
   });
 
   it("reopens it the same way when the seller taps Continue straight after ✕", async () => {
@@ -202,7 +207,7 @@ describe("Sell wizard, closing a draft with ✕ and opening one again in the sam
     expect(screen.queryByText(new RegExp(a.photoId))).toBeNull();
     expect(screen.getAllByText(/^photo /)).toHaveLength(1);
     expectDraftAsSaved(screen, b);
-    for (const payload of savedPayloads(a.id)) expect(payload.photos).toEqual([a.savedPhoto]);
+    for (const payload of savedPayloads(a.id)) expect(payload.photos).toEqual(a.savedPhotos);
   });
 
   it("✕ before the device has listed the staged photos saves the draft with its photos", async () => {
@@ -218,7 +223,7 @@ describe("Sell wizard, closing a draft with ✕ and opening one again in the sam
 
     expect(savedPayloads(a.id).length).toBeGreaterThan(0);
     for (const payload of savedPayloads(a.id)) {
-      expect(payload.photos).toEqual([a.savedPhoto]);
+      expect(payload.photos).toEqual(a.savedPhotos);
       expect(payload.validatedSteps).toEqual(expect.arrayContaining(LATER_STEPS));
     }
   });

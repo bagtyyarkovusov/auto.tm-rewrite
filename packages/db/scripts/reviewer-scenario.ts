@@ -2,7 +2,6 @@
 import "dotenv/config";
 
 import { Pool } from "pg";
-import { uploadReviewerPhoto } from "./reviewer-fixtures/uploadReviewerPhoto";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { Prisma, PrismaClient } from "../generated/prisma/client/client";
@@ -12,6 +11,8 @@ import {
   type ReviewerScenarioSeedStore,
   type ReviewerScenarioUser,
 } from "../src/reviewer-scenario-seed";
+
+import { uploadReviewerPhoto } from "./reviewer-fixtures/uploadReviewerPhoto";
 
 type PrismaOrTx = PrismaClient;
 

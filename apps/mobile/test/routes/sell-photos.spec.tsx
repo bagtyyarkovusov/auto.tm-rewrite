@@ -125,13 +125,12 @@ describe("Sell wizard, Photos step", () => {
     expect(screen.getByText("Add 5 more for a better listing")).toBeTruthy();
   });
 
-  it("opens on Photos with no error yet and will not continue until a photo is picked", () => {
+  it("opens on Photos with the minimum helper and will not continue below three", () => {
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
 
     expect(screen.getByRole("header", { name: "Photos, Step 3 of 7" })).toBeTruthy();
-    // The step's error waits for a removal or a Continue tap (#629).
-    expect(screen.queryByText("At least one photo is required")).toBeNull();
+    expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
     expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: true });
   });
 
@@ -149,7 +148,7 @@ describe("Sell wizard, Photos step", () => {
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
 
-    expect(screen.queryByText("At least one photo is required")).toBeNull();
+    expect(screen.queryByText("At least 3 photos are required")).toBeNull();
     expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: false });
     fireEvent.press(continueButton(screen));
 

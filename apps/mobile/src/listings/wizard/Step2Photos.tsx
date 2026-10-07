@@ -439,7 +439,7 @@ export default function Step2Photos({
         onPickFromLibrary={pickFromLibrary}
       />
 
-      {photosError && <InlineError message={photosError} />}
+      {photosError && photosError !== t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS }) && <InlineError message={photosError} />}
 
       {maxReached && (
         <Text className="text-sm text-muted-foreground">

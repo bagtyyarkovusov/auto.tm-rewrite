@@ -405,6 +405,7 @@ describe("PublishListing", () => {
     seedDraft(draftRepo, { ...validPayload, photos: [
       { photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 },
       { photoId: "00000000-0000-0000-0000-000000000006", key: "p1.jpg", sortOrder: 1 },
+          { photoId: "00000000-0000-0000-0000-000000000007", key: "photo3.jpg", sortOrder: 2 },
     ] });
     const error = await makeUseCase(draftRepo, prisma).execute({ draftId: "draft-1", userId: "user-1" }).catch((err: unknown) => err);
     expect(error).toBeInstanceOf(BadRequestException);
@@ -414,6 +415,28 @@ describe("PublishListing", () => {
     });
     expect(prisma.createdListings).toEqual([]);
     expect(prisma.deletedDrafts).toEqual([]);
+  });
+
+  it.each([1, 2])("refuses three draft slots containing only %i uploaded keys", async (keyedCount) => {
+    const photos = validPayload.photos.map((photo, index) => index < keyedCount ? photo : { photoId: photo.photoId, sortOrder: photo.sortOrder });
+    seedDraft(draftRepo, { ...validPayload, photos });
+    const error = await makeUseCase(draftRepo, prisma).execute({ draftId: "draft-1", userId: "user-1" }).catch((err: unknown) => err);
+    expect((error as BadRequestException).getResponse()).toMatchObject({ code: "INVALID_DRAFT_PAYLOAD", details: { formErrors: ["AT_LEAST_THREE_PHOTOS_REQUIRED"] } });
+    expect(prisma.createdMedia).toEqual([]);
+    expect(prisma.deletedDrafts).toEqual([]);
+  });
+
+  it("refuses twenty-one attached photos without publication", async () => {
+    const photos = Array.from({ length: 21 }, (_, index) => ({
+      photoId: `00000000-0000-0000-0000-${String(100 + index).padStart(12, "0")}`,
+      key: `cap-${index}.jpg`, sortOrder: index,
+    }));
+    photos.forEach((photo) => presignedUpload(photo.key));
+    seedDraft(draftRepo, { ...validPayload, photos });
+    const error = await makeUseCase(draftRepo, prisma).execute({ draftId: "draft-1", userId: "user-1" }).catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({ code: "INVALID_DRAFT_PAYLOAD", details: { formErrors: ["MEDIA_LIMIT_EXCEEDED"] } });
+    expect(prisma.createdListings).toEqual([]);
   });
 
   it("publishes a valid draft", async () => {
@@ -692,12 +715,14 @@ describe("PublishListing", () => {
         photos: [
           { photoId: "00000000-0000-0000-0000-000000000005", key: "p1.jpg", sortOrder: 0 },
           { photoId: "00000000-0000-0000-0000-000000000006", key: "p1.jpg", sortOrder: 1 },
+          { photoId: "00000000-0000-0000-0000-000000000007", key: "photo3.jpg", sortOrder: 2 },
         ],
       });
 
       const err = await publishError();
 
       expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as BadRequestException).getResponse()).toMatchObject({ message: "A photo key can be used only once" });
       expectNothingPublished();
     });
 

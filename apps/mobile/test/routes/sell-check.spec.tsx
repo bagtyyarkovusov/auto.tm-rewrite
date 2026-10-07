@@ -12,10 +12,14 @@ const fixture = vi.hoisted(() => {
   const id = "550e8400-e29b-41d4-a716-446655440000";
   const photoId = "11111111-1111-4111-8111-111111111111";
   const savedPhoto = { photoId, key: `${photoId}.jpg`, sortOrder: 0 };
+  const savedPhotos = [savedPhoto, ...[1, 2].map((index) => ({
+    ...savedPhoto, photoId: `${photoId.slice(0, -12)}${String(900 + index).padStart(12, "0")}`,
+    key: `support-${photoId}-${index}.jpg`, sortOrder: index,
+  }))];
   const complete = {
     brandId: id, modelId: id, year: 2020,
     condition: "used", mileageKm: 10000, conditionDisclosure: { damaged: false },
-    photos: [savedPhoto],
+    photos: savedPhotos,
     priceAmount: 100000, priceCurrency: "TMT", description: "One owner", regionId: id, cityId: id,
     contactPhone: "+99365000000", allowCalls: true, allowChat: true,
   } as Record<string, unknown>;
@@ -23,6 +27,7 @@ const fixture = vi.hoisted(() => {
     id,
     photoId,
     savedPhoto,
+    savedPhotos,
     complete,
     payload: complete,
     // File names by staging directory, as the device would list them.
@@ -163,7 +168,7 @@ describe("Check and publish: changing a step (#588)", () => {
     // Done saved the draft on Check, with its photo and every step still complete.
     expect(savedPayloads().at(-1)).toMatchObject({
       currentStep: 7,
-      photos: [fixture.savedPhoto],
+      photos: fixture.savedPhotos,
       validatedSteps: ["vehicle", "specs", "photos", "price", "location", "contact"],
     });
   });
@@ -220,7 +225,7 @@ describe("Check and publish: publishing (#588)", () => {
 
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
 
-    expect(savedPayloads().at(-1)).toMatchObject({ photos: [fixture.savedPhoto], priceAmount: 100000 });
+    expect(savedPayloads().at(-1)).toMatchObject({ photos: fixture.savedPhotos, priceAmount: 100000 });
     expect(publishCalls()).toEqual([[id]]);
     expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${id}`);
     expect(fixture.show).toHaveBeenCalledWith({ title: "Listing published", variant: "success" });
@@ -250,7 +255,7 @@ describe("Check and publish: a publish that fails (#588)", () => {
     header(screen, "Check and publish, Step 7 of 7");
     expect(within(screen.getByRole("alert")).getByText(message)).toBeTruthy();
     expect(announcements).toContain(message);
-    expect(savedPayloads().at(-1)).toMatchObject({ photos: [fixture.savedPhoto] });
+    expect(savedPayloads().at(-1)).toMatchObject({ photos: fixture.savedPhotos });
     expect(routerMock.replace).not.toHaveBeenCalled();
     expect(fixture.show).not.toHaveBeenCalled();
     expect(publish(screen).props.accessibilityState).toMatchObject({ disabled: false });
@@ -419,7 +424,7 @@ describe("Check and publish: what blocks publishing (#588)", () => {
     // The draft names a photo that has no key and no file on the device.
     fixture.payload = {
       ...fixture.complete,
-      photos: [fixture.savedPhoto, { photoId: lostPhoto, sortOrder: 1 }],
+      photos: [...fixture.savedPhotos, { photoId: lostPhoto, sortOrder: 3 }],
     };
     const screen = await openCheck();
 
@@ -431,7 +436,7 @@ describe("Check and publish: what blocks publishing (#588)", () => {
   it("lists missing steps, then uploading photos, then failed photos", async () => {
     fixture.payload = {
       ...fixture.complete,
-      photos: [fixture.savedPhoto, { photoId: lostPhoto, sortOrder: 1 }],
+      photos: [...fixture.savedPhotos, { photoId: lostPhoto, sortOrder: 3 }],
     };
     fixture.staged[`draft-${id}`] = [`${photoId}.jpg`, `${secondPhoto}.jpg`];
     fixture.presign.mockImplementation(() => new Promise(() => {}));

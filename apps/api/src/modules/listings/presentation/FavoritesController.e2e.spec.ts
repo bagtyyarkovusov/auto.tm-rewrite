@@ -122,6 +122,12 @@ describe("FavoritesController e2e", () => {
     return draft;
   }
 
+  const publicationPhotos = (photoId: string, key: string) => [0, 1, 2].map((index) => ({
+    photoId: index === 0 ? photoId : suite.id(`${photoId}-support-${index}`),
+    key: index === 0 ? key : `${key}-support-${index}`,
+    sortOrder: index,
+  }));
+
   const validPayload = {
     brandId: suite.catalog.brandId,
     modelId: suite.catalog.modelId,
@@ -136,7 +142,7 @@ describe("FavoritesController e2e", () => {
     allowCalls: true,
     allowChat: true,
     conditionDisclosure: { damaged: false },
-    photos: [{ photoId: suite.id("photo-1"), key: "photo1.jpg", sortOrder: 0 }],
+    photos: publicationPhotos(suite.id("photo-1"), "photo1.jpg"),
   };
 
   describe("POST /api/v1/listings/:id/favorite", () => {
@@ -514,7 +520,7 @@ describe("FavoritesController e2e", () => {
       for (let i = 0; i < 3; i++) {
         const draft = await seedDraft("seller-1", {
           ...validPayload,
-          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
+          photos: publicationPhotos(suite.id(`photo-${i}`), `photo${i}.jpg`),
         });
         const publishRes = await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -564,7 +570,7 @@ describe("FavoritesController e2e", () => {
         for (const [i, status] of statuses.entries()) {
           const draft = await seedDraft("seller-1", {
             ...validPayload,
-            photos: [{ photoId: suite.id(`photo-s${i}`), key: `s${i}.jpg`, sortOrder: 0 }],
+            photos: publicationPhotos(suite.id(`photo-s${i}`), `s${i}.jpg`),
           });
           const publishRes = await request
             .post(`/api/v1/listings/drafts/${draft.id}/publish`)
