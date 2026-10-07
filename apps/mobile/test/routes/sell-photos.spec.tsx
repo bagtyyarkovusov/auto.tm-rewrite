@@ -24,7 +24,7 @@ const fixture = vi.hoisted(() => {
     payloads: {
       // Car and Details are done, so a resumed draft opens on Photos.
       atPhotos: { ...car, ...details },
-      complete: { ...car, ...details, photos: [{ photoId: ids.a, key: `${ids.a}.jpg`, sortOrder: 0 }], ...rest },
+      complete: { ...car, ...details, photos: Object.values(ids).map((photoId, sortOrder) => ({ photoId, key: `${photoId}.jpg`, sortOrder })), ...rest },
     } as Record<string, Record<string, unknown>>,
     payload: {} as Record<string, unknown>,
     queuePhotos: [] as StagedPhoto[],
@@ -92,6 +92,9 @@ const staged = (photoId: string, sortOrder: number, state: StagedPhoto["state"],
 const keyed = (photoId: string, sortOrder: number) => staged(photoId, sortOrder, "uploaded", { key: `${photoId}.jpg` });
 
 function resume(payload: "atPhotos" | "complete") {
+  if (payload === "complete") {
+    for (const id of Object.values(ids)) if (fixture.queuePhotos.length < 3 && !fixture.queuePhotos.some((p) => p.photoId === id)) fixture.queuePhotos.push(keyed(id, fixture.queuePhotos.length));
+  }
   fixture.payload = fixture.payloads[payload] ?? {};
   routeParams.resumeDraftId = fixture.id;
 }
@@ -109,13 +112,25 @@ beforeEach(() => {
 });
 
 describe("Sell wizard, Photos step", () => {
-  it("opens on Photos with no error yet and will not continue until a photo is picked", () => {
+  it("requires three picked photos, explains the floor and nudges toward eight", () => {
+    fixture.queuePhotos = [keyed(ids.a, 0), keyed(ids.b, 1)];
+    resume("atPhotos");
+    const screen = renderMobile(<SellScreen />);
+    expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
+    expect(screen.getByText("2 / 8 photos")).toBeTruthy();
+    fixture.queuePhotos = [...fixture.queuePhotos, keyed(ids.c, 2)];
+    screen.rerender(<SellScreen />);
+    expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: false });
+    expect(screen.getByText("Add 5 more for a better listing")).toBeTruthy();
+  });
+
+  it("opens on Photos with the minimum helper and will not continue below three", () => {
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
 
     expect(screen.getByRole("header", { name: "Photos, Step 3 of 7" })).toBeTruthy();
-    // The step's error waits for a removal or a Continue tap (#629).
-    expect(screen.queryByText("At least one photo is required")).toBeNull();
+    expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
     expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: true });
   });
 
@@ -128,12 +143,12 @@ describe("Sell wizard, Photos step", () => {
     ["failed", staged(ids.a, 0, "failed", { retryCount: 1, error: { code: "NETWORK_ERROR", message: "Offline", retryable: true } })],
     ["lost", staged(ids.a, 0, "lost", { localUri: undefined })],
     ["uploaded", keyed(ids.a, 0)],
-  ])("Continue moves on with one photo that is %s", (_name, photo) => {
-    fixture.queuePhotos = [photo];
+  ])("Continue moves on with three picked photos including one that is %s", (_name, photo) => {
+    fixture.queuePhotos = [photo, keyed(ids.b, 1), keyed(ids.c, 2)];
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
 
-    expect(screen.queryByText("At least one photo is required")).toBeNull();
+    expect(screen.queryByText("At least 3 photos are required")).toBeNull();
     expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: false });
     fireEvent.press(continueButton(screen));
 
@@ -153,7 +168,7 @@ describe("Sell wizard, Photos step", () => {
   });
 
   it("saves nothing under photos when no picked photo has a key yet, and Publish would still need one", () => {
-    fixture.queuePhotos = [staged(ids.a, 0, "uploading")];
+    fixture.queuePhotos = [staged(ids.a, 0, "uploading"), staged(ids.b, 1, "compressed"), staged(ids.c, 2, "presigned")];
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
     fireEvent.press(continueButton(screen));
@@ -260,7 +275,7 @@ describe("Sell wizard, upload status on later steps", () => {
     const screen = renderMobile(<SellScreen />);
     expect(screen.getByRole("button", { name: "Publish" }).props.accessibilityState).toMatchObject({ disabled: true });
 
-    fixture.queuePhotos = [keyed(ids.a, 0)];
+    fixture.queuePhotos = [keyed(ids.a, 0), keyed(ids.b, 1), keyed(ids.c, 2)];
     fixture.gate = { canPublish: true, blockers: [] };
     screen.rerender(<SellScreen />);
 
@@ -278,7 +293,7 @@ describe("Sell wizard, upload status on later steps", () => {
     expect(screen.queryByText(/^Fill in: /)).toBeNull();
 
     // A photo the seller adds afterwards is a change of theirs, and is checked again.
-    fixture.queuePhotos = [keyed(ids.a, 0), staged(ids.b, 1, "compressed"), staged(ids.c, 2, "selected")];
+    fixture.queuePhotos = [...fixture.queuePhotos, staged("44444444-4444-4444-8444-444444444444", 3, "selected")];
     screen.rerender(<SellScreen />);
     expect(screen.getByText(/^Fill in: /)).toBeTruthy();
   });

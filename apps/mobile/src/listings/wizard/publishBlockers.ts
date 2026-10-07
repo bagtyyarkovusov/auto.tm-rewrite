@@ -1,4 +1,4 @@
-import { WizardSchemas } from "@auto-tm/contracts";
+import { WizardSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import type { TFunction } from "i18next";
 
 import type { UploadCounts } from "../uploadStaging/uploadCounts";
@@ -26,6 +26,9 @@ export function publishBlockerLines(t: TFunction, { validatedSteps, uploads }: P
   );
   if (missing.length > 0) {
     lines.push(t("publishFillIn", { steps: missing.map((step) => t(`wizardSteps.${step}`)).join(", ") }));
+  }
+  if (uploads && uploads.total < ListingsSchemas.MIN_LISTING_PHOTOS) {
+    lines.push(t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS }));
   }
   if (uploads && uploads.inflight > 0) {
     lines.push(t("photosGateUploading", { count: uploads.inflight }));

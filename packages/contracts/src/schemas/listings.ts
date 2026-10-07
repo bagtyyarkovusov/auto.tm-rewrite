@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+/** Publication floor, guidance target and hard cap shared by API and clients. */
+export const MIN_LISTING_PHOTOS = 3;
+export const RECOMMENDED_LISTING_PHOTOS = 8;
+export const MAX_LISTING_PHOTOS = 20;
+
 import { Currency, ListingCondition, ListingStatus } from "../enums";
 
 import { PhoneTm } from "./auth";
@@ -687,6 +692,7 @@ export const ListingsErrorCode = {
   ListingDeleted: "LISTING_DELETED",
   ListingNotFound: "LISTING_NOT_FOUND",
   MediaLimitExceeded: "MEDIA_LIMIT_EXCEEDED",
+  PhotoMinimumRequired: "PHOTO_MINIMUM_REQUIRED",
   /** The User already has `MAX_DRAFTS_PER_USER` drafts; creating another is refused with 409. */
   DraftLimitReached: "DRAFT_LIMIT_REACHED",
   /** The media key was not presigned for this User, or its kind does not match. */

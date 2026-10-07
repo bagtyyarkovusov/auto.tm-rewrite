@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import {
+  MIN_LISTING_PHOTOS,
+  MAX_LISTING_PHOTOS,
   ListingDraftPayloadSchema,
   CurrencySchema,
   ListingConditionSchema,
@@ -100,14 +102,15 @@ const KEY = WIZARD_ERROR_KEYS;
 // Each schema validates exactly the fields required for its step.
 // They are refinements of ListingDraftPayloadSchema — partial, step-scoped.
 
-// Continue needs one picked photo, not one uploaded photo (#584): uploads keep
+// Continue needs three picked photos, not one uploaded photo (#584): uploads keep
 // running while the seller fills in the later steps. The mobile client lists every
 // picked photo here, key or not, but saves only photos that have a key into the
-// draft, and Publish still refuses a Listing with no keyed photo.
+// draft, and Publish still requires three keyed photos.
 export const StepPhotosSchema = z.object({
   photos: z
     .array(DraftPhotoSchema, { required_error: KEY.photosRequired })
-    .min(1, KEY.photosRequired),
+    .min(MIN_LISTING_PHOTOS, KEY.photosRequired)
+    .max(MAX_LISTING_PHOTOS),
 });
 export type StepPhotosInput = z.infer<typeof StepPhotosSchema>;
 

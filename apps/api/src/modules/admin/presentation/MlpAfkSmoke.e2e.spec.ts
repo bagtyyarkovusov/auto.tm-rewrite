@@ -167,13 +167,7 @@ describe("MLP AFK e2e smoke", () => {
       allowCalls: true,
       allowChat: true,
       conditionDisclosure: { damaged: false },
-      photos: [
-        {
-          photoId: suite.id("photo-1"),
-          key: "afk-smoke-photo.jpg",
-          sortOrder: 0,
-        },
-      ],
+      photos: [0, 1, 2].map((index) => ({ photoId: suite.id(`photo-${index + 1}`), key: `afk-smoke-photo.jpg-${index}`, sortOrder: index })),
     } satisfies Record<string, unknown>;
 
     const seededPayload = await seedPresignedPhotos(prisma, input.sellerId, draftPayload);

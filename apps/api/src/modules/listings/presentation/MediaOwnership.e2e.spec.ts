@@ -147,6 +147,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
         priceAmount: 100000,
         priceCurrency: "TMT",
         publishedAt: new Date(),
+        media: { create: [0, 1, 2].map((i) => ({ kind: "image", key: `review-floor/${name}-${i}.jpg`, sortOrder: i + 10 })) },
       },
     });
   }
@@ -175,6 +176,20 @@ describe("Listing media upload ownership e2e (#536)", () => {
       .set("Authorization", `Bearer ${tokens[alias]}`);
   }
 
+  it("allows only one of two concurrent removals from a four-photo Listing", async () => {
+    const listing = await createListing("user-a", "concurrent-floor");
+    const key = await presignAndPut("user-a");
+    const fourth = await attach("user-a", listing.id, key).expect(201);
+    const baseline = await prisma.listingMedia.findFirstOrThrow({ where: { listingId: listing.id, id: { not: fourth.body.id } } });
+    const responses = await Promise.all([
+      removeMedia("user-a", listing.id, fourth.body.id),
+      removeMedia("user-a", listing.id, baseline.id),
+    ]);
+    expect(responses.map((r) => r.status).sort()).toEqual([200, 400]);
+    expect(responses.find((r) => r.status === 400)?.body.code).toBe("PHOTO_MINIMUM_REQUIRED");
+    expect(await prisma.listingMedia.count({ where: { listingId: listing.id, kind: "image" } })).toBe(3);
+  });
+
   it("presign, upload, attach and remove still work for the owner", async () => {
     const listing = await createListing("user-a", "listing-a");
     const key = await presignAndPut("user-a");
@@ -186,7 +201,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
 
     await removeMedia("user-a", listing.id, attached.body.id).expect(200);
 
-    expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(0);
+    expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(3);
     expect(await prisma.mediaUpload.count({ where: { key } })).toBe(0);
     const prefix = key.replace(/original\.jpg$/, "");
     expect(store.deleted.length).toBeGreaterThan(0);
@@ -195,6 +210,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
 
   it("publishes a draft only with uploads the owner presigned", async () => {
     const key = await presignAndPut("user-a");
+    const supportKeys = [await presignAndPut("user-a"), await presignAndPut("user-a")];
     const payload = {
       brandId: suite.catalog.brandId,
       modelId: suite.catalog.modelId,
@@ -211,7 +227,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
       allowCalls: true,
       allowChat: true,
       conditionDisclosure: { damaged: false },
-      photos: [{ photoId: suite.id("photo-1"), key, sortOrder: 0 }],
+      photos: [{ photoId: suite.id("photo-1"), key, sortOrder: 0 }, ...supportKeys.map((photoKey, i) => ({ photoId: suite.id(`support-${i}`), key: photoKey, sortOrder: i + 1 }))],
     };
     await prisma.exchangeRate.upsert({
       where: { fromCurrency_toCurrency: { fromCurrency: "TMT", toCurrency: "TMT" } },
@@ -263,10 +279,10 @@ describe("Listing media upload ownership e2e (#536)", () => {
 
       const rejected = await attach("user-a", listingA.id, victimKey).expect(400);
       expect(rejected.body.code).toBe("UPLOAD_NOT_AVAILABLE");
-      expect(await prisma.listingMedia.count({ where: { listingId: listingA.id } })).toBe(0);
+      expect(await prisma.listingMedia.count({ where: { listingId: listingA.id } })).toBe(3);
 
       await removeMedia("user-a", listingA.id, victim.body.id).expect(404);
-      expect(await prisma.listingMedia.count({ where: { listingId: listingB.id } })).toBe(1);
+      expect(await prisma.listingMedia.count({ where: { listingId: listingB.id } })).toBe(4);
       expect(store.deleted).toEqual([]);
     });
 
@@ -373,6 +389,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
   it("returns 409 and rolls publication back when attachment adopts its authorized upload first", async () => {
     const listing = await createListing("user-a", "listing-a");
     const key = await presignAndPut("user-a");
+    const supportKeys = [await presignAndPut("user-a"), await presignAndPut("user-a")];
     const draft = await prisma.listingDraft.create({ data: {
       userId: suite.id("user-a"), payload: {
         brandId: suite.catalog.brandId, modelId: suite.catalog.modelId,
@@ -380,7 +397,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
         priceAmount: 100000, priceCurrency: "TMT", year: 2020,
         condition: "used", mileageKm: 50000, description: "Race evidence car",
         contactPhone: suite.phone("user-a"), allowCalls: true, allowChat: true, conditionDisclosure: { damaged: false },
-        photos: [{ photoId: suite.id("race-photo"), key, sortOrder: 0 }],
+        photos: [{ photoId: suite.id("race-photo"), key, sortOrder: 0 }, ...supportKeys.map((photoKey, i) => ({ photoId: suite.id(`race-support-${i}`), key: photoKey, sortOrder: i + 1 }))],
       },
     } });
     let reached!: () => void;
@@ -435,7 +452,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
       const retry = await attach("user-a", listing.id, key).expect(201);
 
       expect(retry.body.id).toBe(first.body.id);
-      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(1);
+      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(4);
     });
 
     it("keeps one row when the same attach is sent twice concurrently", async () => {
@@ -449,7 +466,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
 
       expect([one.status, two.status]).toEqual([201, 201]);
       expect(one.body.id).toBe(two.body.id);
-      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(1);
+      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(4);
     });
 
     it("lets one upload back only one Listing when attached concurrently to two", async () => {
@@ -478,7 +495,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
 
       expect(results.map((r) => r.status).sort()).toEqual([200, 404]);
       expect(new Set(store.deleted).size).toBe(store.deleted.length);
-      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(0);
+      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(3);
     });
 
     it("cannot re-attach an upload after its media was removed", async () => {
@@ -490,7 +507,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
       const rejected = await attach("user-a", listing.id, key).expect(400);
 
       expect(rejected.body.code).toBe("UPLOAD_NOT_AVAILABLE");
-      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(0);
+      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(3);
     });
   });
 });

@@ -291,11 +291,11 @@ const postingRulesPromises: CopyPromise[] = [
     },
   },
   {
-    name: "a Listing needs between 1 and 20 photos",
+    name: "a Listing needs between 3 and 20 photos",
     phrases: {
-      en: "at least 1 and up to 20 photos",
-      ru: "от 1 до 20 фотографий",
-      tk: "azyndan 1, iň köp 20 surat",
+      en: "at least 3 and up to 20 photos",
+      ru: "от 3 до 20 фотографий",
+      tk: "azyndan 3, iň köp 20 surat",
     },
   },
   {

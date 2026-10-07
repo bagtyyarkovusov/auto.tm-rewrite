@@ -75,7 +75,7 @@ Every rule must map to something the product or its moderators enforce. Do not a
 | Section | Content and what enforces it |
 |---|---|
 | **What you may list** | A real vehicle the seller owns or may sell; one Listing per vehicle (moderators block duplicates); brand, model, year and VIN are locked after publish |
-| **Photos** | Photos of the actual vehicle (moderators act on misleading reports); 1 to 20 photos; JPEG or WebP up to 5 MB each, compressed by the app |
+| **Photos** | Photos of the actual vehicle (moderators act on misleading reports); 3 to 20 photos; JPEG or WebP up to 5 MB each, compressed by the app |
 | **Price, description and contact** | Price above zero in TMT, USD or AED; description required, up to 2,000 characters, damage question answered, mileage for a used vehicle; calls, chat or both enabled; a contact phone the seller is entitled to use. The page does not yet claim SMS verification of the contact phone: [ADR-0056](../../adr/0056-listing-contact-phones-are-verified.md) is decided but the publish check is not implemented |
 | **What is not allowed** | The Listing report reasons the app offers (spam, scam or fraud, misleading information, wrong category), plus the Terms' prohibited content |
 | **What happens when a Listing breaks the rules** | Listings go live on publish with no pre-review; moderators can block a Listing and suspend an account, with a recorded reason |

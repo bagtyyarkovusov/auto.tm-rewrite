@@ -162,9 +162,7 @@ describe("Conversation message broadcast e2e", () => {
           allowCalls: true,
           allowChat: true,
           conditionDisclosure: { damaged: false },
-          photos: [
-            { photoId: suite.id("photo-1"), key: "photo1.jpg", sortOrder: 0 },
-          ],
+          photos: [0, 1, 2].map((index) => ({ photoId: suite.id(`photo-${index + 1}`), key: `photo1.jpg-${index}`, sortOrder: index })),
         } satisfies Record<string, unknown>;
     const seededPayload = await seedPresignedPhotos(prisma, suite.id("seller-1"), draftPayload);
     const draft = await prisma.listingDraft.create({
