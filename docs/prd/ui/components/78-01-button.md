@@ -130,3 +130,19 @@ The mobile `Button` (`apps/mobile/components/ui/button.tsx`) reads the mobile su
 - **Loading:** the caller disables the button and swaps the label for its progress text or a spinner; the width does not change.
 - **Reduce Motion:** the scale is an instant change.
 - A header action is `variant="secondary" size="icon"`: a tonal circle, not a bare icon.
+
+### Conversation attachment Remove (#729)
+
+The preview's Remove action keeps a compact 24dp circular mark with a 14dp X,
+inside its own 44×44dp Pressable. It reuses the localized `remove` label and
+exposes the button role. The control sits at the top-right inside a 96dp preview
+wrapper, as a sibling of the rounded/clipped image surface; neither negative
+positioning nor hitSlop outside a clipped parent supplies its target.
+
+Removal retains the staged-file cleanup and held message text. Send, attachment
+selection/cancel and the parent's existing disabled behavior are unchanged.
+Rendered user-action tests cover these outcomes in EN/RU/TK through the real
+composer and compression path, with native service boundaries substituted.
+They do not measure NativeWind layout or TalkBack. Native proof must measure the
+44dp reachable target, tap its edges with the keyboard open, activate it through
+TalkBack, and capture light/dark preview states before release sign-off.
