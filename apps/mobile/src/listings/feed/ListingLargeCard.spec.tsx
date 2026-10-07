@@ -1,6 +1,6 @@
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import * as Linking from "expo-linking";
-import { StyleSheet } from "react-native";
+import { Image, StyleSheet } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderMobile, fireEvent, act } from "../../../test/render";
@@ -108,6 +108,16 @@ describe("Results photo strip", () => {
     const { view } = renderCard({ ...feedItem, galleryKeys: keys, photoCount: length });
     const frames = view.getAllByTestId("listing-photo");
     expect(frames).toHaveLength(length);
+    expect(frames.map((frame) => frame.findByType(Image).props.source)).toEqual([
+      { uri: "https://media.autotm.tm/listing-photos/photo-0.jpg/detail.jpg" },
+      { uri: "https://media.autotm.tm/listing-photos/photo-1.jpg/detail.jpg" },
+      { uri: "https://media.autotm.tm/listing-photos/photo-2.jpg/detail.jpg" },
+      { uri: "https://media.autotm.tm/listing-photos/photo-3.jpg/detail.jpg" },
+      { uri: "https://media.autotm.tm/listing-photos/photo-4.jpg/detail.jpg" },
+      { uri: "https://media.autotm.tm/listing-photos/photo-5.jpg/detail.jpg" },
+      { uri: "https://media.autotm.tm/listing-photos/photo-6.jpg/detail.jpg" },
+      { uri: "https://media.autotm.tm/listing-photos/photo-7.jpg/detail.jpg" },
+    ].slice(0, length));
     expect(view.queryByTestId("listing-photo-more")).toBeNull();
     expect(view.queryByTestId("listing-photo-strip") === null).toBe(length === 1);
   });
