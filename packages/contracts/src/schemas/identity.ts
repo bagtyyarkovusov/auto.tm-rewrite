@@ -103,9 +103,44 @@ export const UpdateMeRequestSchema = z.object({
 export type UpdateMeRequest = z.infer<typeof UpdateMeRequestSchema>;
 
 /**
+ * Body of `PUT /api/v1/me/photo`. `key` is the key the image presign
+ * (`POST /api/v1/uploads/presign` with `kind: "image"` and `writeProtocol:
+ * "conditional-v1"`) answered, after the file reached storage with the
+ * presign's required headers. The protocol is required: an upload presigned
+ * without it is refused, because its file could never be deleted. Other fields
+ * are dropped. The answer is the `/me` shape with `avatarKey` set;
+ * `DELETE /api/v1/me/photo` takes no body and answers `/me` with
+ * `avatarKey: null`.
+ */
+export const SetProfilePhotoRequestSchema = z.object({
+  key: z.string().min(1).max(512),
+});
+export type SetProfilePhotoRequest = z.infer<typeof SetProfilePhotoRequestSchema>;
+
+/**
+ * Why `PUT /api/v1/me/photo` refuses an upload. The values are the Listing
+ * upload codes, whose meaning is the same (declared here because the Listings
+ * schemas import this file):
+ * - `UPLOAD_NOT_AVAILABLE` (400): the key is not this User's unused image
+ *   upload. A made-up key, another User's key, a video key and a removed
+ *   photo's key all answer this.
+ * - `UPLOAD_OBJECT_INVALID` (400): storage holds no file for the upload, or
+ *   one that is empty, over 5 MB or of another type than presigned.
+ * - `UPLOAD_ALREADY_ATTACHED` (409): the upload already belongs to a Listing.
+ * After any refusal but `UPLOAD_ALREADY_ATTACHED` the app presigns again.
+ */
+export const ProfilePhotoErrorCode = {
+  UploadNotAvailable: "UPLOAD_NOT_AVAILABLE",
+  UploadAlreadyAttached: "UPLOAD_ALREADY_ATTACHED",
+  UploadObjectInvalid: "UPLOAD_OBJECT_INVALID",
+} as const;
+export type ProfilePhotoErrorCode =
+  (typeof ProfilePhotoErrorCode)[keyof typeof ProfilePhotoErrorCode];
+
+/**
  * What one User may see of another (#644): the name they set or null, the
  * number and car avatar index for their Generated Name and Assigned Avatar,
- * and the profile photo key, null until photos ship. `deleted` is true for a
+ * and the Profile Photo key, null when the User has none. `deleted` is true for a
  * User purged after account deletion: no name and no photo, and the app keeps
  * its deleted-User wording and person icon. Never carries a Sign-in Method,
  * the role or an upload id. Compose the name with `formatDisplayName`.
