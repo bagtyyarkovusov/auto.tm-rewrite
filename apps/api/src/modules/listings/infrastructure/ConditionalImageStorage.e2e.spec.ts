@@ -200,7 +200,12 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
       throw error ?? new Error("Generation finished before the controlled storage race");
     })]);
     try { await remove(manifest(fixture.key)); } finally { resume(); }
-    expect(await result).toMatchObject({ $metadata: { httpStatusCode: 412 } });
+    const refusal = await result;
+    expect(refusal).not.toBeNull();
+    const status = (refusal as { $metadata?: { httpStatusCode?: number } } | null)?.$metadata?.httpStatusCode;
+    // This pinned MinIO returns NoSuchKey/404, while S3 can return 409/412.
+    // Success, auth failures, server errors and timeouts must still fail.
+    expect([404, 409, 412]).toContain(status);
     await absent(manifest(fixture.key));
   });
 });
