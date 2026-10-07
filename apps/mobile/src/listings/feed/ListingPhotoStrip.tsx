@@ -1,7 +1,7 @@
 import { Enums } from "@auto-tm/contracts";
 import { Camera } from "lucide-react-native";
 import { useCallback, useMemo } from "react";
-import { FlatList, View, useWindowDimensions, type ListRenderItem } from "react-native";
+import { FlatList, Pressable, View, useWindowDimensions, type ListRenderItem } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { ListingPhoto, PhotoChip } from "./ListingPhoto";
@@ -33,6 +33,9 @@ interface ListingPhotoStripProps {
   photoCount: number;
   /** The seller stated the car is new: a quiet chip says so on the photos. */
   condition?: Enums.ListingCondition;
+  onOpen: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 }
 
 /**
@@ -40,7 +43,8 @@ interface ListingPhotoStripProps {
  * frame. Two or more scroll sideways: each is 80% of the card wide so the
  * next one peeks in, they snap one photo per swipe, and a "+N photos" tile
  * ends the strip when the Listing has more photos than the feed sent. The
- * tile, like any photo, opens the Listing: a tap falls through to the card.
+ * tile, like any photo, opens the Listing through its own tap target. The
+ * scrolling container has no detail-opening press handler above it.
  *
  * The strip is a horizontal list inside the vertical Results list. A
  * horizontal scroll view only claims a drag that moves sideways, so a
@@ -51,7 +55,7 @@ interface ListingPhotoStripProps {
  * The photo count and a seller-stated "New" sit on the photos' bottom edge,
  * fixed while the photos move under them; they take no touches.
  */
-export function ListingPhotoStrip({ photoKeys, photoCount, condition }: ListingPhotoStripProps) {
+export function ListingPhotoStrip({ photoKeys, photoCount, condition, onOpen, onPressIn, onPressOut }: ListingPhotoStripProps) {
   const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = screenWidth - CARD_INSET * 2;
@@ -60,14 +64,16 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition }: ListingP
   const tiles = useMemo(() => stripTiles(photoKeys, photoCount), [photoKeys, photoCount]);
   const interval = photoWidth + STRIP_GAP;
 
-  const renderItem = useCallback<ListRenderItem<Tile>>(({ item }) => item.kind === "photo"
+  const renderItem = useCallback<ListRenderItem<Tile>>(({ item }) => <Pressable
+    accessible={false} onPress={onOpen} onPressIn={onPressIn} onPressOut={onPressOut}
+  >{item.kind === "photo"
     ? <View testID="listing-photo" style={{ width: photoWidth, height }} className="overflow-hidden bg-secondary">
       <ListingPhoto mediaKey={item.key} emptyLabel={t("noPhotos")} variant="detail" />
     </View>
     : <View testID="listing-photo-more" style={{ width: photoWidth, height }} className="items-center justify-center gap-0.5 bg-secondary">
       <Text className="font-heading text-title font-semibold text-foreground" style={tabularFigures}>{`+${item.count}`}</Text>
       <Text className="text-footnote text-muted-foreground">{t("photos")}</Text>
-    </View>, [height, photoWidth, t]);
+    </View>}</Pressable>, [height, photoWidth, t, onOpen, onPressIn, onPressOut]);
 
   const chips = <View pointerEvents="none" className="absolute bottom-3 left-3 flex-row gap-1.5">
     {photoCount > 1 ? <PhotoChip icon={Camera} label={String(photoCount)} className="relative"
@@ -80,9 +86,10 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition }: ListingP
     // Every card keeps the strip's height, so a card without a photo lines up with its neighbours
     // and the list does not change rhythm; the frame's tone and the quiet mark say there is no picture.
     return <View testID="listing-photos" style={{ height }}>
-      <View testID="listing-photo" className="h-full w-full overflow-hidden bg-secondary">
+      <Pressable accessible={false} onPress={onOpen} onPressIn={onPressIn} onPressOut={onPressOut}
+        testID="listing-photo" className="h-full w-full overflow-hidden bg-secondary">
         <ListingPhoto mediaKey={only?.kind === "photo" ? only.key : undefined} emptyLabel={t("noPhotos")} variant="detail" />
-      </View>
+      </Pressable>
       {chips}
     </View>;
   }

@@ -125,8 +125,9 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
 
   return <EnterOnce order={enterOrder}>
     <MotionView style={press.style} className="overflow-hidden rounded-3xl bg-card">
+      <ListingPhotoStrip photoKeys={feedCardPhotoKeys(listing)} photoCount={listing.photoCount} condition={listing.condition}
+        onOpen={() => onPress(listing.id)} {...press.handlers} />
       <Pressable onPress={() => onPress(listing.id)} {...press.handlers} accessibilityRole="button" accessibilityLabel={[title, price].filter(Boolean).join(", ")}>
-        <ListingPhotoStrip photoKeys={feedCardPhotoKeys(listing)} photoCount={listing.photoCount} condition={listing.condition} />
         <View className="items-start gap-1 px-4 pt-3.5">
           <View className="mb-1 rounded-md bg-secondary px-2.5 py-0.5">
             <Text className="font-heading text-headline font-bold text-foreground" style={tabularFigures} numberOfLines={1}>{price}</Text>
