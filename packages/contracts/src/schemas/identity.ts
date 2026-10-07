@@ -126,8 +126,9 @@ export type SetProfilePhotoRequest = z.infer<typeof SetProfilePhotoRequestSchema
  *   photo's key all answer this.
  * - `UPLOAD_OBJECT_INVALID` (400): storage holds no file for the upload, or
  *   one that is empty, over 5 MB or of another type than presigned.
- * - `UPLOAD_ALREADY_ATTACHED` (409): the upload already belongs to a Listing.
- * After any refusal but `UPLOAD_ALREADY_ATTACHED` the app presigns again.
+ * - `UPLOAD_ALREADY_ATTACHED` (409): this User's upload is already in use.
+ *   `details.reason` (`ProfilePhotoConflictReason`) says how.
+ * After a 400 the app presigns again.
  */
 export const ProfilePhotoErrorCode = {
   UploadNotAvailable: "UPLOAD_NOT_AVAILABLE",
@@ -136,6 +137,31 @@ export const ProfilePhotoErrorCode = {
 } as const;
 export type ProfilePhotoErrorCode =
   (typeof ProfilePhotoErrorCode)[keyof typeof ProfilePhotoErrorCode];
+
+/**
+ * `details.reason` of a 409 from `PUT /api/v1/me/photo`. Both are about the
+ * caller's own upload; another User's key answers `UPLOAD_NOT_AVAILABLE`.
+ * - `UPLOAD_PREPARING`: another request for this key is still setting it as
+ *   the photo. The app waits and sends the same key again; that answers the
+ *   photo once the first request finished, or `UPLOAD_NOT_AVAILABLE` if it
+ *   failed. A request that died holds the key for up to 10 minutes.
+ * - `UPLOAD_ATTACHED_TO_LISTING`: the upload belongs to a Listing. The app
+ *   presigns another file.
+ */
+export const ProfilePhotoConflictReason = {
+  UploadPreparing: "UPLOAD_PREPARING",
+  UploadAttachedToListing: "UPLOAD_ATTACHED_TO_LISTING",
+} as const;
+export type ProfilePhotoConflictReason =
+  (typeof ProfilePhotoConflictReason)[keyof typeof ProfilePhotoConflictReason];
+
+export const ProfilePhotoConflictDetailsSchema = z.object({
+  reason: z.enum([
+    ProfilePhotoConflictReason.UploadPreparing,
+    ProfilePhotoConflictReason.UploadAttachedToListing,
+  ]),
+});
+export type ProfilePhotoConflictDetails = z.infer<typeof ProfilePhotoConflictDetailsSchema>;
 
 /**
  * What one User may see of another (#644): the name they set or null, the

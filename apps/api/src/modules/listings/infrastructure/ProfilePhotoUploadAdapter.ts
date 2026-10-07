@@ -1,3 +1,4 @@
+import { IdentitySchemas } from "@auto-tm/contracts";
 import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
 
 import type { ProfilePhotoPort } from "../../identity/identity.public";
@@ -16,6 +17,8 @@ import {
   type ProfilePhotoLinkPort,
 } from "../domain/ports/ProfilePhotoLinkPort";
 import { UPLOAD_CLAIM_PORT, type UploadClaimPort } from "../domain/ports/UploadClaimPort";
+
+const { ProfilePhotoConflictReason } = IdentitySchemas;
 
 /**
  * Identity's Profile Photo port, served by the upload pipeline a Listing photo
@@ -73,6 +76,7 @@ export class ProfilePhotoUploadAdapter implements ProfilePhotoPort {
       throw new ConflictException({
         code: LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
         message: "Upload is already being set as the profile photo",
+        details: { reason: ProfilePhotoConflictReason.UploadPreparing },
       });
     }
 
@@ -111,6 +115,8 @@ export class ProfilePhotoUploadAdapter implements ProfilePhotoPort {
       return new ConflictException({
         code: err.code,
         message: "Upload is already attached to a Listing",
+        // The guard passed first, so this is the caller's own upload.
+        details: { reason: ProfilePhotoConflictReason.UploadAttachedToListing },
       });
     }
     if (err.code === LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE) return this.notAvailable();

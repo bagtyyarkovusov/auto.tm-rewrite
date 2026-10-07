@@ -732,7 +732,7 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
       },
       409: {
         description:
-          "UPLOAD_ALREADY_ATTACHED: the upload belongs to a Listing, or another request is still setting it",
+          "UPLOAD_ALREADY_ATTACHED, with details.reason UPLOAD_ATTACHED_TO_LISTING (the upload belongs to a Listing) or UPLOAD_PREPARING (another request is still setting it; send the same key again later)",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },
