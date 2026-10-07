@@ -1,12 +1,12 @@
 import { AccessibilityInfo } from "react-native";
 import { onlineManager } from "@tanstack/react-query";
+import type { AuthSchemas } from "@auto-tm/contracts";
 import * as Linking from "expo-linking";
 import { http, HttpResponse } from "msw";
-import { profilePhotoUploadStore } from "../../src/identity/useProfilePhotoUpload";
-import { profileNoticeStore } from "../../src/identity/profileNotice";
-import { AuthSchemas } from "@auto-tm/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { profilePhotoUploadStore } from "../../src/identity/useProfilePhotoUpload";
+import { profileNoticeStore } from "../../src/identity/profileNotice";
 import ProfileScreen from "../../app/profile";
 import { clearAuthSession, storeAuthSession } from "../../src/auth/session";
 import { server } from "../msw";
@@ -14,7 +14,6 @@ import { profilePhotoCopy } from "../profile-photo-copy";
 import { choosePhoto, photoDevice as picker, resetPhotoDevice } from "../profile-photo-device";
 import CabinetScreen from "../../app/(tabs)/services";
 import { act, fireEvent, renderMobile } from "../render";
-
 import { ToastProvider } from "@/components/ui/toast";
 
 vi.mock("expo-linking", () => ({ openSettings: vi.fn(async () => {}) }));
@@ -67,7 +66,7 @@ beforeEach(async () => {
     http.get("*/me", () => HttpResponse.json(currentMe)),
     http.post("*/uploads/presign", async ({ request }) => {
       requests.presigns.push(await request.json());
-      return HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: `pending/new${requests.presigns.length}/original.jpg`, expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"', "content-type": "image/jpeg" } });
+      return HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: `pending/new${requests.presigns.length}/original.jpg`, expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"', "content-type": "image/jpeg" } });
     }),
     http.put("*/me/photo", async ({ request }) => {
       const body = await request.json() as { key: string };
