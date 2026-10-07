@@ -76,3 +76,9 @@ Server B:
 - [ADR-0005 — Hosting](../../docs/adr/0005-hosting.md)
 - [Deployment runbook](../../docs/prd/ops/80-deployment-runbook.md)
 - [Monitoring + alarms](../../docs/prd/ops/81-monitoring-alarms.md)
+
+## Conditional Listing image storage
+
+The optional `conditional-v1` upload protocol requires an unversioned `listing-photos` bucket and working conditional PUT semantics. The API checks versioning and probes uniquely owned scratch keys before new authority or conditional generation; denied/unknown/versioned/unsupported storage fails closed. Never change live bucket configuration to satisfy a test. Hosted proof uses the CI digest from `docker-compose.ci.yml`; it does not establish support for the different dev/prod digest or the deployed media origin. Deployment versioning/permissions and actual native PUT proof remain operator-owned release evidence.
+
+Shipped Listing PUT callers are native Expo and the Node smoke script. A future browser caller also needs deployed CORS permitting PUT and `if-match`/`content-type`; no CORS configuration is changed by this implementation. Legacy upload/generation remains compatible and supplies no conditional deletion guarantee. See [ADR-0088](../../docs/adr/0088-exclusive-upload-adoption-and-retirement.md).
