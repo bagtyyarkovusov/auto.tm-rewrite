@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 import { ConfigService } from "@nestjs/config";
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import sharp from "sharp";
@@ -46,7 +47,7 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
       `${base}detail.jpg`, `${base}detail.webp`, `${base}fullscreen.jpg`, `${base}fullscreen.webp`];
   }
 
-  async function issue() {
+  async function issue(protocol: "legacy" | "conditional-v1" = "conditional-v1") {
     const key = `pending/${randomUUID()}/original.jpg`;
     for (const member of manifest(key)) owned.add(member);
     const photo = await sharp({ create: { width: 32, height: 48, channels: 3, background: "red" } })
@@ -54,7 +55,7 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
         GPSLatitudeRef: "N", GPSLatitude: "37/1 56/1 0/1", GPSLongitudeRef: "E", GPSLongitude: "58/1 23/1 0/1",
       } }).toBuffer();
     const signed = await adapter.presignUpload({ key, contentType: "image/jpeg", sizeBytes: photo.length,
-      ...{ writeProtocol: "conditional-v1" as const } });
+      ...(protocol === "conditional-v1" ? { writeProtocol: "conditional-v1" as const } : {}) });
     const headers = "headers" in signed ? signed.headers as Record<string, string> : {};
     return { key, photo, signed, headers };
   }
@@ -91,6 +92,9 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
       { "content-type": "image/jpeg", "if-match": '"altered"' }]) {
       const refused = await fetch(fixture.signed.url, { method: "PUT", headers, body: new Uint8Array(fixture.photo) });
       expect([400, 403, 409, 412]).toContain(refused.status);
+      const unchanged = await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: fixture.key }));
+      expect(unchanged.ContentLength).toBe(0);
+      expect(unchanged.ETag).toBe(fixture.headers["if-match"]);
     }
     await upload(fixture);
     const replay = await fetch(fixture.signed.url, { method: "PUT", headers: fixture.headers, body: new Uint8Array(fixture.photo) });
@@ -99,6 +103,48 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     const late = await fetch(fixture.signed.url, { method: "PUT", headers: fixture.headers, body: new Uint8Array(fixture.photo) });
     expect([404, 409, 412]).toContain(late.status);
     await absent(manifest(fixture.key));
+  });
+
+  it("keeps plain installed-client uploads usable without protocol or If-Match headers", async () => {
+    const fixture = await issue("legacy");
+    expect(fixture.signed).not.toHaveProperty("headers");
+    await upload(fixture);
+    expect((await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: fixture.key }))).ContentLength)
+      .toBe(fixture.photo.length);
+  });
+
+  it("does not recreate an object when a real conditional PUT body overlaps DeleteObject", async () => {
+    const fixture = await issue();
+    await upload(fixture);
+    const current = await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: fixture.key }));
+    let started!: () => void;
+    let resume!: () => void;
+    const firstChunk = new Promise<void>((resolve) => { started = resolve; });
+    const release = new Promise<void>((resolve) => { resume = resolve; });
+    const bytes = Buffer.alloc(128 * 1024, 1);
+    const body = Readable.from((async function* () {
+      yield bytes.subarray(0, 64 * 1024);
+      started();
+      await release;
+      yield bytes.subarray(64 * 1024);
+    })());
+    const put = s3.send(new PutObjectCommand({ Bucket: bucket, Key: fixture.key,
+      Body: body, ContentLength: bytes.length, IfMatch: current.ETag,
+    }), { abortSignal: AbortSignal.timeout(10_000) }).then(() => null, (error: unknown) => error);
+    await Promise.race([firstChunk, put.then((error) => {
+      throw error ?? new Error("PUT completed before the streamed body barrier");
+    })]);
+    const deletion = s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: fixture.key }));
+    // A provider holding the object lock may wait for the PUT body; either order
+    // must leave the final key absent once both real operations finish.
+    await Promise.race([deletion, new Promise<void>((resolve) => setTimeout(resolve, 50))]);
+    resume();
+    await deletion;
+    const error = await put;
+    if (error) expect([404, 409, 412]).toContain(
+      (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode,
+    );
+    await absent([fixture.key]);
   });
 
   it("scrubs original/variant metadata and fences every real generator write", async () => {
