@@ -240,7 +240,9 @@ function SignedInProfile() {
   const { data, isPending, isError, error, refetch } = useMe();
   const displayNameOf = useDisplayName();
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  const [failedPreviewUri, setFailedPreviewUri] = useState<string | null>(null);
   const photo = useProfilePhotoUpload();
+  const previewUri = photo.state.status === "uploading" ? photo.state.uri : null;
   const photoErrorText = photo.state.status === "idle" || photo.state.status === "uploading" || photo.state.status === "removing" ? null
     : photo.state.reason === "suspended" ? t("common:accountRestrictedDescription")
     : photo.state.reason === "listing" ? t("photoAttached")
@@ -287,7 +289,9 @@ function SignedInProfile() {
         >
         {photo.state.status === "uploading" ? (
           <View className="items-center justify-center overflow-hidden rounded-full" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}>
-            <Image source={{ uri: photo.state.uri }} contentFit="cover" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }} />
+            {previewUri === failedPreviewUri ? <UserAvatar size={AVATAR_SIZE} avatarIndex={data.avatarIndex} /> : (
+              <Image source={{ uri: photo.state.uri }} contentFit="cover" onError={() => setFailedPreviewUri(previewUri)} style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }} />
+            )}
             <View className="absolute inset-0 items-center justify-center bg-scrim/50">
               <Svg width={44} height={44} viewBox="0 0 36 36" accessible={false}>
                 <Circle cx={18} cy={18} r={15} fill="none" stroke="white" opacity={0.35} strokeWidth={3} />
