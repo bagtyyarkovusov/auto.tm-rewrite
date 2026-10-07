@@ -3,7 +3,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
 
 import { PrismaModule } from "../../common/prisma.module";
 import { IdentityModule } from "../identity/identity.module";
-import { IDENTITY_CHECK_PORT } from "../identity/identity.public";
+import { IDENTITY_CHECK_PORT, PROFILE_PHOTO_PORT } from "../identity/identity.public";
 
 import { ListingsController } from "./presentation/listings.controller";
 import { DraftsController } from "./presentation/DraftsController";
@@ -22,6 +22,9 @@ import { PrismaListingMediaRepository } from "./infrastructure/PrismaListingMedi
 import { PrismaMediaUploadRepository } from "./infrastructure/PrismaMediaUploadRepository";
 import { PrismaUploadClaims } from "./infrastructure/PrismaUploadClaims";
 import { UPLOAD_CLAIM_PORT } from "./domain/ports/UploadClaimPort";
+import { PrismaProfilePhotoLink } from "./infrastructure/PrismaProfilePhotoLink";
+import { ProfilePhotoUploadAdapter } from "./infrastructure/ProfilePhotoUploadAdapter";
+import { PROFILE_PHOTO_LINK_PORT } from "./domain/ports/ProfilePhotoLinkPort";
 import { PrismaExchangeRateRepository } from "./infrastructure/PrismaExchangeRateRepository";
 import { PrismaListingsReadRepository } from "./infrastructure/PrismaListingsReadRepository";
 import { PrismaListingsAdminRepository } from "./infrastructure/PrismaListingsAdminRepository";
@@ -160,6 +163,16 @@ import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/Accoun
       useExisting: MinioMediaStorageAdapter,
     },
     {
+      provide: PROFILE_PHOTO_LINK_PORT,
+      useClass: PrismaProfilePhotoLink,
+    },
+    ProfilePhotoUploadAdapter,
+    {
+      // Identity's port, served by the upload pipeline (ADR-0088).
+      provide: PROFILE_PHOTO_PORT,
+      useExisting: ProfilePhotoUploadAdapter,
+    },
+    {
       provide: IMAGE_VARIANT_GENERATOR,
       useClass: SharpImageVariantGenerator,
     },
@@ -252,6 +265,7 @@ import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/Accoun
     LISTINGS_READ_PORT,
     LISTINGS_ADMIN_PORT,
     FAVORITE_REPOSITORY,
+    PROFILE_PHOTO_PORT,
   ],
 })
 export class ListingsModule {}

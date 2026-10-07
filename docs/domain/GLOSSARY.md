@@ -46,9 +46,15 @@ _Avoid_: Default name, random name
 
 **Assigned Avatar**
 
-One of the car pictures bundled in the app, chosen by the server for a User when the User is created and shown until the User sets a profile photo.
+One of the car pictures bundled in the app, chosen by the server for a User when the User is created and shown whenever the User has no Profile Photo.
 
 _Avoid_: Default avatar, placeholder avatar
+
+**Profile Photo**
+
+The one public picture a User uploads to show in place of their Assigned Avatar. The User can replace or remove it and a moderator can remove it, after which the Assigned Avatar shows again.
+
+_Avoid_: Avatar photo, user picture, custom avatar
 
 **Dealership Member**
 

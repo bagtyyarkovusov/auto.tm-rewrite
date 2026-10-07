@@ -18,8 +18,15 @@ function makeFakePrisma() {
       nameNumber?: number;
       avatarIndex?: number;
       avatarKey?: string | null;
+      avatarUploadId?: string | null;
       deletionScheduledAt: Date | null;
     }>,
+    /** Upload records, as far as the purge touches them. */
+    uploads: [] as Array<{ id: string; state: string }>,
+    /** Upload ids with recorded deletion work. */
+    cleanups: [] as string[],
+    /** Raw statements in the order they were issued: their SQL and bound values. */
+    raw: [] as Array<{ sql: string; values: unknown[] }>,
     sessions: [] as Array<{ id: string; userId: string }>,
     totpEnrollments: [] as Array<{ id: string; userId: string }>,
     fcmDevices: [] as Array<{ id: string; userId: string }>,
@@ -52,16 +59,42 @@ function makeFakePrisma() {
         }
         return state.users;
       },
-      update: async (args: { where: { id: string }; data: Partial<typeof state.users[number]> }) => {
-        const idx = state.users.findIndex((u) => u.id === args.where.id);
-        if (idx !== -1) {
-          const existing = state.users[idx];
-          if (existing) {
-            state.users[idx] = { ...existing, ...args.data };
+      update: (args: { where: { id: string }; data: Partial<typeof state.users[number]> }) =>
+        labelled("user.update", (async () => {
+          const idx = state.users.findIndex((u) => u.id === args.where.id);
+          if (idx !== -1) {
+            const existing = state.users[idx];
+            if (existing) {
+              state.users[idx] = { ...existing, ...args.data };
+            }
           }
-        }
-        return state.users[idx];
-      },
+          return state.users[idx];
+        })()),
+    },
+
+    $queryRaw: (strings: TemplateStringsArray, ...values: unknown[]) => {
+      const sql = strings.join("?");
+      state.raw.push({ sql, values });
+      return labelled(/FROM users[\s\S]*FOR UPDATE/.test(sql) ? "user.lock" : "raw.query", Promise.resolve([]));
+    },
+
+    // Stands in for the one statement that retires the photo's upload and
+    // records its deletion work. The real SQL runs in the hosted suite.
+    $executeRaw: (strings: TemplateStringsArray, ...values: unknown[]) => {
+      const sql = strings.join("?");
+      state.raw.push({ sql, values });
+      const retires = sql.includes("media_uploads") && sql.includes("media_upload_cleanups");
+      return labelled(retires ? "profilePhoto.retire" : "raw.execute", (async () => {
+        if (!retires) return 0;
+        const user = state.users.find((u) => values.includes(u.id));
+        const upload = state.uploads.find(
+          (u) => u.id === user?.avatarUploadId && u.state !== "RETIRED" && u.state !== "DELETED",
+        );
+        if (!upload) return 0;
+        upload.state = "RETIRED";
+        state.cleanups.push(upload.id);
+        return 1;
+      })());
     },
 
     session: {
@@ -290,6 +323,73 @@ describe("PurgeExpiredAccounts", () => {
       avatarKey: null,
       nameNumber: 4821,
       avatarIndex: 7,
+    });
+  });
+
+  describe("Profile Photo (#642)", () => {
+    const photoOwner = {
+      id: "user-expired",
+      phone: "+99361234567",
+      displayName: "Expired",
+      avatarUrl: null,
+      nameNumber: 4821,
+      avatarIndex: 7,
+      avatarKey: "pending/0b9f3c1e-2d4a-4c6b-8e1f-3a5b7c9d1e2f/original.jpg",
+      avatarUploadId: "upload-1",
+      deletionScheduledAt: new Date(NOW.getTime() - 1000),
+    };
+
+    it("retires the photo's upload, records its storage deletion and clears the link", async () => {
+      fake.users.push({ ...photoOwner });
+      fake.uploads.push({ id: "upload-1", state: "ADOPTED" });
+
+      await job.execute({ now: NOW });
+
+      expect(fake.uploads).toEqual([{ id: "upload-1", state: "RETIRED" }]);
+      expect(fake.cleanups).toEqual(["upload-1"]);
+      expect(fake.users[0]).toMatchObject({
+        avatarKey: null,
+        avatarUploadId: null,
+        avatarIndex: 7,
+        nameNumber: 4821,
+      });
+    });
+
+    it("does it in the purge transaction: the User row lock first, the retirement before the link is cleared", async () => {
+      fake.users.push({ ...photoOwner });
+      fake.uploads.push({ id: "upload-1", state: "ADOPTED" });
+
+      await job.execute({ now: NOW });
+
+      expect(fake.transactions).toHaveLength(1);
+      const operations = fake.transactions[0] ?? [];
+      expect(operations[0]).toBe("user.lock");
+      expect(operations.indexOf("profilePhoto.retire")).toBeGreaterThan(0);
+      expect(operations.indexOf("profilePhoto.retire")).toBeLessThan(operations.indexOf("user.update"));
+    });
+
+    it("retires at the purge's own time, for this User only", async () => {
+      fake.users.push({ ...photoOwner });
+      fake.uploads.push({ id: "upload-1", state: "ADOPTED" });
+
+      await job.execute({ now: NOW });
+
+      const retirement = fake.raw.find((statement) => statement.sql.includes("media_upload_cleanups"));
+      expect(retirement?.values).toContain("user-expired");
+      expect(retirement?.values).toContain(NOW);
+      // Legacy bytes are recorded but never deleted; only fenced work is due.
+      expect(retirement?.sql).toContain("LEGACY_PENDING");
+    });
+
+    it("purges a User with no photo without retiring anything", async () => {
+      fake.users.push({ ...photoOwner, avatarKey: null, avatarUploadId: null });
+      fake.uploads.push({ id: "someone-elses", state: "ADOPTED" });
+
+      const result = await job.execute({ now: NOW });
+
+      expect(result.purgedCount).toBe(1);
+      expect(fake.uploads).toEqual([{ id: "someone-elses", state: "ADOPTED" }]);
+      expect(fake.cleanups).toEqual([]);
     });
   });
 

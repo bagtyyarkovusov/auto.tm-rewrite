@@ -36,7 +36,10 @@ type SuiteUser =
   | "admin-one"
   | "reporter-two"
   | "seller-two"
-  | "admin-two";
+  | "admin-two"
+  | "photo-owner"
+  | "photo-reporter"
+  | "photo-admin";
 const SUITE_USERS: readonly SuiteUser[] = [
   "reporter-one",
   "seller-one",
@@ -44,6 +47,9 @@ const SUITE_USERS: readonly SuiteUser[] = [
   "reporter-two",
   "seller-two",
   "admin-two",
+  "photo-owner",
+  "photo-reporter",
+  "photo-admin",
 ];
 
 describe("AdminModerationController e2e smoke", () => {
@@ -279,6 +285,112 @@ describe("AdminModerationController e2e smoke", () => {
         where: { id: listing.id },
       });
       expect(listingAfter!.status).toBe("active");
+    });
+  });
+
+  describe("moderator removes a reported User's Profile Photo (#642)", () => {
+    const ownerId = suite.id("photo-owner");
+    const photoKey = `pending/${suite.id("photo-directory")}/original.jpg`;
+    const directory = photoKey.slice(0, photoKey.lastIndexOf("/") + 1);
+    const objectKeys = [photoKey, ...["thumbnail", "list", "detail", "fullscreen"]
+      .flatMap((name) => [`${directory}${name}.jpg`, `${directory}${name}.webp`])];
+
+    /**
+     * A User whose Profile Photo was adopted. The upload pipeline belongs to
+     * another context and its own suite (MePhoto.e2e.spec.ts) proves adoption
+     * end to end, so these rows are written directly.
+     */
+    async function createOwnerWithPhoto() {
+      await prisma.user.create({
+        data: {
+          id: ownerId, phone: suite.phone("photo-owner"), phoneVerifiedAt: new Date(),
+          nameNumber: 4821, avatarIndex: 7,
+        },
+      });
+      const upload = await prisma.mediaUpload.create({
+        data: {
+          userId: ownerId, key: photoKey, kind: "image", contentType: "image/jpeg", sizeBytes: 2048,
+          writeProtocol: "conditional-v1", objectKeys,
+          state: "ADOPTED", claimTargetType: "profile", claimTargetId: ownerId,
+        },
+      });
+      await prisma.user.update({
+        where: { id: ownerId },
+        data: { avatarUploadId: upload.id, avatarKey: photoKey },
+      });
+      return upload;
+    }
+
+    function removePhoto(token: string, body: object) {
+      return request
+        .post(`/api/v1/admin/users/${ownerId}/remove-photo`)
+        .set("Authorization", `Bearer ${token}`)
+        .send(body);
+    }
+
+    it("report, removal, audit entry, retired upload and recorded storage deletion commit together", async () => {
+      const upload = await createOwnerWithPhoto();
+      await createUser("photo-reporter", "buyer");
+      await createUser("photo-admin", "admin");
+      const adminToken = await createAdminSession(suite.id("photo-admin"));
+      const report = await request
+        .post(`/api/v1/users/${ownerId}/report`)
+        .set("Authorization", `Bearer ${mintUserJwt(suite.id("photo-reporter"))}`)
+        .send({ reason: "other", details: "Offensive profile photo" })
+        .expect(201);
+      const reportId = report.body.reportId;
+
+      const res = await removePhoto(adminToken, { reason: "Offensive photo", reportId }).expect(200);
+
+      expect(res.body).toEqual({
+        targetId: ownerId,
+        targetState: { avatarKey: null, avatarIndex: 7 },
+        reportId,
+        reportStatus: "actioned",
+        auditLogId: expect.any(String),
+      });
+      expect(await prisma.user.findUniqueOrThrow({ where: { id: ownerId } })).toMatchObject({
+        avatarKey: null, avatarUploadId: null, avatarIndex: 7, suspendedAt: null,
+      });
+      expect((await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } })).state).toBe("RETIRED");
+      const work = await prisma.mediaUploadCleanup.findUniqueOrThrow({ where: { uploadId: upload.id } });
+      expect(work).toMatchObject({ status: "PENDING", key: photoKey, writeProtocol: "conditional-v1" });
+      expect([...work.objectKeys].sort()).toEqual([...objectKeys].sort());
+      const audit = await prisma.auditLog.findUniqueOrThrow({ where: { id: res.body.auditLogId } });
+      expect(audit).toMatchObject({
+        action: "USER_PHOTO_REMOVE",
+        targetType: "user",
+        targetId: ownerId,
+        actorId: suite.id("photo-admin"),
+      });
+      expect(audit.details).toMatchObject({
+        reason: "Offensive photo",
+        reportId,
+        avatarIndex: 7,
+        before: { avatarKey: photoKey, reportStatus: "pending" },
+        after: { avatarKey: null, reportStatus: "actioned" },
+      });
+      expect(await prisma.contentReport.findUniqueOrThrow({ where: { id: reportId } })).toMatchObject({
+        status: "actioned", reviewedById: suite.id("photo-admin"),
+      });
+
+      // The photo is gone, so a second removal has nothing to act on and writes no audit entry.
+      const again = await removePhoto(adminToken, { reason: "Offensive photo" }).expect(409);
+      expect(again.body.details).toMatchObject({ reason: "MODERATION_TARGET_STATE_CONFLICT" });
+      expect(await prisma.auditLog.count({ where: { targetId: ownerId, action: "USER_PHOTO_REMOVE" } })).toBe(1);
+    });
+
+    it("refuses an ordinary User, a signed-out caller and the photo's owner, and keeps the photo", async () => {
+      const upload = await createOwnerWithPhoto();
+      const strangerToken = await createUser("photo-reporter", "buyer");
+
+      await removePhoto(strangerToken!, { reason: "I do not like it" }).expect(403);
+      await removePhoto(mintUserJwt(ownerId), { reason: "Mine" }).expect(403);
+      await request.post(`/api/v1/admin/users/${ownerId}/remove-photo`).send({ reason: "x" }).expect(401);
+
+      expect((await prisma.user.findUniqueOrThrow({ where: { id: ownerId } })).avatarKey).toBe(photoKey);
+      expect((await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } })).state).toBe("ADOPTED");
+      expect(await prisma.auditLog.count({ where: { targetId: ownerId } })).toBe(0);
     });
   });
 });

@@ -8,7 +8,7 @@ export interface User extends SignInMethods {
   readonly nameNumber: number;
   /** Assigned Avatar index, assigned at creation and never changed. */
   readonly avatarIndex: number;
-  /** Object key of the profile photo; always null until photos ship. */
+  /** Object key of the Profile Photo's original, or null when the User has none. */
   readonly avatarKey: string | null;
   readonly avatarUrl: string | null;
   readonly locale: string;

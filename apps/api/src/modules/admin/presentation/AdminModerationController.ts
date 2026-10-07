@@ -22,6 +22,7 @@ import { UnbanListing } from "../application/UnbanListing";
 import { SuspendUser } from "../application/SuspendUser";
 import { UnsuspendUser } from "../application/UnsuspendUser";
 import { DismissReport } from "../application/DismissReport";
+import { RemoveUserPhoto } from "../application/RemoveUserPhoto";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -39,6 +40,8 @@ export class AdminModerationController {
     private readonly unsuspendUserUC: UnsuspendUser,
     @Inject(DismissReport)
     private readonly dismissReportUC: DismissReport,
+    @Inject(RemoveUserPhoto)
+    private readonly removeUserPhotoUC: RemoveUserPhoto,
     @Inject(ConfigService)
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -185,6 +188,34 @@ export class AdminModerationController {
         suspendedById: result.targetState.suspendedById,
         suspensionReason: result.targetState.suspensionReason,
       },
+      auditLogId: result.auditLogId,
+    };
+  }
+
+  /** Removes a User's Profile Photo; their Assigned Avatar shows again. */
+  @Post("users/:id/remove-photo")
+  @HttpCode(200)
+  async removeUserPhoto(
+    @Param("id") userId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    this.assertModerationActionsEnabled();
+    const adminUserId = this.userId(req);
+    const parsed = this.parseOrThrow(AdminSchemas.RemoveUserPhotoRequestSchema, body);
+
+    const result = await this.removeUserPhotoUC.execute({
+      userId,
+      adminUserId,
+      reason: parsed.reason,
+      reportId: parsed.reportId,
+    });
+
+    return {
+      targetId: result.targetId,
+      targetState: result.targetState,
+      ...(result.reportId !== undefined ? { reportId: result.reportId } : {}),
+      ...(result.reportStatus !== undefined ? { reportStatus: result.reportStatus } : {}),
       auditLogId: result.auditLogId,
     };
   }

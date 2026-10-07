@@ -11,6 +11,7 @@ import { PrismaService } from "@auto-tm/db";
 
 import { CleanRetiredUploads } from "./CleanRetiredUploads";
 import { PrismaRetiredUploadLedger } from "./PrismaRetiredUploadLedger";
+import { PurgeExpiredAccounts } from "./PurgeExpiredAccounts";
 import { RETIRED_UPLOAD_BUCKET, S3RetiredObjectStore } from "./S3RetiredObjectStore";
 import type { RetiredObjectStore } from "./retiredUploadCleanup";
 
@@ -299,6 +300,63 @@ describe.skipIf(!hosted)("retired upload cleanup on Postgres and MinIO (#721)", 
       expect(await present(upload.keys)).toBe(9);
       expect(await workOf(upload.id)).toMatchObject({ status: "LEGACY_PENDING", attempts: 0 });
     });
+  });
+
+  it("day-30 purge: the User's Profile Photo is retired with the name, and the next sweep deletes its nine objects (#642)", async () => {
+    const photo = await retiredUpload({ state: "ADOPTED", work: "none" });
+    await prisma.mediaUpload.update({
+      where: { id: photo.id }, data: { claimTargetType: "profile", claimTargetId: userId },
+    });
+    await prisma.user.update({ where: { id: userId }, data: {
+      avatarUploadId: photo.id, avatarKey: photo.key, avatarIndex: 7, displayName: "Aman",
+      deletionScheduledAt: DUE,
+    } });
+
+    // While the User still shows the photo there is no work, and nothing is deleted.
+    expect(await job.execute({ now: SWEEP, limit: 10 })).toMatchObject({ deleted: 0, waiting: 0 });
+    expect(await present(photo.keys)).toBe(9);
+
+    // Only this suite's User is due in the year 2000, so the purge touches no one else.
+    expect(await new PurgeExpiredAccounts(prisma).execute({ now: SWEEP })).toEqual({ purgedCount: 1 });
+
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: userId } })).toMatchObject({
+      displayName: null, avatarKey: null, avatarUploadId: null, avatarIndex: 7, phone: null,
+    });
+    expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { id: photo.id } })).toMatchObject({
+      state: "RETIRED", retiredAt: SWEEP,
+    });
+    const work = await workOf(photo.id);
+    expect(work).toMatchObject({
+      status: "PENDING", attempts: 0, key: photo.key, writeProtocol: "conditional-v1", nextAttemptAt: SWEEP,
+    });
+    expect([...work.objectKeys].sort()).toEqual([...photo.keys].sort());
+    // The purge only records the work; the bytes go in the sweep, with its retries.
+    expect(await present(photo.keys)).toBe(9);
+
+    expect(await job.execute({ now: SWEEP, limit: 10 })).toMatchObject({ deleted: 1, waiting: 0 });
+
+    expect(await present(photo.keys)).toBe(0);
+    expect(await workOf(photo.id)).toMatchObject({ status: "DONE" });
+    expect(await stateOf(photo.id)).toBe("DELETED");
+  });
+
+  it("day-30 purge: a failed deletion of the photo is kept and retried (#642)", async () => {
+    const photo = await retiredUpload({ state: "ADOPTED", work: "none" });
+    await prisma.user.update({ where: { id: userId }, data: {
+      avatarUploadId: photo.id, avatarKey: photo.key, deletionScheduledAt: DUE,
+    } });
+    await new PurgeExpiredAccounts(prisma).execute({ now: SWEEP });
+
+    const failed = await new CleanRetiredUploads(ledger, outageAfter(2)).execute({ now: SWEEP, limit: 10 });
+
+    expect(failed).toMatchObject({ deleted: 0, waiting: 1 });
+    const waiting = await workOf(photo.id);
+    expect(waiting).toMatchObject({ status: "PENDING", attempts: 1, lastError: "storage unavailable" });
+
+    await job.execute({ now: new Date(waiting.nextAttemptAt.getTime() + 1), limit: 10 });
+
+    expect(await present(photo.keys)).toBe(0);
+    expect(await workOf(photo.id)).toMatchObject({ status: "DONE", attempts: 2 });
   });
 
   it("still deletes the bytes after the upload record and its User are gone", async () => {

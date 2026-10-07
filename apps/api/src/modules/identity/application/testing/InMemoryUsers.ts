@@ -52,6 +52,12 @@ export class InMemoryUsers implements UserRepository {
     this.users.set(userId, { ...user, displayName });
   }
 
+  /** What the upload boundary does when it stores or clears a Profile Photo. */
+  setAvatarKey(userId: string, avatarKey: string | null): void {
+    const user = this.users.get(userId);
+    if (user) this.users.set(userId, { ...user, avatarKey });
+  }
+
   async delete(id: string): Promise<void> {
     this.users.delete(id);
   }

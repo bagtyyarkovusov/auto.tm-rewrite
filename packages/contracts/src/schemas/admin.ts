@@ -36,6 +36,7 @@ export const AdminAuditAction = {
   ListingUnban: "LISTING_UNBAN",
   UserSuspend: "USER_SUSPEND",
   UserUnsuspend: "USER_UNSUSPEND",
+  UserPhotoRemove: "USER_PHOTO_REMOVE",
   ContentReportResolve: "CONTENT_REPORT_RESOLVE",
   ReviewerOtpBypassLogin: "REVIEWER_OTP_BYPASS_LOGIN",
 } as const;
@@ -323,6 +324,30 @@ export const UnsuspendUserResponseSchema = z.object({
   auditLogId: z.string().uuid(),
 });
 export type UnsuspendUserResponse = z.infer<typeof UnsuspendUserResponseSchema>;
+
+/**
+ * `POST /api/v1/admin/users/{id}/remove-photo`: a moderator removes a User's
+ * Profile Photo, which shows their Assigned Avatar again. With `reportId`, a
+ * pending report on that User becomes actioned in the same transaction. A User
+ * with no photo answers 409 `MODERATION_TARGET_STATE_CONFLICT`.
+ */
+export const RemoveUserPhotoRequestSchema = z.object({
+  reason: AdminActionReasonSchema,
+  reportId: z.string().uuid().optional(),
+});
+export type RemoveUserPhotoRequest = z.infer<typeof RemoveUserPhotoRequestSchema>;
+
+export const RemoveUserPhotoResponseSchema = z.object({
+  targetId: z.string().uuid(),
+  targetState: z.object({
+    avatarKey: z.null(),
+    avatarIndex: z.number().int().nonnegative(),
+  }),
+  reportId: z.string().uuid().optional(),
+  reportStatus: z.literal(ContentReportStatus.Actioned).optional(),
+  auditLogId: z.string().uuid(),
+});
+export type RemoveUserPhotoResponse = z.infer<typeof RemoveUserPhotoResponseSchema>;
 
 // ── Audit ──
 

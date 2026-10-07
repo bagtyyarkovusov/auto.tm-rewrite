@@ -1,5 +1,13 @@
+import "reflect-metadata";
+
 import { describe, it, expect, vi } from "vitest";
-import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, RequestMethod } from "@nestjs/common";
+import {
+  GUARDS_METADATA,
+  HTTP_CODE_METADATA,
+  METHOD_METADATA,
+  PATH_METADATA,
+} from "@nestjs/common/constants";
 import type { ConfigService } from "@nestjs/config";
 import type { FastifyRequest } from "fastify";
 
@@ -9,6 +17,8 @@ import type { UnbanListing } from "../application/UnbanListing";
 import type { SuspendUser } from "../application/SuspendUser";
 import type { UnsuspendUser } from "../application/UnsuspendUser";
 import type { DismissReport } from "../application/DismissReport";
+import type { RemoveUserPhoto } from "../application/RemoveUserPhoto";
+import { AdminGuard } from "../../../common/admin.guard";
 import type { Env } from "../../../env.schema";
 
 function makeController(opts: {
@@ -19,6 +29,8 @@ function makeController(opts: {
   const suspendUserUC = { execute: vi.fn().mockResolvedValue({ targetId: "u1", targetState: { suspendedAt: new Date(), suspendedById: "admin-1", suspensionReason: "spam" }, auditLogId: "a1" }) } as unknown as SuspendUser;
   const unsuspendUserUC = { execute: vi.fn().mockResolvedValue({ targetId: "u1", targetState: { suspendedAt: null, suspendedById: null, suspensionReason: null }, auditLogId: "a1" }) } as unknown as UnsuspendUser;
   const dismissReportUC = { execute: vi.fn().mockResolvedValue({ reportId: "r1", status: "dismissed", reviewedAt: new Date().toISOString(), auditLogId: "a1" }) } as unknown as DismissReport;
+
+  const removeUserPhotoUC = { execute: vi.fn().mockResolvedValue({ targetId: "u1", targetState: { avatarKey: null, avatarIndex: 7 }, reportId: "r1", reportStatus: "actioned", auditLogId: "a1" }) } as unknown as RemoveUserPhoto;
 
   const config = {
     get: vi.fn((key: keyof Env) => {
@@ -33,10 +45,11 @@ function makeController(opts: {
     suspendUserUC,
     unsuspendUserUC,
     dismissReportUC,
+    removeUserPhotoUC,
     config,
   );
 
-  return { controller, banListingUC, unbanListingUC, suspendUserUC, unsuspendUserUC, dismissReportUC, config };
+  return { controller, banListingUC, unbanListingUC, suspendUserUC, unsuspendUserUC, dismissReportUC, removeUserPhotoUC, config };
 }
 
 function adminReq(): FastifyRequest {
@@ -95,8 +108,58 @@ describe("AdminModerationController", () => {
     });
   });
 
+  describe("removeUserPhoto (POST users/:id/remove-photo)", () => {
+    it("is a POST answering 200 behind the admin guard", () => {
+      const handler = AdminModerationController.prototype.removeUserPhoto;
+      expect(Reflect.getMetadata(PATH_METADATA, handler)).toBe("users/:id/remove-photo");
+      expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(RequestMethod.POST);
+      expect(Reflect.getMetadata(HTTP_CODE_METADATA, handler)).toBe(200);
+      expect(Reflect.getMetadata(GUARDS_METADATA, AdminModerationController)).toEqual([AdminGuard]);
+    });
+
+    it("is blocked with FEATURE_DISABLED when moderation actions are off", async () => {
+      const { controller, removeUserPhotoUC } = makeController({ moderationActionsEnabled: false });
+
+      const error = await controller
+        .removeUserPhoto("u1", { reason: "Offensive photo" }, adminReq())
+        .catch((err: unknown) => err);
+
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toMatchObject({
+        details: { reason: "FEATURE_DISABLED" },
+      });
+      expect(removeUserPhotoUC.execute).not.toHaveBeenCalled();
+    });
+
+    it("passes the moderator, the target, the reason and the report to the use-case", async () => {
+      const { controller, removeUserPhotoUC } = makeController();
+      const reportId = "0b9f3c1e-2d4a-4c6b-8e1f-3a5b7c9d1e2f";
+
+      const result = await controller.removeUserPhoto(
+        "u1",
+        { reason: "Offensive photo", reportId },
+        adminReq(),
+      );
+
+      expect(removeUserPhotoUC.execute).toHaveBeenCalledWith({
+        userId: "u1",
+        adminUserId: "admin-1",
+        reason: "Offensive photo",
+        reportId,
+      });
+      expect(result).toEqual({
+        targetId: "u1",
+        targetState: { avatarKey: null, avatarIndex: 7 },
+        reportId: "r1",
+        reportStatus: "actioned",
+        auditLogId: "a1",
+      });
+    });
+  });
+
   describe("invalid request", () => {
     it.each([
+      ["removeUserPhoto", "u1"],
       ["dismissReport", "r1"],
       ["banListing", "l1"],
       ["unbanListing", "l1"],
