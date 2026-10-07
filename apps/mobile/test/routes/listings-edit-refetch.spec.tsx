@@ -145,6 +145,7 @@ describe("Listing edit save across a background refetch", () => {
     fixture.photos = [
       { photoId: fixture.localId, key: fixture.newKey, state: "uploaded", sortOrder: 0, retryCount: 0 },
       { photoId: fixture.persistedId, key: fixture.persistedKey, state: "attached", sortOrder: 1, retryCount: 0 },
+      { photoId: "550e8400-e29b-41d4-a716-000000000901", key: "pending/support/original.jpg", state: "uploaded", sortOrder: 2, retryCount: 0 },
     ];
 
     const screen = renderMobile(<EditListingScreen />);
@@ -152,7 +153,7 @@ describe("Listing edit save across a background refetch", () => {
     fireEvent.press(screen.getByRole("button", { name: "Done", disabled: false }));
     await act(async () => fireEvent.press(screen.getByRole("button", { name: "Save changes", disabled: false })));
     await waitFor(() => expect(screen.getByText("✗ Update photo order")).toBeTruthy());
-    expect(screen.getByText("✓ Attach photo")).toBeTruthy();
+    expect(screen.getAllByText("✓ Attach photo")).toHaveLength(2);
 
     // The save's invalidations refetch the Listing: a new object with the attached row.
     fixture.listing = { ...api.detail(), favoriteCount: 1 };
@@ -174,9 +175,9 @@ describe("Listing edit save across a background refetch", () => {
     await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`));
 
     expect(api.fields.conditionDisclosure).toEqual(expect.objectContaining({ damaged: false }));
-    expect(api.requests.attach).toEqual([fixture.newKey]);
+    expect(api.requests.attach).toEqual([fixture.newKey, "pending/support/original.jpg"]);
     expect(api.requests.remove).toEqual([]);
-    expect(api.media().map((m) => m.key)).toEqual([fixture.newKey, fixture.persistedKey]);
+    expect(api.media().map((m) => m.key)).toEqual([fixture.newKey, fixture.persistedKey, "pending/support/original.jpg"]);
     expect(fixture.show).toHaveBeenCalledWith(expect.objectContaining({ variant: "success" }));
   });
 });

@@ -275,7 +275,7 @@ describe("Sell wizard, upload status on later steps", () => {
     const screen = renderMobile(<SellScreen />);
     expect(screen.getByRole("button", { name: "Publish" }).props.accessibilityState).toMatchObject({ disabled: true });
 
-    fixture.queuePhotos = [keyed(ids.a, 0)];
+    fixture.queuePhotos = [keyed(ids.a, 0), keyed(ids.b, 1), keyed(ids.c, 2)];
     fixture.gate = { canPublish: true, blockers: [] };
     screen.rerender(<SellScreen />);
 
@@ -293,7 +293,7 @@ describe("Sell wizard, upload status on later steps", () => {
     expect(screen.queryByText(/^Fill in: /)).toBeNull();
 
     // A photo the seller adds afterwards is a change of theirs, and is checked again.
-    fixture.queuePhotos = [keyed(ids.a, 0), staged(ids.b, 1, "compressed"), staged(ids.c, 2, "selected")];
+    fixture.queuePhotos = [...fixture.queuePhotos, staged("44444444-4444-4444-8444-444444444444", 3, "selected")];
     screen.rerender(<SellScreen />);
     expect(screen.getByText(/^Fill in: /)).toBeTruthy();
   });

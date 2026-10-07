@@ -287,6 +287,14 @@ describe("Step2Photos while photos upload", () => {
   });
 });
 
+describe("Step2Photos minimum guidance", () => {
+  it("does not promise Continue while only two photos are picked", () => {
+    const photos = [photo("a", 0), { ...photo("b", 1), state: "uploading" as const }];
+    const screen = renderMobile(<Step2Photos {...defaults()} photos={photos} />);
+    expect(screen.queryByText("You can continue. Photos keep uploading.")).toBeNull();
+  });
+});
+
 describe("Step2Photos errors", () => {
   const required = { photos: "At least one photo is required" };
 

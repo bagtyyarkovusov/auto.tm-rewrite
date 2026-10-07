@@ -402,11 +402,7 @@ describe("PublishListing", () => {
   });
 
   it("refuses two attached photos without publishing or discarding the draft", async () => {
-    seedDraft(draftRepo, { ...validPayload, photos: [
-      { photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 },
-      { photoId: "00000000-0000-0000-0000-000000000006", key: "p1.jpg", sortOrder: 1 },
-          { photoId: "00000000-0000-0000-0000-000000000007", key: "photo3.jpg", sortOrder: 2 },
-    ] });
+    seedDraft(draftRepo, { ...validPayload, photos: validPayload.photos.slice(0, 2) });
     const error = await makeUseCase(draftRepo, prisma).execute({ draftId: "draft-1", userId: "user-1" }).catch((err: unknown) => err);
     expect(error).toBeInstanceOf(BadRequestException);
     expect((error as BadRequestException).getResponse()).toMatchObject({

@@ -218,6 +218,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   }
 
   async upsertListing(input: {
+    contactPhone: string;
     id: string;
     sellerId: string;
     priceAmount: number;
@@ -247,7 +248,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         locationText: "Review City",
         allowCalls: false,
         allowChat: true,
-        contactPhone: null,
+        contactPhone: input.contactPhone,
         damaged: input.damaged,
         knownIssuesText: input.knownIssuesText,
       },
@@ -270,6 +271,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         locationText: "Review City",
         allowCalls: false,
         allowChat: true,
+        contactPhone: input.contactPhone,
         damaged: input.damaged,
         knownIssuesText: input.knownIssuesText,
       },

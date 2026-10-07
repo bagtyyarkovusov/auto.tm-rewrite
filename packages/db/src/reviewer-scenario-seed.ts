@@ -135,6 +135,7 @@ export interface ReviewerScenarioSeedStore {
     citySlug: string;
   }): Promise<void>;
   upsertListing(input: {
+    contactPhone: string;
     id: string;
     sellerId: string;
     priceAmount: number;
@@ -453,6 +454,7 @@ export async function runReviewerScenarioSeed(
   await store.upsertListing({
     id: PRIMARY_LISTING_ID,
     sellerId: seller.id,
+    contactPhone: seller.phone,
     priceAmount: 245000,
     description:
       "Store review scenario listing. Deterministic demo data only; not a real vehicle.",
@@ -463,6 +465,7 @@ export async function runReviewerScenarioSeed(
   await store.upsertListing({
     id: REPORTABLE_LISTING_ID,
     sellerId: seller.id,
+    contactPhone: seller.phone,
     priceAmount: 198000,
     description:
       "Reportable store review scenario listing with intentionally incomplete disclosure copy.",
