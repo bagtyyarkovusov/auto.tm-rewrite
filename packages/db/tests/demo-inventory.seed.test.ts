@@ -321,7 +321,8 @@ describe("demo inventory seed and removal — Testcontainers Postgres and MinIO"
     expect(publishedDays.size).toBeGreaterThanOrEqual(15);
     expect(new Set(listings.map((listing) => listing.viewCount)).size).toBeGreaterThan(listings.length / 2);
     const usd = must(listings.find((listing) => listing.priceCurrency === "USD"));
-    expect(usd.priceTmt).toBeCloseTo(usd.priceAmount * 3.5, 5);
+    // priceTmt is amount times the seeded USD->TMT catalog rate.
+    expect(usd.priceTmt).toBeCloseTo(usd.priceAmount * 18.2, 5);
 
     expect(media).toHaveLength(photoCount);
     expect(new Set(media.map((row) => row.key)).size).toBe(media.length);
