@@ -4,7 +4,8 @@ export interface MediaStoragePort {
     contentType: string;
     sizeBytes: number;
     expirySeconds?: number;
-  }): Promise<{ url: string; key: string }>;
+    writeProtocol?: "conditional-v1";
+  }): Promise<{ url: string; key: string; headers?: Record<string, string>; objectKeys?: string[] }>;
 
   resolvePublicUrl(key: string): string;
 

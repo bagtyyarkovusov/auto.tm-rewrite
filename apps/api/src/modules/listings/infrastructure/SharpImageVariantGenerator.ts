@@ -11,6 +11,8 @@ import { stripImageMetadata } from "../../../common/stripImageMetadata";
 import { UPLOAD_CAPS } from "../domain/MediaUpload";
 import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerator";
 import type { Env } from "../../../env.schema";
+import { ConditionalImageStorage } from "./ConditionalImageStorage";
+import { imageUploadObjectKeys } from "../domain/imageUploadObjectKeys";
 
 interface VariantSpec {
   name: "thumbnail" | "list" | "detail" | "fullscreen";
@@ -61,7 +63,7 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     });
   }
 
-  async generate(originalKey: string): Promise<{
+  async generate(originalKey: string, options?: { writeProtocol?: "legacy" | "conditional-v1" }): Promise<{
     variants: {
       thumbnail: string;
       list: string;
@@ -70,9 +72,17 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     };
   }> {
     const bucket = this.inferBucket(originalKey);
+    const conditional = options?.writeProtocol === "conditional-v1"
+      ? new ConditionalImageStorage(this.s3, bucket) : undefined;
+    if (conditional) {
+      imageUploadObjectKeys(originalKey);
+      await conditional.assertSupported();
+    }
     const original = await this.s3.send(
       new GetObjectCommand({ Bucket: bucket, Key: originalKey }),
     );
+
+    if (conditional && !original.ETag) throw new Error("Conditional original returned no ETag");
 
     if (!original.Body) {
       throw new Error(`Empty body for ${originalKey}`);
@@ -94,7 +104,9 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     );
     const buffer = cleaned ?? input;
     if (cleaned) {
-      await this.s3.send(
+      if (conditional) {
+        await conditional.write(originalKey, buffer, isWebp ? "image/webp" : "image/jpeg", original.ETag);
+      } else await this.s3.send(
         new PutObjectCommand({
           Bucket: bucket,
           Key: originalKey,
@@ -120,7 +132,9 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
       const jpegBuffer = await sharp(resized)
         .jpeg({ quality: 85, progressive: true })
         .toBuffer();
-      await this.s3.send(
+      if (conditional) {
+        await conditional.write(jpegKey, jpegBuffer, "image/jpeg");
+      } else await this.s3.send(
         new PutObjectCommand({
           Bucket: bucket,
           Key: jpegKey,
@@ -134,7 +148,9 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
       const webpBuffer = await sharp(resized)
         .webp({ quality: 80 })
         .toBuffer();
-      await this.s3.send(
+      if (conditional) {
+        await conditional.write(webpKey, webpBuffer, "image/webp");
+      } else await this.s3.send(
         new PutObjectCommand({
           Bucket: bucket,
           Key: webpKey,

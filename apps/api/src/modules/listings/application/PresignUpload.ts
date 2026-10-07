@@ -2,6 +2,7 @@ import { Inject, Injectable, BadRequestException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 
 import { UPLOAD_CAPS } from "../domain/MediaUpload";
+import { imageUploadObjectKeys } from "../domain/imageUploadObjectKeys";
 import {
   MEDIA_STORAGE_PORT,
   type MediaStoragePort,
@@ -16,6 +17,7 @@ export interface PresignUploadInput {
   kind: "image" | "video";
   contentType: string;
   sizeBytes: number;
+  writeProtocol?: "conditional-v1";
 }
 
 export interface PresignUploadResult {
@@ -23,6 +25,7 @@ export interface PresignUploadResult {
   key: string;
   expiresIn: number;
   maxSizeBytes: number;
+  headers?: Record<string, string>;
 }
 
 @Injectable()
@@ -46,7 +49,7 @@ export class PresignUpload {
       );
     }
 
-    if (input.sizeBytes > cap.maxSizeBytes) {
+    if (input.sizeBytes <= 0 || input.sizeBytes > cap.maxSizeBytes) {
       throw new BadRequestException(
         `File too large. Max ${cap.maxSizeBytes} bytes for ${input.kind}`,
       );
@@ -61,12 +64,21 @@ export class PresignUpload {
 
     const key = `pending/${randomUUID()}/original.${ext}`;
 
-    const { url } = await this.storage.presignUpload({
+    if (input.writeProtocol && input.kind !== "image") {
+      throw new BadRequestException("Conditional protocol supports images only");
+    }
+    const signed = await this.storage.presignUpload({
       key,
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
       expirySeconds: 600,
+      ...(input.writeProtocol ? { writeProtocol: input.writeProtocol } : {}),
     });
+    if (input.writeProtocol && (!signed.headers?.["if-match"] ||
+      signed.objectKeys?.length !== 9 ||
+      !imageUploadObjectKeys(key).every((member) => signed.objectKeys?.includes(member)))) {
+      throw new BadRequestException("Storage did not supply conditional upload authority");
+    }
 
     // The caller owns this key from the moment the URL exists. Only a recorded
     // upload can later be attached or published (ADR-0079).
@@ -78,13 +90,16 @@ export class PresignUpload {
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
       createdAt: new Date(),
+      writeProtocol: input.writeProtocol ?? "legacy",
+      objectKeys: signed.objectKeys ?? [],
     });
 
     return {
-      uploadUrl: url,
+      uploadUrl: signed.url,
       key,
       expiresIn: 600,
       maxSizeBytes: cap.maxSizeBytes,
+      ...(signed.headers ? { headers: signed.headers } : {}),
     };
   }
 }

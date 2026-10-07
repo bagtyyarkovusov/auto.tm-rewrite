@@ -217,14 +217,16 @@ async function uploadSignedImage(apiUrl, token, presignPath, extraBody = {}) {
   const presign = expectStatus(
     await request(apiUrl, "POST", presignPath, {
       token,
-      body: { contentType: "image/jpeg", sizeBytes: TINY_JPEG.length, ...extraBody },
+      body: { contentType: "image/jpeg", sizeBytes: TINY_JPEG.length,
+        ...(presignPath === "/api/v1/uploads/presign" ? { writeProtocol: "conditional-v1" } : {}),
+        ...extraBody },
     }),
     [200, 201],
     "presign",
   );
   const put = await fetch(presign.uploadUrl, {
     method: "PUT",
-    headers: { "content-type": "image/jpeg" },
+    headers: presign.headers ?? { "content-type": "image/jpeg" },
     body: TINY_JPEG,
   });
   if (put.status !== 200) throw new Error(`signed PUT returned ${put.status}`);
