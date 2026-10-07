@@ -1,7 +1,7 @@
 ---
 name: run-queue
-description: Works a founder-given ordered list of AutoTM issues from one orchestrator session. The orchestrator dispatches each implementer into its own worktree using the host-specific lifecycle; each issue still gets its own run-issue branch, draft pull request, execution state, and one fixed-commit review round, unless the founder groups issues on an integration branch. The orchestrator sets auto-merge after the review and its one fix round and starts the next ready issue without waiting for CI. Use when the user invokes /run-queue with issue numbers or asks one agent to work a queue of issues.
-argument-hint: "[issue numbers in order, with dependencies]"
+description: Works a founder-numbered queue or an explicitly founder-delegated outcome from one orchestrator session. The orchestrator dispatches each implementer into its own worktree using the host-specific lifecycle; each issue still gets its own run-issue branch, draft pull request, execution state, and one fixed-commit review round, unless the founder groups issues on an integration branch. The orchestrator sets auto-merge after the review and its one fix round and starts the next ready issue without waiting for CI. Use when the user invokes /run-queue with issue numbers, asks one agent to work a queue, or explicitly delegates an outcome and its necessary issue selection.
+argument-hint: "[issue numbers in order, or explicitly delegated outcome]"
 arguments:
   - queue
 disable-model-invocation: true
@@ -13,11 +13,24 @@ One orchestrator session owns a queue from start to finish, so it keeps context 
 
 ## Accept the queue
 
-1. The founder supplies the queue: issue numbers in order, and optionally which issues wait for which. Human selection sets the order ([ADR-0058](../../../docs/adr/0058-portable-coding-agent-issue-execution-and-pull-request-gates.md)). Never add issues the founder did not list. If `$queue` is empty, ask for it.
-2. For each listed issue, read its `## Depends on` section, labels, comments, and any branch or PR. Build the order: listed order, moved later only when a dependency is still open.
-3. Skip, and report, any issue that is closed, labelled `ready-for-human`, or already owned by another open branch or PR. An existing branch or PR for a listed issue is resumed through [resume-issue](../resume-issue/SKILL.md) only when it has no other live owner.
+1. Accept either a founder-numbered queue or an explicitly founder-delegated outcome ([ADR-0087](../../../docs/adr/0087-founder-delegated-outcome-orchestration.md)). For a numbered queue, retain the supplied scope and order; add issues only if the founder explicitly delegates selection. For a delegated outcome, follow [Outcome selection](#outcome-selection) before dispatch. Ask for a queue or delegation only when neither is supplied in the request or existing session.
+2. For each selected issue, read its `## Depends on` section, labels, comments, and any branch or PR. Dispatch only open `ready-for-agent` issues with testable acceptance criteria and no unresolved dependency or blocking label, subject to [Stacking](#stacking). Build the order: supplied order for numbered queues, dependency order for delegated outcomes.
+3. Skip, and report, any issue that is closed, labelled `ready-for-human`, or already owned by another open branch or PR. An existing branch or PR for a selected issue is resumed through [resume-issue](../resume-issue/SKILL.md) only when it has no other live owner.
 4. Never query provider quota. Implementers push checkpoints often, so another agent can resume any issue from its PR if a session stops.
 5. Confirm a supported worktree route: Claude host-created isolation or Codex writer-created ownership under [ADR-0071](../../../docs/adr/0071-codex-queue-models-and-owned-worktrees.md). If neither is available, see [Hosts without isolated subagents](#hosts-without-isolated-subagents).
+
+## Outcome selection
+
+The coordinator owns the strategic scope; separate implementers own tactical work. Before dispatch, create or reuse a parent issue and record:
+
+- the founder's explicit delegation and bounded outcome;
+- the evidence that defines completion and the exclusions;
+- selected issue links, why each is necessary, and dependency order;
+- human-owned steps, missing decisions, competing owners and blocked evidence.
+
+Select existing issues first. File a missing issue only when it is necessary within that scope, with testable acceptance criteria and explicit dependencies. Prepare readiness labels from evidence using the normal issue workflow; selection alone never establishes readiness. Product or architecture ambiguity and scope expansion return to the founder. Keep the parent record current when selection, dependencies or evidence change. Record deferred polish separately unless it is necessary to the delegated outcome.
+
+Issue preparation and ordinary execution are authorized by the delegation. Human-owned operations retain the boundaries in [the coding workflow](../../../docs/agents/coding-workflow.md). Integration grouping, model profiles, writer ownership, test-first verification and ADR-0085 finalization keep their existing contracts.
 
 ## Agent types and models
 
@@ -113,4 +126,4 @@ Label a paused issue `ready-for-human` only when a human must act. Stop the queu
 
 ## Final report
 
-For each listed issue: its PR, merged commit or current state, evidence by acceptance criterion, gates run, missing evidence, follow-up issues filed, labels changed, and its implementer worktrees. Run `pnpm worktree:gc:apply` once more at queue end, then include its completion report: worktrees removed, worktrees kept with the script's exact reason (stopped ones by path), branches deleted, and stale Railway environments. Add a cleanup tuple only for a worktree the script could not retire. List skipped and paused issues with the reason.
+For each selected issue: its PR, merged commit or current state, evidence by acceptance criterion, gates run, missing evidence, follow-up issues filed, labels changed, and its implementer worktrees. Run `pnpm worktree:gc:apply` once more at queue end, then include its completion report: worktrees removed, worktrees kept with the script's exact reason (stopped ones by path), branches deleted, and stale Railway environments. Add a cleanup tuple only for a worktree the script could not retire. List skipped and paused issues with the reason. For a delegated outcome, reconcile the parent record against its completion evidence and report any missing gate or human action; merged code alone does not establish completion.
