@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { ApiError } from "../../api/client";
 
 /** Why a publish did not go through, as Check and publish words it. */
-export type PublishFailure = "offline" | "rateMissing" | "photos" | "server";
+export type PublishFailure = "offline" | "rateMissing" | "photos" | "photoUnavailable" | "server";
 
 /**
  * Sorts a publish error into the three failures Check and publish explains. The
@@ -22,6 +22,8 @@ export function publishFailureOf(error: unknown): PublishFailure {
         details.formErrors.some((code) => code === "AT_LEAST_THREE_PHOTOS_REQUIRED" || code === "AT_LEAST_ONE_PHOTO_REQUIRED"))) return "photos";
     if (error.code === "NETWORK_ERROR" || error.status === 0) return "offline";
     if (error.code === ListingsSchemas.ListingsErrorCode.ExchangeRateMissing) return "rateMissing";
+    // #735: the photo's upload is gone (retired); the seller re-adds that photo.
+    if (error.code === ListingsSchemas.ListingsErrorCode.UploadNotAvailable) return "photoUnavailable";
   }
   return "server";
 }
@@ -31,5 +33,6 @@ export function publishFailureMessage(t: TFunction, failure: PublishFailure | nu
   if (failure === "photos") return t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS });
   if (failure === "offline") return t("publishErrorOffline");
   if (failure === "rateMissing") return t("publishErrorRateMissing", { currency });
+  if (failure === "photoUnavailable") return t("publishErrorPhotoUnavailable");
   return t("publishErrorServer");
 }
