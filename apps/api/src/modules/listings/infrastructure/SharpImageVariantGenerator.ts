@@ -9,6 +9,7 @@ import sharp from "sharp";
 
 import { stripImageMetadata } from "../../../common/stripImageMetadata";
 import { UPLOAD_CAPS } from "../domain/MediaUpload";
+import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerator";
 import type { Env } from "../../../env.schema";
 import { ConditionalImageStorage } from "./ConditionalImageStorage";
@@ -97,11 +98,23 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     const input = Buffer.from(await original.Body.transformToByteArray());
     // Over the upload cap even at the lowest quality, this throws: the
     // adoption guard re-checks the stored size on a retried publish.
-    const cleaned = await stripImageMetadata(
-      input,
-      isWebp ? "webp" : "jpeg",
-      UPLOAD_CAPS.image.maxSizeBytes,
-    );
+    // ADR-0089: any failure here is permanent — the stored bytes cannot be
+    // decoded or can never fit the cap — so publish names the photo instead of
+    // releasing it for a retry that would fail the same way. Transport errors
+    // above stay transient.
+    let cleaned: Buffer | null;
+    try {
+      cleaned = await stripImageMetadata(
+        input,
+        isWebp ? "webp" : "jpeg",
+        UPLOAD_CAPS.image.maxSizeBytes,
+      );
+    } catch {
+      throw new DomainError(
+        LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
+        "Uploaded file is not a usable image",
+      );
+    }
     const buffer = cleaned ?? input;
     if (cleaned) {
       if (conditional) {

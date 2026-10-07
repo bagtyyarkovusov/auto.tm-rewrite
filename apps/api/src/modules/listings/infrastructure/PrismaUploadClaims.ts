@@ -136,6 +136,52 @@ export class PrismaUploadClaims implements UploadClaimPort {
     });
   }
 
+  async release(token: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM media_uploads
+        WHERE "claimToken" = ${token} AND "state" = 'PREPARING' ORDER BY id FOR UPDATE`;
+      await tx.$executeRaw`
+        UPDATE media_uploads SET "state" = 'AVAILABLE',
+          "claimToken" = NULL, "claimDeadline" = NULL,
+          "claimTargetType" = NULL, "claimTargetId" = NULL
+        WHERE "claimToken" = ${token} AND "state" = 'PREPARING'`;
+    });
+  }
+
+  async settle(token: string, retiredUploadId: string): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const held = await tx.$queryRaw<LockedUpload[]>`
+        SELECT id, "userId", "key", "state", "claimToken", "claimTargetType", "claimTargetId",
+          "writeProtocol", "objectKeys"
+        FROM media_uploads
+        WHERE "claimToken" = ${token} AND "state" = 'PREPARING' ORDER BY id FOR UPDATE`;
+      const bad = held.find((upload) => upload.id === retiredUploadId);
+      if (!bad) return false;
+      for (const upload of held) {
+        if (upload.id === retiredUploadId) await this.retire(tx, upload.id);
+        else {
+          await tx.$executeRaw`
+            UPDATE media_uploads SET "state" = 'AVAILABLE',
+              "claimToken" = NULL, "claimDeadline" = NULL,
+              "claimTargetType" = NULL, "claimTargetId" = NULL
+            WHERE id = ${upload.id}`;
+        }
+      }
+      return true;
+    });
+  }
+
+  async retireUnclaimed(uploadId: string): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const [upload] = await this.lock(tx, [uploadId]);
+      // AVAILABLE means unadopted and unheld: nothing a live owner references
+      // is ever retired from here.
+      if (!upload || upload.state !== "AVAILABLE") return false;
+      return this.retire(tx, uploadId);
+    });
+  }
+
   /**
    * Rows of either kind that already point at these uploads, counted under
    * their locks. Covers a row written before this protocol recorded state; the

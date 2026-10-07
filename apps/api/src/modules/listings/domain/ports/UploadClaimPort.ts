@@ -42,6 +42,28 @@ export interface UploadClaimPort {
   retire(tx: unknown, uploadId: string): Promise<boolean>;
   /** A failed preparation is terminal: retires whatever this token still holds. */
   abandon(token: string): Promise<void>;
+  /**
+   * A transiently failed preparation lets go: every upload this token still
+   * holds returns to AVAILABLE with the claim cleared, and no deletion work is
+   * recorded, so a retry can adopt the same bytes (ADR-0089). Only the attempt
+   * that created the token calls it. Uploads already ADOPTED are untouched.
+   */
+  release(token: string): Promise<void>;
+  /**
+   * One photo of a publication turned out permanently unusable: retires exactly
+   * that upload (with its deletion work) and releases every other upload the
+   * token still holds, in one transaction. False when the token no longer holds
+   * the upload, e.g. the attempt committed meanwhile; the caller then reports
+   * the original error instead of naming a photo.
+   */
+  settle(token: string, retiredUploadId: string): Promise<boolean>;
+  /**
+   * Retires one of the User's own uploads whose stored object can never match
+   * what presign recorded (not an image, corrupt, over limits), checked before
+   * any reservation exists. Only an AVAILABLE upload is retired: an adopted,
+   * held or closed upload is a live owner's property and stays untouched.
+   */
+  retireUnclaimed(uploadId: string): Promise<boolean>;
 }
 
 export const UPLOAD_CLAIM_PORT = Symbol("UploadClaimPort");

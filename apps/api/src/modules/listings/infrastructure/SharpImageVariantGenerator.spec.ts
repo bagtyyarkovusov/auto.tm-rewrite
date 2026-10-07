@@ -1,5 +1,3 @@
-import { randomBytes } from "node:crypto";
-
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { ConfigService } from "@nestjs/config";
 import sharp from "sharp";
@@ -32,6 +30,19 @@ function generatorWith(bucket: ReturnType<typeof fakeBucket>) {
   const generator = new SharpImageVariantGenerator(config);
   (generator as unknown as { s3: { send: typeof bucket.send } }).s3 = { send: bucket.send };
   return generator;
+}
+
+/** Deterministic incompressible bytes (mulberry32), one byte per step. */
+function seededNoise(length: number): Buffer {
+  const buffer = Buffer.alloc(length);
+  let state = 0x9e3779b9;
+  for (let i = 0; i < length; i++) {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    buffer[i] = ((t ^ (t >>> 14)) >>> 16) & 0xff;
+  }
+  return buffer;
 }
 
 /** A 300x200 camera photo with a GPS position, stored rotated (EXIF Orientation 6). */
@@ -112,12 +123,11 @@ describe("SharpImageVariantGenerator", () => {
 
   it("reports an image still over the upload cap after cleaning as UPLOAD_OBJECT_INVALID", async () => {
     const key = "pending/3b4c5d6e-7f8a-9b0c-1d2e-3f4a5b6c7d8e/original.jpg";
-    // Random pixels compress badly, so even the lowest cleaning quality stays
-    // over the 5 MB cap; the EXIF tag forces the cleaning pass.
-    const noise = await sharp(
-      Buffer.from(randomBytes(3600 * 2400 * 3)),
-      { raw: { width: 3600, height: 2400, channels: 3 } },
-    )
+    // Seeded noise compresses badly and deterministically, so even the lowest
+    // cleaning quality stays over the 5 MB cap; the EXIF tag forces cleaning.
+    const noise = await sharp(seededNoise(5600 * 3400 * 3), {
+      raw: { width: 5600, height: 3400, channels: 3 },
+    })
       .jpeg({ quality: 100 })
       .withExif({ IFD0: { Make: "NoiseCam" } })
       .toBuffer();

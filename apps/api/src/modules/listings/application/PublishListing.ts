@@ -110,6 +110,29 @@ function claimRejection(err: unknown): unknown {
   });
 }
 
+/** The key and uploadId an UPLOAD_OBJECT_INVALID rejection names, when it does. */
+function objectInvalidDetails(err: unknown): { key?: string; uploadId?: string } | null {
+  if (!(err instanceof BadRequestException)) return null;
+  const response = err.getResponse() as {
+    code?: string;
+    details?: { key?: string; uploadId?: string };
+  };
+  return response.code === LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID ? (response.details ?? {}) : null;
+}
+
+/**
+ * Variant generation proved one photo permanently unusable (ADR-0089), carrying
+ * the draft's own photo reference so the rejection can name it. Anything else
+ * from generation is transient.
+ */
+class UnusablePhotoError {
+  constructor(
+    readonly cause: DomainError,
+    readonly key: string,
+    readonly photoId: string,
+  ) {}
+}
+
 export interface PublishListingInput {
   draftId: string;
   userId: string;
@@ -236,10 +259,20 @@ export class PublishListing {
         message: "A photo key can be used only once",
       });
     }
-    const uploads = await this.uploadGuard.authorize(
-      draft.userId,
-      photoKeys.map((key) => ({ key, kind: "image" as const })),
-    );
+    const uploads = await this.uploadGuard
+      .authorize(
+        draft.userId,
+        photoKeys.map((key) => ({ key, kind: "image" as const })),
+      )
+      .catch(async (err: unknown) => {
+        // ADR-0089: a stored object that can never match presign is retired
+        // before any reservation exists, so it stops blocking every retry.
+        // retireUnclaimed touches only an AVAILABLE upload: one a live owner
+        // holds or has adopted stays untouched.
+        const uploadId = objectInvalidDetails(err)?.uploadId;
+        if (uploadId) await this.claims.retireUnclaimed(uploadId).catch(() => undefined);
+        throw err;
+      });
     if (uploads.some((upload) => upload.adopted)) {
       throw new ConflictException({
         code: LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
@@ -266,9 +299,18 @@ export class PublishListing {
     try {
       await Promise.all(
         attachedPhotos.map((photo) =>
-          this.variantGenerator.generate(photo.key as string, {
-            writeProtocol: uploads.find((upload) => upload.key === photo.key)?.writeProtocol ?? "legacy",
-          }),
+          this.variantGenerator
+            .generate(photo.key as string, {
+              writeProtocol: uploads.find((upload) => upload.key === photo.key)?.writeProtocol ?? "legacy",
+            })
+            .catch((err: unknown) => {
+              // The generator's contract (ADR-0089): bytes that can never be an
+              // image arrive as UPLOAD_OBJECT_INVALID; anything else is transient.
+              if (err instanceof DomainError && err.code === LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID) {
+                throw new UnusablePhotoError(err, photo.key as string, photo.photoId);
+              }
+              throw err;
+            }),
         ),
       );
 
@@ -392,13 +434,36 @@ export class PublishListing {
 
       return { listing };
     } catch (err) {
-      // A failed preparation is terminal (ADR-0088): whatever this attempt still
-      // holds is retired, which is a no-op once the transaction has committed.
-      // Only the attempt that created the token abandons it; a joined retry
-      // must not retire a claim another attempt is still preparing. If it
-      // cannot be recorded now, the storage scanner retires it later.
-      if (!reservation.joined) await this.claims.abandon(reservation.token).catch(() => undefined);
-      throw claimRejection(err);
+      // ADR-0089 supersedes "a failed preparation is terminal" for publish.
+      // Only the attempt that created the token settles it; a joined retry must
+      // not touch a claim another attempt is still preparing.
+      if (!reservation.joined) {
+        if (err instanceof UnusablePhotoError) {
+          // One photo is permanently unusable: retire exactly it (with its
+          // deletion work) and release the others, in one transaction, and
+          // name the photo so the seller can re-add it.
+          const uploadId = uploadIdByKey.get(err.key);
+          const settled =
+            uploadId !== undefined &&
+            (await this.claims.settle(reservation.token, uploadId).catch(() => false));
+          if (settled) {
+            throw new BadRequestException({
+              code: LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
+              message: err.cause.message,
+              details: { key: err.key, photoId: err.photoId },
+            });
+          }
+          // The token no longer holds that upload (a scanner retired it
+          // meanwhile): release whatever it still holds and report the
+          // original error instead of naming a photo.
+        }
+        // A transient failure (storage, database, timeout) lets go: every
+        // upload returns to AVAILABLE with no deletion work recorded, so a
+        // retry of the same draft can adopt the same bytes. A stranded claim
+        // this release cannot record is still retired by the storage scanner.
+        await this.claims.release(reservation.token).catch(() => undefined);
+      }
+      throw claimRejection(err instanceof UnusablePhotoError ? err.cause : err);
     }
   }
 }

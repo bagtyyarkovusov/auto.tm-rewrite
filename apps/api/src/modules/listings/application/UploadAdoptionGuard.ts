@@ -57,9 +57,12 @@ export class UploadAdoptionGuard {
       authorized.map(async (upload) => {
         const object = await this.objects.inspect(upload.key);
         if (!object || !storedObjectMatches(upload, object)) {
+          // The failing upload is named so the caller can retire exactly it
+          // (ADR-0089): it can never match presign, so it must not block retries.
           throw new BadRequestException({
             code: LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
             message: "Uploaded file is missing or does not match the presigned upload",
+            details: { key: upload.key, uploadId: upload.id },
           });
         }
       }),
