@@ -30,6 +30,10 @@ describe("publishFailureOf (#588)", () => {
     ).toBe("photoUnavailable");
   });
 
+  it("is photoUnavailable for a permanently unusable photo", () => {
+    expect(publishFailureOf(new ApiError("UPLOAD_OBJECT_INVALID", 400, "Corrupt image", { key: "photo.jpg" }))).toBe("photoUnavailable");
+  });
+
   it("is server for every other refusal or error", () => {
     expect(publishFailureOf(new ApiError("INTERNAL_ERROR", 500))).toBe("server");
     expect(publishFailureOf(new ApiError("INVALID_DRAFT_PAYLOAD", 400, "Draft is missing required fields"))).toBe("server");
@@ -51,7 +55,7 @@ describe("publishFailureMessage (#588)", () => {
     ["tk", "server", "Neşir edip bolmady. Garalama saklandy. Täzeden synanyşyň."],
     ["tk", "offline", "Internet ýok. Garalama saklandy. Baglanyşyk dikelende neşir ediň."],
     ["tk", "rateMissing", "USD kursy häzir elýeterli däl. Bahany TMT-de görkeziň ýa-da soňrak synanyşyň."],
-    ["tk", "photoUnavailable", "Suratlaryňyzden biri indi elýeterli däl. Ony «Surat» ädiminde täzeden goşuň we täzeden synanyşyň."],
+    ["tk", "photoUnavailable", "Suratlaryňyzdan biri indi elýeterli däl. Ony «Surat» ädiminde täzeden goşuň we täzeden synanyşyň."],
   ] as const)("%s %s", (locale, failure, message) => {
     expect(publishFailureMessage(translator(locale), failure, "USD")).toBe(message);
   });

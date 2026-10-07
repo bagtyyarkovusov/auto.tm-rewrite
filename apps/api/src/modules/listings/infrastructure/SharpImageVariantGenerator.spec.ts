@@ -1,7 +1,9 @@
+import { deflateSync } from "node:zlib";
+
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { ConfigService } from "@nestjs/config";
 import sharp from "sharp";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Env } from "../../../env.schema";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
@@ -30,6 +32,38 @@ function generatorWith(bucket: ReturnType<typeof fakeBucket>) {
   const generator = new SharpImageVariantGenerator(config);
   (generator as unknown as { s3: { send: typeof bucket.send } }).s3 = { send: bucket.send };
   return generator;
+}
+
+/** A tiny hand-built PNG whose header declares far more pixels than sharp decodes. */
+function hugePixelPng(): Buffer {
+  const crc32 = (buf: Buffer): number => {
+    let crc = 0xffffffff;
+    for (const byte of buf) {
+      let c = (crc ^ byte) & 0xff;
+      for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      crc = (crc >>> 8) ^ c;
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(20000, 0);
+  ihdr.writeUInt32BE(20000, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // truecolor RGB
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(Buffer.alloc(100))),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
 }
 
 /** Deterministic incompressible bytes (mulberry32), one byte per step. */
@@ -119,6 +153,36 @@ describe("SharpImageVariantGenerator", () => {
 
     expect(err).toBeInstanceOf(DomainError);
     expect((err as DomainError).code).toBe(LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID);
+  });
+
+  it("reports a truncated JPEG whose header is readable as permanently unusable", async () => {
+    const key = "pending/truncated/original.jpg";
+    const full = await sharp({ create: { width: 100, height: 100, channels: 3, background: "red" } }).jpeg().toBuffer();
+    const scan = full.indexOf(Buffer.from([0xff, 0xda]));
+    const truncated = full.subarray(0, scan + 16);
+    expect((await sharp(truncated).metadata()).width).toBe(100);
+    await expect(generatorWith(fakeBucket({ [key]: truncated })).generate(key)).rejects.toMatchObject({
+      code: LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
+    });
+  });
+
+  it("reports an image over Sharp's pixel limit as permanently unusable", async () => {
+    const key = "pending/huge/original.jpg";
+    await expect(generatorWith(fakeBucket({ [key]: hugePixelPng() })).generate(key)).rejects.toMatchObject({
+      code: LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
+    });
+  });
+
+  it.each(["metadata", "toBuffer"] as const)("keeps a resource failure during %s retryable", async (stage) => {
+    const key = "pending/resource/original.jpg";
+    const input = await sharp({ create: { width: 10, height: 10, channels: 3, background: "red" } }).jpeg().toBuffer();
+    const failure = new Error("VipsRegion: unable to allocate memory");
+    const mock = vi.spyOn(sharp.prototype, stage).mockRejectedValueOnce(failure);
+    try {
+      await expect(generatorWith(fakeBucket({ [key]: input })).generate(key)).rejects.toBe(failure);
+    } finally {
+      mock.mockRestore();
+    }
   });
 
   it("reports an image still over the upload cap after cleaning as UPLOAD_OBJECT_INVALID", async () => {

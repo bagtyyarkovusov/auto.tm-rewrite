@@ -721,15 +721,61 @@ describe("PublishListing", () => {
 
       expect((err as BadRequestException).getResponse()).toMatchObject({
         code: "UPLOAD_OBJECT_INVALID",
-        details: { key: "photo1.jpg", uploadId: "upload-photo1.jpg" },
+        details: { key: "photo1.jpg", photoId: "00000000-0000-0000-0000-000000000005" },
       });
       expectNothingPublished();
-      // #735: the provably unusable upload is retired so it cannot block every
-      // retry; the photos that were fine are never reserved and stay adoptable.
-      expect(world.claimOf("upload-photo1.jpg").state).toBe("RETIRED");
-      expect(world.cleanups).toEqual(["upload-photo1.jpg"]);
+      // A conditional PUT may still be in flight. Missing bytes authorize no retirement.
+      expect(world.claimOf("upload-photo1.jpg").state).toBe("AVAILABLE");
+      expect(world.cleanups).toEqual([]);
       expect(world.claimOf("upload-photo2.jpg").state).toBe("AVAILABLE");
       expect(world.claimOf("upload-photo3.jpg").state).toBe("AVAILABLE");
+    });
+
+    it.each([0, null])("keeps an incomplete conditional PUT adoptable and accepts its completed retry (%s)", async (size) => {
+      const upload = world.uploads.find((u) => u.key === "photo1.jpg")!;
+      upload.writeProtocol = "conditional-v1";
+      if (size === null) world.objects.delete(upload.key);
+      else world.putObject(upload.key, { contentType: "image/jpeg", sizeBytes: size });
+      seedDraft(draftRepo, photoDraft(upload.key));
+      await publishError();
+      expect(world.claimOf(upload.id).state).toBe("AVAILABLE");
+      expect(world.cleanups).toEqual([]);
+      world.completeUpload(upload.key);
+      const result = await makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator)
+        .execute({ draftId: "draft-1", userId: "user-1" });
+      expect(result.listing.status).toBe("active");
+    });
+
+    it("re-inspects a positive mismatch before retirement, leaving a corrected object adoptable", async () => {
+      seedDraft(draftRepo, photoDraft("photo1.jpg"));
+      const inspect = world.inspector.inspect;
+      let first = true;
+      world.inspector.inspect = async (key) => {
+        if (key === "photo1.jpg" && first) {
+          first = false;
+          return { contentType: "image/png", sizeBytes: 100 };
+        }
+        return inspect(key);
+      };
+      await publishError();
+      expect(world.claimOf("upload-photo1.jpg").state).toBe("AVAILABLE");
+      expect(world.cleanups).toEqual([]);
+    });
+
+    it.each([
+      { contentType: "image/png", sizeBytes: 100 },
+      { contentType: "image/jpeg", sizeBytes: 5 * 1024 * 1024 + 1 },
+    ])("retires only the positively mismatched object and names the draft photo (%s)", async (object) => {
+      seedDraft(draftRepo, photoDraft("photo1.jpg"));
+      world.putObject("photo1.jpg", object);
+      const err = await publishError();
+      expect((err as BadRequestException).getResponse()).toMatchObject({
+        code: "UPLOAD_OBJECT_INVALID",
+        details: { key: "photo1.jpg", photoId: "00000000-0000-0000-0000-000000000005" },
+      });
+      expect(world.claimOf("upload-photo1.jpg").state).toBe("RETIRED");
+      expect(world.cleanups).toEqual(["upload-photo1.jpg"]);
+      expectNothingPublished();
     });
 
     it("rejects the same photo key listed twice", async () => {
@@ -877,6 +923,33 @@ describe("PublishListing", () => {
         "p1.jpg", "p2.jpg", "photo3.jpg",
         "p1.jpg", "p2.jpg", "photo3.jpg",
       ]);
+    });
+
+    it.each([false, true])("holds every claim until sibling generators stop after a failure (permanent=%s)", async (permanent) => {
+      seedDraft(draftRepo, threePhotoDraft());
+      let unblock!: () => void;
+      let started!: () => void;
+      const hold = new Promise<void>((resolve) => { unblock = resolve; });
+      const running = new Promise<void>((resolve) => { started = resolve; });
+      variantGenerator.during = async (key) => {
+        if (key === "p1.jpg") { started(); await hold; }
+        if (key === "p2.jpg") throw permanent
+          ? new DomainError(LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID, "Corrupt image")
+          : new Error("storage unavailable");
+      };
+      const pending = publishError();
+      await running;
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      const whileRunning = draftStates();
+      const cleanupWhileRunning = [...world.cleanups];
+      const competing = await world.claims.reserve({ userId: "user-1", uploadIds: ["upload-p1.jpg"],
+        target: { type: "profile", id: "user-1" } }).catch((error: unknown) => error);
+      unblock();
+      await pending;
+      expect(whileRunning).toEqual(["PREPARING", "PREPARING", "PREPARING"]);
+      expect(cleanupWhileRunning).toEqual([]);
+      expect(competing).toMatchObject({ code: "UPLOAD_ALREADY_ATTACHED" });
+      expect(draftStates()).toEqual(permanent ? ["AVAILABLE", "RETIRED", "AVAILABLE"] : ["AVAILABLE", "AVAILABLE", "AVAILABLE"]);
     });
 
     it("names the photo and retires only that upload when generation proves it permanently unusable", async () => {

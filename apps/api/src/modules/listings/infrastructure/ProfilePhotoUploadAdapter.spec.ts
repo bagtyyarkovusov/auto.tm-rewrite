@@ -99,6 +99,17 @@ describe("ProfilePhotoUploadAdapter", () => {
     );
   });
 
+  it("attach and Profile Photo refusals expose the same key details without the internal upload id", async () => {
+    presignedUpload(KEY);
+    world.putObject(KEY, { contentType: "image/png", sizeBytes: 100 });
+    for (const attempt of [() => attachToListing(KEY), () => photos.adopt({ userId: "user-1", key: KEY })]) {
+      const error = await attempt().catch((err: unknown) => err);
+      const response = (error as { getResponse(): { details: unknown } }).getResponse();
+      expect(response.details).toEqual({ key: KEY });
+      expect(world.stateOfKey(KEY)).toBe("AVAILABLE");
+    }
+  });
+
   describe("adopting an upload", () => {
     it("makes the variants for the key and links the upload to the User", async () => {
       const uploadId = presignedUpload(KEY);
