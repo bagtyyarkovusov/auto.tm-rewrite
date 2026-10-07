@@ -25,9 +25,9 @@ export default [
         {
           patterns: [
             {
-              regex: "^\\.\\.?/(\\.\\./)*(src/)?(modules/)?identity/(?!identity\\.(public|module)(\\.js)?$)",
+              regex: "^\\.\\.?/(\\.\\./)*(src/)?(modules/)?identity/(?!(identity\\.(public|module)|profile-photo\\.module)(\\.js)?$)",
               message:
-                "Import identity through identity/identity.public (or identity.module for Nest composition).",
+                "Import identity through identity/identity.public (or identity.module and profile-photo.module for Nest composition).",
             },
           ],
         },
