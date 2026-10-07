@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
@@ -29,11 +30,13 @@ interface OtpCellsRef {
 
 const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
   ({ value, onChange, hasError, length = 6, disabled }, ref) => {
+    const reduceMotion = useReducedMotion();
     const inputRef = useRef<TextInput>(null);
     const shake = useRef(new Animated.Value(0)).current;
 
     const runShake = useCallback(() => {
       shake.setValue(0);
+      if (reduceMotion) return;
       Animated.sequence([
         Animated.timing(shake, {
           duration: 50,
@@ -56,7 +59,7 @@ const OtpCells = forwardRef<OtpCellsRef, OtpCellsProps>(
           useNativeDriver: true,
         }),
       ]).start();
-    }, [shake]);
+    }, [reduceMotion, shake]);
 
     useImperativeHandle(
       ref,

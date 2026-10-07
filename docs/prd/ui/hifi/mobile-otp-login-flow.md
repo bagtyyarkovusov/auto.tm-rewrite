@@ -598,3 +598,19 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 - Custom compositions live under `apps/mobile/components/auth/`, NOT `apps/mobile/components/ui/` (that path is reserved for RNR-installed primitives).
 - `OtpCells` owns the shake animation via `useImperativeHandle`; route file does NOT redeclare an `Animated.Value`.
 - Button "link" inline pattern uses `cn()` at call site, not a new CVA variant (justification: 2 call sites — promote only when third screen needs it).
+
+### Wrong-code Reduce Motion implementation (#730)
+
+The shared OtpCells checks Reanimated's synchronous system Reduce Motion value
+before starting its existing RN Animated shake. With the setting on it resets
+the translation and skips the animation; CodeEntryForm still shows its localized
+error, clears digits and refocuses for recoverable errors. Normal motion and
+terminal/daily-limit behavior retain their existing rules. No code-purpose or
+sign-in navigation changes.
+
+The installed Reanimated 4.2.1 hook reads the system setting when the app starts;
+changing the OS setting during a running session does not update that value.
+Native verification must launch the app afresh with Reduce Motion on, then off,
+trigger wrong code with the keyboard open and verify TalkBack can continue input.
+The rendered real form/cells test proves error/clear/focus and animation invocation
+for phone/email and EN/RU/TK; it does not prove native focus, keyboard or motion.
