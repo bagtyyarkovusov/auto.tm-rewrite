@@ -47,6 +47,17 @@ describe("admin auth server actions", () => {
     mockState.cookies.clear();
   });
 
+  it("shows the Russian wrong-code error for API 400 INVALID_OTP", async () => {
+    mockFetchQueue([{ status: 400, body: { code: "INVALID_OTP", message: "Invalid OTP code" } }]);
+    const formData = new FormData();
+    formData.set("phone", "+99365000001");
+    formData.set("code", "654321");
+
+    await expect(verifyOtp(null, formData)).resolves.toEqual({
+      ok: false, error: "Неверный код. Попробуйте ещё раз.",
+    });
+  });
+
   it("verifyOtp reports when the admin already has TOTP enrolled", async () => {
     mockFetchQueue([
       {
