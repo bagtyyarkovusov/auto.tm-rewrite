@@ -706,8 +706,11 @@ export function AutoTmTabBar({
   const [lensMounted, setLensMounted] = useState(false);
   const mountLens = useCallback(() => setLensMounted(true), []);
 
+  const pendingTick = useRef<string | null>(null);
+  useEffect(() => { pendingTick.current = null; }, [focusedName]);
+
   // A tab chosen by tap or by letting go of a slide over it.
-  const selectTab = (name: string) => {
+  const selectTab = (name: string, tick = false) => {
     const route = state.routes.find((r) => r.name === name);
     if (!route) return;
     const isFocused = focusedName === name;
@@ -717,6 +720,10 @@ export function AutoTmTabBar({
       canPreventDefault: true,
     });
     if (!isFocused && !event.defaultPrevented) {
+      if (tick && pendingTick.current !== name) {
+        pendingTick.current = name;
+        selectionTick();
+      }
       navigation.dispatch({
         ...CommonActions.navigate(route.name, route.params),
         target: state.key,
@@ -842,10 +849,7 @@ export function AutoTmTabBar({
             const isFocused = focusedName === tab.name;
             const descriptor = descriptors[route.key];
 
-            const onPress = () => {
-              if (!isFocused) selectionTick();
-              selectTab(tab.name);
-            };
+            const onPress = () => selectTab(tab.name, true);
 
             const onLongPress = () => {
               navigation.emit({

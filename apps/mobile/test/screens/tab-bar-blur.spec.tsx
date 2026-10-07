@@ -17,7 +17,6 @@ vi.mock("expo-blur", async () => {
 beforeEach(() => { settings.reduced = false; settings.dark = false; Platform.OS = "android"; });
 const target = createRef<View>();
 function surface(withTarget = true) {
-  // The pre-port surface does not yet expose blurTarget; render the accepted native input for red evidence.
   const props = { blurTarget: withTarget ? target : undefined, accessibilityLabel: "Tab material" } as ComponentProps<typeof GlassSurface>;
   return renderMobile(<GlassSurface {...props}><Text>Favorites</Text></GlassSurface>);
 }

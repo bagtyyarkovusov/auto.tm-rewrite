@@ -8,46 +8,46 @@ export default function TabLayout() {
   const { t } = useTranslation();
   return (
     <TabBlurTargets>
-    <Tabs
-      tabBar={(props) => <AutoTmTabBar {...props} />}
-      screenLayout={({ route, children }) => (
-        <TabBlurTarget routeKey={route.key}>{children}</TabBlurTarget>
-      )}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen
-        name="(search)"
-        options={{
-          title: t("search"),
+      <Tabs
+        tabBar={(props) => <AutoTmTabBar {...props} />}
+        screenLayout={({ route, children }) => (
+          <TabBlurTarget routeKey={route.key}>{children}</TabBlurTarget>
+        )}
+        screenOptions={{
+          headerShown: false,
         }}
-      />
-      <Tabs.Screen
-        name="favorites"
-        options={{
-          title: t("favorites"),
-        }}
-      />
-      <Tabs.Screen
-        name="sell"
-        options={{
-          title: t("sell"),
-        }}
-      />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          title: t("messages"),
-        }}
-      />
-      <Tabs.Screen
-        name="services"
-        options={{
-          title: t("cabinet"),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="(search)"
+          options={{
+            title: t("search"),
+          }}
+        />
+        <Tabs.Screen
+          name="favorites"
+          options={{
+            title: t("favorites"),
+          }}
+        />
+        <Tabs.Screen
+          name="sell"
+          options={{
+            title: t("sell"),
+          }}
+        />
+        <Tabs.Screen
+          name="chat"
+          options={{
+            title: t("messages"),
+          }}
+        />
+        <Tabs.Screen
+          name="services"
+          options={{
+            title: t("cabinet"),
+          }}
+        />
+      </Tabs>
     </TabBlurTargets>
   );
 }
