@@ -4,7 +4,9 @@ import {
   isGlassEffectAPIAvailable,
   isLiquidGlassAvailable,
 } from "expo-glass-effect";
+import { BlurView } from "expo-blur";
 import { cssInterop, useColorScheme } from "nativewind";
+import type { RefObject } from "react";
 import { View, type ViewProps } from "react-native";
 
 import { useReduceTransparency } from "@/lib/motion";
@@ -12,6 +14,10 @@ import { cn } from "@/lib/utils";
 
 cssInterop(GlassView, { className: "style" });
 cssInterop(GlassContainer, { className: "style" });
+cssInterop(BlurView, { className: "style" });
+
+/** How strongly Android blurs what is behind a surface given a blur target. */
+const ANDROID_BLUR_INTENSITY = 60;
 
 /**
  * Liquid Glass ships with iOS 26. Checked once: it cannot change while the
@@ -48,6 +54,11 @@ type GlassSurfaceProps = ViewProps & {
   materialClassName?: string;
   /** Lets the system glass react to touch. Use on a surface that is itself a control. */
   interactive?: boolean;
+  /**
+   * Android only: the view to blur behind the surface (see
+   * `TabBlurTargets`). Without it Android draws the tuned surface.
+   */
+  blurTarget?: RefObject<View | null>;
 };
 
 /**
@@ -58,9 +69,11 @@ type GlassSurfaceProps = ViewProps & {
  * Three renderings, each meant to look intended:
  *  - iOS 26 and later: the system Liquid Glass (`expo-glass-effect`), with
  *    a tone inside it so a label stays readable over whatever scrolls below.
- *  - Android and iOS below 26: a tuned, nearly opaque surface with a light
- *    edge and the floating shadow. There is no blur pass, so it costs nothing
- *    on a mid-range phone and text on it never depends on what scrolls below.
+ *  - Android 12 and later, when given a `blurTarget`: a real blur of what is
+ *    behind it under the same tone as the system glass.
+ *  - Otherwise on Android and iOS below 26: a tuned, nearly opaque surface
+ *    with a light edge and the floating shadow. There is no blur pass, so it
+ *    costs nothing and text on it never depends on what scrolls below.
  *  - Reduce Transparency: the fully opaque raised surface.
  *
  * `className` takes the layout, size and radius. The radius must be given
@@ -74,6 +87,7 @@ function GlassSurface({
   className,
   materialClassName,
   interactive = false,
+  blurTarget,
   children,
   ...props
 }: GlassSurfaceProps) {
@@ -92,6 +106,25 @@ function GlassSurface({
         <View pointerEvents="none" className="absolute inset-0 bg-glass/glass-tint" />
         {children}
       </GlassView>
+    );
+  }
+
+  if (blurTarget && !reduceTransparency) {
+    return (
+      <BlurView
+        blurTarget={blurTarget}
+        blurMethod="dimezisBlurViewSdk31Plus"
+        intensity={ANDROID_BLUR_INTENSITY}
+        tint={colorScheme === "dark" ? "dark" : "light"}
+        className={cn(
+          "overflow-hidden border-hairline border-glass-edge/70 dark:border-glass-edge/10",
+          className,
+        )}
+        {...props}
+      >
+        <View pointerEvents="none" className="absolute inset-0 bg-glass/glass-tint" />
+        {children}
+      </BlurView>
     );
   }
 

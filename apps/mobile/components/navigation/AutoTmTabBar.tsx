@@ -39,6 +39,7 @@ import {
   tabBarBottomOffset,
   tabSlotWidth,
 } from "./tabBarHeight";
+import { useTabBlurTarget } from "./TabBlurTargets";
 
 import { GlassSurface } from "@/components/ui/glass-surface";
 import { Icon } from "@/components/ui/icon";
@@ -52,6 +53,7 @@ import {
   useReduceMotion,
   useReduceTransparency,
 } from "@/lib/motion";
+import { selectionTick } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 /**
@@ -682,6 +684,8 @@ export function AutoTmTabBar({
 
   const focusedName = currentRoute?.name;
   const focusedIndex = TAB_CONFIG.findIndex((tab) => tab.name === focusedName);
+  // Android 12 and later blur the open screen behind the bar.
+  const blurTarget = useTabBlurTarget(currentRoute?.key);
   const slot = tabSlotWidth(barWidth, TAB_CONFIG.length);
   const placeAtOnce = useRef(false);
   const capsule = useCapsule(focusedIndex, slot, focusedName === "sell", placeAtOnce);
@@ -696,6 +700,8 @@ export function AutoTmTabBar({
   const lensOpen = useSharedValue(0);
   const swell = useSharedValue(1);
   const slid = useSharedValue(0);
+  // The tab under the lens, so crossing into another one ticks once.
+  const lensTab = useSharedValue(-1);
   // The lens's copy of the row is mounted with the first touch and stays.
   const [lensMounted, setLensMounted] = useState(false);
   const mountLens = useCallback(() => setLensMounted(true), []);
@@ -745,11 +751,16 @@ export function AutoTmTabBar({
     const swollen = pressScale.swell;
     const quick = spring.snappy;
     const landing = spring.settle;
+    const tabAt = (x: number) => {
+      "worklet";
+      return Math.min(Math.max(Math.floor((x - TAB_BAR_PADDING) / slot), 0), tabCount - 1);
+    };
     return Gesture.Pan()
       .enabled(slot > 0)
       .activeOffsetX([-SLIDE_START, SLIDE_START])
       .onBegin((event) => {
         slid.value = 0;
+        lensTab.value = tabAt(event.x);
         lensX.value = Math.min(Math.max(event.x, first), last);
         // A quick tap never opens the lens; a finger that rests does.
         lensOpen.value = withDelay(hold, withTiming(1, opening));
@@ -762,12 +773,14 @@ export function AutoTmTabBar({
       })
       .onUpdate((event) => {
         lensX.value = Math.min(Math.max(event.x, first), last);
+        const index = tabAt(event.x);
+        if (index !== lensTab.value) {
+          lensTab.value = index;
+          scheduleOnRN(selectionTick);
+        }
       })
       .onEnd((event) => {
-        const index = Math.min(
-          Math.max(Math.floor((event.x - TAB_BAR_PADDING) / slot), 0),
-          tabCount - 1,
-        );
+        const index = tabAt(event.x);
         lensX.value = withSpring(TAB_BAR_PADDING + (index + 0.5) * slot, landing);
         scheduleOnRN(selectFromSlide, index);
       })
@@ -775,7 +788,7 @@ export function AutoTmTabBar({
         swell.value = withSpring(1, quick);
         lensOpen.value = withDelay(slid.value ? LENS_LANDING : 0, withTiming(0, closing));
       });
-  }, [barWidth, slot, tabCount, reduceMotion, lensX, lensOpen, swell, slid, mountLens, selectFromSlide]);
+  }, [barWidth, slot, tabCount, reduceMotion, lensX, lensOpen, swell, slid, lensTab, mountLens, selectFromSlide]);
   const swellStyle = useAnimatedStyle(() => ({ transform: [{ scale: swell.value }] }));
 
   const labelWidth = slot > 0 ? slot - LABEL_INSET * 2 : undefined;
@@ -803,6 +816,7 @@ export function AutoTmTabBar({
             drawn at its final size, so nothing in it is ever stretched. */}
         <Animated.View style={swellStyle}>
         <GlassSurface
+          blurTarget={blurTarget}
           accessibilityRole="tablist"
           // items-stretch, not items-center: with align-items:center each tab
           // Pressable sizes to its own content instead of filling the bar,
@@ -828,7 +842,10 @@ export function AutoTmTabBar({
             const isFocused = focusedName === tab.name;
             const descriptor = descriptors[route.key];
 
-            const onPress = () => selectTab(tab.name);
+            const onPress = () => {
+              if (!isFocused) selectionTick();
+              selectTab(tab.name);
+            };
 
             const onLongPress = () => {
               navigation.emit({
