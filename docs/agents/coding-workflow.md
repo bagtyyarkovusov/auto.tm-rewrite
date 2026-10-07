@@ -7,7 +7,7 @@ Choose the route for the task, then read its linked skill. [AGENTS.md](../../AGE
 | Shape a capability or material decision | [shape-with-docs](../../.claude/skills/shape-with-docs/SKILL.md) and, when needed, [new-adr](../../.claude/skills/new-adr/SKILL.md) |
 | Create sprint issues after the shaping PR merges | [create-sprint-issues](../../.claude/skills/create-sprint-issues/SKILL.md), [issue-tracker](issue-tracker.md), and [sprint-transitions](sprint-transitions.md) |
 | Execute one ready issue | [run-issue](../../.claude/skills/run-issue/SKILL.md); use [resume-issue](../../.claude/skills/resume-issue/SKILL.md) when its branch, worktree, or PR exists |
-| Execute a founder-ordered queue | [run-queue](../../.claude/skills/run-queue/SKILL.md); each item follows run-issue |
+| Execute a founder-ordered queue or explicitly delegated outcome | [run-queue](../../.claude/skills/run-queue/SKILL.md); each item follows run-issue |
 | Make a small fix or resolve a PR finding | [Small changes](#small-changes-adr-0065) |
 | Check progress or close a sprint | [sprint-status](../../.claude/skills/sprint-status/SKILL.md) or [close-sprint](../../.claude/skills/close-sprint/SKILL.md) |
 
