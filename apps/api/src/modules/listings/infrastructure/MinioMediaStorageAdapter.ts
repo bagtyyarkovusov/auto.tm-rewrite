@@ -68,7 +68,7 @@ export class MinioMediaStorageAdapter implements MediaStoragePort, MediaObjectIn
       Key: data.key,
       ContentType: data.contentType,
       ContentLength: data.sizeBytes,
-      ...(match ? { IfMatch: match } : {}),
+      ...(match ? { IfMatch: match, CacheControl: "no-store" } : {}),
     });
 
     // The caller supplies the body later. Do not sign a checksum of an empty body.
@@ -85,11 +85,11 @@ export class MinioMediaStorageAdapter implements MediaStoragePort, MediaObjectIn
     if (!signer) throw new Error("Conditional signer was not initialized");
     const url = await getSignedUrl(signer, command, {
       expiresIn: data.expirySeconds ?? 600,
-      ...(match ? { signableHeaders: new Set(["if-match"]) } : {}),
+      ...(match ? { signableHeaders: new Set(["if-match", "cache-control"]) } : {}),
     });
 
     return { url, key: data.key, ...(match && objectKeys ? {
-      headers: { "if-match": match, "content-type": data.contentType }, objectKeys,
+      headers: { "if-match": match, "content-type": data.contentType, "cache-control": "no-store" }, objectKeys,
     } : {}) };
   }
 

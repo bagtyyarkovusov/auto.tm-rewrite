@@ -41,7 +41,7 @@ export class ConditionalImageStorage {
     // Never retry by creating a missing issued object. This method is issuance only.
     for (const key of keys) {
       const result = await this.s3.send(new PutObjectCommand({
-        Bucket: this.bucket, Key: key, Body: Buffer.alloc(0), IfNoneMatch: "*",
+        Bucket: this.bucket, Key: key, Body: Buffer.alloc(0), IfNoneMatch: "*", CacheControl: "no-store",
       }), { abortSignal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
       if (key === keys[0]) originalETag = etag(result.ETag);
     }
@@ -53,7 +53,7 @@ export class ConditionalImageStorage {
       Bucket: this.bucket, Key: key,
     }), { abortSignal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })).ETag);
     await this.s3.send(new PutObjectCommand({
-      Bucket: this.bucket, Key: key, Body: body, ContentType: contentType, IfMatch: current,
+      Bucket: this.bucket, Key: key, Body: body, ContentType: contentType, IfMatch: current, CacheControl: "no-store",
     }), { abortSignal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   }
 

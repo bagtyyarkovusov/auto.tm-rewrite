@@ -32,6 +32,7 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     config = new ConfigService(values) as ConfigService<Env, true>;
     adapter = new MinioMediaStorageAdapter(config);
     s3 = new S3Client({ endpoint, region: "us-east-1", forcePathStyle: true,
+      requestChecksumCalculation: "WHEN_REQUIRED",
       credentials: { accessKeyId: values.MINIO_ACCESS_KEY, secretAccessKey: values.MINIO_SECRET_KEY } });
   });
 
@@ -86,10 +87,12 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     expect([...new URL(fixture.signed.url).searchParams.keys()]
       .some((name) => /^x-amz-checksum-/i.test(name))).toBe(false);
     for (const Key of manifest(fixture.key)) {
-      expect((await s3.send(new HeadObjectCommand({ Bucket: bucket, Key }))).ContentLength).toBe(0);
+      const initialized = await s3.send(new HeadObjectCommand({ Bucket: bucket, Key }));
+      expect(initialized.ContentLength).toBe(0);
+      expect(initialized.CacheControl).toBe("no-store");
     }
-    for (const headers of [{ "content-type": "image/jpeg" },
-      { "content-type": "image/jpeg", "if-match": '"altered"' }]) {
+    for (const headers of [Object.fromEntries(Object.entries(fixture.headers).filter(([name]) => name !== "if-match")),
+      { ...fixture.headers, "if-match": '"altered"' }]) {
       const refused = await fetch(fixture.signed.url, { method: "PUT", headers, body: new Uint8Array(fixture.photo) });
       expect([400, 403, 409, 412]).toContain(refused.status);
       const unchanged = await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: fixture.key }));
@@ -137,8 +140,8 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     const deletion = s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: fixture.key }));
     // A provider holding the object lock may wait for the PUT body; either order
     // must leave the final key absent once both real operations finish.
-    await Promise.race([deletion, new Promise<void>((resolve) => setTimeout(resolve, 50))]);
-    resume();
+    try { await Promise.race([deletion, new Promise<void>((resolve) => setTimeout(resolve, 50))]); }
+    finally { resume(); }
     await deletion;
     const error = await put;
     if (error) expect([404, 409, 412]).toContain(
@@ -167,6 +170,7 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     expect(writes.every((match) => typeof match === "string" && match.length > 0)).toBe(true);
     for (const Key of manifest(fixture.key)) {
       const stored = await s3.send(new GetObjectCommand({ Bucket: bucket, Key }));
+      expect(stored.CacheControl).toBe("no-store");
       if (!stored.Body) throw new Error("Generated image body is missing");
       expect((await sharp(Buffer.from(await stored.Body.transformToByteArray())).metadata()).exif).toBeUndefined();
     }
