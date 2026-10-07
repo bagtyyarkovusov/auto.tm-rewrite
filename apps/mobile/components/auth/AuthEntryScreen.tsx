@@ -1,5 +1,4 @@
 import * as Linking from "expo-linking";
-import { router } from "expo-router";
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -12,9 +11,9 @@ import { useTranslation } from "react-i18next";
 
 import { legalPageUrl } from "../../src/config/publicWebUrl";
 import { BrandLogo } from "../../src/auth/BrandLogo";
-import { closeAuth } from "../../src/auth/closeAuth";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 
+import { SignInMethodContent } from "./SignInMethodContent";
 import { type SignInMethod, SignInMethodTabs } from "./SignInMethodTabs";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
@@ -30,6 +29,8 @@ interface AuthEntryScreenProps {
   canSubmit: boolean;
   isSubmitting: boolean;
   onSubmit: () => Promise<void>;
+  onMethodChange: (method: SignInMethod) => void;
+  onClose: () => void;
   children: ReactNode;
 }
 
@@ -40,6 +41,8 @@ export function AuthEntryScreen({
   canSubmit,
   isSubmitting,
   onSubmit,
+  onMethodChange,
+  onClose,
   children,
 }: AuthEntryScreenProps) {
   const { colorScheme } = useColorScheme();
@@ -62,8 +65,8 @@ export function AuthEntryScreen({
             leading={
               <BackButton
                 kind="close"
-                accessibilityLabel={t("close")}
-                onPress={() => closeAuth(router)}
+                accessibilityLabel={t("common:close")}
+                onPress={onClose}
               />
             }
             trailing={<LocaleSwitcher />}
@@ -75,23 +78,13 @@ export function AuthEntryScreen({
 
               <SignInMethodTabs
                 value={method}
-                onChange={(nextMethod) =>
-                  router.navigate(
-                    nextMethod === "email"
-                      ? "/(auth)/email"
-                      : "/(auth)/phone",
-                  )
-                }
+                onChange={onMethodChange}
               />
 
-              <View className="gap-2">
-                <Text className="text-headline font-semibold leading-snug text-foreground">
-                  {title}
-                </Text>
-                <Text className="text-body leading-normal text-muted-foreground">
-                  {helper}
-                </Text>
-              </View>
+              <SignInMethodContent method={method}
+                phone={<View className="gap-2"><Text className="text-headline font-semibold leading-snug text-foreground">{method === "phone" ? title : t("phoneTitle")}</Text><Text className="text-body leading-normal text-muted-foreground">{method === "phone" ? helper : t("phoneHelper")}</Text></View>}
+                email={<View className="gap-2"><Text className="text-headline font-semibold leading-snug text-foreground">{method === "email" ? title : t("emailTitle")}</Text><Text className="text-body leading-normal text-muted-foreground">{method === "email" ? helper : t("emailHelper")}</Text></View>}
+              />
 
               {children}
 

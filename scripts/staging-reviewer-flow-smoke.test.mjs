@@ -42,7 +42,7 @@ test("the smoke draft is publishable with the seller's own sign-in phone", () =>
   const catalogue = { brandId: "b", modelId: "m", regionId: "r", cityId: "c" };
   const body = smokeDraftBody({
     catalogue,
-    photoKey: "uploads/key.jpg",
+    photoKeys: ["uploads/key.jpg", "uploads/two.jpg", "uploads/three.jpg"],
     sellerPhone: "+99361234567",
     now: new Date("2026-10-03T00:00:00Z"),
   });
@@ -50,6 +50,7 @@ test("the smoke draft is publishable with the seller's own sign-in phone", () =>
   assert.equal(body.contactPhone, "+99361234567");
   assert.equal(body.allowCalls, true);
   assert.deepEqual(body.conditionDisclosure, { damaged: false });
-  assert.equal(body.photos[0].key, "uploads/key.jpg");
+  assert.deepEqual(body.photos.map((photo) => photo.key), ["uploads/key.jpg", "uploads/two.jpg", "uploads/three.jpg"]);
+  assert.deepEqual(body.photos.map((photo) => photo.sortOrder), [0, 1, 2]);
   assert.equal(body.brandId, "b");
 });

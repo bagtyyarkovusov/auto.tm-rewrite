@@ -150,6 +150,7 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
         parseReviewerOtpBypassConfig({
           REVIEW_DEMO_ACCOUNT_ENABLED: process.env["REVIEW_DEMO_ACCOUNT_ENABLED"] === "true",
           REVIEW_DEMO_ACCOUNTS_JSON: process.env["REVIEW_DEMO_ACCOUNTS_JSON"] ?? "[]",
+          TESTER_ACCOUNTS_JSON: process.env["TESTER_ACCOUNTS_JSON"] ?? "[]",
         }),
     },
     {

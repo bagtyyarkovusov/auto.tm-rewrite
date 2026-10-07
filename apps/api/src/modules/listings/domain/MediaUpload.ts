@@ -16,6 +16,9 @@ export interface MediaUpload {
   createdAt: Date;
   /** True once a ListingMedia row has adopted this upload. */
   adopted: boolean;
+  /** Missing only in legacy/test adapters; never infer fencing from storage. */
+  writeProtocol?: "legacy" | "conditional-v1";
+  objectKeys?: string[];
 }
 
 export type NewMediaUpload = Omit<MediaUpload, "adopted">;

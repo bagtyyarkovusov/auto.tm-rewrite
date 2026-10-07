@@ -39,6 +39,7 @@ export class UploadsController {
       kind: parsed.kind,
       contentType: parsed.contentType,
       sizeBytes: parsed.sizeBytes,
+      ...(parsed.writeProtocol ? { writeProtocol: parsed.writeProtocol } : {}),
     });
 
     return {
@@ -46,6 +47,7 @@ export class UploadsController {
       key: result.key,
       expiresIn: result.expiresIn,
       maxSizeBytes: result.maxSizeBytes,
+      ...(result.headers ? { headers: result.headers } : {}),
     };
   }
 }

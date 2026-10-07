@@ -29,9 +29,11 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
-    "test:unit": "vitest run --exclude '**/*.e2e.spec.ts' --exclude '**/tests/**' --passWithNoTests"
+    "test:unit": "vitest run --exclude '**/*.e2e.spec.ts' --exclude '**/tests/**' --passWithNoTests",
+    "tester:accounts": "tsx scripts/tester-accounts.ts"
   },
   "dependencies": {
+    "@auto-tm/contracts": "workspace:*",
     "@prisma/client": "^7.6.0",
     "@prisma/adapter-pg": "^7.6.0",
     "pg": "^8.13.1"

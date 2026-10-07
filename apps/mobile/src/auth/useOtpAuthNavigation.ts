@@ -3,6 +3,7 @@ import { usePreventRemove } from "@react-navigation/native";
 import type { Router } from "expo-router";
 
 import { useAuthIntentStore } from "./intentStore";
+import { hasMountedSignInEntry, selectMountedSignInEntry } from "./signInEntryReturn";
 
 type SignInMethod = "phone" | "email";
 
@@ -35,10 +36,11 @@ export function useOtpAuthNavigation(router: Router) {
       return;
     }
 
-    // Back to the phone entry already under the email screen, or in place of
-    // this screen when sign-in started on email.
+    // Reuse the entry already beneath Code, even when its route is email.
+    // A standalone code link still falls back to the valid phone entry.
     if (exit === "use-phone") {
-      router.dismissTo("/(auth)/phone");
+      if (selectMountedSignInEntry("phone")) router.back();
+      else router.dismissTo("/(auth)/phone");
       return;
     }
 
@@ -48,6 +50,13 @@ export function useOtpAuthNavigation(router: Router) {
           ? "/(auth)/email"
           : "/(auth)/phone",
       );
+      return;
+    }
+
+    // Code Back edits the method already under it. Only leaving that entry
+    // abandons sign-in; a standalone Code route retains its legacy fallback.
+    if (exit === "cancel" && hasMountedSignInEntry()) {
+      router.back();
       return;
     }
 

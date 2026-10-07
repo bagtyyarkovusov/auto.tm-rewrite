@@ -1,4 +1,4 @@
-import { WizardSchemas } from "@auto-tm/contracts";
+import { WizardSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import type { TFunction } from "i18next";
 
 /**
@@ -11,6 +11,7 @@ import type { TFunction } from "i18next";
  * a server or network message that was localized elsewhere.
  */
 const INTERPOLATION = {
+  minimum: ListingsSchemas.MIN_LISTING_PHOTOS,
   vinMaxLength: WizardSchemas.WIZARD_LIMITS.vinMaxLength,
   yearMin: WizardSchemas.WIZARD_LIMITS.yearMin,
   yearMax: WizardSchemas.WIZARD_LIMITS.yearMax,

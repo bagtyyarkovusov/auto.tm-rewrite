@@ -189,22 +189,24 @@ export function MessageComposer({
 
       {attachment && (
         <View className="px-4 pt-2 pb-1 bg-background">
-          <View className="self-start rounded-xl overflow-hidden border border-border bg-muted">
-            <View className="relative h-24 w-24">
+          <View className="relative h-24 w-24 self-start">
+            <View className="h-full w-full overflow-hidden rounded-xl border border-border bg-muted">
               <Image
                 source={{ uri: attachment.uri }}
                 className="h-24 w-24"
                 contentFit="cover"
               />
-              <Pressable
-                onPress={handleRemoveAttachment}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-muted items-center justify-center border border-border"
-                accessibilityLabel={t("remove")}
-              >
-                <Icon as={X} className="size-3.5 text-foreground" />
-              </Pressable>
             </View>
+            <Pressable
+              onPress={handleRemoveAttachment}
+              accessibilityRole="button"
+              accessibilityLabel={t("remove")}
+              className="absolute right-0 top-0 h-11 w-11 items-end justify-start"
+            >
+              <View className="h-6 w-6 items-center justify-center rounded-full border border-border bg-muted">
+                <Icon as={X} className="size-3.5 text-foreground" />
+              </View>
+            </Pressable>
           </View>
         </View>
       )}

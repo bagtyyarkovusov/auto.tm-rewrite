@@ -39,6 +39,7 @@ function seedOptions(overrides: Partial<ReviewerScenarioSeedOptions> = {}): Revi
 }
 
 interface ListingRow {
+  contactPhone?: string;
   id: string;
   sellerId: string;
   damaged: boolean;
@@ -80,6 +81,8 @@ class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   deletedSessionUserIds: string[] = [];
   invalidatedDeviceUserIds: string[] = [];
   catalogSeeded = false;
+  media = new Map<string, { id: string; listingId: string; key: string; sortOrder: number }>();
+  async upsertListingMedia(input: { id: string; listingId: string; key: string; sortOrder: number }): Promise<void> { this.media.set(input.id, input); }
 
   async findUserById(id: string): Promise<ReviewerScenarioUser | null> {
     return this.users.get(id) ?? null;
@@ -148,6 +151,7 @@ class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   }
 
   async upsertListing(input: {
+    contactPhone?: string;
     id: string;
     sellerId: string;
     priceAmount: number;
@@ -157,6 +161,7 @@ class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
     knownIssuesText: string | null;
   }): Promise<void> {
     this.listings.set(input.id, {
+      contactPhone: input.contactPhone,
       id: input.id,
       sellerId: input.sellerId,
       damaged: input.damaged,
@@ -433,7 +438,9 @@ describe("runReviewerScenarioSeed", () => {
     const store = new FakeReviewerScenarioSeedStore();
 
     await runReviewerScenarioSeed(store, seedOptions());
+    const photosBeforeRevoke = [...store.media.values()];
     const result = await runReviewerScenarioSeed(store, seedOptions({ mode: "revoke" }));
+    expect([...store.media.values()]).toEqual(photosBeforeRevoke);
 
     expect(result.exitCode).toBe(0);
     expect(result.revokedUserIds).toEqual(reviewerScenarioSeedIds.userIds.slice(0, 3));
@@ -444,4 +451,23 @@ describe("runReviewerScenarioSeed", () => {
     expect(store.deletedSessionUserIds).toEqual(result.revokedUserIds);
     expect(store.auditLogs.at(-1)?.action).toBe("REVIEWER_SCENARIO_REVOKE");
   });
+});
+
+it("gives each fixed reviewer Listing three ordered fixture images and keeps them on rerun", async () => {
+  const store = new FakeReviewerScenarioSeedStore();
+  await runReviewerScenarioSeed(store, seedOptions());
+  for (const listingId of [reviewerScenarioSeedIds.primaryListingId, reviewerScenarioSeedIds.reportableListingId]) {
+    const photos = [...store.media.values()].filter((m) => m.listingId === listingId);
+    expect(photos).toHaveLength(3);
+    expect(photos.map((m) => m.sortOrder)).toEqual([0, 1, 2]);
+    expect(new Set(photos.map((m) => m.key)).size).toBe(3);
+  }
+  await runReviewerScenarioSeed(store, seedOptions());
+  expect(store.media.size).toBe(6);
+});
+
+it("stores the seller's own sign-in phone so archived reviewer Listings can republish", async () => {
+  const store = new FakeReviewerScenarioSeedStore();
+  await runReviewerScenarioSeed(store, seedOptions());
+  for (const listing of store.listings.values()) expect(listing.contactPhone).toBe("+99365000002");
 });

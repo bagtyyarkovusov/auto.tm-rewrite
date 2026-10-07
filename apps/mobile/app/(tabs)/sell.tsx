@@ -53,7 +53,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 
 // What is saved and published: only photos that have a key, since the API treats
-// a draft photo as attached and Publish needs a keyed one.
+// a draft photo as attached and Publish needs three keyed photos.
 function buildPayloadPhotos(
   photos: ReturnType<typeof useUploadQueue>["photos"],
 ): NonNullable<WizardSchemas.WizardDraftPayload["photos"]> {

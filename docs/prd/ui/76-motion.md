@@ -91,7 +91,7 @@ Press scale: 0.96 for buttons, chips and icon buttons; 0.985 for cards and rows;
 
 Reduce Motion: every spring and timing carries `ReduceMotion.System`, so values jump to their end state. Loops (the skeleton pulse) and entrances do not start. Sheets and toasts fade instead of moving.
 
-Haptics are not used: no haptics module is installed, and adding one is a native dependency decision.
+Sign-in method selection (#717) uses Expo Haptics ~55.0.18: Android system Clock_Tick, selectionAsync elsewhere, with best-effort failures ignored. A tap on the already selected method emits no tick. Its native Android manifest adds VIBRATE; haptics may be suppressed by the device/system settings. Tab haptics remain owned by separate #718 until merged; no tab implementation is claimed here.
 
 ## What NOT to animate
 
