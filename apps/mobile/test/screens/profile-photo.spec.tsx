@@ -375,6 +375,8 @@ describe("Profile photo", () => {
     currentMe = { ...me, id: "00000000-0000-4000-8000-00000000000b", displayName: "Merdan", avatarIndex: 2 };
     await act(async () => { await storeAuthSession({ accessToken: "merdan", refreshToken: "refresh-merdan", user: { id: currentMe.id, phone: me.phone, email: null, displayName: "Merdan", role: "buyer" } }); });
     await view.findByText("Merdan");
+    expect(view.queryByText("Uploading photo... 0%")).toBeNull();
+    expect(view.UNSAFE_queryAllByType("Image" as never)).toHaveLength(0);
     await act(async () => {
       if (phase === "attachment") complete?.(HttpResponse.json({ ...me, avatarKey: "pending/new1/original.jpg" }));
       else picker.finish();
