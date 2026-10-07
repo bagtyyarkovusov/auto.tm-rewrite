@@ -40,11 +40,19 @@ function TabBlurTarget({ routeKey, children }: { routeKey: string; children: Rea
   return <BlurTargetView ref={ref} className="flex-1">{children}</BlurTargetView>;
 }
 
-/** Undefined on platforms that keep the existing material fallback. */
+/**
+ * Undefined on platforms that keep the existing material fallback. A tab that
+ * mounts on its first visit registers a moment after it is focused; until
+ * then the bar keeps the last registered screen, so its material never
+ * changes kind and its tabs are not mounted again.
+ */
 function useTabBlurTarget(routeKey: string | undefined) {
-  const registry = useContext(TabBlurContext);
+  const targets = useContext(TabBlurContext)?.targets;
+  const [heldKey, setHeldKey] = useState(routeKey);
+  const focused = ANDROID_BLUR && routeKey ? targets?.get(routeKey) : undefined;
+  if (focused && heldKey !== routeKey) setHeldKey(routeKey);
   if (!ANDROID_BLUR || !routeKey) return undefined;
-  return registry?.targets.get(routeKey);
+  return focused ?? (heldKey ? targets?.get(heldKey) : undefined);
 }
 
 export { ANDROID_BLUR, TabBlurTarget, TabBlurTargets, useTabBlurTarget };
