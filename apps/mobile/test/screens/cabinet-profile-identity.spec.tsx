@@ -310,7 +310,7 @@ describe("Signing out and signing in as someone else", () => {
     // Aman logs out from Profile and lands on Cabinet, signed out.
     view.rerender(<ToastProvider><ProfileScreen /></ToastProvider>);
     expect(await view.findByText("Aman")).toBeTruthy();
-    fireEvent.press(view.getByRole("button", { name: "Log out" }));
+    fireEvent.press(await view.findByRole("button", { name: "Log out" }));
     fireEvent.press(first(view.getAllByText("Log out").reverse()));
     await vi.waitFor(() => expect(routerMock.dismissTo).toHaveBeenCalledWith("/(tabs)/services"));
     view.rerender(<ToastProvider><CabinetScreen /></ToastProvider>);
