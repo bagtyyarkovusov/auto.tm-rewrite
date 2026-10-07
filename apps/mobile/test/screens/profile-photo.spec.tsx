@@ -223,4 +223,45 @@ describe("Profile photo", () => {
     expect(view.queryByText(message)).toBeNull();
   });
 
+  it("removes a photo immediately without confirmation and restores the same assigned car mark", async () => {
+    currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
+    let deleted = false;
+    server.use(http.delete("*/me/photo", () => {
+      deleted = true;
+      currentMe = { ...me };
+      return HttpResponse.json(currentMe);
+    }));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Remove photo" }));
+    expect(await view.findByText("Photo removed")).toBeTruthy();
+    expect(deleted).toBe(true);
+    expect(view.UNSAFE_queryAllByType("Image" as never)).toHaveLength(0);
+    expect(view.UNSAFE_queryAllByType("Path" as never)[0]?.props.d).toBe("M11.5 12H21M17 12v3M20 12v2.4M6.5 12h.01");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    expect(view.queryByRole("button", { name: "Remove photo" })).toBeNull();
+  });
+
+  it("keeps the photo if removal fails and Retry removes it without a picker", async () => {
+    currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
+    let removes = 0;
+    server.use(http.delete("*/me/photo", () => {
+      removes += 1;
+      if (removes === 1) return HttpResponse.json({ code: "INTERNAL" }, { status: 500 });
+      currentMe = { ...me };
+      return HttpResponse.json(currentMe);
+    }));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Remove photo" }));
+    expect(await view.findByText("Couldn't remove the photo.")).toBeTruthy();
+    expect(view.UNSAFE_queryAllByType("Image" as never)[0]?.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/pending/old/thumbnail.jpg" });
+    fireEvent.press(view.getByRole("button", { name: "Retry" }));
+    expect(await view.findByText("Photo removed")).toBeTruthy();
+    expect(removes).toBe(2);
+    expect(picker.library).not.toHaveBeenCalled();
+  });
+
 });
