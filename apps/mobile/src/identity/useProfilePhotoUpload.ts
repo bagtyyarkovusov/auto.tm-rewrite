@@ -19,6 +19,7 @@ type PhotoUploadState =
   | { status: "removing" }
   | { status: "failed" | "offline" | "too_large" | "unsupported"; operation?: "remove"; reason?: "listing" | "suspended" };
 let selected: { asset: ImagePicker.ImagePickerAsset; compressed?: CompressionResult; session: ProfilePhotoSession } | null = null;
+let lastSource: "camera" | "library" | null = null;
 let removalSession: ProfilePhotoSession | null = null;
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -144,6 +145,7 @@ export function useProfilePhotoUpload() {
   }
 
   async function pick(source: "camera" | "library") {
+    lastSource = source;
     let owner: ProfilePhotoSession;
     try {
       owner = await capturePhotoSession(() => {
@@ -153,6 +155,10 @@ export function useProfilePhotoUpload() {
         profilePhotoUploadStore.setState({ state: { status: "idle" } });
       });
     } catch { return; }
+    const options: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 1,
+    };
+    try {
     if (source === "camera") {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
@@ -161,25 +167,22 @@ export function useProfilePhotoUpload() {
         return;
       }
     }
-    const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 1,
-    };
-    try {
       const result = source === "camera" ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       await owner.current();
       if (!result.canceled && result.assets[0]) {
         await discard();
         selected = { asset: result.assets[0], session: owner };
+        lastSource = null;
         await upload();
       } else owner.dispose();
     } catch (error) {
       owner.dispose();
       if (error instanceof PhotoSessionEnded) return;
-      profilePhotoUploadStore.setState({ state: { status: "unsupported" } });
+      profilePhotoUploadStore.setState({ state: { status: "failed" } });
     }
   }
 
-  return { state, pick, remove, retry: () => "operation" in state && state.operation === "remove" ? remove() : upload(), cancel, cameraDenied, dismissCameraDenied: () => setCameraDenied(false) };
+  return { state, pick, remove, retry: () => "operation" in state && state.operation === "remove" ? remove() : selected ? upload() : lastSource ? pick(lastSource) : Promise.resolve(), cancel, cameraDenied, dismissCameraDenied: () => setCameraDenied(false) };
 }
 
 function conflictReason(error: unknown): IdentitySchemas.ProfilePhotoConflictReason | undefined {

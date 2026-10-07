@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AuthSchemas, type IdentitySchemas } from "@auto-tm/contracts";
 
 import { type ProfilePhotoSession } from "../../identity/profilePhotoSession";
-import { apiClient } from "../client";
+import { ApiError, apiClient } from "../client";
 import { queryKeys } from "../queryKeys";
 
 /** Writes the server's identity only while the initiating session still owns it. */
@@ -16,7 +16,7 @@ export function useSetProfilePhoto() {
     },
     onSuccess: async (me, { session }) => {
       await session.current();
-      if (me.id !== session.userId) return;
+      if (me.id !== session.userId) throw new ApiError("CONTRACT_VIOLATION", 502, "Profile Photo response belongs to another User");
       await queryClient.cancelQueries({ queryKey: queryKeys.me() });
       await session.current();
       queryClient.setQueryData(queryKeys.me(), me);

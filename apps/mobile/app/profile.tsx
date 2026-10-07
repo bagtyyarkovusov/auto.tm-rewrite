@@ -165,9 +165,9 @@ function ProfileNoticeLine() {
           className="text-footnote text-muted-foreground"
           numberOfLines={1}
         >
-          {notice.kind === "nameSaved" || notice.kind === "photoSaved" || notice.kind === "photoRemoved"
-            ? t(notice.kind)
-            : t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })}
+          {"value" in notice
+            ? t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })
+            : t(notice.kind)}
         </Text>
       ) : null}
     </MenuFooter>
@@ -275,7 +275,7 @@ function SignedInProfile() {
     >
       {/* The avatar and the name, set or generated. The name, with its
           pencil, opens the name editor; a screen reader hears "Edit
-          name" and the name as its value. The photo editor attaches here later. */}
+          name" and the name as its value. The camera badge opens the photo sheet. */}
       <View className="items-center gap-1 px-4 pb-6 pt-2">
         <Pressable
           accessibilityRole="button"
