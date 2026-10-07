@@ -74,6 +74,21 @@ it("Code header Back returns to the held selected method without abandoning inte
   expect(useAuthIntentStore.getState().intent).not.toBeNull();
 });
 
+it("Code Back still returns to the older entry when a newer mounted entry unmounts", () => {
+  useAuthIntentStore.getState().requireSignIn(routerMock, { returnTo: "/(tabs)/favorites" });
+  routeParams.authRoot = "1";
+  const entry = renderMobile(<EmailScreen />);
+  fireEvent.changeText(entry.getByPlaceholderText("name@example.com"), "held@example.com");
+  const newer = renderMobile(<PhoneScreen />);
+  newer.unmount();
+  const code = openEmailCode();
+  fireEvent.press(code.getByRole("button", { name: "Back" }));
+  expect(routerMock.back).toHaveBeenCalledOnce();
+  expect(routerMock.dismissTo).not.toHaveBeenCalled();
+  expect(entry.getByDisplayValue("held@example.com")).toBeTruthy();
+  expect(useAuthIntentStore.getState().intent).not.toBeNull();
+});
+
 it("the Code native Back guard returns to the same entry and leaves intent live", () => {
   useAuthIntentStore.getState().requireSignIn(routerMock, { returnTo: "/(tabs)/favorites" });
   routeParams.authRoot = "1";

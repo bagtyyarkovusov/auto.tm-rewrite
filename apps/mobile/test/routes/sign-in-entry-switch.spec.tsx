@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import type * as Native from "react-native";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
+import * as reanimated from "react-native-reanimated";
 import { HttpResponse, http } from "msw";
 
 import PhoneScreen from "../../app/(auth)/phone";
@@ -78,6 +79,22 @@ it("single Android Back leaves either local method and cancels once", async () =
   view.unmount();
   expect(cancel).toHaveBeenCalledOnce();
   expect(routerMock.dismissTo).toHaveBeenCalledOnce();
+});
+
+it("places the selected pill directly on first layout; only a value change springs", () => {
+  const withSpring = vi.spyOn(reanimated, "withSpring");
+  const view = renderMobile(<EmailScreen />);
+  expect(withSpring).not.toHaveBeenCalled();
+  fireEvent.press(view.getByText("Phone"));
+  expect(withSpring).toHaveBeenCalledTimes(1);
+});
+
+it("cross-fades the field only on a method switch, not on mount", () => {
+  const withTiming = vi.spyOn(reanimated, "withTiming");
+  const view = renderMobile(<PhoneScreen />);
+  expect(withTiming).not.toHaveBeenCalled();
+  fireEvent.press(view.getByText("Email"));
+  expect(withTiming).toHaveBeenCalled();
 });
 
 it("gives selection feedback only for a changed method, without navigation", () => {
