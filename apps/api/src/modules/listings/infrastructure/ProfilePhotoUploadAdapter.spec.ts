@@ -146,6 +146,20 @@ describe("ProfilePhotoUploadAdapter", () => {
       expect(world.cleanups).toEqual([]);
     });
 
+    it("refuses an upload presigned without the fenced write protocol, whose bytes could never be deleted", async () => {
+      const uploadId = presignedUpload(KEY);
+      const upload = world.uploads.find((u) => u.id === uploadId);
+      if (upload) upload.writeProtocol = "legacy";
+
+      await expect(photos.adopt({ userId: "user-1", key: KEY })).rejects.toMatchObject({
+        status: 400,
+        response: { code: "UPLOAD_NOT_AVAILABLE", message: "Upload is not available for this User" },
+      });
+      expect(generator.calls).toEqual([]);
+      expect(world.profilePhotos.size).toBe(0);
+      expect(world.stateOfKey(KEY)).toBe("AVAILABLE");
+    });
+
     it.each([
       ["missing", undefined],
       ["empty", { contentType: "image/jpeg", sizeBytes: 0 }],
