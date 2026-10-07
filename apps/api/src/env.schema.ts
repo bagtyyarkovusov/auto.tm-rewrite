@@ -40,6 +40,7 @@ const BaseSchema = z.object({
 
   REVIEW_DEMO_ACCOUNT_ENABLED: booleanFlag,
   REVIEW_DEMO_ACCOUNTS_JSON: z.string().default("[]"),
+  TESTER_ACCOUNTS_JSON: z.string().default("[]"),
 
   RATE_LIMIT_GENERAL: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_OTP_PHONE_DAILY: z.coerce.number().int().positive().default(5),
@@ -221,6 +222,113 @@ function validateReviewerSafety(env: BaseEnv, add: (path: string, message: strin
   }
 
   validateReviewerDemoAccounts(env, add);
+  validateTesterAccounts(env, add);
+}
+
+interface FixedCodeAccountFields {
+  phone?: unknown;
+  email?: unknown;
+  code?: unknown;
+}
+
+function asFixedCodeAccount(entry: unknown): { phone: string; email: string; code: string } | null {
+  if (
+    typeof entry !== "object" ||
+    entry === null ||
+    typeof (entry as FixedCodeAccountFields).phone !== "string" ||
+    typeof (entry as FixedCodeAccountFields).email !== "string" ||
+    typeof (entry as FixedCodeAccountFields).code !== "string"
+  ) {
+    return null;
+  }
+  return entry as { phone: string; email: string; code: string };
+}
+
+function validateTesterAccounts(
+  env: BaseEnv,
+  add: (path: string, message: string) => void,
+): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(env.TESTER_ACCOUNTS_JSON);
+  } catch {
+    add("TESTER_ACCOUNTS_JSON", "TESTER_ACCOUNTS_JSON must be valid JSON");
+    return;
+  }
+
+  if (!Array.isArray(parsed)) {
+    add("TESTER_ACCOUNTS_JSON", "TESTER_ACCOUNTS_JSON must be a JSON array");
+    return;
+  }
+
+  // ADR-0086 caps the temporary tester list at 30 accounts.
+  if (parsed.length > 30) {
+    add("TESTER_ACCOUNTS_JSON", "TESTER_ACCOUNTS_JSON holds at most 30 tester accounts");
+    return;
+  }
+
+  const phones = new Set<string>();
+  const emails = new Set<string>();
+  for (const entry of parsed) {
+    const account = asFixedCodeAccount(entry);
+    if (account === null) {
+      add(
+        "TESTER_ACCOUNTS_JSON",
+        "Each tester account must include string phone, email, and code fields",
+      );
+      return;
+    }
+    if (!/^\+993\d{8}$/.test(account.phone)) {
+      add("TESTER_ACCOUNTS_JSON", "Tester account phones must be +993 E.164 numbers");
+      return;
+    }
+    if (!/^\d{6}$/.test(account.code)) {
+      add("TESTER_ACCOUNTS_JSON", "Tester account codes must be exactly 6 digits");
+      return;
+    }
+    if (
+      account.email !== account.email.trim().toLowerCase() ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account.email) ||
+      account.email.length > 254
+    ) {
+      add(
+        "TESTER_ACCOUNTS_JSON",
+        "Tester account emails must be normalized valid addresses",
+      );
+      return;
+    }
+    if (phones.has(account.phone)) {
+      add("TESTER_ACCOUNTS_JSON", "Tester account phones must be unique");
+      return;
+    }
+    phones.add(account.phone);
+    if (emails.has(account.email)) {
+      add("TESTER_ACCOUNTS_JSON", "Tester account emails must be unique");
+      return;
+    }
+    emails.add(account.email);
+  }
+
+  // A tester never shares a phone or email with a reviewer account
+  // (ADR-0086), so the two fixed-code lists stay disjoint.
+  let reviewerParsed: unknown;
+  try {
+    reviewerParsed = JSON.parse(env.REVIEW_DEMO_ACCOUNTS_JSON);
+  } catch {
+    return;
+  }
+  if (!Array.isArray(reviewerParsed)) return;
+  for (const entry of reviewerParsed) {
+    const reviewer = asFixedCodeAccount(entry);
+    if (reviewer === null) continue;
+    if (phones.has(reviewer.phone) || emails.has(reviewer.email)) {
+      add(
+        "TESTER_ACCOUNTS_JSON",
+        "Tester accounts must not repeat a reviewer account phone or email",
+      );
+      return;
+    }
+  }
 }
 
 function validateReviewerDemoAccounts(
