@@ -99,9 +99,12 @@ class FakeEventPublisher implements ListingEventPublisher {
 
 class FakeImageVariantGenerator implements ImageVariantGenerator {
   generated: string[] = [];
+  /** Runs while the generator holds an upload, before it returns. */
+  during: ((originalKey: string) => Promise<void> | void) | undefined;
 
   async generate(originalKey: string) {
     this.generated.push(originalKey);
+    await this.during?.(originalKey);
     return {
       variants: {
         thumbnail: originalKey.replace("original.jpg", "thumbnail.jpg"),
@@ -129,17 +132,31 @@ class FakePrisma {
   /** When set, the next transaction fails with this error and persists nothing. */
   failTransaction: (() => Error) | undefined;
 
-  $transaction = async <T>(promises: Promise<T>[]): Promise<T[]> => {
+  private rollBack(): void {
+    // The real transaction rolls back every statement, so nothing is recorded.
+    this.createdListings = [];
+    this.createdMedia = [];
+    this.deletedDrafts = [];
+    this.auditLogs = [];
+  }
+
+  $transaction = async <T>(work: Promise<T>[] | ((tx: FakePrisma) => Promise<T>)): Promise<T | T[]> => {
+    if (typeof work === "function") {
+      try {
+        const result = await work(this);
+        if (this.failTransaction) throw this.failTransaction();
+        return result;
+      } catch (err) {
+        this.rollBack();
+        throw err;
+      }
+    }
     if (this.failTransaction) {
-      // The real transaction rolls back every statement, so nothing is recorded.
-      await Promise.allSettled(promises);
-      this.createdListings = [];
-      this.createdMedia = [];
-      this.deletedDrafts = [];
-      this.auditLogs = [];
+      await Promise.allSettled(work);
+      this.rollBack();
       throw this.failTransaction();
     }
-    return Promise.all(promises);
+    return Promise.all(work);
   };
 
   listing = {
@@ -219,6 +236,7 @@ function makeUseCase(
     new UploadAdoptionGuard(world.uploadRepo, world.inspector),
     contactPhones.policy,
     clock,
+    world.claims,
   );
 }
 
@@ -688,23 +706,37 @@ describe("PublishListing", () => {
       });
     });
 
-    it("reports a conflict, with nothing published, when a concurrent adoption wins the race", async () => {
-      seedDraft(draftRepo, photoDraft("photo1.jpg"));
-      // The unique upload link rejects this transaction; by then the winner's
-      // media row is committed.
-      prisma.failTransaction = () => {
-        world.media.push(
-          ListingMedia.create({
-            id: "winner",
-            listingId: "listing-winner",
-            kind: "image",
-            key: "photo1.jpg",
-            sortOrder: 0,
-            uploadId: "upload-photo1.jpg",
-          }),
-        );
-        return Object.assign(new Error("Unique constraint failed"), { code: "P2002", meta: { driverAdapterError: { cause: { kind: "UniqueConstraintViolation", constraint: { fields: ['"uploadId"'] } } } } });
+    // #721, ADR-0088: the common claim, not the unique link, decides the adopter.
+    const twoPhotoDraft = () => ({
+      ...validPayload,
+      photos: [
+        { photoId: "00000000-0000-0000-0000-000000000005", key: "p1.jpg", sortOrder: 0 },
+        { photoId: "00000000-0000-0000-0000-000000000006", key: "p2.jpg", sortOrder: 1 },
+      ],
+    });
+
+    it("reserves every photo for the new Listing before generating any variant", async () => {
+      seedDraft(draftRepo, twoPhotoDraft());
+      const seen: string[] = [];
+      variantGenerator.during = () => {
+        seen.push(`${world.stateOfKey("p1.jpg")},${world.stateOfKey("p2.jpg")}`);
       };
+
+      const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
+      const { listing } = await uc.execute({ draftId: "draft-1", userId: "user-1" });
+
+      expect(seen).toEqual(["PREPARING,PREPARING", "PREPARING,PREPARING"]);
+      expect(world.claimOf("upload-p1.jpg")).toMatchObject({
+        state: "ADOPTED", target: { type: "listing", id: listing.id },
+      });
+      expect(world.stateOfKey("p2.jpg")).toBe("ADOPTED");
+    });
+
+    it("publishes and generates nothing when a Profile Photo is preparing one of the photos", async () => {
+      seedDraft(draftRepo, twoPhotoDraft());
+      await world.claims.reserve({
+        userId: "user-1", uploadIds: ["upload-p2.jpg"], target: { type: "profile", id: "user-1" },
+      });
 
       const err = await publishError();
 
@@ -712,30 +744,16 @@ describe("PublishListing", () => {
       expect((err as ConflictException).getResponse()).toMatchObject({
         code: "UPLOAD_ALREADY_ATTACHED",
       });
-      expect(prisma.createdListings).toHaveLength(0);
+      expectNothingPublished();
+      // All or none: the photo nobody else holds is not left reserved.
+      expect(world.stateOfKey("p1.jpg")).toBe("AVAILABLE");
     });
 
-    it("rethrows another constraint failure even if a photo was concurrently adopted", async () => {
+    it("reports an unavailable upload, with nothing published, when its reservation was retired meanwhile", async () => {
       seedDraft(draftRepo, photoDraft("photo1.jpg"));
-      const failure = Object.assign(new Error("Unique constraint failed"), {
-        code: "P2002", meta: { driverAdapterError: { cause: { kind: "UniqueConstraintViolation", constraint: { fields: ['"publicNumber"'] } } } },
-      });
-      prisma.failTransaction = () => {
-        world.media.push(ListingMedia.create({
-          id: "winner", listingId: "listing-winner", kind: "image", key: "photo1.jpg",
-          sortOrder: 0, uploadId: "upload-photo1.jpg",
-        }));
-        return failure;
-      };
-
-      await expect(publishError()).resolves.toBe(failure);
-    });
-
-    it("reports an unavailable upload if adoption and removal race publication", async () => {
-      seedDraft(draftRepo, photoDraft("photo1.jpg"));
-      prisma.failTransaction = () => {
-        world.uploads = [];
-        return Object.assign(new Error("Foreign key constraint failed"), { code: "P2003" });
+      variantGenerator.during = async () => {
+        // What the storage scanner does to a stranded preparation.
+        await world.claims.retire(null, "upload-photo1.jpg");
       };
 
       const err = await publishError();
@@ -747,12 +765,26 @@ describe("PublishListing", () => {
       expect(prisma.deletedDrafts).toEqual([]);
     });
 
-    it("rethrows an unrelated unique violation instead of blaming the upload", async () => {
+    it("rethrows a failed transaction and retires what it had reserved", async () => {
       seedDraft(draftRepo, photoDraft("photo1.jpg"));
       const failure = Object.assign(new Error("Unique constraint failed"), { code: "P2002" });
       prisma.failTransaction = () => failure;
 
       await expect(publishError()).resolves.toBe(failure);
+      expect(prisma.createdListings).toHaveLength(0);
+      expect(world.stateOfKey("photo1.jpg")).toBe("RETIRED");
+      expect(world.cleanups).toEqual(["upload-photo1.jpg"]);
+    });
+
+    it("retires every reserved photo when generation fails", async () => {
+      seedDraft(draftRepo, twoPhotoDraft());
+      variantGenerator.during = (key) => {
+        if (key === "p2.jpg") throw new Error("Sharp failed");
+      };
+
+      await expect(publishError()).resolves.toMatchObject({ message: "Sharp failed" });
+      expect(prisma.createdListings).toHaveLength(0);
+      expect([world.stateOfKey("p1.jpg"), world.stateOfKey("p2.jpg")]).toEqual(["RETIRED", "RETIRED"]);
     });
   });
 

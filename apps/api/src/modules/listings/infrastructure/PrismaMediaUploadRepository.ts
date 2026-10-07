@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
-import type { MediaUpload, NewMediaUpload } from "../domain/MediaUpload";
+import type { MediaUpload, NewMediaUpload, UploadState } from "../domain/MediaUpload";
 import type { MediaUploadRepository } from "../domain/ports/MediaUploadRepository";
 
 @Injectable()
@@ -41,6 +41,7 @@ export class PrismaMediaUploadRepository implements MediaUploadRepository {
       objectKeys: row.objectKeys,
       createdAt: row.createdAt,
       adopted: row.media !== null,
+      state: row.state as UploadState,
     }));
   }
 }

@@ -186,11 +186,15 @@ describe("Listing media upload ownership e2e (#536)", () => {
 
     await removeMedia("user-a", listing.id, attached.body.id).expect(200);
 
+    // ADR-0088: removal retires the upload in the same transaction and records
+    // deletion work. An installed client's legacy upload stays explicitly
+    // pending; the request deletes no bytes itself.
     expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(0);
-    expect(await prisma.mediaUpload.count({ where: { key } })).toBe(0);
-    const prefix = key.replace(/original\.jpg$/, "");
-    expect(store.deleted.length).toBeGreaterThan(0);
-    expect(store.deleted.every((k) => k.startsWith(prefix))).toBe(true);
+    const retired = await prisma.mediaUpload.findUniqueOrThrow({ where: { key } });
+    expect(retired.state).toBe("RETIRED");
+    expect(await prisma.mediaUploadCleanup.findUnique({ where: { uploadId: retired.id } }))
+      .toMatchObject({ status: "LEGACY_PENDING", key });
+    expect(store.deleted).toEqual([]);
   });
 
   it("publishes a draft only with uploads the owner presigned", async () => {
@@ -370,7 +374,42 @@ describe("Listing media upload ownership e2e (#536)", () => {
     expect(await prisma.listingMedia.findUnique({ where: { id: attacker.id } })).toBeNull();
   });
 
-  it("returns 409 and rolls publication back when attachment adopts its authorized upload first", async () => {
+  it("rolls the Listing, its media and the draft removal back when a reservation is retired before publication commits", async () => {
+    const key = await presignAndPut("user-a");
+    const draft = await prisma.listingDraft.create({ data: {
+      userId: suite.id("user-a"), payload: {
+        brandId: suite.catalog.brandId, modelId: suite.catalog.modelId,
+        cityId: suite.catalog.cityId, regionId: suite.catalog.regionId,
+        priceAmount: 100000, priceCurrency: "TMT", year: 2020,
+        condition: "used", mileageKm: 50000, description: "Rollback evidence car",
+        contactPhone: suite.phone("user-a"), allowCalls: true, allowChat: true, conditionDisclosure: { damaged: false },
+        photos: [{ photoId: suite.id("rollback-photo"), key, sortOrder: 0 }],
+      },
+    } });
+    let stateDuringGeneration: string | undefined;
+    generationHook = async (originalKey) => {
+      if (originalKey !== key) return;
+      generationHook = undefined;
+      stateDuringGeneration = (await prisma.mediaUpload.findUniqueOrThrow({ where: { key } })).state;
+      // What the storage scanner does to a stranded preparation.
+      await prisma.mediaUpload.update({ where: { key }, data: {
+        state: "RETIRED", retiredAt: new Date(), claimToken: null, claimDeadline: null,
+      } });
+    };
+
+    const rejected = await request.post(`/api/v1/listings/drafts/${draft.id}/publish`)
+      .set("Authorization", `Bearer ${tokens["user-a"]}`).send({});
+
+    expect(stateDuringGeneration).toBe("PREPARING");
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.code).toBe("UPLOAD_NOT_AVAILABLE");
+    expect(await prisma.listing.count({ where: { sellerId: suite.id("user-a") } })).toBe(0);
+    expect(await prisma.listingMedia.count({ where: { key } })).toBe(0);
+    expect(await prisma.listingDraft.findUnique({ where: { id: draft.id } })).not.toBeNull();
+    expect(await prisma.auditLog.count({ where: { actorId: suite.id("user-a"), action: "listing.published" } })).toBe(0);
+  });
+
+  it("refuses the attachment that overlaps a publication holding the upload, and publishes once", async () => {
     const listing = await createListing("user-a", "listing-a");
     const key = await presignAndPut("user-a");
     const draft = await prisma.listingDraft.create({ data: {
@@ -402,23 +441,21 @@ describe("Listing media upload ownership e2e (#536)", () => {
           throw new Error(`Publication completed before the race barrier: ${response.status}`);
         }),
       ]);
-      const winner = await attach("user-a", listing.id, key).expect(201);
-      // Also record the real PrismaPg shape, without a fabricated meta.target.
-      const constraintError = await prisma.listingMedia.create({ data: {
-        listingId: listing.id, kind: "image", key, sortOrder: 1,
-        uploadId: (await prisma.listingMedia.findUniqueOrThrow({ where: { id: winner.body.id } })).uploadId,
-      } }).catch((err: unknown) => err);
-      expect(constraintError).toMatchObject({ code: "P2002", meta: {
-        driverAdapterError: { cause: { kind: "UniqueConstraintViolation",
-          constraint: { fields: ['"uploadId"'] } } },
-      } });
+      // Publication reserved the upload before generating (ADR-0088), so the
+      // overlapping attachment loses and writes nothing.
+      const loser = await attach("user-a", listing.id, key);
+      expect(loser.status).toBe(409);
+      expect(loser.body.code).toBe("UPLOAD_ALREADY_ATTACHED");
+      expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(0);
       release();
-      const rejected = await publishing;
-      expect(rejected.status).toBe(409);
-      expect(rejected.body.code).toBe("UPLOAD_ALREADY_ATTACHED");
-      expect(await prisma.listing.count({ where: { sellerId: suite.id("user-a") } })).toBe(1);
-      expect(await prisma.listingMedia.count({ where: { key } })).toBe(1);
-      expect(await prisma.listingDraft.findUnique({ where: { id: draft.id } })).not.toBeNull();
+      const published = await publishing;
+      expect(published.status).toBe(201);
+      const media = await prisma.listingMedia.findMany({ where: { key } });
+      expect(media.map((row) => row.listingId)).toEqual([published.body.id]);
+      expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { key } })).toMatchObject({
+        state: "ADOPTED", claimTargetType: "listing", claimTargetId: published.body.id,
+      });
+      expect(await prisma.listingDraft.findUnique({ where: { id: draft.id } })).toBeNull();
     } finally {
       release();
       generationHook = undefined;
@@ -466,7 +503,7 @@ describe("Listing media upload ownership e2e (#536)", () => {
       expect(await prisma.listingMedia.count({ where: { key } })).toBe(1);
     });
 
-    it("deletes storage objects once when the same media is removed concurrently", async () => {
+    it("records deletion work once when the same media is removed concurrently", async () => {
       const listing = await createListing("user-a", "listing-a");
       const key = await presignAndPut("user-a");
       const attached = await attach("user-a", listing.id, key).expect(201);
@@ -477,7 +514,10 @@ describe("Listing media upload ownership e2e (#536)", () => {
       ]);
 
       expect(results.map((r) => r.status).sort()).toEqual([200, 404]);
-      expect(new Set(store.deleted).size).toBe(store.deleted.length);
+      const upload = await prisma.mediaUpload.findUniqueOrThrow({ where: { key } });
+      expect(upload.state).toBe("RETIRED");
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: upload.id } })).toBe(1);
+      expect(store.deleted).toEqual([]);
       expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(0);
     });
 

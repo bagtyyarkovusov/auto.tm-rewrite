@@ -1,12 +1,18 @@
 import type { ListingMedia } from "../ListingMedia";
 
+/** The reservation an adopting row finalizes, and any poster upload it references. */
+export interface ListingMediaClaim {
+  token: string;
+  posterUploadId?: string;
+}
+
 export interface ListingMediaRepository {
   /**
    * Persists the row. When `media.uploadId` is set the adoption is atomic and
    * single-use: a second row for the same upload fails with a DomainError
    * carrying `UPLOAD_ALREADY_ATTACHED`.
    */
-  save(media: ListingMedia): Promise<ListingMedia>;
+  save(media: ListingMedia, claim?: ListingMediaClaim): Promise<ListingMedia>;
   findById(id: string): Promise<ListingMedia | null>;
   findByListingId(listingId: string): Promise<ListingMedia[]>;
   delete(id: string): Promise<void>;

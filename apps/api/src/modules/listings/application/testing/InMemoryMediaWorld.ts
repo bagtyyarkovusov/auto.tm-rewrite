@@ -1,31 +1,55 @@
+import { randomUUID } from "node:crypto";
+
 import { mediaCleanupPrefix } from "../../domain/mediaCleanupPrefix";
 import { ListingMedia } from "../../domain/ListingMedia";
 import type {
-  MediaUpload,
   NewMediaUpload,
   StoredObjectInfo,
+  UploadState,
 } from "../../domain/MediaUpload";
 import { DomainError, LISTING_ERROR_CODES } from "../../domain/types";
 import type { ListingMediaRepository } from "../../domain/ports/ListingMediaRepository";
 import type { MediaObjectInspector } from "../../domain/ports/MediaObjectInspector";
 import type { MediaStoragePort } from "../../domain/ports/MediaStoragePort";
 import type { MediaUploadRepository } from "../../domain/ports/MediaUploadRepository";
+import type {
+  UploadClaimPort,
+  UploadClaimTarget,
+} from "../../domain/ports/UploadClaimPort";
 
 /** Lets concurrent callers interleave the way separate requests would. */
 const yieldToOtherCallers = () => new Promise<void>((resolve) => setImmediate(resolve));
 
+interface ClaimRecord {
+  state: UploadState;
+  token?: string;
+  target?: UploadClaimTarget;
+}
+
+const notAvailable = () =>
+  new DomainError(LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE, "Upload is no longer available");
+const alreadyAttached = () =>
+  new DomainError(LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED, "Upload is already attached");
+const sameTarget = (a: UploadClaimTarget | undefined, b: UploadClaimTarget) =>
+  a?.type === b.type && a.id === b.id;
+
 /**
  * One consistent in-memory stand-in for the upload tables and object storage,
- * enforcing what the schema does: an upload is adopted by at most one media row,
- * a media row's upload must exist, and a row and its upload are released together.
- * Tests share it across use cases so two Users and two Listings see one world.
+ * enforcing what the schema and the common claim (ADR-0088) do: an upload has at
+ * most one adopter across Listing media and Profile Photos, a retired upload is
+ * never adoptable again, and retirement records deletion work instead of
+ * deleting. Tests share it across use cases so two Users and two Listings see
+ * one world.
  */
 export class InMemoryMediaWorld {
-  uploads: Array<Omit<MediaUpload, "adopted">> = [];
+  uploads: NewMediaUpload[] = [];
   media: ListingMedia[] = [];
   /** Objects currently in storage, by key. */
   objects = new Map<string, StoredObjectInfo>();
   deletedKeys: string[] = [];
+  /** Upload ids with recorded deletion work, in retirement order. */
+  cleanups: string[] = [];
+  private claimRecords = new Map<string, ClaimRecord>();
 
   /** Simulates the client's direct PUT to the presigned URL. */
   putObject(key: string, info: StoredObjectInfo): void {
@@ -38,6 +62,77 @@ export class InMemoryMediaWorld {
     if (!upload) throw new Error(`No upload recorded for ${key}`);
     this.putObject(key, { contentType: upload.contentType, sizeBytes: upload.sizeBytes ?? 1024 });
   }
+
+  /** The claim record of an upload; a row pushed without one is AVAILABLE. */
+  claimOf(uploadId: string): ClaimRecord {
+    let record = this.claimRecords.get(uploadId);
+    if (!record) {
+      // A media row seeded directly with an upload stands for a backfilled adopter.
+      const adopter = this.media.find((m) => m.uploadId === uploadId);
+      record = adopter
+        ? { state: "ADOPTED", target: { type: "listing", id: adopter.listingId } }
+        : { state: "AVAILABLE" };
+      this.claimRecords.set(uploadId, record);
+    }
+    return record;
+  }
+
+  stateOfKey(key: string): UploadState | undefined {
+    const upload = this.uploads.find((u) => u.key === key);
+    return upload ? this.claimOf(upload.id).state : undefined;
+  }
+
+  private retireRecord(uploadId: string): boolean {
+    const record = this.claimOf(uploadId);
+    if (record.state === "RETIRED" || record.state === "DELETED") return false;
+    this.claimRecords.set(uploadId, { state: "RETIRED" });
+    this.cleanups.push(uploadId);
+    return true;
+  }
+
+  readonly claims: UploadClaimPort = {
+    reserve: async ({ userId, uploadIds, target }) => {
+      await yieldToOtherCallers();
+      const records = uploadIds.map((id) => {
+        if (this.uploads.find((u) => u.id === id)?.userId !== userId) throw notAvailable();
+        return this.claimOf(id);
+      });
+      if (records.some((r) => r.state === "RETIRED" || r.state === "DELETED")) throw notAvailable();
+      if (records.every((r) => r.state === "ADOPTED" && sameTarget(r.target, target))) {
+        return { alreadyAdopted: true };
+      }
+      const joined = records[0]?.token;
+      if (joined && records.every((r) => r.state === "PREPARING" && r.token === joined && sameTarget(r.target, target))) {
+        return { token: joined };
+      }
+      if (records.some((r) => r.state !== "AVAILABLE")) throw alreadyAttached();
+      const token = randomUUID();
+      for (const id of uploadIds) this.claimRecords.set(id, { state: "PREPARING", token, target });
+      return { token };
+    },
+    finalize: async (_tx, { token, uploadIds, target, referencedUploadIds }) => {
+      for (const id of referencedUploadIds ?? []) {
+        const { state } = this.claimOf(id);
+        if (state === "RETIRED" || state === "DELETED") throw notAvailable();
+      }
+      const records = uploadIds.map((id) => this.claimOf(id));
+      if (records.every((r) => r.state === "ADOPTED" && sameTarget(r.target, target))) return "already";
+      for (const record of records) {
+        if (record.state === "RETIRED" || record.state === "DELETED") throw notAvailable();
+        if (record.state !== "PREPARING" || record.token !== token || !sameTarget(record.target, target)) {
+          throw alreadyAttached();
+        }
+      }
+      for (const id of uploadIds) this.claimRecords.set(id, { state: "ADOPTED", target });
+      return "adopted";
+    },
+    retire: async (_tx, uploadId) => this.retireRecord(uploadId),
+    abandon: async (token) => {
+      for (const [id, record] of this.claimRecords) {
+        if (record.state === "PREPARING" && record.token === token) this.retireRecord(id);
+      }
+    },
+  };
 
   readonly storage: MediaStoragePort = {
     presignUpload: async ({ key }) => ({ url: `https://media.test/${key}`, key }),
@@ -59,25 +154,29 @@ export class InMemoryMediaWorld {
     findByKeys: async (keys) =>
       this.uploads
         .filter((u) => keys.includes(u.key))
-        .map((u) => ({ ...u, adopted: this.media.some((m) => m.uploadId === u.id) })),
+        .map((u) => {
+          const { state } = this.claimOf(u.id);
+          return { ...u, state, adopted: state === "ADOPTED" || this.media.some((m) => m.uploadId === u.id) };
+        }),
   };
 
   readonly mediaRepo: ListingMediaRepository = {
-    save: async (media) => {
+    save: async (media, claim) => {
       await yieldToOtherCallers();
       if (media.uploadId) {
-        if (!this.uploads.some((u) => u.id === media.uploadId)) {
-          throw new DomainError(
-            LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE,
-            "Upload is no longer available",
-          );
-        }
-        if (this.media.some((m) => m.uploadId === media.uploadId)) {
-          throw new DomainError(
-            LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
-            "Upload is already attached to a Listing",
-          );
-        }
+        if (!this.uploads.some((u) => u.id === media.uploadId)) throw notAvailable();
+        // Without a reservation only the unique upload link stands, as before ADR-0088.
+        const outcome = claim
+          ? await this.claims.finalize(null, {
+              token: claim.token,
+              uploadIds: [media.uploadId],
+              target: { type: "listing", id: media.listingId },
+              ...(claim.posterUploadId ? { referencedUploadIds: [claim.posterUploadId] } : {}),
+            })
+          : "adopted";
+        const existing = this.media.find((m) => m.uploadId === media.uploadId);
+        if (outcome === "already" && existing) return existing;
+        if (existing) throw alreadyAttached();
       }
       this.media.push(media);
       return media;
@@ -97,10 +196,9 @@ export class InMemoryMediaWorld {
       const stillReferenced = prefix === null || this.media.some(
         (m) => m.key.startsWith(prefix) || m.posterKey?.startsWith(prefix),
       );
-      const beforeRelease = this.uploads.length;
-      this.uploads = this.uploads.filter((u) => !(u.id === row.uploadId && u.key === row.key));
-      const released = beforeRelease - this.uploads.length;
-      return { removed: true, ownedKey: released === 1 && !stillReferenced ? row.key : null };
+      const matches = this.uploads.some((u) => u.id === row.uploadId && u.key === row.key);
+      const retired = matches && this.retireRecord(row.uploadId);
+      return { removed: true, ownedKey: retired && !stillReferenced ? row.key : null };
     },
     updateSortOrder: async () => {},
   };
@@ -137,5 +235,9 @@ export class InMemoryMediaWorld {
         uploadId,
       }),
     );
+    this.claimRecords.set(uploadId, {
+      state: "ADOPTED",
+      target: { type: "listing", id: input.listingId },
+    });
   }
 }

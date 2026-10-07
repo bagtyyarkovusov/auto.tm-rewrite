@@ -4,13 +4,17 @@ import { PrismaService } from "@auto-tm/db";
 import { mediaCleanupPrefix } from "../domain/mediaCleanupPrefix";
 import { ListingMedia } from "../domain/ListingMedia";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
-import type { ListingMediaRepository } from "../domain/ports/ListingMediaRepository";
+import type { ListingMediaClaim, ListingMediaRepository } from "../domain/ports/ListingMediaRepository";
+import { UPLOAD_CLAIM_PORT, type UploadClaimPort } from "../domain/ports/UploadClaimPort";
 
 @Injectable()
 export class PrismaListingMediaRepository implements ListingMediaRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(UPLOAD_CLAIM_PORT) private readonly claims: UploadClaimPort,
+  ) {}
 
-  async save(media: ListingMedia): Promise<ListingMedia> {
+  async save(media: ListingMedia, _claim?: ListingMediaClaim): Promise<ListingMedia> {
     try {
       const row = await this.prisma.listingMedia.create({
         data: {

@@ -161,7 +161,7 @@ describe("RemoveMedia", () => {
     storage = new FakeMediaStorage();
   });
 
-  it("deletes media row and all variant MinIO objects", async () => {
+  it("deletes the media row and leaves every stored object to the cleanup worker", async () => {
     seedActiveListing(repo);
     mediaRepo.media.push(
       ListingMedia.create({
@@ -177,33 +177,9 @@ describe("RemoveMedia", () => {
     const uc = makeUseCase(repo, mediaRepo, storage);
     await uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" });
 
+    // ADR-0088: the request retires the upload; it never deletes bytes itself.
     expect(mediaRepo.media).toHaveLength(0);
-    expect(storage.deletedKeys.length).toBe(10); // original.jpg/webp + 4 variants × 2 formats
-    expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/original.jpg");
-    expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/thumbnail.jpg");
-    expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/thumbnail.webp");
-    expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/fullscreen.webp");
-  });
-
-  it("succeeds even when MinIO delete throws (best-effort)", async () => {
-    seedActiveListing(repo);
-    mediaRepo.media.push(
-      ListingMedia.create({
-        id: "media-1",
-        listingId: "listing-1",
-        kind: "image",
-        key: "pending/00000000-0000-4000-8000-000000000001/original.jpg",
-        sortOrder: 0,
-        uploadId: "upload-1",
-      }),
-    );
-    storage.shouldThrow = true;
-
-    const uc = makeUseCase(repo, mediaRepo, storage);
-    await uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" });
-
-    expect(mediaRepo.media).toHaveLength(0);
-    expect(storage.deletedKeys).toHaveLength(0);
+    expect(storage.deletedKeys).toEqual([]);
   });
 
   it("removes a row without upload provenance but deletes no storage objects", async () => {

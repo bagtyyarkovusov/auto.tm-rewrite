@@ -28,6 +28,11 @@ import {
   type ImageVariantGenerator,
 } from "../domain/ports/ImageVariantGenerator";
 
+import {
+  UPLOAD_CLAIM_PORT,
+  type UploadClaimPort,
+} from "../domain/ports/UploadClaimPort";
+
 import { UploadAdoptionGuard, type UploadClaim } from "./UploadAdoptionGuard";
 
 export interface AttachMediaInput {
@@ -59,6 +64,8 @@ export class AttachMedia {
     private readonly variantGenerator: ImageVariantGenerator,
     @Inject(UploadAdoptionGuard)
     private readonly uploadGuard: UploadAdoptionGuard,
+    @Inject(UPLOAD_CLAIM_PORT)
+    private readonly claims: UploadClaimPort,
   ) {}
 
   async execute(input: AttachMediaInput): Promise<AttachMediaResult> {

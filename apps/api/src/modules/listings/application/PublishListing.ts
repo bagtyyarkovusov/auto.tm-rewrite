@@ -37,6 +37,10 @@ import {
   IMAGE_VARIANT_GENERATOR,
   type ImageVariantGenerator,
 } from "../domain/ports/ImageVariantGenerator";
+import {
+  UPLOAD_CLAIM_PORT,
+  type UploadClaimPort,
+} from "../domain/ports/UploadClaimPort";
 
 import { contactPhoneRejection } from "./contactPhoneRejection";
 import { UploadAdoptionGuard } from "./UploadAdoptionGuard";
@@ -130,6 +134,8 @@ export class PublishListing {
     private readonly contactPhones: ContactPhonePolicy,
     @Inject(IDENTITY_CLOCK_PORT)
     private readonly clock: ClockPort,
+    @Inject(UPLOAD_CLAIM_PORT)
+    private readonly claims: UploadClaimPort,
   ) {}
 
   async execute(input: PublishListingInput): Promise<PublishListingResult> {
