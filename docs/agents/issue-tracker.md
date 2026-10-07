@@ -6,46 +6,19 @@ Skills that read this file: user-global generic skills (`triage`, `qa`, `request
 
 ## Operations
 
+[GitHub operations](github-operations.md) documents bounded reads and file-based writes. Fetch omitted governing content before implementing or reviewing.
+
 ### Create an issue
 
-```bash
-gh issue create --title "<concise title>" --body "<markdown body>" --label "needs-triage,<area-label>"
-```
-
-For longer bodies, pipe a heredoc:
-
-```bash
-gh issue create --title "..." --body "$(cat <<'EOF'
-## Summary
-...
-
-## Repro / context
-...
-
-## Acceptance criteria
-- [ ] ...
-EOF
-)"
-```
+Use `pnpm agent:github create-issue --title "<outcome>" --body-file /tmp/issue.md --label needs-triage`. Add the area label. Writes preview by default; `--apply` sends an authorized operation.
 
 ### Find issues
 
-```bash
-gh issue list --label "ready-for-agent" --state open
-gh issue list --search "is:open is:issue label:needs-triage"
-gh issue view <number>
-```
+`pnpm agent:github issue <number>` reads metadata, criteria and dependencies; `--full` includes the body. List candidates with `gh issue list --label ready-for-agent --search "-label:blocked" --json number,title`; the founder chooses the queue.
 
 ### Update issue state
 
-```bash
-gh issue edit <n> --add-label "ready-for-human" --remove-label "needs-triage"
-gh issue comment <n> --body "<update>"
-# Parent dashboards and non-implementation bookkeeping only:
-gh issue close <n> --comment "<why this dashboard/bookkeeping issue is complete>"
-```
-
-Implementation issues close only through a merged pull request whose body contains `Closes #<n>`.
+Use `pnpm agent:github comment issue <number> --body-file /tmp/update.md`. Labels still use `gh issue edit`. Implementation issues close through merged PRs containing `Closes #<number>`; manual closure is for dashboards and non-implementation bookkeeping.
 
 ## Issue types
 
