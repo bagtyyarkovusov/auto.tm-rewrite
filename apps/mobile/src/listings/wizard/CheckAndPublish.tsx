@@ -111,7 +111,7 @@ function PreviewCard({
           />
         ) : photosReady ? (
           <View className="h-full items-center justify-center">
-            <Text className="text-xs text-muted-foreground">{t("noPhotos")}</Text>
+            <Text className="text-caption text-muted-foreground">{t("noPhotos")}</Text>
           </View>
         ) : null}
         {photos.length > 1 ? (
@@ -120,21 +120,21 @@ function PreviewCard({
             className="absolute bottom-2 left-2 flex-row items-center gap-1 rounded-md bg-black/60 px-2 py-1"
           >
             <Icon as={Camera} className="size-3 text-white" />
-            <Text className="text-xs text-white">{photos.length}</Text>
+            <Text className="text-caption text-white">{photos.length}</Text>
           </View>
         ) : null}
       </View>
       <View className="gap-0.5 px-4 py-3">
-        <Text className="text-xl font-heading text-foreground" numberOfLines={1}>
+        <Text className="text-headline font-heading font-semibold text-foreground" numberOfLines={1}>
           {values.price || "—"}
         </Text>
         {values.specs ? (
-          <Text className="text-sm text-foreground" numberOfLines={1}>{values.specs}</Text>
+          <Text className="text-callout text-foreground" numberOfLines={1}>{values.specs}</Text>
         ) : null}
-        <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+        <Text className="text-callout text-muted-foreground" numberOfLines={1}>
           {values.title || "—"}
         </Text>
-        <Text className="pt-1 text-xs text-muted-foreground" numberOfLines={1}>
+        <Text className="pt-1 text-caption text-muted-foreground" numberOfLines={1}>
           {[values.cityName, t("resultsToday")].filter(Boolean).join(" · ")}
         </Text>
       </View>
@@ -204,15 +204,15 @@ function SectionRow({
       onPress={onPress}
     >
       <View className="min-w-0 flex-1 gap-0.5">
-        <Text className="text-base text-foreground">{title}</Text>
+        <Text className="text-body text-foreground">{title}</Text>
         {summary ? (
-          <Text className="text-sm text-muted-foreground" numberOfLines={2}>{summary}</Text>
+          <Text className="text-callout text-muted-foreground" numberOfLines={2}>{summary}</Text>
         ) : null}
       </View>
       {needsSeller ? (
-        <Text key="fill-in" className="text-sm font-medium text-destructive">{action}</Text>
+        <Text key="fill-in" className="text-callout font-medium text-destructive">{action}</Text>
       ) : (
-        <Text key="change" className="text-sm font-medium text-info-500">{action}</Text>
+        <Text key="change" className="text-callout font-medium text-info-500">{action}</Text>
       )}
     </Pressable>
   );
@@ -230,11 +230,11 @@ function LockedSectionRow({ title, summary, note }: { title: string; summary: st
       className="min-h-14 flex-row items-center gap-3 border-b border-border py-3"
     >
       <View className="min-w-0 flex-1 gap-0.5">
-        <Text className="text-base text-foreground">{title}</Text>
+        <Text className="text-body text-foreground">{title}</Text>
         {summary ? (
-          <Text className="text-sm text-muted-foreground" numberOfLines={2}>{summary}</Text>
+          <Text className="text-callout text-muted-foreground" numberOfLines={2}>{summary}</Text>
         ) : null}
-        <Text className="text-xs text-muted-foreground">{note}</Text>
+        <Text className="text-caption text-muted-foreground">{note}</Text>
       </View>
       <Icon as={Lock} className="size-4 text-muted-foreground" />
     </View>
@@ -275,7 +275,7 @@ export function EditSectionList({
 
   return (
     <View className="gap-3 py-5">
-      <Text className="text-xs text-muted-foreground">{t("editChangesNote")}</Text>
+      <Text className="text-caption text-muted-foreground">{t("editChangesNote")}</Text>
 
       <View className="border-t border-border">
         {DATA_STEPS.map((step) =>
@@ -323,7 +323,7 @@ export default function CheckAndPublish({
   return (
     <View className="gap-3 py-5">
       <PreviewCard values={values} photos={photos} photosReady={photosReady} />
-      <Text className="text-center text-xs text-muted-foreground">{t("thisIsHowBuyersSee")}</Text>
+      <Text className="text-center text-caption text-muted-foreground">{t("thisIsHowBuyersSee")}</Text>
 
       <View className="border-t border-border">
         {DATA_STEPS.map((step) => (
@@ -337,11 +337,11 @@ export default function CheckAndPublish({
         ))}
       </View>
 
-      <Text className="pt-1 text-xs leading-normal text-muted-foreground">
+      <Text className="pt-1 text-caption leading-normal text-muted-foreground">
         {t("publishRulesPrefix")}
         <Text
           accessibilityRole="link"
-          className="text-xs font-medium text-info-500 underline"
+          className="text-caption font-medium text-info-500 underline"
           onPress={() => void Linking.openURL(legalPageUrl(resolveLocale(i18n.language), "posting-rules"))}
         >
           {t("publishRulesLink")}

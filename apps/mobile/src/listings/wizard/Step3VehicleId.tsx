@@ -162,7 +162,7 @@ function SkipGenerationRow({ onPress }: { onPress: () => void }) {
       accessibilityRole="button"
       className="min-h-12 flex-row items-center rounded-md px-2 py-3"
     >
-      <Text className="text-base text-muted-foreground">{t("skipGeneration")}</Text>
+      <Text className="text-body text-muted-foreground">{t("skipGeneration")}</Text>
     </Pressable>
   );
 }

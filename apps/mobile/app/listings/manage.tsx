@@ -8,7 +8,6 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
-import { ChevronLeft, List } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -56,13 +55,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EmptyState as EmptyStateView } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useToast } from "@/components/ui/toast";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { ErrorState } from "@/components/ErrorState";
 
 type ManageTab = "active" | "drafts" | "archive";
@@ -118,29 +118,13 @@ function EmptyState({
   const current = copy[tab];
 
   return (
-    <View className="items-center justify-center px-6 py-12 gap-4">
-      <View className="size-16 items-center justify-center rounded-full bg-muted">
-        <Icon as={List} className="size-8 text-muted-foreground" />
-      </View>
-      <View className="items-center gap-1">
-        <Text className="text-lg font-semibold text-foreground">
-          {current.title}
-        </Text>
-        <Text className="text-center text-sm text-muted-foreground">
-          {current.body}
-        </Text>
-      </View>
-      {current.cta && onCreate && (
-        <Button
-          variant="default"
-          size="pill"
-          className="mt-2"
-          onPress={onCreate}
-        >
+    <EmptyStateView className="flex-none py-10" illustration="listings" title={current.title} hint={current.body}>
+      {current.cta && onCreate ? (
+        <Button variant="brand" size="pill" onPress={onCreate}>
           <Text>{current.cta}</Text>
         </Button>
-      )}
-    </View>
+      ) : null}
+    </EmptyStateView>
   );
 }
 
@@ -197,7 +181,7 @@ function SegmentedTabs({
               accessibilityState={{ selected: isActive }}
             >
               <Text
-                className={`text-xs font-medium ${
+                className={`text-caption font-medium ${
                   isActive
                     ? "text-foreground"
                     : "text-muted-foreground"
@@ -206,7 +190,7 @@ function SegmentedTabs({
                 {label}
               </Text>
               {count ? (
-                <Text className="text-xs text-muted-foreground">{count}</Text>
+                <Text className="text-caption text-muted-foreground">{count}</Text>
               ) : null}
             </Pressable>
           );
@@ -401,24 +385,16 @@ export default function ManageListingsScreen() {
   if (isAuthenticated === false) {
     return (
       <SafeScreen>
-        <View className="px-4 pb-3 flex-row items-center gap-2">
-          <Button
-            variant="ghost"
-            className="h-11 w-11"
-            size="icon"
-            onPress={goBack}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-          <Text className="text-2xl font-heading text-foreground">
-            {t("myListings")}
-          </Text>
-        </View>
+        <StackHeader
+          large
+          title={t("myListings")}
+          leading={<BackButton onPress={goBack} />}
+        />
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-lg font-semibold text-foreground">
+          <Text className="text-subhead font-semibold text-foreground">
             {t("signInToManage")}
           </Text>
-          <Text className="mt-1 text-center text-sm text-muted-foreground">
+          <Text className="mt-1 text-center text-callout text-muted-foreground">
             {t("manageYourListings")}
           </Text>
           <Button
@@ -458,7 +434,7 @@ export default function ManageListingsScreen() {
     </View>
   ) : !currentQuery.hasNextPage ? (
     <View className="py-4 items-center">
-      <Text className="text-xs text-muted-foreground">
+      <Text className="text-caption text-muted-foreground">
         {t("noMore")}
       </Text>
     </View>
@@ -467,21 +443,11 @@ export default function ManageListingsScreen() {
   return (
     <SafeScreen>
       {/* Header */}
-      <View className="px-4 pb-3 flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2">
-          <Button
-            variant="ghost"
-            className="h-11 w-11"
-            size="icon"
-            onPress={goBack}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-          <Text className="text-2xl font-heading text-foreground">
-            {t("myListings")}
-          </Text>
-        </View>
-      </View>
+      <StackHeader
+        large
+        title={t("myListings")}
+        leading={<BackButton onPress={goBack} />}
+      />
 
       <SegmentedTabs activeTab={activeTab} counts={counts} onChange={setActiveTab} />
 

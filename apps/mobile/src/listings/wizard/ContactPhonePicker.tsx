@@ -82,11 +82,11 @@ function PhoneRow({
       className="min-h-12 flex-row items-center gap-3 py-3 active:opacity-70"
     >
       <View className="flex-1 gap-0.5">
-        <Text className="text-base text-foreground">{phone}</Text>
+        <Text className="text-body text-foreground">{phone}</Text>
         {sub ? (
           <Text
             className={cn(
-              "text-xs",
+              "text-caption",
               expired ? "text-destructive" : "text-muted-foreground",
             )}
           >
@@ -153,17 +153,17 @@ export function ContactPhonePicker({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">
+      <Text className="text-callout font-medium text-foreground">
         {t("contactPhone")}
       </Text>
-      <Text className="text-xs text-muted-foreground">
+      <Text className="text-caption text-muted-foreground">
         {t("contactPhoneHelp")}
       </Text>
 
       {publishPhoneError ? (
         <View className="rounded-md bg-destructive/10 px-3 py-2">
           <Text
-            className="text-sm text-destructive"
+            className="text-callout text-destructive"
             accessibilityLiveRegion="polite"
           >
             {t("publishPhoneConfirm")}
@@ -172,7 +172,7 @@ export function ContactPhonePicker({
       ) : null}
 
       {!accountPhone ? (
-        <Text className="py-1 text-sm text-muted-foreground">
+        <Text className="py-1 text-callout text-muted-foreground">
           {t("emailOnlyContactNote")}
         </Text>
       ) : null}
@@ -236,7 +236,7 @@ export function ContactPhonePicker({
           onPress={onAnotherNumber}
           className="min-h-12 flex-row items-center gap-3 py-3 active:opacity-70"
         >
-          <Text className="flex-1 text-base text-primary">
+          <Text className="flex-1 text-body text-primary">
             {t("anotherNumber")}
           </Text>
           <Icon as={ChevronRight} className="size-4 text-muted-foreground" />
@@ -245,7 +245,7 @@ export function ContactPhonePicker({
 
       {selectionError ? (
         <Text
-          className="text-sm text-destructive"
+          className="text-callout text-destructive"
           accessibilityLiveRegion="polite"
         >
           {selectionError}

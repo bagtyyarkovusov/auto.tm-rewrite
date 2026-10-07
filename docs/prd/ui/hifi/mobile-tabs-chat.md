@@ -167,7 +167,7 @@ Reduced motion: disable skeleton shimmer.
 | `screen.title` | Сообщения | Habarlaşma | Messages |
 | `empty.heading` | Пока нет сообщений | Habar ýok | No messages yet |
 | `empty.body` | Переписка с покупателями и продавцами появится здесь после запуска мессенджера в S7. | Satyjylar we alyjylar bilen habarlaşyk S7-de habarlaşyk gornüşi işe girizilenden soň şu ýerde görüner. | Conversations with buyers and sellers will appear here once messaging launches in S7. |
-| `anon.cta` | Войдите, чтобы видеть сообщения | Habarlary görmek üçin ulgama giriň | Sign in to see messages |
+| `anon.cta` | Войдите, чтобы видеть сообщения | Satyja ýüz tutmak üçin giriň | Sign in to see messages |
 | `error.load` | Не удалось загрузить сообщения. Попробуйте снова. | Habarlary ýükläp bolmady. Gaýtadan synanyşyň. | Could not load messages. Try again. |
 
 ## Implementation notes

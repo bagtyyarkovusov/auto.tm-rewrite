@@ -31,6 +31,10 @@ import {
   LISTING_CARD_READ_PORT,
   type ListingCardReadPort,
 } from "../domain/ports/ListingCardReadPort";
+import {
+  SELLER_PROFILE_PORT,
+  type SellerProfilePort,
+} from "../domain/ports/SellerProfilePort";
 import { toCardPhotos } from "../domain/CardPhotos";
 
 export interface ListFeedInput {
@@ -58,6 +62,8 @@ export class ListFeed {
     private readonly favorites: FavoriteRepository,
     @Inject(LISTING_CARD_READ_PORT)
     private readonly cards: ListingCardReadPort,
+    @Inject(SELLER_PROFILE_PORT)
+    private readonly sellerProfiles: SellerProfilePort,
   ) {}
 
   async execute(input: ListFeedInput): Promise<FeedResponseDto> {
@@ -76,17 +82,22 @@ export class ListFeed {
     });
 
     const listingIds = rankResult.items.map((listing) => listing.id);
+    const sellerIds = rankResult.items.map((listing) => listing.sellerId);
     const rateMap = await this.buildRateMap();
-    // Batched per page, never per Listing: one media read, one favorites read.
-    const photosById = await this.cards.getCardPhotos(listingIds);
-    const favorited =
+    // Batched per page, never per Listing: one media read, one seller read,
+    // one favorites read.
+    const [photosById, sellers, favorited] = await Promise.all([
+      this.cards.getCardPhotos(listingIds),
+      this.sellerProfiles.getCardSellers(sellerIds),
       input.viewerId !== undefined
-        ? await this.favorites.favoritedListingIds(input.viewerId, listingIds)
-        : undefined;
+        ? this.favorites.favoritedListingIds(input.viewerId, listingIds)
+        : undefined,
+    ]);
     const noPhotos = toCardPhotos([]);
 
     const items = rankResult.items.map((listing) => {
       const photos = photosById.get(listing.id) ?? noPhotos;
+      const seller = sellers.get(listing.sellerId);
       const displayPriceTmt = this.computeDisplayPriceTmt(
         listing.priceAmount,
         listing.priceCurrency,
@@ -105,6 +116,7 @@ export class ListFeed {
         displayPriceTmt,
         coverMediaKey: listing.coverMediaKey,
         photoKeys: photos.photoKeys,
+        galleryKeys: photos.galleryKeys,
         photoCount: photos.photoCount,
         ...(listing.mileageKm !== undefined ? { mileageKm: listing.mileageKm } : {}),
         ...(listing.condition !== undefined ? { condition: listing.condition } : {}),
@@ -115,6 +127,18 @@ export class ListFeed {
         cityId: listing.cityId,
         publishedAt: listing.publishedAt.toISOString(),
         ...(favorited !== undefined ? { isFavorited: favorited.has(listing.id) } : {}),
+        // The contact phone stays out: a caller reads it from Listing detail.
+        allowCalls: listing.allowCalls,
+        allowChat: listing.allowChat,
+        ...(seller !== undefined
+          ? {
+              seller: {
+                displayName: seller.displayName,
+                nameNumber: seller.nameNumber,
+                deleted: seller.deleted,
+              },
+            }
+          : {}),
       };
     });
 

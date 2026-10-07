@@ -49,10 +49,10 @@ export default function OpenListingConversationScreen() {
     return (
       <SafeScreen>
         <View className="flex-1 items-center justify-center px-6 gap-4">
-          <Text className="text-lg font-semibold text-foreground">
+          <Text className="text-subhead font-semibold text-foreground">
             {t("couldNotOpenConversation")}
           </Text>
-          <Text className="text-center text-sm text-muted-foreground">
+          <Text className="text-center text-callout text-muted-foreground">
             {t("listingInformationMissing")}
           </Text>
           <Button variant="ghost" onPress={goBack}>
@@ -78,7 +78,7 @@ export default function OpenListingConversationScreen() {
     <SafeScreen>
       <View className="flex-1 items-center justify-center gap-3">
         <ActivityIndicator />
-        <Text className="text-sm text-muted-foreground">{t("openingConversation")}</Text>
+        <Text className="text-callout text-muted-foreground">{t("openingConversation")}</Text>
       </View>
     </SafeScreen>
   );

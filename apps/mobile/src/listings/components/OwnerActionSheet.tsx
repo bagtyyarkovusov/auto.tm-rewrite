@@ -55,7 +55,7 @@ export function OwnerActionSheet({ open, title, actions, onSelect, onOpenChange 
                   as={ACTION_ICON[action]}
                   className={cn("size-5", destructive ? "text-destructive" : "text-foreground")}
                 />
-                <Text className={cn("text-base", destructive ? "text-destructive" : "text-foreground")}>
+                <Text className={cn("text-body", destructive ? "text-destructive" : "text-foreground")}>
                   {t(OWNER_ACTION_LABEL[action])}
                 </Text>
               </Pressable>

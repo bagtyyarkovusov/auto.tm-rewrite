@@ -24,7 +24,7 @@ export function VinField({ payload, onChange, error, disabled }: VinFieldProps) 
 
   return (
     <View className="gap-1.5">
-      <Text className="text-sm font-medium text-foreground">
+      <Text className="text-callout font-medium text-foreground">
         {t("vin")}
       </Text>
       <View className="relative">
@@ -53,9 +53,9 @@ export function VinField({ payload, onChange, error, disabled }: VinFieldProps) 
           </View>
         )}
       </View>
-      <Text className="text-xs text-muted-foreground">{helper}</Text>
+      <Text className="text-caption text-muted-foreground">{helper}</Text>
       {error && (
-        <Text className="text-sm text-destructive" accessibilityLiveRegion="polite">
+        <Text className="text-callout text-destructive" accessibilityLiveRegion="polite">
           {error}
         </Text>
       )}

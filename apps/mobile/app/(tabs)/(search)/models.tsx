@@ -1,7 +1,5 @@
 import { Redirect, useLocalSearchParams } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import { useMemo } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { readPickerResultsFilters } from "../../../src/listings/search/resultsRouteState";
@@ -9,9 +7,9 @@ import { ModelPicker } from "../../../src/listings/search/ModelPicker";
 import { BRANDS_PATH } from "../../../src/listings/search/pickerActions";
 import { useRoutePickerActions } from "../../../src/listings/search/useRoutePickerActions";
 import { useSafeBack } from "../../../src/navigation/useSafeBack";
+import { TabScreen } from "../../../components/navigation/TabScreen";
 
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { BackButton } from "@/components/navigation/StackHeader";
 
 /**
  * Model picker for one brand (`brandId`), optionally with models already
@@ -34,25 +32,16 @@ export default function ModelPickerScreen() {
   if (!brandId) return <Redirect href={BRANDS_PATH} />;
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    // The picker pins its own bar above the tab bar and brings the fade under it.
+    <TabScreen edgeFade={false}>
       <ModelPicker
         key={brandId}
         actions={actions}
         brandId={brandId}
         initialModelIds={initialModelIds}
         filters={readPickerResultsFilters(params)}
-        leading={
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
-            onPress={goBack}
-            accessibilityLabel={t("back")}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-        }
+        leading={<BackButton onPress={goBack} accessibilityLabel={t("back")} />}
       />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

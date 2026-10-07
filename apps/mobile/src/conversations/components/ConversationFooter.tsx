@@ -49,10 +49,10 @@ export function ConversationFooter({
       <View className="px-4 py-3 border-t border-border bg-muted">
         <View className="flex-row items-center justify-between gap-3">
           <View className="flex-1">
-            <Text className="text-sm font-medium text-foreground">
+            <Text className="text-callout font-medium text-foreground">
               {t("blockedStateTitle")}
             </Text>
-            <Text className="text-xs text-muted-foreground">
+            <Text className="text-caption text-muted-foreground">
               {t("blockedStateDescription")}
             </Text>
           </View>
@@ -76,7 +76,7 @@ export function ConversationFooter({
         testID="conversation-closed-footer"
         accessibilityLiveRegion="polite"
       >
-        <Text className="text-center text-sm text-muted-foreground">
+        <Text className="text-center text-callout text-muted-foreground">
           {tConv(CLOSED_LINE_KEYS[sendRestriction])}
         </Text>
       </View>

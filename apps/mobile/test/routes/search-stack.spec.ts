@@ -20,7 +20,7 @@ describe("Search tab stack", () => {
       resolve(__dirname, "../../components/navigation/AutoTmTabBar.tsx"),
       "utf-8",
     );
-    expect(tabBar).toContain('{ name: "(search)", label: t("search"), icon: Search }');
+    expect(tabBar).toContain('{ name: "(search)", label: t("search"), icon: Search,');
   });
 
   it("re-tapping the active tab emits tabPress, which pops the stack to Home", () => {

@@ -22,12 +22,12 @@ describe("PostRefCard", () => {
 
   it("renders a compact card with image and title", () => {
     expect(source).toContain('contentFit="cover"');
-    expect(source).toContain("text-sm font-medium text-foreground");
+    expect(source).toContain("text-callout font-medium text-foreground");
   });
 
   it("renders price text", () => {
     expect(source).toContain("priceText");
-    expect(source).toContain("text-sm text-muted-foreground");
+    expect(source).toContain("text-callout text-muted-foreground");
   });
 
   it("shows live state when available and active", () => {

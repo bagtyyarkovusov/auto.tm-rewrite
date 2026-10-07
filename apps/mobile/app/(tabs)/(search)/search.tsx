@@ -1,11 +1,12 @@
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { SearchScreen } from "../../../src/listings/search/SearchScreen";
+import { TabScreen } from "../../../components/navigation/TabScreen";
 
 export default function SearchRoute() {
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={["top", "left", "right"]}>
+    // Search pins its own bar above the tab bar and brings the fade under it.
+    <TabScreen edgeFade={false}>
       <SearchScreen />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

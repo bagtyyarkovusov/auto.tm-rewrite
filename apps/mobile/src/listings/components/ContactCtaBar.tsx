@@ -26,8 +26,11 @@ interface ContactCtaBarProps {
   status: Enums.ListingStatus;
   /** The full detail has not loaded: both actions stay disabled until it does. */
   pending?: boolean;
-  /** `viewer` sits on the black photo viewer: no SMS caption, light-on-dark buttons. */
-  variant?: "bar" | "viewer";
+  /**
+   * `viewer` sits on the black photo viewer: no SMS caption, light-on-dark buttons.
+   * `floating` sits inside a `StickyActionBar`, which supplies the padding.
+   */
+  variant?: "bar" | "viewer" | "floating";
   /** Runs before a Message starts, e.g. to close the photo viewer over the screen. */
   onBeforeMessage?: () => void;
   /**
@@ -59,6 +62,8 @@ export function ContactCtaBar({
     !pending && allowCalls && !!contactPhone && !isSold && !isArchived;
   const canMessage = !pending && allowChat && !isSold && !isArchived;
   const onDark = variant === "viewer";
+  // Inside the sticky action bar the bar supplies the padding.
+  const floating = variant === "floating";
 
   const handleCall = async () => {
     if (!canCall || !contactPhone) return;
@@ -98,7 +103,7 @@ export function ContactCtaBar({
 
   return (
     <View>
-      <View className="flex-row items-center gap-2 px-4 py-3">
+      <View className={cn("flex-row items-center gap-2", floating ? "" : "px-4 py-3")}>
         <Button
           variant={canCall ? "brand" : "secondary"}
           size="lg"
@@ -145,13 +150,13 @@ export function ContactCtaBar({
         </Button>
       </View>
       {canCall && !onDark && (
-        <Text className="px-4 pb-2 text-center text-xs text-muted-foreground">
+        <Text className={cn("text-center text-caption text-muted-foreground", floating ? "px-2 pb-1 pt-2" : "px-4 pb-2")}>
           {t("contactSmsCaption")}
         </Text>
       )}
 
       {conversation.error && (
-        <View className="px-4 pb-3">
+        <View className={floating ? "pt-2" : "px-4 pb-3"}>
           <ErrorState
             compact
             error={conversation.error}

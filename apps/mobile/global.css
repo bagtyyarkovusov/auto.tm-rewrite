@@ -1,7 +1,19 @@
 /* AutoTM mobile CSS variables — Tailwind v3 + NativeWind v4
  * AUTHORITY: This file + apps/mobile/lib/theme.ts are PRIMARY for mobile
- * semantic tokens (--background, --primary, etc.). HSL values mirror
- * lib/theme.ts and derive from packages/ui/tokens/colors.ts.
+ * semantic tokens (--background, --primary, etc.). The surface values mirror
+ * packages/ui/tokens/mobile.ts (`mobileSurfaces`, `mobileText`) and
+ * lib/theme.ts; change all three together. docs/prd/ui/71-design-tokens.md
+ * and 72-light-and-dark.md describe the levels.
+ *
+ * Surface levels, from the page up:
+ *   --background  the page
+ *   --card        raised content: cards, grouped lists, inputs
+ *   --popover     overlays: sheets, dialogs, menus, toasts
+ *   --secondary / --muted   tonal fill: secondary buttons, chips, search fields
+ *   --accent      pressed or selected tone
+ *   --glass       floating navigation and controls above scrolling content
+ *   --border      inset dividers inside a raised surface
+ *
  * Status colours are NOT semantic vars here — `success-500` comes from the
  * shared @auto-tm/ui preset via tailwind.config.js. Do not reintroduce
  * --success/--success-foreground; nothing consumes them and they are not
@@ -19,47 +31,56 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 60 7% 95%;
     --foreground: 0 0% 9%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 9%;
-    --primary: 0 90% 48%;
+    --primary: 0 100% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 45 5% 96%;
+    --secondary: 60 5% 90%;
     --secondary-foreground: 0 0% 9%;
-    --muted: 45 5% 92%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 45 5% 96%;
+    --muted: 60 5% 90%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 60 5% 85%;
     --accent-foreground: 0 0% 9%;
     --destructive: 15 85% 55%;
     --destructive-foreground: 0 0% 9%;
-    --border: 45 8% 88%;
-    --input: 45 8% 88%;
-    --ring: 0 90% 48%;
-    --radius: 0.5rem;
+    --border: 60 5% 88%;
+    --input: 60 5% 88%;
+    --ring: 0 100% 45%;
+    --glass: 0 0% 100%;
+    --glass-edge: 0 0% 100%;
+    --scrim: 0 0% 0%;
+    --media-scrim: 0 0% 0%;
+    --media-foreground: 0 0% 100%;
   }
 
   .dark:root {
-    --background: 0 0% 4%;
+    --background: 240 3% 6%;
     --foreground: 60 10% 98%;
-    --card: 0 0% 9%;
+    --card: 240 3% 11%;
     --card-foreground: 60 10% 98%;
-    --popover: 240 4% 16%;
+    --popover: 240 3% 14%;
     --popover-foreground: 60 10% 98%;
     --primary: 0 90% 52%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 23%;
+    --secondary: 240 3% 17%;
     --secondary-foreground: 60 10% 98%;
-    --muted: 240 4% 20%;
-    --muted-foreground: 45 4% 64%;
-    --accent: 240 4% 20%;
+    --muted: 240 3% 17%;
+    --muted-foreground: 240 4% 66%;
+    --accent: 240 3% 23%;
     --accent-foreground: 60 10% 98%;
     --destructive: 15 80% 58%;
     --destructive-foreground: 0 0% 9%;
-    --border: 0 0% 23%;
-    --input: 0 0% 23%;
+    --border: 240 3% 19%;
+    --input: 240 3% 19%;
     --ring: 0 90% 52%;
+    --glass: 240 3% 15%;
+    --glass-edge: 0 0% 100%;
+    --scrim: 0 0% 0%;
+    --media-scrim: 0 0% 0%;
+    --media-foreground: 0 0% 100%;
   }
 }

@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
-import { ChevronLeft, Trash2 } from "lucide-react-native";
+import { Trash2 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -11,6 +11,7 @@ import { clearAuthSession } from "../../src/auth/session";
 import { formatDeletionDateFromNow } from "../../src/auth/formatDeletionDate";
 import { localeTag } from "../../src/i18n/resources";
 
+import { MenuDivider, MenuGroup, MenuSectionLabel } from "@/components/account/MenuRow";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 
 export default function DeleteAccountScreen() {
   const { t, i18n } = useTranslation("account");
@@ -71,53 +73,51 @@ export default function DeleteAccountScreen() {
   return (
     <SafeScreen>
       {/* Header */}
-      <View className="px-4 pb-3 flex-row items-center gap-2">
-        <Button
-          variant="ghost"
-          className="h-11 w-11"
-          size="icon"
-          onPress={goBack}
-          accessibilityLabel={t("common:back", { defaultValue: "Back" })}
-        >
-          <Icon as={ChevronLeft} className="size-6 text-foreground" />
-        </Button>
-        <Text className="text-2xl font-heading text-foreground">
-          {t("deleteAccount")}
-        </Text>
-      </View>
+      <StackHeader
+        title={t("deleteAccount")}
+        leading={
+          <BackButton
+            onPress={goBack}
+            accessibilityLabel={t("common:back", { defaultValue: "Back" })}
+          />
+        }
+      />
 
-      <ScrollView className="flex-1 px-4">
-        <View className="gap-4 py-4">
-          <Text className="text-base text-foreground">
-            {t("deleteAccountDescription")}
-          </Text>
-          <View className="gap-2">
-            <Text className="text-base font-semibold text-foreground">
-              {t("deleteAccountWhatHappens")}
-            </Text>
-            {consequences.map((line) => (
-              <View key={line} className="flex-row gap-2 pl-1">
-                <Text className="text-sm text-muted-foreground">{"•"}</Text>
-                <Text className="flex-1 text-sm text-muted-foreground">{line}</Text>
-              </View>
+      <ScrollView className="flex-1" contentContainerClassName="gap-6 pb-6 pt-1">
+        <Text className="px-8 text-body text-foreground">
+          {t("deleteAccountDescription")}
+        </Text>
+
+        {/* What happens, one fact per row on a raised card. */}
+        <View>
+          <MenuSectionLabel>{t("deleteAccountWhatHappens")}</MenuSectionLabel>
+          <MenuGroup>
+            {consequences.map((line, index) => (
+              <Fragment key={line}>
+                {index > 0 ? <MenuDivider inset="text" /> : null}
+                <Text className="px-4 py-3 text-callout text-foreground">{line}</Text>
+              </Fragment>
             ))}
-          </View>
+          </MenuGroup>
         </View>
 
-        <Pressable
-          onPress={() => setUnderstood((value) => !value)}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: understood }}
-          accessibilityLabel={t("deleteAccountUnderstand")}
-          className="min-h-11 flex-row items-center gap-3 rounded-md active:bg-muted/60"
-        >
-          <Checkbox checked={understood} pointerEvents="none" accessible={false} />
-          <Text className="flex-1 text-base text-foreground">
-            {t("deleteAccountUnderstand")}
-          </Text>
-        </Pressable>
+        <MenuGroup>
+          <Pressable
+            onPress={() => setUnderstood((value) => !value)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: understood }}
+            accessibilityLabel={t("deleteAccountUnderstand")}
+            className="min-h-14 flex-row items-center gap-3 px-4 py-2 active:bg-secondary"
+          >
+            <Checkbox checked={understood} pointerEvents="none" accessible={false} />
+            <Text className="flex-1 text-body text-foreground">
+              {t("deleteAccountUnderstand")}
+            </Text>
+          </Pressable>
+        </MenuGroup>
 
-        <View className="py-6">
+        {/* The destructive token, never brand red: this is not the primary action. */}
+        <View className="px-4">
           <Button
             variant="destructive"
             size="pill"
@@ -125,17 +125,17 @@ export default function DeleteAccountScreen() {
             onPress={() => setShowConfirm(true)}
             accessibilityLabel={t("deleteAccount")}
           >
-            <Icon as={Trash2} className="size-5 mr-2" />
+            <Icon as={Trash2} className="mr-2 size-5" />
             <Text>{t("deleteAccount")}</Text>
           </Button>
         </View>
 
         {deleteAccount.isError ? (
-          <View className="py-2">
+          <View className="px-8">
             <Text
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
-              className="text-sm text-destructive text-center"
+              className="text-center text-callout text-destructive"
             >
               {t("deleteAccountFailed", { defaultValue: "Could not delete account. Please try again." })}
             </Text>

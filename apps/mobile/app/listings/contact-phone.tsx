@@ -1,5 +1,4 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -15,8 +14,8 @@ import { HELP_HREF } from "../../src/navigation/helpHref";
 import { useSafeBack } from "../../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { useToast } from "@/components/ui/toast";
 
@@ -124,17 +123,9 @@ export default function ContactPhoneScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
       >
-        <View className="flex-row items-center px-4 pb-3">
-          <Button
-            accessibilityLabel={t("back")}
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11"
-            onPress={goBack}
-          >
-            <Icon as={ChevronLeft} className="size-6 text-foreground" />
-          </Button>
-        </View>
+        <StackHeader
+          leading={<BackButton accessibilityLabel={t("back")} onPress={goBack} />}
+        />
 
         <ScrollView
           className="flex-1"
@@ -144,13 +135,13 @@ export default function ContactPhoneScreen() {
           <View className="gap-2">
             <Text
               accessibilityRole="header"
-              className="text-2xl font-semibold leading-snug text-foreground"
+              className="text-headline font-semibold leading-snug text-foreground"
             >
               {reconfirm
                 ? t("confirmNumberAgainTitle")
                 : t("anotherContactNumberTitle")}
             </Text>
-            <Text className="text-base leading-normal text-muted-foreground">
+            <Text className="text-body leading-normal text-muted-foreground">
               {t("contactPhoneCodeInfo")}
             </Text>
           </View>
@@ -172,8 +163,8 @@ export default function ContactPhoneScreen() {
             <Text
               className={
                 phone.showError
-                  ? "text-sm leading-snug text-destructive"
-                  : "text-sm leading-snug text-muted-foreground"
+                  ? "text-callout leading-snug text-destructive"
+                  : "text-callout leading-snug text-muted-foreground"
               }
               accessibilityLiveRegion="polite"
             >

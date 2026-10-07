@@ -8,12 +8,16 @@ import type { PickerActions } from "./pickerActions";
 import { useModelPicker } from "./useModelPicker";
 
 import { ErrorState } from "@/components/ErrorState";
+import { HeaderTextAction, StackHeader } from "@/components/navigation/StackHeader";
+import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
+import type { StickyBarContainer } from "@/components/navigation/tabBarHeight";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GroupedItem } from "@/components/ui/grouped-list";
+import { GroupedListSkeleton, ListNote } from "@/components/ui/list-states";
+import { SearchField } from "@/components/ui/search-field";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 
 interface ModelPickerProps {
   actions: PickerActions;
@@ -25,6 +29,11 @@ interface ModelPickerProps {
   filters?: ListingsSchemas.ListingFilter;
   /** Back (a pushed screen) or Close (inside Search parameters). */
   leading: ReactNode;
+  /**
+   * What the picker's parent keeps clear below the action bar: a tab screen
+   * ends above the tab bar (`inset`); a sheet reaches the screen's edge (`screen`).
+   */
+  barContainer?: StickyBarContainer;
 }
 
 interface Section {
@@ -45,11 +54,13 @@ export function ModelPicker({
   initialModelIds,
   filters,
   leading,
+  barContainer = "inset",
 }: ModelPickerProps) {
   const { t } = useTranslation();
   const picker = useModelPicker({ brandId, brandName, initialModelIds, filters });
   const { content, selected } = picker;
   const ready = content.kind === "ready";
+  const bar = useStickyActionBar(barContainer);
 
   const sections = useMemo<Section[]>(() => {
     if (content.kind !== "ready") return [];
@@ -74,13 +85,7 @@ export function ModelPicker({
 
   let body: ReactNode;
   if (content.kind === "loading") {
-    body = (
-      <View className="gap-3 px-4 py-2" accessibilityLabel={t("loadingEllipsis")}>
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-12" />
-        ))}
-      </View>
-    );
+    body = <GroupedListSkeleton rows={8} leading="check" accessibilityLabel={t("loadingEllipsis")} />;
   } else if (content.kind === "error") {
     body = <ErrorState error={content.error} onRetry={picker.retry} />;
   } else {
@@ -92,33 +97,36 @@ export function ModelPicker({
         keyboardDismissMode="on-drag"
         stickySectionHeadersEnabled={false}
         className="min-h-0 flex-1"
-        contentContainerClassName="pb-4"
+        contentContainerStyle={{ paddingBottom: bar.space + 8 }}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           picker.query.trim() ? null : (
-            <ModelCheckRow
-              name={t("allModels")}
-              checked={selected.length === 0}
-              onPress={picker.selectAll}
-            />
+            <GroupedItem inset="check">
+              <ModelCheckRow
+                name={t("allModels")}
+                checked={selected.length === 0}
+                onPress={picker.selectAll}
+              />
+            </GroupedItem>
           )
         }
         ListEmptyComponent={
-          <Text className="px-4 py-8 text-center text-base text-muted-foreground">
-            {t("noModelsMatch")}
-          </Text>
+          <ListNote>{t("noModelsMatch")}</ListNote>
         }
         renderSectionHeader={({ section }) => (
-          <Text className="bg-background px-4 pt-4 pb-1 text-sm font-medium text-muted-foreground">
+          <Text className="px-5 pb-2 pt-6 font-heading text-subhead font-semibold text-foreground">
             {section.title}
           </Text>
         )}
-        renderItem={({ item }) => (
-          <ModelCheckRow
-            name={item.name}
-            count={item.count}
-            checked={selected.includes(item.id)}
-            onPress={() => picker.toggle(item.id)}
-          />
+        renderItem={({ item, index, section }) => (
+          <GroupedItem index={index} count={section?.data.length} inset="check">
+            <ModelCheckRow
+              name={item.name}
+              count={item.count}
+              checked={selected.includes(item.id)}
+              onPress={() => picker.toggle(item.id)}
+            />
+          </GroupedItem>
         )}
       />
     );
@@ -126,17 +134,14 @@ export function ModelPicker({
 
   return (
     <View className="min-h-0 flex-1">
-      <View className="flex-row items-center gap-1 px-1 pt-2 pb-2">
-        {leading}
-        <Text className="min-w-0 flex-1 text-2xl font-heading text-foreground" numberOfLines={1}>
-          {picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
-        </Text>
-        <Button variant="ghost" className="h-11 px-3 py-0" onPress={actions.changeBrand}>
-          <Text className="text-base font-medium text-primary">{t("changeBrand")}</Text>
-        </Button>
-      </View>
-      <View className="px-4 pb-2">
-        <Input
+      <StackHeader
+        large
+        title={picker.brandName ? t("modelsOfBrand", { brand: picker.brandName }) : t("model")}
+        leading={leading}
+        trailing={<HeaderTextAction label={t("changeBrand")} onPress={actions.changeBrand} />}
+      />
+      <View className="px-4 pb-3 pt-1">
+        <SearchField
           value={picker.query}
           onChangeText={picker.setQuery}
           placeholder={t("searchModel")}
@@ -146,40 +151,43 @@ export function ModelPicker({
           clearButtonMode="while-editing"
         />
       </View>
-      {body}
-      <View className="gap-2 border-t border-border px-4 pt-3 pb-4">
-        {actions.mode === "show" && selected.length === 0 && picker.brandName ? (
-          <Text className="text-center text-sm text-muted-foreground">
-            {t("noModelPickedHint", { brand: picker.brandName })}
-          </Text>
-        ) : null}
-        {picker.countError ? (
-          <View accessibilityRole="alert" className="gap-1">
-            <Text className="text-center text-sm text-destructive">{t("failedToLoadListingCount")}</Text>
-            <Button variant="ghost" onPress={picker.retry}>
-              <Text>{t("retry")}</Text>
-            </Button>
-          </View>
-        ) : null}
-        <Button
-          variant="brand"
-          size="pill"
-          disabled={!ready}
-          onPress={() => actions.confirm(picker.choice())}
-          accessibilityLabel={countLabel}
-        >
-          <Text numberOfLines={1}>{countLabel}</Text>
-        </Button>
-        {actions.moreFilters ? (
+      {/* The list runs under the bar; the bar floats at the bottom of this view. */}
+      <View className="min-h-0 flex-1">
+        {body}
+        <StickyActionBar {...bar.barProps} edgeFade={barContainer === "inset"}>
+          {actions.mode === "show" && selected.length === 0 && picker.brandName ? (
+            <Text className="px-2 pt-1 text-center text-footnote text-muted-foreground">
+              {t("noModelPickedHint", { brand: picker.brandName })}
+            </Text>
+          ) : null}
+          {picker.countError ? (
+            <View accessibilityRole="alert" className="gap-1">
+              <Text className="px-2 pt-1 text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
+              <Button variant="ghost" onPress={picker.retry}>
+                <Text>{t("retry")}</Text>
+              </Button>
+            </View>
+          ) : null}
           <Button
-            variant="ghost"
-            className="h-11 py-0"
+            variant="brand"
+            size="lg"
             disabled={!ready}
-            onPress={() => actions.moreFilters?.(picker.choice())}
+            onPress={() => actions.confirm(picker.choice())}
+            accessibilityLabel={countLabel}
           >
-            <Text className="text-base font-medium text-primary">{t("moreFilters")}</Text>
+            <Text numberOfLines={1}>{countLabel}</Text>
           </Button>
-        ) : null}
+          {actions.moreFilters ? (
+            <Button
+              variant="ghost"
+              className="h-11 py-0"
+              disabled={!ready}
+              onPress={() => actions.moreFilters?.(picker.choice())}
+            >
+              <Text className="text-body font-medium text-foreground">{t("moreFilters")}</Text>
+            </Button>
+          ) : null}
+        </StickyActionBar>
       </View>
     </View>
   );
@@ -202,17 +210,19 @@ function ModelCheckRow({
         onPress={onPress}
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
-        className="min-h-12 flex-row items-center gap-3 px-4 py-3 active:bg-muted/60"
+        className="min-h-14 flex-row items-center gap-4 px-4 py-3 active:bg-secondary"
       >
         <Checkbox checked={checked} pointerEvents="none" />
-        <Text className="flex-1 text-base text-foreground" numberOfLines={1}>
+        <Text
+          className={cn("min-w-0 flex-1 text-body text-foreground", checked && "font-medium")}
+          numberOfLines={1}
+        >
           {name}
         </Text>
         {count !== undefined && count > 0 ? (
-          <Text className="text-sm text-muted-foreground">{count}</Text>
+          <Text className="text-callout text-muted-foreground">{count}</Text>
         ) : null}
       </Pressable>
-      <Separator className="ml-4" />
     </>
   );
 }

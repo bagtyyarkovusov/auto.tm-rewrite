@@ -2,6 +2,8 @@ import "../global.css";
 // Registers NativeWind's className->style bridge for expo-image. Must run
 // before any screen renders an <Image className="...">.
 import "../lib/expo-image-interop";
+// Loads the motion tokens and Reanimated's logger setting before the first screen renders.
+import "../lib/motion";
 
 import { Stack } from "expo-router";
 import { ThemeProvider } from "@react-navigation/native";
@@ -19,10 +21,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 import {
   AppState,
-  Platform,
   useColorScheme as useOsColorScheme,
   type AppStateStatus,
 } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import NetInfo from "@react-native-community/netinfo";
 import type { NetInfoState } from "@react-native-community/netinfo";
@@ -158,25 +160,19 @@ export default function RootLayout() {
 
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMove-Bold": require("../assets/fonts/UberMoveBold.otf"),
+    "Geist-Light": require("../assets/fonts/Geist-Light.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMove-Medium": require("../assets/fonts/UberMoveMedium.otf"),
+    "Geist-Regular": require("../assets/fonts/Geist-Regular.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMoveText-Bold": require("../assets/fonts/UberMoveTextBold.otf"),
+    "Geist-Medium": require("../assets/fonts/Geist-Medium.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMoveText-Light": require("../assets/fonts/UberMoveTextLight.otf"),
+    "Geist-SemiBold": require("../assets/fonts/Geist-SemiBold.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMoveText-Medium": require("../assets/fonts/UberMoveTextMedium.otf"),
+    "Geist-Bold": require("../assets/fonts/Geist-Bold.ttf"),
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    "UberMoveText-Regular": require("../assets/fonts/UberMoveTextRegular.otf"),
-    ...(Platform.OS === "ios"
-      ? {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          "UberMoveMono-Medium": require("../assets/fonts/UberMoveMono-Medium.ttf"),
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          "UberMoveMono-Regular": require("../assets/fonts/UberMoveMono-Regular.ttf"),
-        }
-      : {}),
+    "GeistMono-Regular": require("../assets/fonts/GeistMono-Regular.ttf"),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    "GeistMono-Medium": require("../assets/fonts/GeistMono-Medium.ttf"),
   });
   const appReady = fontsLoaded && i18nReady;
 
@@ -220,6 +216,8 @@ export default function RootLayout() {
   }
 
   return (
+    // Gesture Handler needs one root view above every gesture (the tab bar's slide, the photo zoom).
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <QueryClientProvider client={queryClient}>
       <AppNavigationEffects />
       <ThemeProvider value={NAV_THEME[scheme]}>
@@ -245,5 +243,6 @@ export default function RootLayout() {
         </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -16,4 +16,19 @@ describe("MenuRow", () => {
     const view = renderMobile(<MenuRow size="large" singleLineLabel label={LABEL} onPress={() => undefined} />);
     expect(view.getByText(LABEL).props.numberOfLines).toBe(1);
   });
+
+  it("draws a danger row in the destructive token, never the brand colour", () => {
+    const view = renderMobile(<MenuRow label="Delete account" variant="danger" onPress={() => undefined} />);
+    const className = String(view.getByText("Delete account").props.className);
+    expect(className).toContain("text-destructive");
+    expect(className).not.toContain("text-primary");
+  });
+
+  it("keeps the row at least 56 pt tall and reads its label, second line and value", () => {
+    const view = renderMobile(
+      <MenuRow label="Email us" sub="help@auto.tm" value="Open" onPress={() => undefined} />,
+    );
+    const row = view.getByRole("button", { name: "Email us, help@auto.tm, Open" });
+    expect(String(row.props.className)).toContain("min-h-14");
+  });
 });

@@ -109,3 +109,7 @@ Uses `react-native-reanimated` for the shimmer effect, with reduced-motion fallb
 
 - [76-motion.md](../76-motion.md) — shimmer animation
 - [70-design-principles.md](../70-design-principles.md) — performance over polish
+
+## Mobile rendering
+
+The mobile `Skeleton` (`apps/mobile/components/ui/skeleton.tsx`) is a block in the pressed tone, so it shows on the page and on a raised card. It pulses in opacity between 100% and 55% over 1400 ms on the UI thread; there is no moving shimmer. Under Reduce Motion it is still. A skeleton takes the radius of what it stands for: 20 for a photo, 8 for a line of text, full for an avatar.
