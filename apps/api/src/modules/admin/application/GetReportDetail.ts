@@ -38,6 +38,8 @@ export interface GetReportDetailResult {
     model?: string | undefined;
     status?: string | undefined;
     role?: string | undefined;
+    avatarKey?: string | null | undefined;
+    avatarIndex?: number | undefined;
     conversationId?: string | undefined;
     listingId?: string | undefined;
     senderId?: string | undefined;
@@ -205,7 +207,7 @@ export class GetReportDetail {
   }
 
   private buildUserTarget(
-    user: { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | undefined,
+    user: { id: string; displayName: string | null; role: string; avatarKey: string | null; avatarIndex: number; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | undefined,
     targetId: string,
   ): GetReportDetailResult["target"] {
     if (!user) {
@@ -223,6 +225,8 @@ export class GetReportDetail {
       label: user.displayName ?? `User ${user.id.slice(0, 8)}`,
       targetId: user.id,
       role: user.role,
+      avatarKey: user.avatarKey,
+      avatarIndex: user.avatarIndex,
     };
   }
 
@@ -233,7 +237,7 @@ export class GetReportDetail {
       messageContext: { messageId: string; conversationId: string; listingId: string; buyerId: string; sellerId: string; senderId: string; createdAt: Date; body: string | null; deletedAt: Date | null } | null;
     },
     listing: { id: string; sellerId: string; status: string; year: number | null; brandName: string; modelName: string } | undefined,
-    user: { id: string; displayName: string | null; role: string; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | undefined,
+    user: { id: string; displayName: string | null; role: string; avatarKey: string | null; avatarIndex: number; suspendedAt: Date | null; suspendedById: string | null; suspensionReason: string | null } | undefined,
   ): GetReportDetailResult["target"] {
     if (report.targetType === "listing") {
       return this.buildListingTarget(listing, report.targetId);

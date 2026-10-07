@@ -6,7 +6,7 @@ Public report creation is authenticated but does not require admin privilege. St
 
 Report-entry and moderation-action flags disable writes independently while leaving the supported staff reads available. An off switch must not silently disable login or audit access. Moderation writes and corresponding audit records must remain consistent.
 
-A reported Profile Photo is handled through the existing User report queue: there is no separate photo report or automated check. `RemoveUserPhoto` (`POST /api/v1/admin/users/:id/remove-photo`) releases the photo through identity's `PROFILE_PHOTO_PORT`, which `ListingsModule` provides, and commits the release, the report's resolution and a `USER_PHOTO_REMOVE` audit entry together. It does not suspend the User, who may set another photo. The admin browser has no control for it yet.
+A reported Profile Photo is handled through the existing User report queue: there is no separate photo report or automated check. `RemoveUserPhoto` (`POST /api/v1/admin/users/:id/remove-photo`) releases the photo through identity's `PROFILE_PHOTO_PORT`, which `ListingsModule` provides, and commits the release, the report's resolution and a `USER_PHOTO_REMOVE` audit entry together. It does not suspend the User, who may set another photo. The admin report-detail page shows the current photo and lets an elevated admin confirm its removal; moderation actions must be enabled.
 
 Audit and report history intentionally survives account deletion with nullable actor/reporter relationships. Reviewer-auth audit records omit credential values. A table without an update restriction does not enforce append-only history by itself; inspect the application write paths.
 

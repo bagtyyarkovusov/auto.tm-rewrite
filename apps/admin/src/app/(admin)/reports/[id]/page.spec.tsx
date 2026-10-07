@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockState = vi.hoisted(() => ({
@@ -168,7 +168,7 @@ describe("ReportDetailPage profile photo", () => {
     } });
     const view = await renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
-    fireEvent.change(screen.getByLabelText("Причина действия"), { target: { value: "Неприемлемое фото" } });
+    fireEvent.change(within(screen.getByRole("button", { name: "Подтвердить удаление" }).closest("form")!).getByLabelText("Причина действия"), { target: { value: "Неприемлемое фото" } });
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
     await waitFor(() => expect(mockState.refresh).toHaveBeenCalled());
     mockDetail(userReport({ status: "actioned", target: { ...userReport().target, avatarKey: null } }));
@@ -184,7 +184,7 @@ describe("ReportDetailPage profile photo", () => {
     mockState.removeUserPhoto.mockResolvedValue({ ok: false, code: "INTERNAL_ERROR", error: "Ошибка сервера" });
     await renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
-    fireEvent.change(screen.getByLabelText("Причина действия"), { target: { value: "Неприемлемое фото" } });
+    fireEvent.change(within(screen.getByRole("button", { name: "Подтвердить удаление" }).closest("form")!).getByLabelText("Причина действия"), { target: { value: "Неприемлемое фото" } });
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
     expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Ошибка сервера");
     expect(screen.getByText("В ожидании")).toBeDefined();

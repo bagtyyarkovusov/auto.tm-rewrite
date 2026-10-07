@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminSchemas, Enums, ErrorCode } from "@auto-tm/contracts";
 
 import { getReportDetail, getConfig } from "../../actions";
+import { RemovePhotoForm } from "../../components/RemovePhotoForm";
 import { ReportActionForm } from "../../components/ReportActionForm";
 
 function formatDate(iso: string): string {
@@ -80,6 +81,9 @@ export default async function ReportDetailPage({ params }: PageProps) {
   const report = result.data;
   const isPending = report.status === AdminSchemas.ContentReportStatus.Pending;
   const moderationEnabled = configResult.ok ? configResult.data.adminModerationActionsEnabled : true;
+
+  const canRemovePhoto = configResult.ok && moderationEnabled &&
+    report.target.available && report.target.role !== Enums.UserRole.Admin;
 
   // Determine actionable state
   const isListing = report.target.targetType === "listing";
@@ -178,6 +182,25 @@ export default async function ReportDetailPage({ params }: PageProps) {
                 {report.target.status}
               </div>
             )}
+            {isUser && report.target.available && report.target.avatarKey && (
+              // Storage serves original photos directly, just like brand logos.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`${(process.env["NEXT_PUBLIC_MINIO_PUBLIC_URL"] ?? "").replace(/\/$/, "")}/listing-photos/${report.target.avatarKey}`}
+                alt="Фото профиля"
+                className="h-32 w-32 rounded-full object-cover"
+              />
+            )}
+            {isUser && report.target.available && !report.target.avatarKey &&
+              report.status === AdminSchemas.ContentReportStatus.Actioned &&
+              report.target.avatarIndex !== undefined && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`/assigned-avatars/${report.target.avatarIndex % 12}.svg`}
+                  alt="Назначенный аватар"
+                  className="h-32 w-32 rounded-full"
+                />
+              )}
             {isUser && report.target.role && (
               <div>
                 <span className="text-neutral-500">Роль:</span>{" "}
@@ -266,6 +289,16 @@ export default async function ReportDetailPage({ params }: PageProps) {
                   Объявление уже неактивно или недоступно для блокировки.
                 </p>
               )}
+            </div>
+          )}
+
+          {isUser && report.target.avatarKey && canRemovePhoto && (
+            <div className="rounded-md border bg-surface p-4">
+              <h3 className="text-sm font-medium mb-2">Удалить фото профиля</h3>
+              <p className="text-xs text-neutral-500 mb-3">
+                Фото будет удалено, и снова появится назначенный аватар. Жалоба будет обработана.
+              </p>
+              <RemovePhotoForm reportId={id} targetId={report.target.targetId} />
             </div>
           )}
 
