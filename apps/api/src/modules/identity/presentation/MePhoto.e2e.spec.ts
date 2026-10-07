@@ -261,7 +261,9 @@ describe("PUT and DELETE /api/v1/me/photo e2e (#642)", () => {
     const bodies = [];
     for (const key of ["pending/11111111-1111-4111-8111-111111111111/original.jpg", othersKey, video.body.key]) {
       const res = await setPhoto("owner", key).expect(400);
-      bodies.push(res.body);
+      // Everything the caller can tell apart; the timestamp differs per request.
+      const { timestamp: _timestamp, ...answer } = res.body as Record<string, unknown>;
+      bodies.push(answer);
     }
 
     expect(bodies[0]).toMatchObject({ code: "UPLOAD_NOT_AVAILABLE" });
