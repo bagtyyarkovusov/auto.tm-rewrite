@@ -20,6 +20,8 @@ import { PrismaListingDraftRepository } from "./infrastructure/PrismaListingDraf
 import { PrismaListingRepository } from "./infrastructure/PrismaListingRepository";
 import { PrismaListingMediaRepository } from "./infrastructure/PrismaListingMediaRepository";
 import { PrismaMediaUploadRepository } from "./infrastructure/PrismaMediaUploadRepository";
+import { PrismaUploadClaims } from "./infrastructure/PrismaUploadClaims";
+import { UPLOAD_CLAIM_PORT } from "./domain/ports/UploadClaimPort";
 import { PrismaExchangeRateRepository } from "./infrastructure/PrismaExchangeRateRepository";
 import { PrismaListingsReadRepository } from "./infrastructure/PrismaListingsReadRepository";
 import { PrismaListingsAdminRepository } from "./infrastructure/PrismaListingsAdminRepository";
@@ -98,6 +100,7 @@ import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/Accoun
     PrismaListingRepository,
     PrismaListingMediaRepository,
     PrismaMediaUploadRepository,
+    PrismaUploadClaims,
     PrismaExchangeRateRepository,
     PrismaListingsReadRepository,
     PrismaListingsAdminRepository,
@@ -147,6 +150,10 @@ import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/Accoun
     {
       provide: MEDIA_UPLOAD_REPOSITORY,
       useClass: PrismaMediaUploadRepository,
+    },
+    {
+      provide: UPLOAD_CLAIM_PORT,
+      useExisting: PrismaUploadClaims,
     },
     {
       provide: MEDIA_OBJECT_INSPECTOR,

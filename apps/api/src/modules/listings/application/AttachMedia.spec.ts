@@ -61,9 +61,12 @@ class FakeContentClassifier implements MediaContentClassifierPort {
 
 class FakeVariantGenerator implements ImageVariantGenerator {
   called = false;
+  /** Runs while the generator holds the upload, before it returns. */
+  during: (() => Promise<void> | void) | undefined;
 
   async generate(originalKey: string) {
     this.called = true;
+    await this.during?.();
     return {
       variants: {
         thumbnail: `${originalKey}/thumbnail.jpg`,
@@ -130,7 +133,161 @@ describe("AttachMedia", () => {
       classifier,
       variantGen,
       new UploadAdoptionGuard(world.uploadRepo, world.inspector),
+      world.claims,
     );
+  });
+
+  describe("common upload claim (#721, ADR-0088)", () => {
+    const key = "pending/abc/original.jpg";
+    const input = { listingId: "listing-1", userId: "user-1", key, kind: "image" as const, sortOrder: 0 };
+
+    beforeEach(() => {
+      seedActiveListing(repo);
+      presignedUpload(key);
+    });
+
+    it("reserves the upload for its Listing before any variant is generated", async () => {
+      let duringGeneration: unknown;
+      variantGen.during = () => {
+        duringGeneration = world.claimOf(`upload-${key}`);
+      };
+
+      await uc.execute(input);
+
+      expect(duringGeneration).toMatchObject({
+        state: "PREPARING", target: { type: "listing", id: "listing-1" },
+      });
+      expect(world.stateOfKey(key)).toBe("ADOPTED");
+    });
+
+    it("generates nothing for an upload a Profile Photo is already preparing", async () => {
+      await world.claims.reserve({
+        userId: "user-1", uploadIds: [`upload-${key}`], target: { type: "profile", id: "user-1" },
+      });
+
+      await expect(uc.execute(input)).rejects.toMatchObject({
+        response: { code: "UPLOAD_ALREADY_ATTACHED" },
+      });
+      expect(variantGen.called).toBe(false);
+      expect(world.media).toHaveLength(0);
+    });
+
+    it("retires the upload when generation fails, and refuses the retry", async () => {
+      variantGen.during = () => {
+        throw new Error("Sharp failed");
+      };
+      await expect(uc.execute(input)).rejects.toThrow("Sharp failed");
+
+      expect(world.stateOfKey(key)).toBe("RETIRED");
+      expect(world.cleanups).toEqual([`upload-${key}`]);
+      variantGen.during = undefined;
+      await expect(uc.execute(input)).rejects.toMatchObject({
+        response: { code: "UPLOAD_NOT_AVAILABLE" },
+      });
+      expect(world.media).toHaveLength(0);
+    });
+
+    it("a joined retry that fails generation does not abandon the creator's in-flight claim", async () => {
+      let calls = 0;
+      let releaseCreator!: () => void;
+      let creatorInside!: () => void;
+      let joinerInside!: () => void;
+      const gate = new Promise<void>((done) => { releaseCreator = done; });
+      const creatorSignal = new Promise<void>((done) => { creatorInside = done; });
+      const joinerSignal = new Promise<void>((done) => { joinerInside = done; });
+      variantGen.generate = async (originalKey: string) => {
+        calls += 1;
+        if (calls === 1) {
+          creatorInside();
+          await gate;
+          return {
+            variants: {
+              thumbnail: `${originalKey}/thumbnail.jpg`,
+              list: `${originalKey}/list.jpg`,
+              detail: `${originalKey}/detail.jpg`,
+              fullscreen: `${originalKey}/fullscreen.jpg`,
+            },
+          };
+        }
+        joinerInside();
+        throw new Error("Sharp failed");
+      };
+
+      const creator = uc.execute(input);
+      await creatorSignal;
+      const joiner = uc.execute(input);
+      await joinerSignal;
+
+      await expect(joiner).rejects.toThrow("Sharp failed");
+      // Only the attempt that created the token may abandon it: the creator is
+      // still preparing, so the shared claim stays in flight and no retirement
+      // work is recorded for it.
+      expect(world.stateOfKey(key)).toBe("PREPARING");
+      expect(world.cleanups).toEqual([]);
+
+      releaseCreator();
+      await expect(creator).resolves.toMatchObject({ media: { uploadId: `upload-${key}` } });
+      expect(world.stateOfKey(key)).toBe("ADOPTED");
+      expect(world.media).toHaveLength(1);
+      expect(world.cleanups).toEqual([]);
+    });
+
+    it("the creator's own failure still abandons the shared claim", async () => {
+      let calls = 0;
+      let release!: () => void;
+      let creatorInside!: () => void;
+      let joinerInside!: () => void;
+      const gate = new Promise<void>((done) => { release = done; });
+      const creatorSignal = new Promise<void>((done) => { creatorInside = done; });
+      const joinerSignal = new Promise<void>((done) => { joinerInside = done; });
+      variantGen.generate = async () => {
+        calls += 1;
+        if (calls === 1) creatorInside();
+        else joinerInside();
+        await gate;
+        throw new Error("Sharp failed");
+      };
+
+      const creator = uc.execute(input);
+      await creatorSignal;
+      const joiner = uc.execute(input);
+      await joinerSignal;
+      release();
+
+      await expect(creator).rejects.toThrow("Sharp failed");
+      await expect(joiner).rejects.toThrow("Sharp failed");
+      expect(world.stateOfKey(key)).toBe("RETIRED");
+      expect(world.cleanups).toEqual([`upload-${key}`]);
+    });
+
+    it("writes no media row when the reservation was retired during generation", async () => {
+      variantGen.during = async () => {
+        // What the storage scanner does to a stranded preparation.
+        await world.claims.retire(null, `upload-${key}`);
+      };
+
+      await expect(uc.execute(input)).rejects.toMatchObject({
+        response: { code: "UPLOAD_NOT_AVAILABLE" },
+      });
+      expect(world.media).toHaveLength(0);
+      expect(world.stateOfKey(key)).toBe("RETIRED");
+    });
+
+    it("refuses a retired upload before asking storage about it", async () => {
+      await world.claims.retire(null, `upload-${key}`);
+      let inspected = false;
+      const guard = new UploadAdoptionGuard(world.uploadRepo, {
+        inspect: async (objectKey) => {
+          inspected = true;
+          return world.inspector.inspect(objectKey);
+        },
+      });
+
+      await expect(guard.authorize("user-1", [{ key, kind: "image" }])).rejects.toMatchObject({
+        response: { code: "UPLOAD_NOT_AVAILABLE" },
+      });
+      expect(inspected).toBe(false);
+    });
   });
 
   it("attaches an image and calls variant generator", async () => {

@@ -50,6 +50,9 @@ model User {
   avatarIndex     Int       @default(dbgenerated("(floor((random() * (12)::double precision)))::integer"))
   /// Object key of the profile photo; always null until photos ship.
   avatarKey       String?
+  /// Private link to the upload behind `avatarKey` (ADR-0088). Never published.
+  avatarUploadId  String?      @unique
+  avatarUpload    MediaUpload? @relation("ProfilePhotoUpload", fields: [avatarUploadId], references: [id], onDelete: NoAction)
   avatarUrl       String?
   locale          String    @default("ru")
   role            UserRole  @default(buyer)
@@ -504,8 +507,41 @@ model MediaUpload {
   createdAt   DateTime      @default(now())
   media       ListingMedia?
 
+  // One adopter across Listing media and Profile Photos (ADR-0088). The row
+  // lock on this record decides every claim; the unique relation columns are
+  // only additional constraints. AVAILABLE, PREPARING, ADOPTED, RETIRED, DELETED.
+  state           String    @default("AVAILABLE")
+  claimToken      String?
+  claimTargetType String?
+  claimTargetId   String?
+  claimDeadline   DateTime?
+  retiredAt       DateTime?
+  profileOf       User?     @relation("ProfilePhotoUpload")
+
+  @@index([state, claimDeadline])
+  @@index([claimToken])
+
   @@index([userId, createdAt])
   @@map("media_uploads")
+}
+
+/// Durable deletion work for a retired upload (ADR-0088), written in the
+/// transaction that releases its adopter. It has no foreign key, so it outlives
+/// the upload row and its User. The worker never deletes LEGACY_PENDING work.
+model MediaUploadCleanup {
+  uploadId      String    @id
+  key           String
+  objectKeys    String[]
+  writeProtocol String
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  lastError     String?
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@map("media_upload_cleanups")
 }
 
 /// A number a seller confirmed by SMS code for their Listings (ADR-0081). Owned

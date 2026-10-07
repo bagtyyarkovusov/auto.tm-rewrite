@@ -145,8 +145,9 @@ describe("Listing media upload ownership (#536)", () => {
       acceptingClassifier,
       fakeVariants,
       guard,
+      world.claims,
     );
-    remove = new RemoveMedia(listings, world.mediaRepo, world.storage);
+    remove = new RemoveMedia(listings, world.mediaRepo);
   });
 
   describe("legitimate flow", () => {
@@ -158,10 +159,13 @@ describe("Listing media upload ownership (#536)", () => {
 
       await remove.execute({ listingId: LISTING_A, userId: USER_A, mediaId: media.id });
 
+      // Removal retires the upload and leaves deletion to the worker (ADR-0088):
+      // the request deletes no bytes itself.
       expect(world.media).toHaveLength(0);
-      const prefix = key.replace(/original\.jpg$/, "");
-      expect(world.deletedKeys.length).toBeGreaterThan(0);
-      expect(world.deletedKeys.every((k) => k.startsWith(prefix))).toBe(true);
+      expect(world.stateOfKey(key)).toBe("RETIRED");
+      expect(world.cleanups).toEqual([media.uploadId]);
+      expect(world.deletedKeys).toEqual([]);
+      expect(world.objects.has(key)).toBe(true);
     });
 
     it("records the upload for the calling User only", async () => {
@@ -359,6 +363,7 @@ describe("Listing media upload ownership (#536)", () => {
       await remove.execute({ listingId: LISTING_A, userId: USER_A, mediaId: own.media.id });
 
       expect(world.uploads).toHaveLength(uploadCount);
+      expect(world.cleanups).toEqual([]);
       expect(world.deletedKeys).toEqual([]);
       expect(world.objects.has(own.key)).toBe(true);
     });
@@ -498,7 +503,7 @@ describe("Listing media upload ownership (#536)", () => {
       expect(world.media).toHaveLength(0);
     });
 
-    it("deletes storage objects once when the same media is removed concurrently", async () => {
+    it("records deletion work once when the same media is removed concurrently", async () => {
       const first = await uploadAndAttach(USER_A, LISTING_A);
       const input = { listingId: LISTING_A, userId: USER_A, mediaId: first.media.id };
 
@@ -507,7 +512,8 @@ describe("Listing media upload ownership (#536)", () => {
       expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
       const failed = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
       expect(failed.reason).toBeInstanceOf(NotFoundException);
-      expect(new Set(world.deletedKeys).size).toBe(world.deletedKeys.length);
+      expect(world.cleanups).toEqual([first.media.uploadId]);
+      expect(world.deletedKeys).toEqual([]);
     });
 
     it("keeps every other User's objects intact through a mixed concurrent run", async () => {

@@ -37,6 +37,10 @@ import {
   IMAGE_VARIANT_GENERATOR,
   type ImageVariantGenerator,
 } from "../domain/ports/ImageVariantGenerator";
+import {
+  UPLOAD_CLAIM_PORT,
+  type UploadClaimPort,
+} from "../domain/ports/UploadClaimPort";
 
 import { contactPhoneRejection } from "./contactPhoneRejection";
 import { UploadAdoptionGuard } from "./UploadAdoptionGuard";
@@ -89,20 +93,21 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   }
 });
 
-/** PrismaPg 7 reports constraint fields under its driver-adapter cause. */
-function isUploadUniqueViolation(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const error = err as {
-    code?: unknown;
-    meta?: { driverAdapterError?: { cause?: { constraint?: { fields?: unknown } } } };
-  };
-  const fields = error.meta?.driverAdapterError?.cause?.constraint?.fields;
-  return error.code === "P2002" && Array.isArray(fields) && fields.length === 1 &&
-    (fields[0] === "uploadId" || fields[0] === '"uploadId"');
-}
-
-function isForeignKeyViolation(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: unknown }).code === "P2003";
+/** The HTTP answer for a claim refusal; any other error passes through. */
+function claimRejection(err: unknown): unknown {
+  if (!(err instanceof DomainError)) return err;
+  if (err.code === LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED) {
+    return new ConflictException({
+      code: err.code,
+      message: "A photo upload is already attached to a Listing",
+    });
+  }
+  return new BadRequestException({
+    code: err.code,
+    message: err.code === LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE
+      ? "A photo upload is no longer available"
+      : err.message,
+  });
 }
 
 export interface PublishListingInput {
@@ -133,6 +138,8 @@ export class PublishListing {
     private readonly contactPhones: ContactPhonePolicy,
     @Inject(IDENTITY_CLOCK_PORT)
     private readonly clock: ClockPort,
+    @Inject(UPLOAD_CLAIM_PORT)
+    private readonly claims: UploadClaimPort,
   ) {}
 
   async execute(input: PublishListingInput): Promise<PublishListingResult> {
@@ -220,8 +227,8 @@ export class PublishListing {
     const attachedPhotos = photos.filter((photo) => photo.key);
 
     // A draft's photo keys are only strings. Each must be an upload this User
-    // presigned and has not adopted elsewhere (ADR-0079); the unique upload link
-    // on the media row below makes that single-use even under a race.
+    // presigned (ADR-0079), and the common claim below lets only one target
+    // adopt it, whether that is a Listing or a Profile Photo (ADR-0088).
     const photoKeys = attachedPhotos.map((photo) => photo.key as string);
     if (new Set(photoKeys).size !== photoKeys.length) {
       throw new BadRequestException({
@@ -241,17 +248,35 @@ export class PublishListing {
     }
     const uploadIdByKey = new Map(uploads.map((upload) => [upload.key, upload.id]));
 
-    await Promise.all(
-      attachedPhotos.map((photo) =>
-        this.variantGenerator.generate(photo.key as string, {
-          writeProtocol: uploads.find((upload) => upload.key === photo.key)?.writeProtocol ?? "legacy",
-        }),
-      ),
-    );
+    // Reserve every photo for the new Listing before any variant is written:
+    // all of them, or none and nothing is published.
+    const claim = {
+      uploadIds: uploads.map((upload) => upload.id),
+      target: { type: "listing" as const, id: listingId },
+    };
+    const reservation = await this.claims
+      .reserve({ userId: input.userId, ...claim })
+      .catch((err: unknown) => {
+        throw claimRejection(err);
+      });
+    if (!("token" in reservation)) {
+      throw claimRejection(new DomainError(LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED, "Already adopted"));
+    }
 
     try {
-      const [listingRow] = await this.prisma.$transaction([
-        this.prisma.listing.create({
+      await Promise.all(
+        attachedPhotos.map((photo) =>
+          this.variantGenerator.generate(photo.key as string, {
+            writeProtocol: uploads.find((upload) => upload.key === photo.key)?.writeProtocol ?? "legacy",
+          }),
+        ),
+      );
+
+      // The Listing, its media, the draft removal, the audit entry and the
+      // adoption of every upload commit together or not at all.
+      const listingRow = await this.prisma.$transaction(async (tx) => {
+        await this.claims.finalize(tx, { token: reservation.token, ...claim });
+        const created = await tx.listing.create({
           data: {
             id: listingId,
             sellerId: input.userId,
@@ -285,9 +310,9 @@ export class PublishListing {
             damaged,
             knownIssuesText: payload.conditionDisclosure?.knownIssuesText ?? null,
           },
-        }),
-        ...attachedPhotos.map((photo) =>
-          this.prisma.listingMedia.create({
+        });
+        for (const photo of attachedPhotos) {
+          await tx.listingMedia.create({
             data: {
               id: photo.photoId,
               listingId,
@@ -296,10 +321,10 @@ export class PublishListing {
               sortOrder: photo.sortOrder,
               uploadId: uploadIdByKey.get(photo.key as string) as string,
             },
-          }),
-        ),
-        this.prisma.listingDraft.delete({ where: { id: draft.id } }),
-        this.prisma.auditLog.create({
+          });
+        }
+        await tx.listingDraft.delete({ where: { id: draft.id } });
+        await tx.auditLog.create({
           data: {
             actorId: input.userId,
             action: "listing.published",
@@ -313,8 +338,9 @@ export class PublishListing {
               priceCurrency: payload.priceCurrency,
             },
           },
-        }),
-      ]);
+        });
+        return created;
+      });
 
       const listing = Listing.create({
         id: listingRow.id,
@@ -366,29 +392,13 @@ export class PublishListing {
 
       return { listing };
     } catch (err) {
-      if (isUploadUniqueViolation(err) && (await this.uploadGuard.anyAdopted(photoKeys))) {
-        // A concurrent attach or publish adopted one of these uploads first. The
-        // whole transaction rolled back, so nothing was published.
-        throw new ConflictException({
-          code: LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
-          message: "A photo upload is already attached to a Listing",
-        });
-      }
-      if (isForeignKeyViolation(err) && (await this.uploadGuard.anyUnavailable(photoKeys))) {
-        // Adoption followed by removal can erase the upload after authorization.
-        // A different foreign-key failure retains its original error.
-        throw new BadRequestException({
-          code: LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE,
-          message: "A photo upload is no longer available",
-        });
-      }
-      if (err instanceof DomainError) {
-        throw new BadRequestException({
-          code: err.code,
-          message: err.message,
-        });
-      }
-      throw err;
+      // A failed preparation is terminal (ADR-0088): whatever this attempt still
+      // holds is retired, which is a no-op once the transaction has committed.
+      // Only the attempt that created the token abandons it; a joined retry
+      // must not retire a claim another attempt is still preparing. If it
+      // cannot be recorded now, the storage scanner retires it later.
+      if (!reservation.joined) await this.claims.abandon(reservation.token).catch(() => undefined);
+      throw claimRejection(err);
     }
   }
 }

@@ -14,14 +14,18 @@ export interface MediaUpload {
   /** Null only for uploads backfilled from media that predates the record. */
   sizeBytes: number | null;
   createdAt: Date;
-  /** True once a ListingMedia row has adopted this upload. */
+  /** True once a Listing media row or a Profile Photo has adopted this upload. */
   adopted: boolean;
+  /** Where the upload stands in the common claim protocol (ADR-0088). */
+  state: UploadState;
   /** Missing only in legacy/test adapters; never infer fencing from storage. */
   writeProtocol?: "legacy" | "conditional-v1";
   objectKeys?: string[];
 }
 
-export type NewMediaUpload = Omit<MediaUpload, "adopted">;
+export type UploadState = "AVAILABLE" | "PREPARING" | "ADOPTED" | "RETIRED" | "DELETED";
+
+export type NewMediaUpload = Omit<MediaUpload, "adopted" | "state">;
 
 export const UPLOAD_CAPS: Record<
   MediaKind,
