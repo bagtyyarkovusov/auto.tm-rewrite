@@ -86,7 +86,16 @@ describe("Results photo strip", () => {
     const { view, onPress } = renderCard(feedItem);
     // Android may deliver the drag's release at the scrolling container.
     // That container must not find a detail-opening ancestor press handler.
-    fireEvent.press(view.getByTestId("listing-photo-strip"));
+    // RNTL also bubbles to composite callback props named onPress. Only a
+    // rendered native host can receive the Android responder release here.
+    let parent = view.getByTestId("listing-photo-strip").parent;
+    while (parent) {
+      if (typeof parent.type === "string" && parent.props.onPress) {
+        act(() => parent!.props.onPress());
+        break;
+      }
+      parent = parent.parent;
+    }
     expect(onPress).not.toHaveBeenCalled();
     fireEvent.press(view.getAllByTestId("listing-photo")[0]);
     expect(onPress).toHaveBeenCalledOnce();
