@@ -12,6 +12,8 @@ import {
   type ReviewerScenarioUser,
 } from "../src/reviewer-scenario-seed";
 
+import { uploadReviewerPhoto } from "./reviewer-fixtures/uploadReviewerPhoto";
+
 type PrismaOrTx = PrismaClient;
 
 /** A nullable Json column takes SQL NULL as `Prisma.DbNull`, matching a create that omits it. */
@@ -150,16 +152,16 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
     await this.prisma.brand.upsert({
       where: { slug: input.brandSlug },
       update: {
-        nameRu: "AutoTM Review",
-        nameTk: "AutoTM Review",
-        nameEn: "AutoTM Review",
+        nameRu: "Toyota (демо)",
+        nameTk: "Toyota (demo)",
+        nameEn: "Toyota (demo)",
       },
       create: {
         id: input.brandId,
         slug: input.brandSlug,
-        nameRu: "AutoTM Review",
-        nameTk: "AutoTM Review",
-        nameEn: "AutoTM Review",
+        nameRu: "Toyota (демо)",
+        nameTk: "Toyota (demo)",
+        nameEn: "Toyota (demo)",
       },
     });
     await this.prisma.model.upsert({
@@ -167,17 +169,17 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         brandId_slug: { brandId: input.brandId, slug: input.modelSlug },
       },
       update: {
-        nameRu: "Review Scenario",
-        nameTk: "Review Scenario",
-        nameEn: "Review Scenario",
+        nameRu: "Camry Hybrid (демо)",
+        nameTk: "Camry Hybrid (demo)",
+        nameEn: "Camry Hybrid (demo)",
       },
       create: {
         id: input.modelId,
         brandId: input.brandId,
         slug: input.modelSlug,
-        nameRu: "Review Scenario",
-        nameTk: "Review Scenario",
-        nameEn: "Review Scenario",
+        nameRu: "Camry Hybrid (демо)",
+        nameTk: "Camry Hybrid (demo)",
+        nameEn: "Camry Hybrid (demo)",
       },
     });
     await this.prisma.region.upsert({
@@ -216,6 +218,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   }
 
   async upsertListing(input: {
+    contactPhone: string;
     id: string;
     sellerId: string;
     priceAmount: number;
@@ -245,7 +248,7 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         locationText: "Review City",
         allowCalls: false,
         allowChat: true,
-        contactPhone: null,
+        contactPhone: input.contactPhone,
         damaged: input.damaged,
         knownIssuesText: input.knownIssuesText,
       },
@@ -268,9 +271,20 @@ class PrismaReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
         locationText: "Review City",
         allowCalls: false,
         allowChat: true,
+        contactPhone: input.contactPhone,
         damaged: input.damaged,
         knownIssuesText: input.knownIssuesText,
       },
+    });
+  }
+
+  async upsertListingMedia(input: {
+    id: string; listingId: string; key: string; sortOrder: number; fixtureIndex: number;
+  }): Promise<void> {
+    const dimensions = await uploadReviewerPhoto(input.key, input.fixtureIndex);
+    const data = { listingId: input.listingId, kind: "image" as const, key: input.key, sortOrder: input.sortOrder, ...dimensions };
+    await this.prisma.listingMedia.upsert({
+      where: { id: input.id }, create: { id: input.id, ...data }, update: data,
     });
   }
 

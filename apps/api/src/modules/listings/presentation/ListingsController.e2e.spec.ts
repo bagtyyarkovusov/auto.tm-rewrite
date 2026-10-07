@@ -140,6 +140,12 @@ describe("ListingsController e2e", () => {
     });
   }
 
+  const publicationPhotos = (photoId: string, key: string) => [0, 1, 2].map((index) => ({
+    photoId: index === 0 ? photoId : suite.id(`${photoId}-support-${index}`),
+    key: index === 0 ? key : `${key}-support-${index}`,
+    sortOrder: index,
+  }));
+
   const validPayload = {
     brandId: suite.catalog.brandId,
     modelId: suite.catalog.modelId,
@@ -153,7 +159,7 @@ describe("ListingsController e2e", () => {
     description: "Great car",
     allowCalls: true,
     allowChat: true,
-    photos: [{ photoId: suite.id("photo-1"), key: "photo1.jpg", sortOrder: 0 }],
+    photos: publicationPhotos(suite.id("photo-1"), "photo1.jpg"),
     conditionDisclosure: {
       damaged: true,
       knownIssuesText: "Small scratch",
@@ -189,7 +195,7 @@ describe("ListingsController e2e", () => {
 
       // Media should be created
       const media = await prisma.listingMedia.findMany({ where: { listingId: res.body.id } });
-      expect(media).toHaveLength(1);
+      expect(media).toHaveLength(3);
 
       // Condition disclosure and the stored TMT price should be persisted
       const listing = await prisma.listing.findUnique({ where: { id: res.body.id } });
@@ -416,7 +422,7 @@ describe("ListingsController e2e", () => {
 
       // Media rows should still exist
       const mediaAfter = await prisma.listingMedia.findMany({ where: { listingId } });
-      expect(mediaAfter).toHaveLength(1);
+      expect(mediaAfter).toHaveLength(3);
     });
   });
 
@@ -697,7 +703,7 @@ describe("ListingsController e2e", () => {
       expect(res.body.status).toBe("active");
       expect(res.body.priceAmount).toBe(validPayload.priceAmount);
       expect(res.body.displayPriceTmt).toBe(validPayload.priceAmount);
-      expect(res.body.media).toHaveLength(1);
+      expect(res.body.media).toHaveLength(3);
       expect(res.body.media[0].variants.thumbnail).toContain("thumbnail.jpg");
     });
 
@@ -1091,7 +1097,7 @@ describe("ListingsController e2e", () => {
       for (let i = 0; i < 25; i++) {
         const draft = await seedDraft("user-1", {
           ...validPayload,
-          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
+          photos: publicationPhotos(suite.id(`photo-${i}`), `photo${i}.jpg`),
         });
         await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -1200,13 +1206,7 @@ describe("ListingsController e2e", () => {
         ...validPayload,
         brandId: brand2.id,
         modelId: suite.id("model-2"),
-        photos: [
-          {
-            photoId: suite.id("photo-2"),
-            key: "photo2.jpg",
-            sortOrder: 0,
-          },
-        ],
+        photos: publicationPhotos(suite.id("photo-2"), "photo2.jpg"),
       });
 
       const publish1 = await request
@@ -1281,7 +1281,7 @@ describe("ListingsController e2e", () => {
           ...validPayload,
           brandId: i % 2 === 0 ? validPayload.brandId : brand2.id,
           modelId: i % 2 === 0 ? validPayload.modelId : suite.id("model-2"),
-          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
+          photos: publicationPhotos(suite.id(`photo-${i}`), `photo${i}.jpg`),
         });
         await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -1567,7 +1567,7 @@ describe("ListingsController e2e", () => {
       for (let i = 0; i < 3; i++) {
         const draft = await seedDraft("user-1", {
           ...validPayload,
-          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
+          photos: publicationPhotos(suite.id(`photo-${i}`), `photo${i}.jpg`),
         });
         await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -1613,13 +1613,7 @@ describe("ListingsController e2e", () => {
         ...validPayload,
         brandId: brand2.id,
         modelId: suite.id("model-2"),
-        photos: [
-          {
-            photoId: suite.id("photo-2"),
-            key: "photo2.jpg",
-            sortOrder: 0,
-          },
-        ],
+        photos: publicationPhotos(suite.id("photo-2"), "photo2.jpg"),
       });
 
       await request
@@ -1706,7 +1700,7 @@ describe("ListingsController e2e", () => {
         const draft = await seedDraft("user-1", {
           ...validPayload,
           ...price,
-          photos: [{ photoId: suite.id(`photo-${i}`), key: `photo${i}.jpg`, sortOrder: 0 }],
+          photos: publicationPhotos(suite.id(`photo-${i}`), `photo${i}.jpg`),
         });
         await request
           .post(`/api/v1/listings/drafts/${draft.id}/publish`)
@@ -1746,13 +1740,7 @@ describe("ListingsController e2e", () => {
         ...validPayload,
         priceAmount: 20000,
         priceCurrency: "USD",
-        photos: [
-          {
-            photoId: suite.id("photo-2"),
-            key: "photo2.jpg",
-            sortOrder: 0,
-          },
-        ],
+        photos: publicationPhotos(suite.id("photo-2"), "photo2.jpg"),
       });
 
       await request

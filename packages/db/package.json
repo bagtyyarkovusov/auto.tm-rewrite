@@ -33,6 +33,7 @@
     "tester:accounts": "tsx scripts/tester-accounts.ts"
   },
   "dependencies": {
+    "@auto-tm/contracts": "workspace:*",
     "@prisma/client": "^7.6.0",
     "@prisma/adapter-pg": "^7.6.0",
     "pg": "^8.13.1"

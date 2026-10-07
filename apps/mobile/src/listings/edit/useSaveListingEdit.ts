@@ -313,13 +313,25 @@ export function useSaveListingEdit(
         }
       };
 
-      if (Object.keys(plan.fieldsPatch).length > 0) {
-        await runOp("fields", () =>
-          editListing.mutateAsync({ listingId, patch: plan.fieldsPatch }),
-        );
-      }
-
+      // Repair older Listings before fields. At the cap, release one obsolete
+      // photo per attachment; at 20 -> 19 this preserves the publication floor.
+      const removePlanned = async (mediaId: string) => {
+        await runOp(`remove:${mediaId}`, async () => {
+          await removeMedia.mutateAsync(mediaId);
+          ledger.removed.add(mediaId);
+        });
+      };
+      let attachedCount = seedMedia.filter((media) => !ledger.removed.has(media.id)).length +
+        [...ledger.attached.values()].filter((id) => !seedMedia.some((media) => media.id === id) && !ledger.removed.has(id)).length;
       for (const attachment of plan.attachments) {
+        if (ledger.attached.has(attachment.photoId)) continue;
+        if (attachedCount >= ListingsSchemas.MAX_LISTING_PHOTOS) {
+          const obsoleteId = plan.removedMediaIds.find((id) => !ledger.removed.has(id));
+          if (obsoleteId) {
+            await removePlanned(obsoleteId);
+            attachedCount--;
+          }
+        }
         await runOp(`attach:${attachment.photoId}`, async () => {
           const attached = await attachMedia.mutateAsync({
             key: attachment.key,
@@ -329,14 +341,18 @@ export function useSaveListingEdit(
             height: attachment.height,
           });
           ledger.attached.set(attachment.photoId, attached.id);
+          attachedCount++;
         });
       }
 
+      if (Object.keys(plan.fieldsPatch).length > 0) {
+        await runOp("fields", () =>
+          editListing.mutateAsync({ listingId, patch: plan.fieldsPatch }),
+        );
+      }
+
       for (const mediaId of plan.removedMediaIds) {
-        await runOp(`remove:${mediaId}`, async () => {
-          await removeMedia.mutateAsync(mediaId);
-          ledger.removed.add(mediaId);
-        });
+        await removePlanned(mediaId);
       }
 
       if (plan.orderedPhotoIds.length > 0) {
@@ -359,6 +375,7 @@ export function useSaveListingEdit(
       attachMedia,
       removeMedia,
       reorderMedia,
+      seedMedia,
     ],
   );
 

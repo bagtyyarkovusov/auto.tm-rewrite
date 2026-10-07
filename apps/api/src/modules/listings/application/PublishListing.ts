@@ -61,8 +61,11 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   (data) => data.allowCalls || data.allowChat,
   { message: "CONTACT_METHOD_REQUIRED" },
 ).refine(
-  (data) => data.photos && data.photos.length >= 1 && data.photos.some((p) => p.key),
-  { message: "AT_LEAST_ONE_PHOTO_REQUIRED" },
+  (data) => (data.photos?.filter((photo) => photo.key).length ?? 0) >= ListingsSchemas.MIN_LISTING_PHOTOS,
+  { message: "AT_LEAST_THREE_PHOTOS_REQUIRED" },
+).refine(
+  (data) => (data.photos?.filter((photo) => photo.key).length ?? 0) <= ListingsSchemas.MAX_LISTING_PHOTOS,
+  { message: "MEDIA_LIMIT_EXCEEDED" },
 ).refine(
   (data) => data.description.trim().length > 0,
   { message: "DESCRIPTION_REQUIRED" },

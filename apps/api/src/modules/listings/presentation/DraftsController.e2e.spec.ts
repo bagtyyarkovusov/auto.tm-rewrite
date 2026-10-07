@@ -174,6 +174,33 @@ describe("DraftsController e2e", () => {
       expect(res.body.payload.validatedSteps).toBeDefined();
     });
 
+    it("saves a draft with one photo, below the publish minimum, and reads it back", async () => {
+      const token = await createUser("user-1");
+      const created = await request
+        .post("/api/v1/listings/drafts")
+        .set("Authorization", `Bearer ${token}`)
+        .send({})
+        .expect(201);
+      const photos = [{ photoId: suite.id("draft-photo-1"), key: "draft-photo-1.jpg", sortOrder: 0 }];
+
+      const saved = await request
+        .patch(`/api/v1/listings/drafts/${created.body.id}`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({ photos })
+        .expect(200);
+
+      expect(saved.body.payload.photos).toEqual(photos);
+
+      const list = await request
+        .get("/api/v1/me/drafts")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(200);
+
+      expect(list.body.items).toHaveLength(1);
+      expect(list.body.items[0].id).toBe(created.body.id);
+      expect(list.body.items[0].payload.photos).toEqual(photos);
+    });
+
     it("returns 404 for another user's draft", async () => {
       const token1 = await createUser("user-1");
       const token2 = await createUser("user-2");

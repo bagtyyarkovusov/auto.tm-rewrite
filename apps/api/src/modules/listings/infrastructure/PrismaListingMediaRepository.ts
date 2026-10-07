@@ -76,10 +76,24 @@ export class PrismaListingMediaRepository implements ListingMediaRepository {
 
   async deleteReleasingUpload(
     id: string,
+    minimumPhotos?: number,
   ): Promise<{ removed: boolean; ownedKey: string | null }> {
     return this.prisma.$transaction(async (tx) => {
-      const row = await tx.listingMedia.findUnique({ where: { id } });
+      let row = await tx.listingMedia.findUnique({ where: { id } });
       if (!row) return { removed: false, ownedKey: null };
+
+      if (minimumPhotos !== undefined) {
+        // All removals of one Listing serialize, including distinct media IDs.
+        await tx.$queryRaw`SELECT id FROM listings WHERE id = ${row.listingId} FOR UPDATE`;
+        // The ID read above can precede a competing delete. Re-read after the
+        // Listing lock so a lost same-ID removal is 404 before any floor check.
+        row = await tx.listingMedia.findUnique({ where: { id } });
+        if (!row) return { removed: false, ownedKey: null };
+        const remaining = await tx.listingMedia.count({ where: {
+          listingId: row.listingId, kind: "image", id: { not: id },
+        } });
+        if (remaining < minimumPhotos) throw new DomainError("PHOTO_MINIMUM_REQUIRED", `At least ${minimumPhotos} photos are required`);
+      }
 
       // deleteMany reports whether this caller won; a concurrent remove sees 0.
       const { count } = await tx.listingMedia.deleteMany({ where: { id } });

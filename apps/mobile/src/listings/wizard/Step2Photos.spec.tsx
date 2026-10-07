@@ -256,7 +256,7 @@ describe("Step2Photos while photos upload", () => {
   it.each(["selected", "compressed", "presigned", "uploading", "waiting_for_network"] as const)(
     "tells the seller to continue while a photo is %s",
     (state) => {
-      const screen = renderMobile(<Step2Photos {...defaults()} photos={[inState("a", 0, state)]} />);
+      const screen = renderMobile(<Step2Photos {...defaults()} photos={[inState("a", 0, state), photo("b", 1), photo("c", 2)]} />);
 
       expect(screen.getByText(KEEP_UPLOADING)).toBeTruthy();
     },
@@ -272,14 +272,14 @@ describe("Step2Photos while photos upload", () => {
 
   it("does not say it where the next step still waits for an uploaded photo", () => {
     const screen = renderMobile(
-      <Step2Photos {...defaults()} photos={[inState("a", 0, "uploading")]} continuesWhileUploading={false} />,
+      <Step2Photos {...defaults()} photos={[inState("a", 0, "uploading"), inState("b", 1, "attached"), inState("c", 2, "attached")]} continuesWhileUploading={false} />,
     );
 
     expect(screen.queryByText(KEEP_UPLOADING)).toBeNull();
   });
 
   it("says it in Russian and Turkmen", () => {
-    const photos = [inState("a", 0, "uploading")];
+    const photos = [inState("a", 0, "uploading"), inState("b", 1, "attached"), inState("c", 2, "attached")];
     const ru = renderMobile(<Step2Photos {...defaults()} photos={photos} />, { locale: "ru" });
     expect(ru.getByText("Можно продолжать. Фото загружаются в фоне.")).toBeTruthy();
     const tk = renderMobile(<Step2Photos {...defaults()} photos={photos} />, { locale: "tk" });
@@ -287,14 +287,22 @@ describe("Step2Photos while photos upload", () => {
   });
 });
 
-describe("Step2Photos errors", () => {
-  const required = { photos: "At least one photo is required" };
+describe("Step2Photos minimum guidance", () => {
+  it("does not promise Continue while only two photos are picked", () => {
+    const photos = [photo("a", 0), { ...photo("b", 1), state: "uploading" as const }];
+    const screen = renderMobile(<Step2Photos {...defaults()} photos={photos} />);
+    expect(screen.queryByText("You can continue. Photos keep uploading.")).toBeNull();
+  });
+});
 
-  it("says nothing about missing photos when the seller arrives on the step", () => {
+describe("Step2Photos errors", () => {
+  const required = { photos: "At least 3 photos are required" };
+
+  it("states the three-photo minimum when the seller arrives on the step", () => {
     const screen = renderMobile(<Step2Photos {...defaults()} fieldErrors={required} />);
 
     expect(screen.getByText("No photos")).toBeTruthy();
-    expect(screen.queryByText("At least one photo is required")).toBeNull();
+    expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
   });
 
   it("says a photo is required once the seller removes the last one", () => {
@@ -305,12 +313,12 @@ describe("Step2Photos errors", () => {
     expect(props.onRemovePhoto).toHaveBeenCalledWith("a");
     screen.rerender(<Step2Photos {...props} photos={[]} fieldErrors={required} />);
 
-    expect(screen.getByText("At least one photo is required")).toBeTruthy();
+    expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
   });
 
   it("says a photo is required when the wizard asks the step to show its errors", () => {
     const screen = renderMobile(<Step2Photos {...defaults()} fieldErrors={required} showErrors />);
 
-    expect(screen.getByText("At least one photo is required")).toBeTruthy();
+    expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
   });
 });

@@ -1,3 +1,4 @@
+import { ListingsSchemas } from "@auto-tm/contracts";
 import { randomUUID } from "node:crypto";
 
 import {
@@ -86,7 +87,7 @@ export class AttachMedia {
     const photoCount = existingMedia.filter((m) => m.kind === "image").length;
     const videoCount = existingMedia.filter((m) => m.kind === "video").length;
 
-    if (input.kind === "image" && photoCount >= 20) {
+    if (input.kind === "image" && photoCount >= ListingsSchemas.MAX_LISTING_PHOTOS) {
       throw new BadRequestException({
         code: LISTING_ERROR_CODES.MEDIA_LIMIT_EXCEEDED,
         message: "Maximum 20 photos per listing",
