@@ -190,7 +190,8 @@ vi.mock("@/lib/motion", async () => {
     spring: tokens.mobileSpring,
     easing: {},
     timing: (token: keyof typeof tokens.mobileDuration) => ({ duration: tokens.mobileDuration[token] }),
-    useReduceMotion: () => false,
+    // A spec turns Reduce Motion on with `vi.mocked(useReduceMotion).mockReturnValue(true)`.
+    useReduceMotion: vi.fn(() => false),
     useReduceTransparency: () => false,
   };
 });

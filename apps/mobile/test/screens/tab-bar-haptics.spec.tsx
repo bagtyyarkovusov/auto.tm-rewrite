@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, renderMobile } from "../render";
 import { AutoTmTabBar } from "../../components/navigation/AutoTmTabBar";
 
+import { useReduceMotion } from "@/lib/motion";
+
 const gestures = vi.hoisted(() => ({ handlers: {} as Record<string, (event: { x: number }) => void> }));
 vi.mock("react-native-gesture-handler", async () => {
   const { View } = await import("react-native");
@@ -41,7 +43,7 @@ function gesture(name: string, x: number) {
   if (!handler) throw new Error(`Missing gesture handler ${name}`);
   handler({ x });
 }
-beforeEach(() => { vi.clearAllMocks(); Platform.OS = "ios"; });
+beforeEach(() => { vi.clearAllMocks(); vi.mocked(useReduceMotion).mockReturnValue(false); Platform.OS = "ios"; });
 
 describe("Tab bar selection feedback", () => {
   it.each([["en", "Favorites"], ["ru", "Избранное"], ["tk", "Halanlarym"]])("keeps a labeled tab action in %s", (locale, label) => {
@@ -95,5 +97,37 @@ describe("Tab bar selection feedback", () => {
     });
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
     expect(navigation.dispatch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Tab bar selection feedback with Reduce Motion on", () => {
+  beforeEach(() => { vi.mocked(useReduceMotion).mockReturnValue(true); });
+
+  it("still ticks once when a tap opens Favorites, and not again on a repeat", () => {
+    const { view, navigation } = renderBar();
+    const favorites = view.getByRole("tab", { name: "Favorites" });
+    fireEvent.press(favorites);
+    fireEvent.press(favorites);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+    expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { name: "favorites", params: undefined } }));
+  });
+  it("still ticks once per crossed tab and selects the tab on slide release", () => {
+    const { navigation } = renderBar();
+    act(() => {
+      gesture("onBegin", 35);
+      gesture("onStart", 35);
+      gesture("onUpdate", 110);
+      gesture("onUpdate", 115);
+      gesture("onUpdate", 185);
+      gesture("onEnd", 185);
+    });
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(2);
+    expect(navigation.dispatch).toHaveBeenCalledTimes(1);
+    expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: { name: "sell", params: undefined } }));
+  });
+  it("does not tick when the open tab is tapped or selection is prevented", () => {
+    fireEvent.press(renderBar().view.getByRole("tab", { name: "Search" }));
+    fireEvent.press(renderBar(true).view.getByRole("tab", { name: "Favorites" }));
+    expect(Haptics.selectionAsync).not.toHaveBeenCalled();
   });
 });
