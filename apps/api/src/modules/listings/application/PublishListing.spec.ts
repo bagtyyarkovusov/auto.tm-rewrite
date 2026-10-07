@@ -395,6 +395,21 @@ describe("PublishListing", () => {
     });
   });
 
+  it("refuses two attached photos without publishing or discarding the draft", async () => {
+    seedDraft(draftRepo, { ...validPayload, photos: [
+      { photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 },
+      { photoId: "00000000-0000-0000-0000-000000000006", key: "p1.jpg", sortOrder: 1 },
+    ] });
+    const error = await makeUseCase(draftRepo, prisma).execute({ draftId: "draft-1", userId: "user-1" }).catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      code: "INVALID_DRAFT_PAYLOAD",
+      details: { formErrors: ["AT_LEAST_THREE_PHOTOS_REQUIRED"] },
+    });
+    expect(prisma.createdListings).toEqual([]);
+    expect(prisma.deletedDrafts).toEqual([]);
+  });
+
   it("publishes a valid draft", async () => {
     seedDraft(draftRepo, validPayload);
 

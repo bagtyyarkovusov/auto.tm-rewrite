@@ -109,6 +109,19 @@ beforeEach(() => {
 });
 
 describe("Sell wizard, Photos step", () => {
+  it("requires three picked photos, explains the floor and nudges toward eight", () => {
+    fixture.queuePhotos = [keyed(ids.a, 0), keyed(ids.b, 1)];
+    resume("atPhotos");
+    const screen = renderMobile(<SellScreen />);
+    expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: true });
+    expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
+    expect(screen.getByText("2 / 8 photos")).toBeTruthy();
+    fixture.queuePhotos = [...fixture.queuePhotos, keyed(ids.c, 2)];
+    screen.rerender(<SellScreen />);
+    expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: false });
+    expect(screen.getByText("Add 5 more for a better listing")).toBeTruthy();
+  });
+
   it("opens on Photos with no error yet and will not continue until a photo is picked", () => {
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
