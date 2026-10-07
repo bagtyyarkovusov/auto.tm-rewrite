@@ -635,3 +635,19 @@ Code return and completed replay. Native proof remains required for stationary
 geometry, keyboard continuity, actual navigation/back, animation/reduced motion,
 haptics and account-purpose flows. Capture phone/email in light/dark EN/RU/TK,
 record a switch, and exercise Code return, single exit and account add/change.
+
+### Wrong-code Reduce Motion implementation (#730)
+
+The shared OtpCells checks Reanimated's synchronous system Reduce Motion value
+before starting its existing RN Animated shake. With the setting on it resets
+the translation and skips the animation; CodeEntryForm still shows its localized
+error, clears digits and refocuses for recoverable errors. Normal motion and
+terminal/daily-limit behavior retain their existing rules. No code-purpose or
+sign-in navigation changes.
+
+The installed Reanimated 4.2.1 hook reads the system setting when the app starts;
+changing the OS setting during a running session does not update that value.
+Native verification must launch the app afresh with Reduce Motion on, then off,
+trigger wrong code with the keyboard open and verify TalkBack can continue input.
+The rendered real form/cells test proves error/clear/focus and animation invocation
+for phone/email and EN/RU/TK; it does not prove native focus, keyboard or motion.
