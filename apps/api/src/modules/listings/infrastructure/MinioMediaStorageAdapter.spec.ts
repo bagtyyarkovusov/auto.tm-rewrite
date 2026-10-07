@@ -184,6 +184,19 @@ describe("MinioMediaStorageAdapter", () => {
     );
   });
 
+  it("requires the placeholder ETag in the signed Listing image PUT (#721)", async () => {
+    const adapter = makeAdapter("https://media.auto.tm");
+    awsMocks.sendResult = async () => ({ ETag: '\"placeholder\"' });
+    const result = await adapter.presignUpload({
+      key: "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/original.jpg",
+      contentType: "image/jpeg",
+      sizeBytes: 1024,
+    });
+
+    expect(result).toMatchObject({ headers: { "if-match": '\"placeholder\"' } });
+    expect(awsMocks.signedCommand?.input).toMatchObject({ IfMatch: '\"placeholder\"' });
+  });
+
   it("uses the private endpoint for administrative object deletion", async () => {
     const adapter = makeAdapter(
       "https://media.auto.tm",
