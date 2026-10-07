@@ -41,11 +41,14 @@ Identity application and domain code use an injected Profile Photo port. Upload 
 
 ### Negative / accepted costs
 
+- An interrupted initializer or failed provenance write can leave empty placeholders. It exposes no upload authority or photo bytes, but general orphan sweeping remains out of scope.
 - All adoption and retirement writers must participate in the common transaction protocol; an omitted writer breaks the guarantee.
 - Ownership migration and worker deletion require independent database/storage integration evidence before profile routes ship.
 - Storage outages delay removal of public bytes. Privacy text must describe pending cleanup and its retry behavior truthfully; no instantaneous deletion claim is made.
 
 ### Neutral
+
+- Issue #725 implements the opt-in storage prerequisite; #721 implements the common lifecycle/cleanup next, before #642 profile routes. This ADR does not assert those later behaviors already ship.
 
 - The Assigned Avatar remains available after removing a Profile Photo.
 - Existing user reports and moderator photo removal supply the approved release moderation path; no automated moderation provider is introduced.

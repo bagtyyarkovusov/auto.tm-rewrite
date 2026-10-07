@@ -106,7 +106,7 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     const writes: Array<string | undefined> = [];
     const transport = {
       send: async (command: unknown, options?: { abortSignal?: AbortSignal }) => {
-        if (command instanceof PutObjectCommand && manifest(fixture.key).includes(command.input.Key!)) {
+        if (command instanceof PutObjectCommand && command.input.Key && manifest(fixture.key).includes(command.input.Key)) {
           writes.push(command.input.IfMatch);
         }
         return s3.send(command as PutObjectCommand, options);
@@ -119,7 +119,8 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     expect(writes.every((match) => typeof match === "string" && match.length > 0)).toBe(true);
     for (const Key of manifest(fixture.key)) {
       const stored = await s3.send(new GetObjectCommand({ Bucket: bucket, Key }));
-      expect((await sharp(Buffer.from(await stored.Body!.transformToByteArray())).metadata()).exif).toBeUndefined();
+      if (!stored.Body) throw new Error("Generated image body is missing");
+      expect((await sharp(Buffer.from(await stored.Body.transformToByteArray())).metadata()).exif).toBeUndefined();
     }
   });
 
@@ -143,7 +144,9 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     (generator as unknown as { s3: unknown }).s3 = transport;
     const generate = generator.generate.bind(generator) as (key: string, opts: { writeProtocol: "conditional-v1" }) => Promise<unknown>;
     const result = generate(fixture.key, { writeProtocol: "conditional-v1" }).then(() => null, (error: unknown) => error);
-    await paused;
+    await Promise.race([paused, result.then((error) => {
+      throw error ?? new Error("Generation finished before the controlled storage race");
+    })]);
     try { await remove(manifest(fixture.key)); } finally { resume(); }
     expect(await result).toMatchObject({ $metadata: { httpStatusCode: 412 } });
     await absent(manifest(fixture.key));

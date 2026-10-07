@@ -132,7 +132,7 @@ export class AttachMedia {
     }
 
     if (input.kind === "image") {
-      await this.variantGenerator.generate(input.key);
+      await this.variantGenerator.generate(input.key, { writeProtocol: upload.writeProtocol ?? "legacy" });
     }
 
     const media = ListingMedia.create({

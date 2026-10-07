@@ -448,6 +448,23 @@ describe("useUploadQueue — parallel batch compression", () => {
       );
     });
 
+    it("opts into fencing and forwards the signed If-Match header to the native PUT", async () => {
+      mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
+      mockPresignMutateAsync.mockResolvedValue({
+        uploadUrl: "http://localhost/conditional", key: "conditional-key",
+        headers: { "if-match": '"placeholder"', "content-type": "image/jpeg" },
+      });
+      const { result } = renderHook(() => useUploadQueue("draft-9", payload), { wrapper });
+      await waitFor(() => expect(result.current.photos.find((p) => p.photoId === "left-behind"))
+        .toMatchObject({ state: "uploaded", key: "conditional-key" }));
+
+      expect(mockPresignMutateAsync).toHaveBeenCalledWith(expect.objectContaining({ writeProtocol: "conditional-v1" }));
+      expect(mockUploadAsync).toHaveBeenCalledWith("http://localhost/conditional",
+        "file:///doc/listing-staging/draft-9/left-behind.jpg", expect.objectContaining({
+          httpMethod: "PUT", headers: { "if-match": '"placeholder"', "content-type": "image/jpeg" },
+        }));
+    });
+
     it("uploads that photo once when the app or network resumes while it is starting", async () => {
       mockListLocalPhotoIds.mockResolvedValueOnce(["left-behind"]);
       // The upload's first step, reading the staged file, is held open.

@@ -17,6 +17,8 @@ export class PrismaMediaUploadRepository implements MediaUploadRepository {
         kind: upload.kind,
         contentType: upload.contentType,
         sizeBytes: upload.sizeBytes,
+        writeProtocol: upload.writeProtocol ?? "legacy",
+        objectKeys: upload.objectKeys ?? [],
         createdAt: upload.createdAt,
       },
     });
@@ -35,6 +37,8 @@ export class PrismaMediaUploadRepository implements MediaUploadRepository {
       kind: row.kind,
       contentType: row.contentType,
       sizeBytes: row.sizeBytes,
+      writeProtocol: row.writeProtocol as "legacy" | "conditional-v1",
+      objectKeys: row.objectKeys,
       createdAt: row.createdAt,
       adopted: row.media !== null,
     }));

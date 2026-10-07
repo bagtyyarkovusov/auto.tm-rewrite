@@ -9,6 +9,8 @@ const awsMocks = vi.hoisted(() => ({
   signedClient: undefined as undefined | { endpoint: string; sent: unknown[] },
   signedCommand: undefined as undefined | { input: Record<string, unknown> },
   sendResult: undefined as undefined | (() => Promise<unknown>),
+  versioning: undefined as string | undefined,
+  conditionalSupported: true,
 }));
 
 vi.mock("@aws-sdk/client-s3", () => {
@@ -21,9 +23,33 @@ vi.mock("@aws-sdk/client-s3", () => {
       awsMocks.clients.push(this);
     }
 
+    private objects = new Map<string, string>();
+
     async send(command: unknown): Promise<unknown> {
       this.sent.push(command);
-      return awsMocks.sendResult?.();
+      const input = (command as { input: Record<string, unknown> }).input;
+      if (command instanceof GetBucketVersioningCommand) return { Status: awsMocks.versioning };
+      const key = String(input["Key"]);
+      const probe = key.endsWith("/.conditional-probe");
+      if (!probe && awsMocks.sendResult) {
+        const result = await awsMocks.sendResult();
+        if (command instanceof PutObjectCommand) this.objects.set(key, '"placeholder"');
+        return result;
+      }
+      if (command instanceof PutObjectCommand) {
+        if (awsMocks.conditionalSupported && (
+          (input["IfMatch"] && input["IfMatch"] !== this.objects.get(key)) ||
+          (input["IfNoneMatch"] === "*" && this.objects.has(key))
+        )) throw Object.assign(new Error("PreconditionFailed"), { $metadata: { httpStatusCode: 412 } });
+        this.objects.set(key, '"placeholder"');
+        return { ETag: '"placeholder"' };
+      }
+      if (command instanceof DeleteObjectCommand) { this.objects.delete(key); return {}; }
+      if (command instanceof HeadObjectCommand) {
+        if (!this.objects.has(key)) throw Object.assign(new Error("NotFound"), { name: "NotFound" });
+        return { ETag: this.objects.get(key) };
+      }
+      return {};
     }
   }
 
@@ -51,7 +77,11 @@ vi.mock("@aws-sdk/client-s3", () => {
     }
   }
 
-  return { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand };
+  class GetBucketVersioningCommand {
+    constructor(readonly input: Record<string, unknown>) {}
+  }
+
+  return { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand, GetBucketVersioningCommand };
 });
 
 vi.mock("@aws-sdk/s3-request-presigner", () => ({
@@ -72,6 +102,8 @@ function makeAdapter(publicUrl: string, endpoint = "http://minio.internal:9000")
   awsMocks.signedClient = undefined;
   awsMocks.signedCommand = undefined;
   awsMocks.sendResult = undefined;
+  awsMocks.versioning = undefined;
+  awsMocks.conditionalSupported = true;
 
   const config = {
     get: vi.fn((key: keyof Env) => {
@@ -186,7 +218,7 @@ describe("MinioMediaStorageAdapter", () => {
 
   it("requires the placeholder ETag in the signed Listing image PUT (#725)", async () => {
     const adapter = makeAdapter("https://media.auto.tm");
-    awsMocks.sendResult = async () => ({ ETag: '\"placeholder\"' });
+    awsMocks.sendResult = async () => ({ ETag: '"placeholder"' });
     const result = await adapter.presignUpload({
       key: "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/original.jpg",
       contentType: "image/jpeg",
@@ -194,8 +226,8 @@ describe("MinioMediaStorageAdapter", () => {
       ...{ writeProtocol: "conditional-v1" as const },
     });
 
-    expect(result).toMatchObject({ headers: { "if-match": '\"placeholder\"' } });
-    expect(awsMocks.signedCommand?.input).toMatchObject({ IfMatch: '\"placeholder\"' });
+    expect(result).toMatchObject({ headers: { "if-match": '"placeholder"' } });
+    expect(awsMocks.signedCommand?.input).toMatchObject({ IfMatch: '"placeholder"' });
   });
 
   it("initializes the fixed original and eight variants before issuing conditional upload authority (#725)", async () => {
@@ -206,7 +238,7 @@ describe("MinioMediaStorageAdapter", () => {
       if (command.input["Key"] && command.input["Body"] !== undefined) {
         initialized.add(String(command.input["Key"]));
       }
-      return { ETag: '\"placeholder\"' };
+      return { ETag: '"placeholder"' };
     };
     await adapter.presignUpload({
       key: "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/original.jpg",
@@ -236,6 +268,26 @@ describe("MinioMediaStorageAdapter", () => {
       contentType: "image/jpeg", sizeBytes: 1024,
       ...{ writeProtocol: "conditional-v1" as const },
     })).rejects.toThrow("storage unavailable");
+    expect(awsMocks.signedCommand).toBeUndefined();
+  });
+
+  it.each(["Enabled", "Suspended"])("refuses conditional authority on a %s versioned bucket", async (status) => {
+    const adapter = makeAdapter("https://media.auto.tm");
+    awsMocks.versioning = status;
+    await expect(adapter.presignUpload({
+      key: "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/original.jpg",
+      contentType: "image/jpeg", sizeBytes: 1024, writeProtocol: "conditional-v1",
+    })).rejects.toThrow("unversioned bucket");
+    expect(awsMocks.signedCommand).toBeUndefined();
+  });
+
+  it("refuses conditional authority when the provider ignores If-Match", async () => {
+    const adapter = makeAdapter("https://media.auto.tm");
+    awsMocks.conditionalSupported = false;
+    await expect(adapter.presignUpload({
+      key: "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/original.jpg",
+      contentType: "image/jpeg", sizeBytes: 1024, writeProtocol: "conditional-v1",
+    })).rejects.toThrow("does not enforce conditional writes");
     expect(awsMocks.signedCommand).toBeUndefined();
   });
 

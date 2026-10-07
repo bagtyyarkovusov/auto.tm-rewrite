@@ -1,5 +1,5 @@
 export interface ImageVariantGenerator {
-  generate(originalKey: string): Promise<{
+  generate(originalKey: string, options?: { writeProtocol?: "legacy" | "conditional-v1" }): Promise<{
     variants: {
       thumbnail: string;
       list: string;
