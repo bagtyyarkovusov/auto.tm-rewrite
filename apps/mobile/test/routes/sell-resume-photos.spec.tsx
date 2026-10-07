@@ -95,7 +95,7 @@ vi.mock("../../src/listings/wizard/CheckAndPublish", async () => {
 vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [] } }) }));
 vi.mock("../../src/api/catalog/useModels", () => ({ useModels: () => ({ data: { items: [] } }) }));
 
-const { id, photoId, savedPhoto } = fixture;
+const { id, photoId, savedPhoto, savedPhotos } = fixture;
 const LATER_STEPS = ["photos", "price", "location", "contact"];
 
 const publishButton = (screen: ReturnType<typeof renderMobile>) => screen.getByRole("button", { name: "Publish" });
@@ -127,7 +127,7 @@ describe("Sell wizard, resuming a draft whose saved photo is still staged on the
     const screen = await openDraftFromSellTab();
 
     expect(screen.getByRole("header", { name: "Check and publish, Step 7 of 7" })).toBeTruthy();
-    await screen.findByText(/^photo /);
+    expect(await screen.findAllByText(/^photo /)).toHaveLength(3);
     await letAutosaveRun();
 
     expect(screen.queryByText(/^Fill in: /)).toBeNull();
@@ -139,13 +139,13 @@ describe("Sell wizard, resuming a draft whose saved photo is still staged on the
     // Every save carried the photo and the completed steps.
     expect(savedPayloads().length).toBeGreaterThan(0);
     for (const payload of savedPayloads()) {
-      expect(payload.photos).toEqual([savedPhoto]);
+      expect(payload.photos).toEqual(savedPhotos);
       expect(payload.validatedSteps).toEqual(expect.arrayContaining(LATER_STEPS));
     }
 
     fireEvent.press(publishButton(screen));
     await waitFor(() => expect(fixture.mutation.mutateAsync).toHaveBeenCalledWith(id));
-    for (const payload of savedPayloads()) expect(payload.photos).toEqual([savedPhoto]);
+    for (const payload of savedPayloads()) expect(payload.photos).toEqual(savedPhotos);
   });
 
   it("saves nothing while the device is still listing the staged photos", async () => {
@@ -161,6 +161,6 @@ describe("Sell wizard, resuming a draft whose saved photo is still staged on the
     await letAutosaveRun();
 
     expect(publishButton(screen).props.accessibilityState).toMatchObject({ disabled: false });
-    for (const payload of savedPayloads()) expect(payload.photos).toEqual([savedPhoto]);
+    for (const payload of savedPayloads()) expect(payload.photos).toEqual(savedPhotos);
   });
 });

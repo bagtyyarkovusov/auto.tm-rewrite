@@ -430,7 +430,7 @@ describe("Check and publish: what blocks publishing (#588)", () => {
 
     expect(await screen.findByText("Photos failed: 1. Retry or remove them.")).toBeTruthy();
     expect(disabled(screen)).toBe(true);
-    expect(screen.getByRole("button", { name: "Photos, Photos: 2, Fill in" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Photos, Photos: 4, Fill in" })).toBeTruthy();
   });
 
   it("lists missing steps, then uploading photos, then failed photos", async () => {

@@ -205,7 +205,9 @@ describe("Sell wizard, closing a draft with ✕ and opening one again in the sam
     await letAutosaveRun();
 
     expect(screen.queryByText(new RegExp(a.photoId))).toBeNull();
-    expect(screen.getAllByText(/^photo /)).toHaveLength(1);
+    expect(screen.getAllByText(/^photo /)).toHaveLength(3);
+    for (const photo of b.savedPhotos) expect(screen.getByText(`photo ${photo.photoId} attached ${photo.key}`)).toBeTruthy();
+    for (const photo of a.savedPhotos) expect(screen.queryByText(new RegExp(photo.photoId))).toBeNull();
     expectDraftAsSaved(screen, b);
     for (const payload of savedPayloads(a.id)) expect(payload.photos).toEqual(a.savedPhotos);
   });
