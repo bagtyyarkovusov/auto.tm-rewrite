@@ -76,7 +76,7 @@ function staged(photoId: string, key: string, sortOrder: number): StagedPhoto {
  * contract the real ones do: attach mints a fresh server UUID, and remove and
  * reorder only know server media IDs that belong to the Listing.
  */
-function createMediaApi(initial: ListingsSchemas.ListingMedia[]) {
+function createMediaApi(initial: ListingsSchemas.ListingMedia[], enforceFloor = false) {
   const rows = new Map(initial.map((m) => [m.id, { ...m }]));
   const requests = {
     attach: [] as ListingsSchemas.AttachMediaRequest[],
@@ -90,6 +90,7 @@ function createMediaApi(initial: ListingsSchemas.ListingMedia[]) {
     http.patch("*/listings/:id", async ({ request }) => {
       const body = (await request.json()) as ListingsSchemas.EditListingRequest;
       requests.edit.push(body);
+      if (enforceFloor && rows.size < 3) return HttpResponse.json({ code: "PHOTO_MINIMUM_REQUIRED", message: "Three photos required" }, { status: 400 });
       return HttpResponse.json({
         id: LISTING_ID,
         sellerId: "550e8400-e29b-41d4-a716-446655440003",
@@ -215,6 +216,16 @@ function sentMediaIds(api: ReturnType<typeof createMediaApi>): string[] {
 describe("useSaveListingEdit server media IDs", () => {
   beforeEach(() => {
     server.resetHandlers();
+  });
+
+  it("repairs an older one-photo Listing before saving its field changes", async () => {
+    const seed = [persisted(PERSISTED_A, 0)];
+    const api = createMediaApi(seed, true);
+    const photos = [staged(PERSISTED_A, KEY_A, 0), staged(LOCAL_NEW_1, "pending/new-1/original.jpg", 1), staged(LOCAL_NEW_2, "pending/new-2/original.jpg", 2)];
+    const { result } = renderSave({ photos, seed, payload: { description: "Repaired Listing" } });
+    await result.current.save().catch(() => undefined);
+    await waitFor(() => expect(result.current.status).toBe("succeeded"));
+    expect(api.requests.edit.at(-1)?.description).toBe("Repaired Listing");
   });
 
   it("reorders a new attachment by the ID attach returned, not its local staging UUID", async () => {
