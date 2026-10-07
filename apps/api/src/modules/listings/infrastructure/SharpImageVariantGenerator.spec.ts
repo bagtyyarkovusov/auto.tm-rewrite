@@ -1,9 +1,12 @@
+import { randomBytes } from "node:crypto";
+
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { ConfigService } from "@nestjs/config";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 
 import type { Env } from "../../../env.schema";
+import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import { SharpImageVariantGenerator } from "./SharpImageVariantGenerator";
 
 /** An in-memory stand-in for the bucket the generator reads and writes. */
@@ -92,5 +95,47 @@ describe("SharpImageVariantGenerator", () => {
     await generatorWith(bucket).generate(key);
 
     expect(Buffer.compare(bucket.objects.get(key)!, input)).toBe(0);
+  });
+
+  // #735 / ADR-0089: bytes that can never become an image are a permanent
+  // failure (UPLOAD_OBJECT_INVALID), so publish names the photo and retires
+  // only that upload; transport failures stay transient and retryable.
+  it("reports bytes that are not an image as UPLOAD_OBJECT_INVALID", async () => {
+    const key = "pending/2a3b4c5d-6e7f-8a9b-0c1d-2e3f4a5b6c7d/original.jpg";
+    const bucket = fakeBucket({ [key]: Buffer.from("this is not an image at all") });
+
+    const err = await generatorWith(bucket).generate(key).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(DomainError);
+    expect((err as DomainError).code).toBe(LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID);
+  });
+
+  it("reports an image still over the upload cap after cleaning as UPLOAD_OBJECT_INVALID", async () => {
+    const key = "pending/3b4c5d6e-7f8a-9b0c-1d2e-3f4a5b6c7d8e/original.jpg";
+    // Random pixels compress badly, so even the lowest cleaning quality stays
+    // over the 5 MB cap; the EXIF tag forces the cleaning pass.
+    const noise = await sharp(
+      Buffer.from(randomBytes(3600 * 2400 * 3)),
+      { raw: { width: 3600, height: 2400, channels: 3 } },
+    )
+      .jpeg({ quality: 100 })
+      .withExif({ IFD0: { Make: "NoiseCam" } })
+      .toBuffer();
+    const bucket = fakeBucket({ [key]: noise });
+
+    const err = await generatorWith(bucket).generate(key).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(DomainError);
+    expect((err as DomainError).code).toBe(LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID);
+  }, 20000);
+
+  it("keeps a missing stored object a transient error, not UPLOAD_OBJECT_INVALID", async () => {
+    const key = "pending/4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f/original.jpg";
+    const bucket = fakeBucket({});
+
+    const err = await generatorWith(bucket).generate(key).catch((e: unknown) => e);
+
+    expect(err).not.toBeInstanceOf(DomainError);
+    expect((err as Error).name).toBe("NoSuchKey");
   });
 });
