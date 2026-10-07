@@ -28,7 +28,7 @@ Use the screen's existing feed state components and recovery actions.
 
 - **Home visual mismatch, in scope:** title is `text-headline` (22) bold with a
   filled 56-point car disc and a filled 36-point arrow. Quiet card requires a
-  17-point semibold title, footnote count, plain muted car/chevron, compact
+  16-point semibold title, footnote count, plain muted car/chevron, compact
   padding, rounded-2xl raised surface and a light hairline edge.
 - **Home documentation defect, in scope:** mutable hi-fi points to the removed
   tabs index and describes an unshipped personalized stub, obsolete font and
@@ -69,3 +69,15 @@ No visual-only test assertions are edited. Existing source route checks are
 retained; their presence is not counted as rendered behavior proof. Run existing
 rendered Home/feed behavior checks and add only coverage needed by actual
 behavior changes. Visual-only styling has the ADR-0070 red-test exemption.
+
+## Before visual evidence
+
+`before-home-dark-ru.png` is the preserved native dark RU populated Home from
+the root baseline session (Medium_Phone_API_36.1 / emulator5554, JS `080566ca`,
+API `b80f021b`). Root's `/tmp/ui696-baseline-final-evidence.md` records the run.
+HomeHeader's blob `eded0ff838cc798dfcbfc4e8c4f206f51c148177` is identical in
+that JS head and accepted main `9c5d9ce0`. Inspected before editing: the filled
+car/arrow discs and oversized label dominate the raised card. This proves one
+before state with source provenance; light/loading/error/empty before captures
+are absent and it is not an exact-final-SHA full-state claim. New affected-state
+proof remains pending the assigned native slot.
