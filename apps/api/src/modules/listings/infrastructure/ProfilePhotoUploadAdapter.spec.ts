@@ -205,7 +205,10 @@ describe("ProfilePhotoUploadAdapter", () => {
 
       await expect(photos.adopt({ userId: "user-1", key: KEY })).rejects.toMatchObject({
         status: 409,
-        response: { code: "UPLOAD_ALREADY_ATTACHED" },
+        response: {
+          code: "UPLOAD_ALREADY_ATTACHED",
+          details: { reason: "UPLOAD_ATTACHED_TO_LISTING" },
+        },
       });
       expect(world.profilePhotos.size).toBe(0);
       expect(world.media).toHaveLength(1);
@@ -255,7 +258,10 @@ describe("ProfilePhotoUploadAdapter", () => {
       expect(first).toEqual({ status: "fulfilled", value: { key: KEY } });
       expect(second).toMatchObject({
         status: "rejected",
-        reason: { status: 409, response: { code: "UPLOAD_ALREADY_ATTACHED" } },
+        reason: {
+          status: 409,
+          response: { code: "UPLOAD_ALREADY_ATTACHED", details: { reason: "UPLOAD_PREPARING" } },
+        },
       });
       expect(generator.calls).toHaveLength(1);
       expect(world.profilePhotos.get("user-1")).toEqual({ uploadId, key: KEY });
@@ -342,7 +348,10 @@ describe("ProfilePhotoUploadAdapter", () => {
 
       await expect(photos.adopt({ userId: "user-1", key: KEY })).resolves.toEqual({ key: KEY });
 
-      expect(overlapping).toMatchObject({ status: 409, response: { code: "UPLOAD_ALREADY_ATTACHED" } });
+      expect(overlapping).toMatchObject({
+        status: 409,
+        response: { code: "UPLOAD_ALREADY_ATTACHED", details: { reason: "UPLOAD_PREPARING" } },
+      });
       expect(generator.calls).toHaveLength(1);
       expect(world.profilePhotos.get("user-1")).toEqual({ uploadId, key: KEY });
       expect(world.cleanups).toEqual([]);

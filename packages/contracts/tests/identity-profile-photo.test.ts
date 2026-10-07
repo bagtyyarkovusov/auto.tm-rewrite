@@ -6,6 +6,8 @@ import {
   RemoveUserPhotoResponseSchema,
 } from "../src/schemas/admin";
 import {
+  ProfilePhotoConflictDetailsSchema,
+  ProfilePhotoConflictReason,
   ProfilePhotoErrorCode,
   SetProfilePhotoRequestSchema,
 } from "../src/schemas/identity";
@@ -36,6 +38,26 @@ describe("ProfilePhotoErrorCode", () => {
       UploadAlreadyAttached: ListingsErrorCode.UploadAlreadyAttached,
       UploadObjectInvalid: ListingsErrorCode.UploadObjectInvalid,
     });
+  });
+});
+
+describe("ProfilePhotoConflictReason (details.reason of a 409)", () => {
+  it("tells an upload still being set from one that belongs to a Listing", () => {
+    expect(ProfilePhotoConflictReason).toEqual({
+      UploadPreparing: "UPLOAD_PREPARING",
+      UploadAttachedToListing: "UPLOAD_ATTACHED_TO_LISTING",
+    });
+  });
+
+  it("reads only those two reasons", () => {
+    expect(ProfilePhotoConflictDetailsSchema.parse({ reason: "UPLOAD_PREPARING" })).toEqual({
+      reason: "UPLOAD_PREPARING",
+    });
+    expect(
+      ProfilePhotoConflictDetailsSchema.safeParse({ reason: "UPLOAD_ATTACHED_TO_LISTING" }).success,
+    ).toBe(true);
+    expect(ProfilePhotoConflictDetailsSchema.safeParse({ reason: "OTHER" }).success).toBe(false);
+    expect(ProfilePhotoConflictDetailsSchema.safeParse({}).success).toBe(false);
   });
 });
 
