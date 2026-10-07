@@ -408,7 +408,7 @@ describe("useSaveListingEdit", () => {
     expect(callLog).toEqual([
       "attach-1", // first attempt fails
       "attach-2", // retry succeeds
-      "fields"
+      "fields",
       "remove",
       "reorder",
     ]);
