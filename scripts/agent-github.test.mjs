@@ -83,6 +83,7 @@ test("queue snapshots preserve pending checks and flag a possibly incomplete lis
   assert.equal(result.possiblyMore, true);
   assert.deepEqual(result.prs[0].checks, [{ name: "pr", state: "IN_PROGRESS" }]);
   assert.equal(result.prs[0].execution[0].text, "- **Status:** verifying");
+  assert.deepEqual(result.omitted, ["full bodies", "comments", "formal reviews"]);
 });
 
 test("full bodies require explicit opt-in and GraphQL failures never become empty history", () => {
@@ -90,5 +91,7 @@ test("full bodies require explicit opt-in and GraphQL failures never become empt
   const deps = { repo: "owner/repo", gh: () => JSON.stringify(item) };
   assert.equal(runCommand(parseCommand(["issue", "7"]), deps).body, undefined);
   assert.equal(runCommand(parseCommand(["issue", "7", "--full"]), deps).body, item.body);
+  assert.deepEqual(runCommand(parseCommand(["issue", "7", "--full"]), deps).omitted, ["comments"]);
+  assert.deepEqual(runCommand(parseCommand(["pr", "7", "--full"]), deps).omitted, ["comments", "formal reviews"]);
   assert.throws(() => runCommand(parseCommand(["comments", "issue", "7"]), { repo: "owner/repo", gh: () => JSON.stringify({ errors: [{ message: "Not authorized" }] }) }), /errors/);
 });

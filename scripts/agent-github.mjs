@@ -154,12 +154,13 @@ export function runCommand(config, dependencies = {}) {
   const prFields = "number,title,state,url,headRefName,headRefOid,isDraft,autoMergeRequest,statusCheckRollup,body";
   if (config.command === "queue") {
     const items = JSON.parse(gh(["pr", "list", "--repo", repo.name, "--state", "open", "--limit", String(config.limit), "--json", prFields]));
-    return { snapshot: true, limit: config.limit, possiblyMore: items.length === config.limit, prs: items.map((item) => compactItem(item, "pr", limit)) };
+    return { snapshot: true, limit: config.limit, possiblyMore: items.length === config.limit, omitted: ["full bodies", "comments", "formal reviews"], prs: items.map((item) => compactItem(item, "pr", limit)) };
   }
   const kind = config.command === "issue" ? "issue" : "pr";
   const item = JSON.parse(gh([kind, "view", String(config.number), "--repo", repo.name, "--json", kind === "issue" ? issueFields : prFields]));
   if (config.command === "execution") return { number: item.number, head: item.headRefOid, execution: compactItem(item, "pr", limit).execution };
-  return { ...compactItem(item, kind, limit), ...(config.full ? { body: item.body } : {}), omitted: config.full ? [] : ["full body", "comments", "formal reviews"] };
+  const omitted = [...(config.full ? [] : ["full body"]), "comments", ...(kind === "pr" ? ["formal reviews"] : [])];
+  return { ...compactItem(item, kind, limit), ...(config.full ? { body: item.body } : {}), omitted };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -9,6 +9,10 @@ Use Context7 for external library, framework, SDK, API, CLI and cloud-service qu
 3. Query the specific operation. If insufficient, narrow the question and retry using arguments supported by the exposed tool. If the server remains unavailable after one retry, use official upstream documentation and record the fallback.
 4. Record the library ID, verified behavior and any fallback in Execution state. Internal-only changes record `not applicable`.
 
+## Library-ID reference
+
+Resolve current IDs through Context7 rather than maintaining a second catalog. Skip resolution only for an exact ID supplied by the user.
+
 ## Boundaries
 
 The issue and owning specification define intended behavior; source and runtime evidence establish current behavior. Context7 establishes neither. Use [the context map](../../CONTEXT-MAP.md) to find the owning area and the lockfile for resolved versions.
