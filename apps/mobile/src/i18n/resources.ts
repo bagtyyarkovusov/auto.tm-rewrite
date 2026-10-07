@@ -670,6 +670,9 @@ export const resources: Resource = {
       signInToManageDescription: "Войдите, чтобы управлять объявлениями и черновиками.",
     },
     account: {
+      permT: "Нет доступа к камере",
+      permD: "Чтобы сделать фото, разрешите AutoTM доступ к камере в настройках системы.",
+      openSettings: "Открыть настройки",
       photoT: "Фото профиля",
       changePhoto: "Изменить фото профиля",
       takePhoto: "Сделать фото",
@@ -1477,6 +1480,9 @@ export const resources: Resource = {
       signInToManageDescription: "Bildirişleri we garalamalary dolandyrmak üçin giriň.",
     },
     account: {
+      permT: "Kamera rugsady ýok",
+      permD: "Surata almak üçin ulgam sazlamalarynda AutoTM-e kamera rugsadyny beriň.",
+      openSettings: "Sazlamalary aç",
       photoT: "Profil suraty",
       changePhoto: "Profil suratyny üýtget",
       takePhoto: "Surata al",
@@ -2282,6 +2288,9 @@ export const resources: Resource = {
       signInToManageDescription: "Sign in to manage your listings and drafts.",
     },
     account: {
+      permT: "Camera access is off",
+      permD: "To take a photo, allow camera access for AutoTM in system settings.",
+      openSettings: "Open settings",
       photoT: "Profile photo",
       changePhoto: "Change profile photo",
       takePhoto: "Take photo",

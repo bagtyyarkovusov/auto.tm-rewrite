@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import {
   Camera,
@@ -13,6 +14,7 @@ import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useMe } from "../src/api/identity/useMe";
+import { useProfilePhotoUpload } from "../src/identity/useProfilePhotoUpload";
 import { useDisplayName } from "../src/identity/useDisplayName";
 import { useAuth } from "../src/auth/useAuth";
 import { useLogout } from "../src/auth/useLogout";
@@ -235,6 +237,7 @@ function SignedInProfile() {
   const { data, isPending, isError, error, refetch } = useMe();
   const displayNameOf = useDisplayName();
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  const photo = useProfilePhotoUpload();
 
   if (isPending) return <LoadingState />;
 
@@ -295,12 +298,26 @@ function SignedInProfile() {
       <SignInMethods phone={data.phone} email={data.email} />
 
       <AccountActions />
+      <AlertDialog open={photo.cameraDenied} onOpenChange={(open) => { if (!open) photo.dismissCameraDenied(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("permT")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("permD")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onPress={photo.dismissCameraDenied}><Text>{t("common:cancel")}</Text></AlertDialogCancel>
+            <AlertDialogAction onPress={() => { photo.dismissCameraDenied(); void Linking.openSettings(); }}>
+              <Text>{t("openSettings")}</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <ProfilePhotoSheet
         open={photoSheetOpen}
         onOpenChange={setPhotoSheetOpen}
         hasPhoto={Boolean(data.avatarKey)}
-        onTakePhoto={() => {}}
-        onChoosePhoto={() => {}}
+        onTakePhoto={() => void photo.pick("camera")}
+        onChoosePhoto={() => void photo.pick("library")}
         onRemovePhoto={() => {}}
       />
     </ScrollView>
