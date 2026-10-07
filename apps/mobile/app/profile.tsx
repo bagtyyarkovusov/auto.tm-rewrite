@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import Svg, { Circle } from "react-native-svg";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { AccessibilityInfo, Platform, Pressable, ScrollView, View } from "react-native";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import {
@@ -241,6 +241,18 @@ function SignedInProfile() {
   const displayNameOf = useDisplayName();
   const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
   const photo = useProfilePhotoUpload();
+  const photoErrorText = photo.state.status === "idle" || photo.state.status === "uploading" || photo.state.status === "removing" ? null
+    : photo.state.reason === "suspended" ? t("common:accountRestrictedDescription")
+    : photo.state.reason === "listing" ? t("photoAttached")
+    : photo.state.status === "offline" ? t("common:offline")
+    : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail");
+  const photoStatusText = photo.state.status === "uploading" ?
+    t(photo.state.preparing ? "photoPreparing" : "uploading", { p: photo.state.percent })
+    : photo.state.status === "removing" ? t("photoRemoving") : null;
+  useEffect(() => {
+    const announcement = photoErrorText ?? photoStatusText;
+    if (announcement && Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(announcement);
+  }, [photoErrorText, photoStatusText]);
 
   if (isPending) return <LoadingState />;
 
@@ -321,7 +333,7 @@ function SignedInProfile() {
       {photo.state.status === "removing" ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoRemoving")}</Text> : null}
       {photo.state.status !== "idle" && photo.state.status !== "uploading" && photo.state.status !== "removing" ? <View className="mx-4 mb-4 gap-2 rounded-2xl bg-destructive/10 px-4 py-3">
         <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" className="text-body text-destructive">
-          {photo.state.reason === "suspended" ? t("common:accountRestrictedDescription") : photo.state.reason === "listing" ? t("photoAttached") : photo.state.status === "offline" ? t("common:offline") : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail")}
+          {photoErrorText}
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {photo.state.reason === "suspended" ? null : photo.state.status === "failed" || photo.state.status === "offline" ?

@@ -101,16 +101,24 @@ export function useProfilePhotoUpload() {
 
   async function remove() {
     profilePhotoUploadStore.setState({ state: { status: "removing" } });
+    let owner = removalSession;
     try {
-      removalSession ??= await capturePhotoSession();
-      await removePhoto.mutateAsync(removalSession);
-      await removalSession.current();
+      owner ??= await capturePhotoSession(() => {
+        if (removalSession !== owner) return;
+        removalSession = null;
+        owner?.dispose();
+        profilePhotoUploadStore.setState({ state: { status: "idle" } });
+      });
+      removalSession = owner;
+      await removePhoto.mutateAsync(owner);
+      await owner.current();
+      if (removalSession !== owner) return;
       profilePhotoUploadStore.setState({ state: { status: "idle" } });
       profileNoticeStore.getState().show({ kind: "photoRemoved" });
-      removalSession.dispose();
+      owner.dispose();
       removalSession = null;
     } catch (error) {
-      if (error instanceof PhotoSessionEnded) { cancel(); return; }
+      if (error instanceof PhotoSessionEnded || owner !== removalSession) { owner?.dispose(); return; }
       const status = !onlineManager.isOnline() || (error instanceof ApiError && error.status === 0) ? "offline" : "failed";
       profilePhotoUploadStore.setState({ state: { status, operation: "remove", reason: refusalReason(error) } });
     }
