@@ -295,9 +295,17 @@ async function signupProbeRequest() {
     body: { phone },
   });
   expectStatus(res, [200, 201], "signup probe OTP request");
+  // The mock-SMS log line carries the phone's last four digits and the start
+  // of this request's id, so two phones that share their last four still grep
+  // apart. Keep in step with requestTag in apps/api's HttpOtpSenderAdapter.
+  const requestId = res.json?.requestId;
+  if (typeof requestId !== "string" || requestId.length < 8) {
+    throw new Error("signup probe OTP request returned no requestId");
+  }
   console.log(
     "PASS  signup-probe-request — OTP issued for an unreserved number; " +
-      "pipe the code from the API mock-SMS log line into signup-probe-verify",
+      `grep the API mock-SMS log for 'mock] OTP for \\*\\*\\*${phone.slice(-4)} (req ${requestId.slice(0, 8)}):' ` +
+      "and pipe that line's code into signup-probe-verify",
   );
 }
 

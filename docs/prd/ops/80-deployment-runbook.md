@@ -131,13 +131,16 @@ driver delivers the code to the API log rather than to the caller:
 node scripts/staging-reviewer-flow-smoke.mjs signup-probe-request
 
 railway logs --service api --environment <env> -d --lines 200 \
-  | grep -a 'mock] OTP for \*\*\*<last four digits of the probe phone>:' | tail -1 | sed -E 's/.*: ([0-9]{6}).*/\1/' \
+  | grep -a 'mock] OTP for \*\*\*<last four> (req <request tag>):' | tail -1 | sed -E 's/.*: ([0-9]{6}).*/\1/' \
   | node scripts/staging-reviewer-flow-smoke.mjs signup-probe-verify
 ```
 
-The log line carries only the last four digits of the phone number
-(`[mock] OTP for ***3456: 123456`), so pick the newest line with the probe
-phone's last four digits, requested just now.
+The log line carries only the last four digits of the phone number and the
+first eight characters of the code request's id
+(`[mock] OTP for ***3456 (req 1a2b3c4d): 123456`). Nothing else derived from the
+phone is logged: a hash beside the last four digits would pick the number out.
+Two phones can share their last four, so `signup-probe-request` prints the exact
+`***<last four> (req <request tag>)` pattern for its own request; grep for it.
 
 The code goes down a pipe rather than into an argument: it is single-use, but
 argv lands in shell history and in `ps` output.
@@ -223,6 +226,73 @@ pnpm --filter @auto-tm/db reviewer:scenario -- --mode revoke
 ```
 
 Revocation rewrites reserved reviewer user phones to non-login `revoked:<id>` tombstones, clears their reserved emails, deletes their sessions, invalidates push tokens, and writes a `REVIEWER_SCENARIO_REVOKE` audit row. Remove or disable `REVIEW_DEMO_ACCOUNTS_JSON` / `REVIEW_DEMO_ACCOUNT_ENABLED` in the same operator change when store review is no longer in flight.
+
+### Demo inventory seed and removal
+
+Reviewer production starts empty. The demo inventory fills it for store review and closed testing: about 50 active car Listings, each with 5 to 8 photographs of that car, spread over demo sellers. It is temporary and one command removes it. It is operator work, not a boot side effect, and an agent runs it against staging or production only on the founder's go-ahead in chat.
+
+Run the reviewer scenario seed first. The demo inventory adds Listings around it and touches none of its rows. Run it on staging before production.
+
+The founder recorded two decisions on issue #703 on 2026-10-06:
+
+1. **Photo licensing.** 295 of the 297 photographs are CC BY or CC BY-SA and must be credited. They are accepted with the credits page `/<locale>/demo-credits`, which the Trust page links. Keep both deployed while the demo Listings are public.
+2. **Egress.** The seed downloads from `upload.wikimedia.org` inside the API container. This is approved for the files the manifest lists, in a seed the founder runs or approves for that run. It is not a standing dependency: nothing else may download from Wikimedia.
+
+Before seeding an environment, confirm:
+
+- The API's `/healthz` reports a commit at or after the merge of #704, so the container holds the script. Redeploy the API if it does not.
+- Web is deployed with `/<locale>/demo-credits`, and `/<locale>/trust` links to it.
+
+Both modes run inside the API container, where Postgres and MinIO are reachable on Railway's private network. The script refuses a public database proxy or a public MinIO host, and a `DATABASE_URL` that sets a `host` or `port` query parameter. It needs the catalog seeded and the media buckets created.
+
+Required environment:
+
+- `APP_ENV=staging` or `APP_ENV=production`. The script also runs with `APP_ENV=development` or `test`, and then only against a loopback Postgres and MinIO.
+- `DEMO_INVENTORY_AUTHORIZATION=seed-demo-inventory` to seed, `DEMO_INVENTORY_AUTHORIZATION=remove-demo-inventory` to remove. Pass it on the command line as below, so it is not left in the service's variables.
+- `SIGNUPS_ENABLED=false` to seed production. Removal does not check it.
+- `DATABASE_URL`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY`, which the API service already has.
+
+Seed:
+
+```bash
+railway ssh --service api --environment <env> -- sh -c \
+  'cd /app && DEMO_INVENTORY_AUTHORIZATION=seed-demo-inventory node --import tsx packages/db/scripts/demo-inventory.ts --mode seed'
+```
+
+The seed downloads each photograph from Wikimedia Commons (`upload.wikimedia.org`), one at a time, so the container needs outbound HTTPS and the first run takes a while. It prints one line per Listing and then the counts. A rerun converges: fixed ids, no duplicates, and it keeps each Listing's publication time and views. A rerun also makes every demo Listing active again, including one an admin blocked or removed since.
+
+If it stops part way, run it again: photographs already downloaded are kept and not asked for twice. If Commons keeps refusing (HTTP 429 or 403 on the same file after a second run), stop, run the removal below to clear the partial inventory, and report the printed reason.
+
+After a successful seed, check:
+
+1. The last line reads `Demo inventory converged 10 sellers, 47 Listings, 297 photos and 1485 stored objects`.
+2. The feed shows the Listings, and one Listing's gallery loads through the public media host.
+3. A demo seller shows a Display Name, not "Deleted user".
+4. `/<locale>/demo-credits` opens and lists the photographs.
+
+On failure it prints `Demo inventory seed failed:` and a reason. A failed download names the Commons file and the HTTP status, or says the answer was not an image. Any other error is named by its class only, because a driver message can quote a connection string; read the service logs for more.
+
+Nobody can sign in as a demo seller. Each holds one Sign-in Method, a phone tombstone of the form `demo-inventory:<user id>`, which is not a number and which the API never accepts for a sign-in code. It is stored because a User with no phone and no email is shown to buyers as a deleted User. Their Listings have calls off and chat on and carry no contact phone.
+
+The photographs are CC BY and CC BY-SA files. `packages/db/scripts/demo-inventory/photos.manifest.json` records each one's author, licence and source, and the web page `/<locale>/demo-credits` shows the same list. Keep that page deployed and linked for as long as the demo Listings are public.
+
+Remove, after review and testing end:
+
+```bash
+railway ssh --service api --environment <env> -- sh -c \
+  'cd /app && DEMO_INVENTORY_AUTHORIZATION=remove-demo-inventory node --import tsx packages/db/scripts/demo-inventory.ts --mode remove'
+```
+
+Removal deletes the demo sellers, their Listings and media rows, every stored object under `demo-inventory/` in `listing-photos`, and what reviewers and testers left on those Listings: favourites, Conversations with their messages and the photos sent in them (under `chat-attachments/<conversation id>/` in `chat-attachments`), Inspection Interests, and Content Reports about a demo Listing, a demo seller or a message in one of those Conversations. It prints the counts. It touches nothing else, and a second run reports zeros. If it fails while deleting stored objects, run it again: it finishes the deletion even when no demo seller is left.
+
+Removal refuses, deleting nothing, if a demo seller holds an email or any phone other than its tombstone. That account may now belong to a person; resolve it by hand before running removal again.
+
+Removal checklist:
+
+1. Run the removal command and keep the printed counts.
+2. Run it again and confirm it reports zeros.
+3. Take the credits page down: delete `apps/web/src/app/[locale]/demo-credits` and the Trust page's link to it (`trustDemoCreditsLabel` in `apps/web/src/app/[locale]/trust/page.tsx`, with its test), and deploy web.
+4. Audit rows and notification history that mention a demo Listing stay as history.
 
 ### Step 5 — Railway rollback and restore
 

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -88,6 +91,7 @@ describe("validateEasBuildProfile", () => {
 
   it.each([
     "https://user:password@api.autotm.bagtyyar.dev/api/v1",
+    "https://user@api.autotm.bagtyyar.dev/api/v1",
     "https://api.autotm.bagtyyar.dev:8443/api/v1",
   ])("rejects credentials or a custom port in a production URL without echoing it (%s)", (apiUrl) => {
     const errors = validateEasBuildProfile({
@@ -98,6 +102,24 @@ describe("validateEasBuildProfile", () => {
     });
     expect(errors).toEqual(["EXPO_PUBLIC_API_URL must not carry credentials or a custom port in production"]);
   });
+
+  it.each([
+    ["wss://user:password@api.autotm.bagtyyar.dev/ws/chat", "https://media.autotm.bagtyyar.dev"],
+    ["wss://user@api.autotm.bagtyyar.dev/ws/chat", "https://media.autotm.bagtyyar.dev"],
+    ["wss://api.autotm.bagtyyar.dev/ws/chat", "https://user:password@media.autotm.bagtyyar.dev"],
+  ])(
+    "rejects credentials on the production websocket or media URL, not only on the API URL",
+    (wsUrl, mediaUrl) => {
+      const errors = validateEasBuildProfile({
+        profile: "production",
+        apiUrl: "https://api.autotm.bagtyyar.dev/api/v1",
+        wsUrl,
+        mediaUrl,
+      });
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toMatch(/must not carry credentials or a custom port in production$/);
+    },
+  );
 
   it("rejects Railway hosts for production", () => {
     expect(
@@ -223,5 +245,64 @@ describe("validateAndroidApplicationId", () => {
       EXPO_PUBLIC_MEDIA_URL: "https://media.auto.tm",
     });
     expect(errors).toEqual(["ANDROID_APPLICATION_ID must be com.auto_tm.ynamly for the production profile"]);
+  });
+});
+
+describe("the real eas.json profiles", () => {
+  type EasProfile = { extends?: string; env?: Record<string, string> };
+  const easJson = JSON.parse(
+    readFileSync(resolve(__dirname, "../../eas.json"), "utf8"),
+  ) as { build: Record<string, EasProfile> };
+
+  /** The env EAS composes for a profile: its own over the one it extends. */
+  function profileEnv(name: string): Record<string, string> {
+    const profile = easJson.build[name];
+    if (!profile) throw new Error(`eas.json has no ${name} profile`);
+    const base = profile.extends ? profileEnv(profile.extends) : {};
+    return { ...base, ...profile.env, EAS_BUILD_PROFILE: name };
+  }
+
+  it("keeps the store package only on the production profile", () => {
+    for (const name of Object.keys(easJson.build)) {
+      if (name === "base") continue;
+      const env = profileEnv(name);
+      if (name === "production") {
+        expect(env["ANDROID_APPLICATION_ID"]).toBe("com.auto_tm.ynamly");
+      } else {
+        expect(env["ANDROID_APPLICATION_ID"]).toBeUndefined();
+      }
+      expect(validateAndroidApplicationId(name, env["ANDROID_APPLICATION_ID"])).toEqual([]);
+    }
+  });
+
+  it("lets every eas.json profile through the validator with a legitimate environment", () => {
+    const envByProfile: Record<string, Record<string, string>> = {
+      development: {},
+      staging: {
+        EXPO_PUBLIC_API_URL: "https://autotm-api-staging.up.railway.app/api/v1",
+        EXPO_PUBLIC_WS_URL: "wss://autotm-api-staging.up.railway.app/ws/chat",
+        EXPO_PUBLIC_MEDIA_URL: "https://autotm-media-staging.up.railway.app",
+      },
+      "production-smoke": {
+        EXPO_PUBLIC_API_URL: "https://autotm-api-production.up.railway.app/api/v1",
+        EXPO_PUBLIC_WS_URL: "wss://autotm-api-production.up.railway.app/ws/chat",
+        EXPO_PUBLIC_MEDIA_URL: "https://autotm-media-production.up.railway.app",
+        PRODUCTION_SMOKE_API_HOST: "autotm-api-production.up.railway.app",
+        PRODUCTION_SMOKE_WS_HOST: "autotm-api-production.up.railway.app",
+        PRODUCTION_SMOKE_MEDIA_HOST: "autotm-media-production.up.railway.app",
+      },
+      production: {
+        EXPO_PUBLIC_API_URL: "https://api.autotm.bagtyyar.dev/api/v1",
+        EXPO_PUBLIC_WS_URL: "wss://api.autotm.bagtyyar.dev/ws/chat",
+        EXPO_PUBLIC_MEDIA_URL: "https://media.autotm.bagtyyar.dev",
+      },
+    };
+
+    for (const name of Object.keys(easJson.build)) {
+      if (name === "base") continue;
+      const extra = envByProfile[name];
+      if (!extra) throw new Error(`add a legitimate test environment for the ${name} profile`);
+      expect(validateCurrentEasBuildProfile({ ...profileEnv(name), ...extra })).toEqual([]);
+    }
   });
 });

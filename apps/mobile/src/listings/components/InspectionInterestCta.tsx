@@ -228,7 +228,8 @@ export function InspectionInterestCta({
                 <Button
                   variant="default"
                   className="w-full"
-                  disabled={createInterest.isPending}
+                  // Until the session is read, a guest's submit would be refused as an ended session.
+                  disabled={createInterest.isPending || isAuthenticated === null}
                   onPress={handleSubmit}
                 >
                   <Text>

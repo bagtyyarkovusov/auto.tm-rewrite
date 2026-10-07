@@ -7,19 +7,15 @@ import type {
 import { CONVERSATION_ERROR_CODES, ConversationDomainError } from "../domain/types";
 
 import { createCleanRichMessage } from "./RichMessageFactory";
+import { FakeChatAttachmentCleaner } from "./testing/FakeChatAttachmentCleaner";
 
 const CONVERSATION_ID = "7d0c1a52-3b64-4e8f-9a17-5c2e8f1b6d90";
 const KEY = `chat-attachments/${CONVERSATION_ID}/0b9f3c1e-2d4a-4c6b-8e1f-3a5b7c9d1e2f/original.jpg`;
 
 function cleanerReturning(result: ChatAttachmentCleanResult) {
-  const cleaned: string[] = [];
-  const cleaner: ChatAttachmentCleaner = {
-    clean: async (key) => {
-      cleaned.push(key);
-      return result;
-    },
-  };
-  return { cleaner, cleaned };
+  const cleaner = new FakeChatAttachmentCleaner();
+  cleaner.result = result;
+  return cleaner;
 }
 
 function imageMessage(cleaner: ChatAttachmentCleaner, key: string) {
@@ -42,11 +38,11 @@ async function rejection(promise: Promise<unknown>): Promise<ConversationDomainE
 
 describe("createCleanRichMessage", () => {
   it("cleans the stored image before the image message exists", async () => {
-    const { cleaner, cleaned } = cleanerReturning("clean");
+    const cleaner = cleanerReturning("clean");
 
     const message = await imageMessage(cleaner, KEY);
 
-    expect(cleaned).toEqual([KEY]);
+    expect(cleaner.cleaned).toEqual([KEY]);
     expect(message.kind).toBe("image");
     expect(message.metadata).toEqual({ key: KEY, width: 800, height: 600 });
   });
@@ -54,7 +50,7 @@ describe("createCleanRichMessage", () => {
   it.each<ChatAttachmentCleanResult>(["missing", "invalid"])(
     "refuses an image message whose stored image is %s",
     async (result) => {
-      const { cleaner } = cleanerReturning(result);
+      const cleaner = cleanerReturning(result);
 
       const error = await rejection(imageMessage(cleaner, KEY));
 
@@ -68,16 +64,16 @@ describe("createCleanRichMessage", () => {
     ["a path that climbs out of the Conversation", `chat-attachments/${CONVERSATION_ID}/../other/original.jpg`],
     ["an absolute URL", "https://example.com/original.jpg"],
   ])("refuses %s without touching storage", async (_label, key) => {
-    const { cleaner, cleaned } = cleanerReturning("clean");
+    const cleaner = cleanerReturning("clean");
 
     const error = await rejection(imageMessage(cleaner, key));
 
     expect(error.code).toBe(CONVERSATION_ERROR_CODES.IMAGE_ATTACHMENT_NOT_USABLE);
-    expect(cleaned).toEqual([]);
+    expect(cleaner.cleaned).toEqual([]);
   });
 
   it("creates a text message without touching storage", async () => {
-    const { cleaner, cleaned } = cleanerReturning("clean");
+    const cleaner = cleanerReturning("clean");
 
     const message = await createCleanRichMessage(cleaner, {
       id: "msg-2",
@@ -87,6 +83,6 @@ describe("createCleanRichMessage", () => {
     });
 
     expect(message.kind).toBe("text");
-    expect(cleaned).toEqual([]);
+    expect(cleaner.cleaned).toEqual([]);
   });
 });

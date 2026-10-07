@@ -4,6 +4,7 @@ import { Message } from "../domain/Message";
 
 import type { SendConversationMessage } from "./SendConversationMessage";
 import { SendRealtimeMessage } from "./SendRealtimeMessage";
+import { FakeChatAttachmentCleaner } from "./testing/FakeChatAttachmentCleaner";
 
 describe("SendRealtimeMessage", () => {
   it("returns whether the writer created the message", async () => {
@@ -21,9 +22,7 @@ describe("SendRealtimeMessage", () => {
         created: false,
       }),
     } as unknown as SendConversationMessage;
-    const useCase = new SendRealtimeMessage(sender, {
-      clean: async () => "clean",
-    });
+    const useCase = new SendRealtimeMessage(sender, new FakeChatAttachmentCleaner());
 
     const result = await useCase.execute({
       senderId: "buyer-1",
@@ -39,7 +38,6 @@ describe("SendRealtimeMessage", () => {
   it("removes an image's metadata before the socket message is created", async () => {
     const key =
       "chat-attachments/conversation-1/0b9f3c1e-2d4a-4c6b-8e1f-3a5b7c9d1e2f/original.jpg";
-    const cleaned: string[] = [];
     const sender = {
       execute: vi.fn(async (input: Parameters<SendConversationMessage["execute"]>[0]) => ({
         message: await input.createMessage({
@@ -51,12 +49,8 @@ describe("SendRealtimeMessage", () => {
         created: true,
       })),
     } as unknown as SendConversationMessage;
-    const useCase = new SendRealtimeMessage(sender, {
-      clean: async (cleanedKey) => {
-        cleaned.push(cleanedKey);
-        return "clean";
-      },
-    });
+    const cleaner = new FakeChatAttachmentCleaner();
+    const useCase = new SendRealtimeMessage(sender, cleaner);
 
     const result = await useCase.execute({
       senderId: "buyer-1",
@@ -65,7 +59,7 @@ describe("SendRealtimeMessage", () => {
       metadata: { key },
     });
 
-    expect(cleaned).toEqual([key]);
+    expect(cleaner.cleaned).toEqual([key]);
     expect(result.message.kind).toBe("image");
   });
 });

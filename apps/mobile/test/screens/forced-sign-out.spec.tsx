@@ -1,12 +1,16 @@
 import { http, HttpResponse } from "msw";
+import { Pressable } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import CabinetScreen from "../../app/(tabs)/services";
 import ProfileScreen from "../../app/profile";
-import { clearAuthSession, storeAuthSession } from "../../src/auth/session";
+import { useRequestSignInMethodChange } from "../../src/api/identity/useRequestSignInMethodChange";
+import { useUpdateDisplayName } from "../../src/api/identity/useUpdateDisplayName";
+import { useVerifySignInMethodChange } from "../../src/api/identity/useVerifySignInMethodChange";
+import { clearAuthSession, loadAuthSession, storeAuthSession } from "../../src/auth/session";
 import { AppNavigationEffects } from "../../src/navigation/AppNavigationEffects";
 import { server } from "../msw";
-import { act, first, renderMobile, routerMock } from "../render";
+import { act, fireEvent, first, renderMobile, routerMock } from "../render";
 
 import { ToastProvider } from "@/components/ui/toast";
 
@@ -166,5 +170,47 @@ describe("Signing in as someone else after the API ended the session", () => {
     expect(view.getByRole("button", { name: "Log out" })).toBeTruthy();
     expect(view.queryByText("Aman")).toBeNull();
     await act(async () => { await clearAuthSession(); });
+  });
+});
+
+/** One account edit, saved the way its screen saves it. */
+function Save({ useSave }: { useSave: () => { mutate: () => void } }) {
+  const save = useSave();
+  return <Pressable accessibilityRole="button" accessibilityLabel="Save" onPress={() => save.mutate()} />;
+}
+
+describe("Saving an account edit after the API ended the session (#673)", () => {
+  it.each([
+    {
+      edit: "a new Display Name",
+      route: http.patch("*/me", unauthenticated),
+      useSave: () => { const m = useUpdateDisplayName(); return { mutate: () => m.mutate("Aman") }; },
+    },
+    {
+      edit: "an email to add",
+      route: http.post("*/me/sign-in-methods/request", unauthenticated),
+      useSave: () => { const m = useRequestSignInMethodChange(); return { mutate: () => m.mutate({ email: "aman@example.com" }) }; },
+    },
+    {
+      edit: "a phone to add",
+      route: http.post("*/me/sign-in-methods/request", unauthenticated),
+      useSave: () => { const m = useRequestSignInMethodChange(); return { mutate: () => m.mutate({ phone: "+99365123457" }) }; },
+    },
+    {
+      edit: "the code for a new Sign-in Method",
+      route: http.post("*/me/sign-in-methods/verify", unauthenticated),
+      useSave: () => { const m = useVerifySignInMethodChange(); return { mutate: () => m.mutate({ email: "aman@example.com", code: "123456" }) }; },
+    },
+  ])("signs the User out and offers sign-in when $edit is refused", async ({ route, useSave }) => {
+    server.use(route);
+    await signIn("aman", AMAN_ID);
+    const view = renderMobile(<><AppNavigationEffects /><Save useSave={useSave} /></>);
+
+    fireEvent.press(view.getByRole("button", { name: "Save" }));
+
+    await act(async () => {
+      await vi.waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/phone"));
+    });
+    expect(await loadAuthSession()).toBeNull();
   });
 });

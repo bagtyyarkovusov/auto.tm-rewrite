@@ -16,11 +16,8 @@ import { ListEngineTypes } from "../application/ListEngineTypes";
 import { ListTransmissions } from "../application/ListTransmissions";
 import { SearchCatalog } from "../application/SearchCatalog";
 
-import {
-  encodeCatalogCursor,
-  parseCatalogPagination,
-  parseCatalogQuery,
-} from "./parseCatalogPagination";
+import { encodeCatalogCursor, parseCatalogPagination } from "./parseCatalogPagination";
+import { parseCatalogQuery } from "./parseCatalogQuery";
 
 @Controller("api/v1/catalog")
 export class CatalogController {

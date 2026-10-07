@@ -17,6 +17,7 @@ import { ConfirmSignInMethodChange } from "./ConfirmSignInMethodChange";
 
 const NOW = new Date("2026-09-24T00:00:00.000Z");
 const CODE = "123456";
+const REVIEWER_CODE = "654321";
 
 function makeUser(input: {
   id: string;
@@ -296,4 +297,23 @@ describe("ConfirmSignInMethodChange", () => {
       expect(otpRepo.request).toMatchObject({ verifiedAt: null, attempts: 0 });
     },
   );
+
+  it("refuses a reviewer's fixed sign-in code (ADR-0030)", async () => {
+    // The reviewer adds an email it does not hold yet, so an accepted code would change the User.
+    const reviewer = makeUser({ id: "user-1", phone: "+99361234567", email: null });
+    const { useCase, users, otpRepo } = harnessFor("sign-in", reviewer, "reviewer@review.auto.tm");
+    otpRepo.request = {
+      ...otpRepo.request,
+      userId: null,
+      codeHash: createHash("sha256").update(REVIEWER_CODE).digest("hex"),
+    };
+
+    await expect(useCase.execute({
+      userId: reviewer.id,
+      email: "reviewer@review.auto.tm",
+      code: REVIEWER_CODE,
+    })).rejects.toThrow("No Sign-in Code request found");
+    expect(users.users).toEqual([reviewer]);
+    expect(otpRepo.request).toMatchObject({ verifiedAt: null, attempts: 0 });
+  });
 });

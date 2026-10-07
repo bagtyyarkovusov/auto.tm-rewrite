@@ -58,7 +58,8 @@ export default function DeleteAccountScreen() {
     try {
       await deleteAccount.mutateAsync();
     } catch {
-      // The User stays signed in; deleteAccount.isError shows the message inline.
+      // deleteAccount.isError shows the message inline. The User stays signed in
+      // unless the session itself had ended, which sends them to sign-in.
       return;
     }
     await clearAuthSession();
