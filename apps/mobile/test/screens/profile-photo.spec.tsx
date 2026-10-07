@@ -14,6 +14,7 @@ import { profilePhotoCopy } from "../profile-photo-copy";
 import { choosePhoto, photoDevice as picker, resetPhotoDevice } from "../profile-photo-device";
 import CabinetScreen from "../../app/(tabs)/services";
 import { act, fireEvent, renderMobile } from "../render";
+
 import { ToastProvider } from "@/components/ui/toast";
 
 vi.mock("expo-linking", () => ({ openSettings: vi.fn(async () => {}) }));
