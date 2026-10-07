@@ -100,6 +100,30 @@ const privacyPromises: CopyPromise[] = [
     },
   },
   {
+    name: "a replaced or removed profile photo stops being shown at once and a moderator may remove one",
+    phrases: {
+      en: "When you replace or remove your profile photo, or a moderator removes it, it stops being shown at once",
+      ru: "Когда вы заменяете или удаляете фото профиля либо его удаляет модератор, оно сразу перестаёт показываться",
+      tk: "Profil suratyňyzy çalşanyňyzda ýa-da aýranyňyzda, ýa-da ony moderator aýranda, ol derrew görkezilmegini bes edýär",
+    },
+  },
+  {
+    name: "the photo's files are deleted by a job that retries, with no claim of instant deletion",
+    phrases: {
+      en: "Its files are then deleted from our storage by a background job that keeps retrying until they are gone",
+      ru: "Затем его файлы удаляются из нашего хранилища фоновым заданием, которое повторяет попытки, пока они не будут удалены",
+      tk: "Soňra onuň faýllary saklaýjymyzdan fon işi arkaly pozulýar; faýllar pozulýança synanyşyk gaýtalanýar",
+    },
+  },
+  {
+    name: "the purge deletes the profile photo's files the same way",
+    phrases: {
+      en: "your profile photo is removed and its files are deleted from our storage in the same way",
+      ru: "фото профиля удаляется, а его файлы удаляются из нашего хранилища тем же способом",
+      tk: "profil suraty aýrylýar we onuň faýllary saklaýjymyzdan şol usul bilen pozulýar",
+    },
+  },
+  {
     name: "the Listing contact phone is public",
     phrases: {
       en: "the contact phone you chose for a listing",
