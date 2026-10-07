@@ -96,6 +96,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0084](0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md) | Related issues of one parent may ship on one integration branch and pull request (amends the one-PR-per-issue rule of ADR-0058, ADR-0064, ADR-0069 and ADR-0082, and ADR-0069's Branch handoff, for grouped issues) | Accepted | 2026-10-05 |
 | [0085](0085-one-review-round-one-fix-round-no-re-review.md) | One review round, one fix round, no re-review; the orchestrator merges from the PR body (supersedes ADR-0083; amends the re-review rules of ADR-0058, ADR-0064, ADR-0065, ADR-0069 and ADR-0084) | Accepted | 2026-10-07 |
 | [0086](0086-temporary-tester-accounts-with-fixed-sign-in-codes.md) | Temporary tester accounts with fixed sign-in codes, up to 30 in a separate list (amends ADR-0030 for testers only) | Accepted | 2026-10-07 |
+| [0087](0087-founder-delegated-outcome-orchestration.md) | Founder-delegated outcome orchestration (amends ADR-0058 and ADR-0066 queue selection) | Accepted | 2026-10-07 |
 
 ## Per-app ADRs
 
