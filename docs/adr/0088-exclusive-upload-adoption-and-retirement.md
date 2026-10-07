@@ -1,8 +1,9 @@
 # ADR-0088: Exclusive upload adoption and retirement
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-07
 - **Deciders**: AutoTM founder
+- **Acceptance**: Confirmed by the release orchestrator on 2026-10-07 within the founder's delegated Android release and approved actual Profile Photo cleanup scope. [PR #726 integration disposition](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/726#issuecomment-6033119554) records the authority. Provider configuration, credentials, deployment and live operations remain outside this acceptance.
 - **Amends**: [ADR-0079](0079-server-recorded-upload-provenance-for-listing-media.md), extending Listing-only adoption to Profile Photos.
 
 ## Context
