@@ -82,6 +82,17 @@ describe("Large Listing card", () => {
 });
 
 describe("Results photo strip", () => {
+  it("keeps the strip responder separate from photo and card taps", () => {
+    const { view, onPress } = renderCard(feedItem);
+    // Android may deliver the drag's release at the scrolling container.
+    // That container must not find a detail-opening ancestor press handler.
+    fireEvent.press(view.getByTestId("listing-photo-strip"));
+    expect(onPress).not.toHaveBeenCalled();
+    fireEvent.press(view.getAllByTestId("listing-photo")[0]);
+    expect(onPress).toHaveBeenCalledOnce();
+    fireEvent.press(view.getByRole("button", { name: /Toyota Camry, 2018/ }));
+    expect(onPress).toHaveBeenCalledTimes(2);
+  });
   it.each([1, 2, 5, 8])("shows all %i gallery photos in the seller's order", (length) => {
     const keys = Array.from({ length }, (_, index) => `photo-${index}.jpg`);
     const { view } = renderCard({ ...feedItem, galleryKeys: keys, photoCount: length });
