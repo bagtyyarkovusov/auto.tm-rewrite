@@ -1,0 +1,68 @@
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { Test } from "@nestjs/testing";
+import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
+
+import { AuthController } from "../src/modules/identity/presentation/AuthController";
+import { RequestOtp } from "../src/modules/identity/application/RequestOtp";
+import { VerifyOtp } from "../src/modules/identity/application/VerifyOtp";
+import { RefreshSession } from "../src/modules/identity/application/RefreshSession";
+import { Logout } from "../src/modules/identity/application/Logout";
+import { LogoutAll } from "../src/modules/identity/application/LogoutAll";
+import { GlobalErrorFilter } from "../src/common/error.filter";
+
+// There is no Next request context in this network test. Only cookie storage
+// is replaced; the admin API client, fetch, API router and controller are real.
+vi.mock("../../admin/src/lib/cookies", () => ({
+  getAccessToken: async () => undefined,
+  getRefreshToken: async () => undefined,
+  setAuthCookies: vi.fn(),
+  clearAuthCookies: vi.fn(),
+}));
+
+
+describe("real admin-to-API sign-in routing", () => {
+  let app: NestFastifyApplication;
+  let origin: string;
+
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({
+      controllers: [AuthController],
+      // Invalid input is rejected by the real controller before any use case.
+      // These providers deliberately cannot execute business logic.
+      providers: [RequestOtp, VerifyOtp, RefreshSession, Logout, LogoutAll].map((provide) => ({
+        provide, useValue: {},
+      })),
+    }).compile();
+    app = module.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    app.useGlobalFilters(new GlobalErrorFilter());
+    await app.listen(0, "127.0.0.1");
+    origin = await app.getUrl();
+  });
+
+  afterAll(async () => { await app?.close(); });
+  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
+
+  it.each(["", "/", "/api/v1", "/api/v1/"])(
+    "reaches the running API's real OTP controller with suffix '%s'", async (suffix) => {
+      vi.stubEnv("API_BASE_URL", `${origin}${suffix}`);
+      const { apiFetch } = await import("../../admin/src/lib/api-client");
+      await expect(apiFetch("/auth/otp/request", {
+        method: "POST", body: { phone: "not-a-phone" },
+      })).rejects.toMatchObject({
+        status: 400, code: "VALIDATION_FAILED",
+      });
+    },
+  );
+
+  it("detects a misrouted API prefix over real HTTP", async () => {
+    vi.stubEnv("API_BASE_URL", `${origin}/api/v2`);
+    const { apiFetch, ApiError } = await import("../../admin/src/lib/api-client");
+    try {
+      await apiFetch("/auth/otp/request", { method: "POST", body: { phone: "not-a-phone" } });
+      expect.fail("A wrong prefix must fail the admin-to-API gate");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).toMatchObject({ status: 404 });
+    }
+  });
+});
