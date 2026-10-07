@@ -36,11 +36,15 @@ Use the screen's existing feed state components and recovery actions.
 - **Message attachment remove target, separate fix needed:** MessageComposer's
   24-point remove control has 8-point hitSlop (nominal 40 total), inside two
   clipped preview containers, and no button role. This does not establish a
-  44-point reachable TalkBack/touch target. Reproduce with attached image,
+  44-point reachable TalkBack/touch target. Source: MessageComposer lines
+  192–205; governing icon-button target: components/78-01-button.md line 61. Reproduce with attached image,
   keyboard open and TalkBack; fix the hit region and role in a Messages issue.
 - **Code Reduce Motion, separate fix needed:** OtpCells always starts a 200ms
   four-step horizontal shake through Animated; there is no accessibility
-  setting branch in this component. Preserve wrong-code/reset behavior while
+  setting branch in this component (OtpCells lines 35–59). Governing
+  mobile-otp-login-flow.md line 469 requires an instant error and focus reset
+  instead of shake under Reduce Motion; mobile-auth-otp.md line 313 agrees.
+  Preserve wrong-code/reset behavior while
   making the error indication respect Reduce Motion in an account/code issue.
 - **Account keyboard/layout risk, not a confirmed runtime defect:**
   SignInMethodEntryScreen uses a fixed flex View with no ScrollView and iOS-only
