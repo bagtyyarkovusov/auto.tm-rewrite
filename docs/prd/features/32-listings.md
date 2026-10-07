@@ -167,7 +167,7 @@ Chat switched off on a Listing (`allowChat` off) also leaves an existing Convers
 | Wizard step 1 (Car) | Missing year | Continue disabled; year is required for marketplace-quality listings |
 | Wizard step 2 (details and condition) | Used car missing mileage | Continue disabled; mileage is required for used-car listings |
 | Wizard step 3 (photos) | <3 photos | Continue disabled; "At least 3 photos are required" |
-| Wizard step 3 (photos) | 1 or more photos picked, some still uploading | Continue enabled; "You can continue. Photos keep uploading." |
+| Wizard step 3 (photos) | 3 or more photos picked, some still uploading | Continue enabled; "You can continue. Photos keep uploading." |
 | Wizard step 7 (check and publish) | Photos still uploading or failed | Publish disabled; "Photos still uploading: N" or "Photos failed: N. Retry or remove them." above it |
 | Wizard step 6 (contact) | Different phone or email-only seller | Send contact-phone code, block Continue / Publish until confirmed, then offer the number as a quick pick for 7 days |
 | Wizard | Upload failed | Retry button per failed photo |
