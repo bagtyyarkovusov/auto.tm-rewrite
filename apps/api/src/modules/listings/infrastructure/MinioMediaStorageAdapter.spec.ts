@@ -184,7 +184,7 @@ describe("MinioMediaStorageAdapter", () => {
     );
   });
 
-  it("requires the placeholder ETag in the signed Listing image PUT (#721)", async () => {
+  it("requires the placeholder ETag in the signed Listing image PUT (#725)", async () => {
     const adapter = makeAdapter("https://media.auto.tm");
     awsMocks.sendResult = async () => ({ ETag: '\"placeholder\"' });
     const result = await adapter.presignUpload({
@@ -196,6 +196,47 @@ describe("MinioMediaStorageAdapter", () => {
 
     expect(result).toMatchObject({ headers: { "if-match": '\"placeholder\"' } });
     expect(awsMocks.signedCommand?.input).toMatchObject({ IfMatch: '\"placeholder\"' });
+  });
+
+  it("initializes the fixed original and eight variants before issuing conditional upload authority (#725)", async () => {
+    const adapter = makeAdapter("https://media.auto.tm");
+    const initialized = new Set<string>();
+    awsMocks.sendResult = async () => {
+      const command = awsMocks.clients[0]?.sent.at(-1) as { input: Record<string, unknown> };
+      if (command.input["Key"] && command.input["Body"] !== undefined) {
+        initialized.add(String(command.input["Key"]));
+      }
+      return { ETag: '\"placeholder\"' };
+    };
+    await adapter.presignUpload({
+      key: "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/original.jpg",
+      contentType: "image/jpeg", sizeBytes: 1024,
+      ...{ writeProtocol: "conditional-v1" as const },
+    });
+
+    expect([...initialized].sort()).toEqual([
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/original.jpg",
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/thumbnail.jpg",
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/thumbnail.webp",
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/list.jpg",
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/list.webp",
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/detail.jpg",
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/detail.webp",
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/fullscreen.jpg",
+      "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/fullscreen.webp",
+    ].sort());
+  });
+
+  it("returns no conditional upload authority when initialization fails (#725)", async () => {
+    const adapter = makeAdapter("https://media.auto.tm");
+    awsMocks.sendResult = async () => { throw new Error("storage unavailable"); };
+
+    await expect(adapter.presignUpload({
+      key: "pending/21b0b4e0-4d4a-4d2c-8bd6-705555cb7585/original.jpg",
+      contentType: "image/jpeg", sizeBytes: 1024,
+      ...{ writeProtocol: "conditional-v1" as const },
+    })).rejects.toThrow("storage unavailable");
+    expect(awsMocks.signedCommand).toBeUndefined();
   });
 
   it("uses the private endpoint for administrative object deletion", async () => {
