@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
@@ -19,8 +19,11 @@ interface SignInMethodTabsProps {
 export function SignInMethodTabs({ value, onChange }: SignInMethodTabsProps) {
   const { t } = useTranslation("auth");
   const [slot, setSlot] = useState(0);
-  const position = useSharedValue(value === "email" ? slot : 0);
+  const sprungFor = useRef(value);
+  const position = useSharedValue(0);
   useEffect(() => {
+    if (sprungFor.current === value) return;
+    sprungFor.current = value;
     position.value = withSpring(value === "email" ? slot : 0, { ...spring.snappy, overshootClamping: true });
   }, [value, slot, position]);
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: position.value }] }));
@@ -29,7 +32,13 @@ export function SignInMethodTabs({ value, onChange }: SignInMethodTabsProps) {
     <View
       accessibilityRole="tablist"
       className="flex-row rounded-full bg-muted p-1"
-      onLayout={(event) => setSlot(Math.max(0, (event.nativeEvent.layout.width - 8) / 2))}
+      onLayout={(event) => {
+        const next = Math.max(0, (event.nativeEvent.layout.width - 8) / 2);
+        // First layout — and any resize without a value change — places the
+        // pill directly; only a changed selection springs it.
+        if (sprungFor.current === value) position.value = value === "email" ? next : 0;
+        setSlot(next);
+      }}
     >
       <Animated.View pointerEvents="none" className="absolute bottom-1 left-1 top-1 rounded-full bg-card" style={[{ width: slot }, indicator]} />
       {(["phone", "email"] as const).map((method) => (

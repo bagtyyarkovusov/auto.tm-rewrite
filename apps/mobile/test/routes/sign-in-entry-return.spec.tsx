@@ -76,7 +76,6 @@ it("Code header Back returns to the held selected method without abandoning inte
 
 it("Code Back still returns to the older entry when a newer mounted entry unmounts", () => {
   useAuthIntentStore.getState().requireSignIn(routerMock, { returnTo: "/(tabs)/favorites" });
-  routeParams.authRoot = "1";
   const entry = renderMobile(<EmailScreen />);
   fireEvent.changeText(entry.getByPlaceholderText("name@example.com"), "held@example.com");
   const newer = renderMobile(<PhoneScreen />);

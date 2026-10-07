@@ -45,6 +45,7 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
   const focused = useIsFocused();
   const reduceMotion = useReducedMotion();
   const opacity = useSharedValue(1);
+  const firstRender = useRef(true);
 
   const selectMethod = useCallback((next: SignInMethod) => {
     if (next === methodRef.current) return;
@@ -60,6 +61,10 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
   }, [method, focused]);
 
   useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
     opacity.value = reduceMotion ? 1 : 0;
     opacity.value = withTiming(1, timing("fast"));
   }, [method, opacity, reduceMotion]);
