@@ -410,6 +410,28 @@ describe("Profile photo", () => {
     expect(view.UNSAFE_queryAllByType("Image" as never)).toHaveLength(0);
   });
 
+  it("discards compression after sign-out without leaking validation errors to the next User", async () => {
+    choosePhoto();
+    let complete!: () => void;
+    picker.renderWait = new Promise<void>((resolve) => { complete = resolve; });
+    picker.size = 6 * 1024 * 1024;
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.renderStarted).toHaveBeenCalledOnce());
+    await act(async () => { await clearAuthSession(); view.queryClient.clear(); });
+    currentMe = { ...me, id: "00000000-0000-4000-8000-00000000000b", displayName: "Merdan" };
+    await act(async () => { await storeAuthSession({ accessToken: "merdan", refreshToken: "refresh-merdan", user: { id: currentMe.id, phone: me.phone, email: null, displayName: "Merdan", role: "buyer" } }); });
+    await view.findByText("Merdan");
+    await act(async () => { complete(); });
+    expect(view.queryByRole("alert")).toBeNull();
+    expect(picker.deletes).toHaveLength(1);
+    expect(requests.presigns).toHaveLength(0);
+    expect(requests.sets).toHaveLength(0);
+    expect(view.getByText("Merdan")).toBeTruthy();
+  });
+
   it("announces upload progress and failures on iOS, where live regions do not speak", async () => {
     const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
     choosePhoto();

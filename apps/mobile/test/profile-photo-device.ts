@@ -9,6 +9,8 @@ export const photoDevice = {
   size: 2048,
   readable: true,
   dimensions: { width: 1024, height: 1024 },
+  renderWait: null as Promise<void> | null,
+  renderStarted: vi.fn(),
   sent: [] as { url: string; uri: string; options?: FileSystemUploadOptions }[],
   progress: (_data: UploadProgressData) => {},
   finish: (_status = 200) => {},
@@ -27,6 +29,7 @@ export function resetPhotoDevice() {
   photoDevice.size = 2048;
   photoDevice.readable = true;
   photoDevice.dimensions = { width: 1024, height: 1024 };
+  photoDevice.renderWait = null;
   photoDevice.sent = [];
   photoDevice.saves = [];
   photoDevice.deletes = [];
@@ -70,6 +73,8 @@ export const imageManipulatorFake = {
         dimensions = { width: Math.round(dimensions.width * factor), height: Math.round(dimensions.height * factor) };
       },
       renderAsync: async () => {
+        photoDevice.renderStarted();
+        await photoDevice.renderWait;
         if (!photoDevice.readable) throw new Error("Not a picture");
         return { ...dimensions, saveAsync: async (options: unknown) => {
           photoDevice.saves.push(options);
