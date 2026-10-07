@@ -8,6 +8,7 @@ import {
 
 import { ListingDraft } from "../domain/ListingDraft";
 import { ListingMedia } from "../domain/ListingMedia";
+import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import type { ListingDraftRepository } from "../domain/ports/ListingDraftRepository";
 import type { ExchangeRatePort } from "../domain/ports/ExchangeRatePort";
 import type { ListingEventPublisher } from "../domain/ports/ListingEventPublisher";
@@ -720,8 +721,15 @@ describe("PublishListing", () => {
 
       expect((err as BadRequestException).getResponse()).toMatchObject({
         code: "UPLOAD_OBJECT_INVALID",
+        details: { key: "photo1.jpg", uploadId: "upload-photo1.jpg" },
       });
       expectNothingPublished();
+      // #735: the provably unusable upload is retired so it cannot block every
+      // retry; the photos that were fine are never reserved and stay adoptable.
+      expect(world.claimOf("upload-photo1.jpg").state).toBe("RETIRED");
+      expect(world.cleanups).toEqual(["upload-photo1.jpg"]);
+      expect(world.claimOf("upload-photo2.jpg").state).toBe("AVAILABLE");
+      expect(world.claimOf("upload-photo3.jpg").state).toBe("AVAILABLE");
     });
 
     it("rejects the same photo key listed twice", async () => {
@@ -813,27 +821,141 @@ describe("PublishListing", () => {
       expect(prisma.deletedDrafts).toEqual([]);
     });
 
-    it("rethrows a failed transaction and retires what it had reserved", async () => {
+    it("rethrows a failed transaction, releases what it had reserved, and lets a retry publish the same photos", async () => {
       seedDraft(draftRepo, photoDraft("photo1.jpg"));
       const failure = Object.assign(new Error("Unique constraint failed"), { code: "P2002" });
       prisma.failTransaction = () => failure;
 
-      await expect(publishError()).resolves.toBe(failure);
+      const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
+      await expect(
+        uc.execute({ draftId: "draft-1", userId: "user-1" }).then(
+          () => {
+            throw new Error("Expected publish to be rejected");
+          },
+          (err: unknown) => err,
+        ),
+      ).resolves.toBe(failure);
       expect(prisma.createdListings).toHaveLength(0);
+      // #735 / ADR-0089: a transient failure releases the reservation instead of
+      // retiring every photo; nothing is recorded for deletion.
       const draftUploads = ["upload-photo1.jpg", "upload-photo2.jpg", "upload-photo3.jpg"];
-      expect(draftUploads.map((id) => world.claimOf(id).state)).toEqual(["RETIRED", "RETIRED", "RETIRED"]);
-      expect([...world.cleanups].sort()).toEqual(draftUploads);
+      expect(draftUploads.map((id) => world.claimOf(id).state)).toEqual(["AVAILABLE", "AVAILABLE", "AVAILABLE"]);
+      expect(world.cleanups).toEqual([]);
+
+      prisma.failTransaction = undefined;
+      const { listing } = await uc.execute({ draftId: "draft-1", userId: "user-1" });
+      expect(listing.status).toBe("active");
+      expect(draftUploads.map((id) => world.claimOf(id).state)).toEqual(["ADOPTED", "ADOPTED", "ADOPTED"]);
     });
 
-    it("retires every reserved photo when generation fails", async () => {
+    it("releases every reserved photo when generation fails transiently, and a retry publishes with the same photos", async () => {
       seedDraft(draftRepo, threePhotoDraft());
+      let failed = false;
       variantGenerator.during = (key) => {
-        if (key === "p2.jpg") throw new Error("Sharp failed");
+        if (!failed && key === "p2.jpg") {
+          failed = true;
+          throw new Error("Sharp failed");
+        }
       };
 
-      await expect(publishError()).resolves.toMatchObject({ message: "Sharp failed" });
+      const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
+      await expect(
+        uc.execute({ draftId: "draft-1", userId: "user-1" }).then(
+          () => {
+            throw new Error("Expected publish to be rejected");
+          },
+          (err: unknown) => err,
+        ),
+      ).resolves.toMatchObject({ message: "Sharp failed" });
       expect(prisma.createdListings).toHaveLength(0);
-      expect(draftStates()).toEqual(["RETIRED", "RETIRED", "RETIRED"]);
+      expect(draftStates()).toEqual(["AVAILABLE", "AVAILABLE", "AVAILABLE"]);
+      expect(world.cleanups).toEqual([]);
+
+      const { listing } = await uc.execute({ draftId: "draft-1", userId: "user-1" });
+      expect(listing.status).toBe("active");
+      expect(variantGenerator.generated).toEqual([
+        "p1.jpg", "p2.jpg", "photo3.jpg",
+        "p1.jpg", "p2.jpg", "photo3.jpg",
+      ]);
+    });
+
+    it("names the photo and retires only that upload when generation proves it permanently unusable", async () => {
+      seedDraft(draftRepo, threePhotoDraft());
+      variantGenerator.during = (key) => {
+        if (key === "p2.jpg") {
+          // The contract with ImageVariantGenerator: bytes that can never be an
+          // image are reported as UPLOAD_OBJECT_INVALID, not a transient error.
+          throw new DomainError(
+            LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
+            "Uploaded file is not a usable image",
+          );
+        }
+      };
+
+      const err = await publishError();
+
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as BadRequestException).getResponse()).toMatchObject({
+        code: "UPLOAD_OBJECT_INVALID",
+        details: { key: "p2.jpg", photoId: "00000000-0000-0000-0000-000000000006" },
+      });
+      expect(prisma.createdListings).toHaveLength(0);
+      // Only the unusable upload is retired; the others are released and stay adoptable.
+      expect(draftStates()).toEqual(["AVAILABLE", "RETIRED", "AVAILABLE"]);
+      expect(world.cleanups).toEqual(["upload-p2.jpg"]);
+    });
+
+    it("keeps the released photos unadoptable by another target while a retry is in flight", async () => {
+      seedDraft(draftRepo, threePhotoDraft());
+      let failed = false;
+      let signalInFlight!: () => void;
+      let releaseGeneration!: () => void;
+      const inFlight = new Promise<void>((resolve) => {
+        signalInFlight = resolve;
+      });
+      const hold = new Promise<void>((resolve) => {
+        releaseGeneration = resolve;
+      });
+      variantGenerator.during = async (key) => {
+        if (!failed && key === "p2.jpg") {
+          failed = true;
+          throw new Error("Sharp failed");
+        }
+        if (failed && key === "p1.jpg") {
+          signalInFlight();
+          await hold;
+        }
+      };
+
+      const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
+      await expect(
+        uc.execute({ draftId: "draft-1", userId: "user-1" }).then(
+          () => {
+            throw new Error("Expected publish to be rejected");
+          },
+          (err: unknown) => err,
+        ),
+      ).resolves.toMatchObject({ message: "Sharp failed" });
+      expect(draftStates()).toEqual(["AVAILABLE", "AVAILABLE", "AVAILABLE"]);
+
+      const retrying = uc.execute({ draftId: "draft-1", userId: "user-1" });
+      await inFlight;
+      try {
+        // #721 / ADR-0088 still holds: while the retry holds the uploads
+        // PREPARING, no other target can adopt them.
+        await expect(
+          world.claims.reserve({
+            userId: "user-1",
+            uploadIds: ["upload-p1.jpg"],
+            target: { type: "listing", id: "listing-other" },
+          }),
+        ).rejects.toMatchObject({ code: "UPLOAD_ALREADY_ATTACHED" });
+        expect(draftStates()).toEqual(["PREPARING", "PREPARING", "PREPARING"]);
+      } finally {
+        releaseGeneration();
+      }
+      const { listing } = await retrying;
+      expect(listing.status).toBe("active");
     });
   });
 

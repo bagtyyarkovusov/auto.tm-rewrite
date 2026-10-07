@@ -131,6 +131,29 @@ export class InMemoryMediaWorld {
         if (record.state === "PREPARING" && record.token === token) this.retireRecord(id);
       }
     },
+    release: async (token) => {
+      for (const [id, record] of this.claimRecords) {
+        if (record.state === "PREPARING" && record.token === token) {
+          this.claimRecords.set(id, { state: "AVAILABLE" });
+        }
+      }
+    },
+    settle: async (token, retiredUploadId) => {
+      const record = this.claimOf(retiredUploadId);
+      if (record.state !== "PREPARING" || record.token !== token) return false;
+      this.retireRecord(retiredUploadId);
+      for (const [id, held] of this.claimRecords) {
+        if (id !== retiredUploadId && held.state === "PREPARING" && held.token === token) {
+          this.claimRecords.set(id, { state: "AVAILABLE" });
+        }
+      }
+      return true;
+    },
+    retireUnclaimed: async (uploadId) => {
+      const record = this.claimOf(uploadId);
+      if (record.state !== "AVAILABLE") return false;
+      return this.retireRecord(uploadId);
+    },
   };
 
   readonly storage: MediaStoragePort = {
