@@ -48,7 +48,8 @@ model User {
   /// constraints from the migration hold the same ranges.
   nameNumber      Int       @default(dbgenerated("(((1000)::double precision + floor((random() * (9000)::double precision))))::integer"))
   avatarIndex     Int       @default(dbgenerated("(floor((random() * (12)::double precision)))::integer"))
-  /// Object key of the profile photo; always null until photos ship.
+  /// Object key of the Profile Photo's original, or null when the User has none.
+  /// Written only with `avatarUploadId`, by the Listings Profile Photo link.
   avatarKey       String?
   /// Private link to the upload behind `avatarKey` (ADR-0088). Never published.
   avatarUploadId  String?      @unique

@@ -3437,6 +3437,12 @@
             "type": "integer",
             "minimum": 0,
             "exclusiveMinimum": true
+          },
+          "writeProtocol": {
+            "type": "string",
+            "enum": [
+              "conditional-v1"
+            ]
           }
         },
         "required": [
@@ -3464,6 +3470,12 @@
             "type": "integer",
             "minimum": 0,
             "exclusiveMinimum": true
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -7251,6 +7263,67 @@
           "auditLogId"
         ]
       },
+      "RemoveUserPhotoRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "RemoveUserPhotoResponse": {
+        "type": "object",
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetState": {
+            "type": "object",
+            "properties": {
+              "avatarKey": {
+                "nullable": true
+              },
+              "avatarIndex": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "avatarKey",
+              "avatarIndex"
+            ]
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportStatus": {
+            "type": "string",
+            "enum": [
+              "actioned"
+            ]
+          },
+          "auditLogId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "targetId",
+          "targetState",
+          "auditLogId"
+        ]
+      },
       "UnsuspendUserRequest": {
         "type": "object",
         "properties": {
@@ -7324,6 +7397,7 @@
               "LISTING_UNBAN",
               "USER_SUSPEND",
               "USER_UNSUSPEND",
+              "USER_PHOTO_REMOVE",
               "CONTENT_REPORT_RESOLVE",
               "REVIEWER_OTP_BYPASS_LOGIN"
             ]
@@ -7389,6 +7463,7 @@
                     "LISTING_UNBAN",
                     "USER_SUSPEND",
                     "USER_UNSUSPEND",
+                    "USER_PHOTO_REMOVE",
                     "CONTENT_REPORT_RESOLVE",
                     "REVIEWER_OTP_BYPASS_LOGIN"
                   ]
@@ -7892,6 +7967,99 @@
           "optOuts"
         ]
       },
+      "MeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\+993[67]\\d{7}$"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "format": "email"
+          },
+          "phoneVerified": {
+            "type": "boolean"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "nameNumber": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 9999
+          },
+          "avatarIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "avatarKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "seller",
+              "moderator",
+              "admin"
+            ]
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletionScheduledAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "phone",
+          "email",
+          "phoneVerified",
+          "displayName",
+          "nameNumber",
+          "avatarIndex",
+          "avatarKey",
+          "role",
+          "avatarUrl",
+          "locale",
+          "createdAt",
+          "deletionScheduledAt"
+        ]
+      },
+      "SetProfilePhotoRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
       "VerifiedContactPhone": {
         "type": "object",
         "properties": {
@@ -7943,6 +8111,382 @@
     "parameters": {}
   },
   "paths": {
+    "/api/v1/admin/users/{id}/remove-photo": {
+      "post": {
+        "summary": "Remove a User's Profile Photo as a moderator",
+        "description": "Shows the User's Assigned Avatar again. With reportId, a pending report on that User becomes actioned in the same transaction. Writes a USER_PHOTO_REMOVE audit entry.",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "reportId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Photo removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "targetId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "targetState": {
+                      "type": "object",
+                      "properties": {
+                        "avatarKey": {
+                          "nullable": true
+                        },
+                        "avatarIndex": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "avatarKey",
+                        "avatarIndex"
+                      ]
+                    },
+                    "reportId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "reportStatus": {
+                      "type": "string",
+                      "enum": [
+                        "actioned"
+                      ]
+                    },
+                    "auditLogId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "targetId",
+                    "targetState",
+                    "auditLogId"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, or the report is not about this User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an elevated admin, moderation actions disabled, or the target cannot be moderated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User or report not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The User has no photo, or the report is already resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/conversations": {
       "post": {
         "summary": "Open or create a conversation",
@@ -10827,6 +11371,667 @@
           },
           "409": {
             "description": "Sign-in Method belongs to another User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/photo": {
+      "put": {
+        "summary": "Set the signed-in User's Profile Photo",
+        "description": "The key comes from POST /api/v1/uploads/presign with kind image and writeProtocol conditional-v1, after the file reached storage. A second photo replaces the first. Sending the current photo's key again changes nothing.",
+        "tags": [
+          "Identity"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  }
+                },
+                "required": [
+                  "key"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated /me, with avatarKey set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^\\+993[67]\\d{7}$"
+                    },
+                    "email": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "email"
+                    },
+                    "phoneVerified": {
+                      "type": "boolean"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "nameNumber": {
+                      "type": "integer",
+                      "minimum": 1000,
+                      "maximum": 9999
+                    },
+                    "avatarIndex": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "avatarKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "buyer",
+                        "seller",
+                        "moderator",
+                        "admin"
+                      ]
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "deletionScheduledAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "phone",
+                    "email",
+                    "phoneVerified",
+                    "displayName",
+                    "nameNumber",
+                    "avatarIndex",
+                    "avatarKey",
+                    "role",
+                    "avatarUrl",
+                    "locale",
+                    "createdAt",
+                    "deletionScheduledAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "UPLOAD_NOT_AVAILABLE (not this User's unused fenced image upload), UPLOAD_OBJECT_INVALID (stored file missing, empty, over 5 MB or of another type), or VALIDATION_FAILED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The User is suspended or their deletion is scheduled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Signed-in User no longer exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "UPLOAD_ALREADY_ATTACHED: the upload belongs to a Listing, or another request is still setting it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove the signed-in User's Profile Photo",
+        "description": "The Assigned Avatar shows again; avatarIndex never changes. Succeeds when the User has no photo.",
+        "tags": [
+          "Identity"
+        ],
+        "responses": {
+          "200": {
+            "description": "The updated /me, with avatarKey null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^\\+993[67]\\d{7}$"
+                    },
+                    "email": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "email"
+                    },
+                    "phoneVerified": {
+                      "type": "boolean"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "nameNumber": {
+                      "type": "integer",
+                      "minimum": 1000,
+                      "maximum": 9999
+                    },
+                    "avatarIndex": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "avatarKey": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "buyer",
+                        "seller",
+                        "moderator",
+                        "admin"
+                      ]
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "deletionScheduledAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "phone",
+                    "email",
+                    "phoneVerified",
+                    "displayName",
+                    "nameNumber",
+                    "avatarIndex",
+                    "avatarKey",
+                    "role",
+                    "avatarUrl",
+                    "locale",
+                    "createdAt",
+                    "deletionScheduledAt"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The User is suspended or their deletion is scheduled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Signed-in User no longer exists",
             "content": {
               "application/json": {
                 "schema": {

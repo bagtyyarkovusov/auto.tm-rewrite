@@ -19,8 +19,8 @@ export const privacyPolicy: Record<Locale, LegalDocument> = {
     title: "Privacy Policy",
     effectiveDate: "September 23, 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "October 6, 2026",
-    lastRevisedISO: "2026-10-06",
+    lastRevised: "October 7, 2026",
+    lastRevisedISO: "2026-10-07",
     sections: [
       {
         title: "1. What we collect",
@@ -66,13 +66,15 @@ Future collections (if features ship): video uploads, garage vehicle data, blog 
         title: "6. Data retention & account deletion",
         body: `Your data is retained while your account is active. Records of sign-in codes (the phone number or email address, and the IP address of the request) are deleted after 30 days.
 
+Your profile photo is public, and other users can report it. When you replace or remove your profile photo, or a moderator removes it, it stops being shown at once. Its files are then deleted from our storage by a background job that keeps retrying until they are gone, so if our storage is unavailable the deletion finishes later. We cannot delete copies that other people saved or that are held outside our servers.
+
 If you are signed in, you can delete your account in the app: open Cabinet, tap your profile, then tap Delete account at the bottom of the Profile screen. On the public [account deletion page](/en/account/delete) on our website, enter a phone number or email address on the account and confirm the request with a code sent to it.
 
 When you request account deletion:
 - Your account enters a **30-day grace period**.
 - During this period, your listings are archived, all sessions are revoked, and your phone number and email address remain reserved to you.
 - You may recover your account at any time during the grace period by signing in again with either your phone number or your email address. Recovery reactivates your account and republishes archived listings.
-- After 30 days, your personal information is removed: your phone number and email address are freed, display name and avatar are cleared, the contact phone is removed from your listings, and records of the sign-in codes sent to you are deleted.
+- After 30 days, your personal information is removed: your phone number and email address are freed, your display name is cleared, your profile photo is removed and its files are deleted from our storage in the same way, the contact phone is removed from your listings, and records of the sign-in codes sent to you are deleted.
 - Your listings, messages, and conversation history are retained with "Deleted user" attribution to preserve counterparties' records and audit trails.
 - Moderation reports and audit logs remain intact.`,
       },
@@ -106,8 +108,8 @@ When you request account deletion:
     title: "Политика конфиденциальности",
     effectiveDate: "23 сентября 2026 г.",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "6 октября 2026 г.",
-    lastRevisedISO: "2026-10-06",
+    lastRevised: "7 октября 2026 г.",
+    lastRevisedISO: "2026-10-07",
     sections: [
       {
         title: "1. Какие данные мы собираем",
@@ -149,13 +151,15 @@ When you request account deletion:
         title: "6. Хранение данных и удаление аккаунта",
         body: `Данные хранятся, пока аккаунт активен. Записи о кодах входа (номер телефона или адрес почты и IP-адрес запроса) удаляются через 30 дней.
 
+Фото профиля видно всем, и другие пользователи могут на него пожаловаться. Когда вы заменяете или удаляете фото профиля либо его удаляет модератор, оно сразу перестаёт показываться. Затем его файлы удаляются из нашего хранилища фоновым заданием, которое повторяет попытки, пока они не будут удалены, поэтому при недоступности хранилища удаление завершается позже. Мы не можем удалить копии, которые сохранили другие люди или которые хранятся вне наших серверов.
+
 Если вы вошли в аккаунт, удалить его можно в приложении: откройте «Кабинет», нажмите на свой профиль и выберите «Удалить аккаунт» внизу экрана «Профиль». На общедоступной [странице удаления аккаунта](/ru/account/delete) на нашем сайте укажите номер телефона или адрес почты из аккаунта и подтвердите запрос кодом, отправленным на выбранный способ входа.
 
 При удалении аккаунта:
 - Аккаунт переходит в **30-дневный льготный период**.
 - В этот период объявления архивируются, все сессии завершаются, номер телефона и адрес почты остаются зарезервированными за вами.
 - Вы можете восстановить аккаунт в любой момент, войдя снова по номеру телефона или по адресу почты. Восстановление активирует аккаунт и возвращает архивные объявления.
-- Через 30 дней персональные данные удаляются: номер телефона и адрес почты освобождаются, имя и аватар очищаются, контактный телефон удаляется из объявлений, а записи об отправленных вам кодах входа удаляются.
+- Через 30 дней персональные данные удаляются: номер телефона и адрес почты освобождаются, имя очищается, фото профиля удаляется, а его файлы удаляются из нашего хранилища тем же способом, контактный телефон удаляется из объявлений, а записи об отправленных вам кодах входа удаляются.
 - Объявления, сообщения и переписка сохраняются с пометкой «Удалённый пользователь» — чтобы сохранить историю для собеседников и аудита.
 - Жалобы и журналы аудита остаются нетронутыми.`,
       },
@@ -189,8 +193,8 @@ When you request account deletion:
     title: "Gizlinlik syýasaty",
     effectiveDate: "23-nji sentýabr 2026",
     effectiveDateISO: "2026-09-23",
-    lastRevised: "6-njy oktýabr 2026",
-    lastRevisedISO: "2026-10-06",
+    lastRevised: "7-nji oktýabr 2026",
+    lastRevisedISO: "2026-10-07",
     sections: [
       {
         title: "1. Haýsy maglumatlary ýygnaýarys",
@@ -232,13 +236,15 @@ When you request account deletion:
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
         body: `Maglumatlar akkaunt işjeň bolança saklanýar. Giriş kodlarynyň ýazgylary (telefon belgisi ýa-da e-poçta salgysy we haýyşyň IP salgysy) 30 günden soň pozulýar.
 
+Profil suraty hemmelere görünýär we beýleki ulanyjylar ol barada şikaýat edip bilýär. Profil suratyňyzy çalşanyňyzda ýa-da aýranyňyzda, ýa-da ony moderator aýranda, ol derrew görkezilmegini bes edýär. Soňra onuň faýllary saklaýjymyzdan fon işi arkaly pozulýar; faýllar pozulýança synanyşyk gaýtalanýar, şonuň üçin saklaýjy elýeterli bolmasa, pozmak soňrak tamamlanýar. Başga adamlaryň ýatda saklan ýa-da serwerlerimizden daşarda saklanýan nusgalaryny pozup bilmeýäris.
+
 Akkaunta giren bolsaňyz, ony programmada pozup bilersiňiz: «Kabinet» bölümini açyň, profiliňize basyň we «Profil» ekranynyň aşagyndaky «Akkaunty poz» düwmesine basyň. Saýtymyzdaky köpçülige açyk [akkaunt pozmak sahypasynda](/tk/account/delete) akkauntdaky telefon belgini ýa-da e-poçta salgysyny giriziň we şol giriş usulyna iberilen kod bilen haýyşy tassyklaň.
 
 Akkaunty pozan wagtyňyz:
 - **30 günlük lýgotly döwr** başlaýar.
 - Bu döwürde bildirişler arhiwlenýär, ähli sessiýalar gutarýar, telefon belgiňiz we e-poçta salgyňyz size bellenen galýar.
 - Bu döwürde islän wagtyňyz telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bilersiňiz. Dikeltme işjeň edýär we arhiwlenen bildirişleri yzyna getirýär.
-- 30 günden soň şahsy maglumatlar aýrylýar: telefon belgisi we e-poçta salgysy boşadylýar, ady we awatar arassalanýar, bildirişlerden habarlaşma belgisi aýrylýar we size iberilen giriş kodlarynyň ýazgylary pozulýar.
+- 30 günden soň şahsy maglumatlar aýrylýar: telefon belgisi we e-poçta salgysy boşadylýar, ady arassalanýar, profil suraty aýrylýar we onuň faýllary saklaýjymyzdan şol usul bilen pozulýar, bildirişlerden habarlaşma belgisi aýrylýar we size iberilen giriş kodlarynyň ýazgylary pozulýar.
 - Bildirişler, habarlar we çat taryhy «Pozulan ulanyjy» diýip saklanýar — tarapyňyz üçin ýazgylary we audit ýollaryny goraşmak üçin.
 - Şikaýatlar we audit gündelikleri galyberýär.`,
       },
