@@ -11,17 +11,20 @@ export interface ProfilePhotoSession {
   dispose(): void;
 }
 
-export async function capturePhotoSession(): Promise<ProfilePhotoSession> {
+export async function capturePhotoSession(onEnded: () => void = () => {}): Promise<ProfilePhotoSession> {
   const initial = await loadAuthSession();
   if (!initial) throw new PhotoSessionEnded();
   let ended = false;
+  const end = () => {
+    if (!ended) { ended = true; onEnded(); }
+  };
   const check = async () => {
     const session = await loadAuthSession();
-    if (!session || session.user.id !== initial.user.id) ended = true;
+    if (!session || session.user.id !== initial.user.id) end();
     return session;
   };
   const unsubscribe = subscribeAuthSession(() => {
-    void check().catch(() => { ended = true; });
+    void check().catch(end);
   });
   return {
     userId: initial.user.id,

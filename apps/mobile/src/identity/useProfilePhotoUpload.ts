@@ -83,11 +83,16 @@ export function useProfilePhotoUpload() {
         }
       }
       await photo.session.current();
+      if (selected !== photo) return;
       profilePhotoUploadStore.setState({ state: { status: "idle" } });
       profileNoticeStore.getState().show({ kind: "photoSaved" });
       await discard();
     } catch (error) {
-      if (error instanceof PhotoSessionEnded) { cancel(); return; }
+      if (error instanceof PhotoSessionEnded || selected !== photo) {
+        photo.session.dispose();
+        if (photo.compressed) await FileSystem.deleteAsync(photo.compressed.uri, { idempotent: true }).catch(() => {});
+        return;
+      }
       const status = error instanceof CompressionError ? "unsupported"
         : !onlineManager.isOnline() || (error instanceof ApiError && (error.status === 0 || error.code === "NETWORK_ERROR")) ? "offline" : "failed";
       profilePhotoUploadStore.setState({ state: { status, reason: refusalReason(error) } });
@@ -127,7 +132,14 @@ export function useProfilePhotoUpload() {
 
   async function pick(source: "camera" | "library") {
     let owner: ProfilePhotoSession;
-    try { owner = await capturePhotoSession(); } catch { return; }
+    try {
+      owner = await capturePhotoSession(() => {
+        if (selected?.session !== owner) return;
+        selected = null;
+        owner.dispose();
+        profilePhotoUploadStore.setState({ state: { status: "idle" } });
+      });
+    } catch { return; }
     if (source === "camera") {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
@@ -149,7 +161,7 @@ export function useProfilePhotoUpload() {
       } else owner.dispose();
     } catch (error) {
       owner.dispose();
-      if (error instanceof PhotoSessionEnded) { cancel(); return; }
+      if (error instanceof PhotoSessionEnded) return;
       profilePhotoUploadStore.setState({ state: { status: "unsupported" } });
     }
   }
