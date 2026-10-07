@@ -1,53 +1,16 @@
 # Documentation lookups
 
-Use Context7 when a task asks about an external library, framework, SDK, API, CLI, or cloud service. Before writing or debugging code that touches one of these dependencies, resolve and query it through Context7, even if the API seems familiar. This includes API syntax, configuration, version migration, package-specific debugging, and setup. [ADR-0017](../adr/0017-context7-as-canonical-doc-source.md) records the decision.
-
-Read this repository's source, tests, package files, and lockfile for our implementation and installed versions. Context7 answers questions about the external dependency. A business-logic bug, code review, internal refactor, or general programming question with no external dependency touched needs repository evidence rather than a library lookup.
+Use Context7 for external library, framework, SDK, API, CLI and cloud-service questions, including dependency-specific syntax, configuration, migrations, debugging and setup. [ADR-0017](../adr/0017-context7-as-canonical-doc-source.md) owns the choice. Internal refactors, business logic and reviews need repository evidence unless an external API claim requires verification.
 
 ## Lookup procedure
 
-1. Call `resolve-library-id` with the library name and the full task question. Skip resolution only when the user supplies an exact `/org/project` ID. Choose the match by name, relevant description, snippet coverage, source reputation, benchmark score, and the installed version when the question is version-specific. Retry with an alternate name if the matches are poor.
-2. Call `query-docs` with the selected ID and the specific full question. Use the matching version ID when one is available and the installed version matters. Do not treat the newest documentation as proof of behavior in an older installed version.
-3. If the answer is insufficient, query the same ID with `researchMode: true`. If Context7 is unavailable after one retry, consult official upstream documentation and record the fallback.
-4. In the PR's Execution state, record the library ID, the behavior or API verified, and any official-source fallback. A pure internal change records `not applicable`.
-
-A useful query names the actual operation and version, such as “How does TanStack Query v5 match hierarchical keys in `invalidateQueries`?” A one-word query rarely identifies the needed behavior.
-
-## Library-ID reference
-
-These IDs are candidates for the major stack libraries, not proof that a version or ID is still current. Start with `resolve-library-id` unless the user supplies an exact ID; use the result to choose the best current match. Resolve unlisted libraries on demand.
-
-| Area | Library | Candidate ID |
-|---|---|---|
-| Backend | NestJS | `/nestjs/docs.nestjs.com` |
-| Backend | `@nestjs/jwt` | `/nestjs/jwt` |
-| Backend | `nestjs-pino` | `/iamolegga/nestjs-pino` |
-| Backend | Prisma | `/prisma/prisma` |
-| Backend | Fastify | `/fastify/fastify` |
-| Backend | Socket.IO | `/websites/socket_io_v4` |
-| Backend | BullMQ | `/taskforcesh/bullmq` |
-| Backend | ioredis | `/redis/ioredis` |
-| Backend | Pino | `/pinojs/pino` |
-| Shared | Zod | `/colinhacks/zod` |
-| Shared | TypeScript | `/microsoft/typescript` |
-| Shared | Vitest | `/vitest-dev/vitest` |
-| Shared | Turborepo | `/vercel/turborepo` |
-| Web | Next.js | `/vercel/next.js` |
-| Web | React | `/reactjs/react.dev` |
-| Web | Tailwind CSS | `/tailwindlabs/tailwindcss.com` |
-| Web | shadcn/ui | `/shadcn-ui/ui` |
-| Web | Base UI | `/mui/base-ui` |
-| Mobile | Expo, expo-router | `/expo/expo` |
-| Mobile | React Native | `/facebook/react-native-website` |
-| Mobile | NativeWind | `/nativewind/nativewind` |
-| Mobile | React Native Reusables | `/founded-labs/react-native-reusables` |
-| Mobile | TanStack Query | `/tanstack/query` |
-| Mobile | react-native-reanimated | `/software-mansion/react-native-reanimated` |
+1. Inspect source and workspace package files for the operation and installed version.
+2. Resolve the library ID unless the user supplied an exact `/org/project` ID. Choose the relevant reputable match and version.
+3. Query the specific operation. If insufficient, narrow the question and retry using arguments supported by the exposed tool. If the server remains unavailable after one retry, use official upstream documentation and record the fallback.
+4. Record the library ID, verified behavior and any fallback in Execution state. Internal-only changes record `not applicable`.
 
 ## Boundaries
 
-The [issue and owning specification](coding-workflow.md) define intended behavior; source, schema, tests, and runtime evidence define AutoTM's current behavior. The [local overview](../../CONTEXT-MAP.md) locates source and names important boundaries. Context7 does not establish either project-specific truth.
+The issue and owning specification define intended behavior; source and runtime evidence establish current behavior. Context7 establishes neither. Use [the context map](../../CONTEXT-MAP.md) to find the owning area and the lockfile for resolved versions.
 
-Use the installed version from workspace `package.json` files and `pnpm-lock.yaml`; avoid maintaining another version catalogue here. For mobile dependency alignment and runtime checks, use [mobile-expo.md](mobile-expo.md). For task-specific NativeWind and data-fetching constraints, use [nativewind-v4.md](nativewind-v4.md) and [mobile-data-fetching.md](mobile-data-fetching.md). These guides supplement the lookup procedure when that area is affected.
-
-A reviewer checks whether an external API claim has current, version-appropriate evidence. The current [verification gate](../../.claude/skills/run-issue/VERIFICATION.md) owns that check; `CLAUDE.md` only loads the shared root policy.
+Mobile dependency and runtime work also follows [mobile/Expo checks](mobile-expo.md); styling and data fetching follow [NativeWind](nativewind-v4.md) and [mobile data fetching](mobile-data-fetching.md). [Verification](../../.claude/skills/run-issue/VERIFICATION.md) owns evidence requirements.

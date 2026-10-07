@@ -28,6 +28,7 @@ Execute exactly one issue per invocation. Under [run-queue](../run-queue/SKILL.m
 - If a local/remote canonical branch, issue worktree, or PR already exists, including a reservation-only branch with no checkpoint commits, route through `resume-issue <N>` and continue the existing attempt instead of creating a duplicate.
 - A design pause may leave only the reservation branch. After its design PR merges, `resume-issue` verifies that the branch has no unique work and fast-forwards it to current `main` before implementation.
 - Build a scoped execution plan mapping every acceptance criterion to implementation and evidence.
+- For an issue with ordered slices, read [SLICED-ISSUES.md](SLICED-ISSUES.md) before planning and apply its eligibility, checkpoint and real-path evidence rules.
 - Record relevant canonical terms and avoided synonyms. Do not silently migrate unrelated names.
 - Before writing or debugging code that touches an external dependency, resolve and query it through Context7, following `docs/agents/documentation-lookups.md` and ADR-0017.
 - Never query an agent provider for remaining quota before starting.

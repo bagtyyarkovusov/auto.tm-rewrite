@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+
 import { compactItem, executionSections, parseCommand, runCommand } from "./agent-github.mjs";
 
 test("reads every grouped Execution state and ignores headings inside fences", () => {
@@ -73,4 +74,21 @@ test("creating an issue requires a title and nonempty body file, and returns a s
     const result = runCommand(parseCommand(args), deps);
     assert.equal(result.url, "https://example.test/issues/1");
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("queue snapshots preserve pending checks and flag a possibly incomplete list", () => {
+  const result = runCommand(parseCommand(["queue", "--limit", "1"]), {
+    repo: "owner/repo", gh: () => JSON.stringify([{ number: 7, title: "Pending", statusCheckRollup: [{ name: "pr", status: "IN_PROGRESS", conclusion: "" }], body: "## Execution state\n- **Status:** verifying" }]),
+  });
+  assert.equal(result.possiblyMore, true);
+  assert.deepEqual(result.prs[0].checks, [{ name: "pr", state: "IN_PROGRESS" }]);
+  assert.equal(result.prs[0].execution[0].text, "- **Status:** verifying");
+});
+
+test("full bodies require explicit opt-in and GraphQL failures never become empty history", () => {
+  const item = { number: 7, body: "## Context\nThe governing decision is in this section." };
+  const deps = { repo: "owner/repo", gh: () => JSON.stringify(item) };
+  assert.equal(runCommand(parseCommand(["issue", "7"]), deps).body, undefined);
+  assert.equal(runCommand(parseCommand(["issue", "7", "--full"]), deps).body, item.body);
+  assert.throws(() => runCommand(parseCommand(["comments", "issue", "7"]), { repo: "owner/repo", gh: () => JSON.stringify({ errors: [{ message: "Not authorized" }] }) }), /errors/);
 });
