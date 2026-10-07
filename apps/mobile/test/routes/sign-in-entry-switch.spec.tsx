@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import type * as Native from "react-native";
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { HttpResponse, http } from "msw";
 
 import PhoneScreen from "../../app/(auth)/phone";
@@ -101,4 +101,31 @@ it("requests the selected method and opens the existing code route with its purp
   await vi.waitFor(() => expect(routerMock.push).toHaveBeenCalled());
   expect(body).toEqual({ email: "held@example.com" });
   expect(routerMock.push).toHaveBeenCalledWith({ pathname: "/(auth)/otp", params: { method: "email", destination: "held@example.com", requestId: "00000000-0000-4000-8000-000000000001", resendInSeconds: "60" } });
+});
+
+
+it.each([
+  ["en", "Phone", "Email", "Phone number", "Enter your email", "Close"],
+  ["ru", "Телефон", "Эл. почта", "Номер телефона", "Введите электронную почту", "Закрыть"],
+  ["tk", "Telefon", "E-poçta", "Telefon belgisi", "E-poçtaňyzy giriziň", "Ýap"],
+] as const)("keeps localized accessible method selection and held value in %s", (locale, phone, email, field, emailTitle, close) => {
+  const view = renderMobile(<PhoneScreen />, { locale });
+  fireEvent.changeText(view.getByLabelText(field), "61234567");
+  fireEvent.press(view.getByRole("tab", { name: email }));
+  expect(view.getByRole("tab", { name: email, selected: true })).toBeTruthy();
+  expect(view.getByText(emailTitle)).toBeTruthy();
+  expect(view.getByRole("button", { name: close })).toBeTruthy();
+  fireEvent.press(view.getByRole("tab", { name: phone }));
+  expect(view.getByDisplayValue("61 23-45-67")).toBeTruthy();
+  expect(routerMock.navigate).not.toHaveBeenCalled();
+});
+
+it("preserves completed sign-in replay when the entry unmounts", () => {
+  pendingIntent();
+  const cancel = vi.spyOn(useAuthIntentStore.getState(), "cancelSignIn");
+  const view = renderMobile(<PhoneScreen />);
+  act(() => useAuthIntentStore.getState().completeSignIn(routerMock));
+  view.unmount();
+  expect(cancel).not.toHaveBeenCalled();
+  expect(useAuthIntentStore.getState().replayAction).toEqual({ kind: "favorite", listingId: "listing" });
 });

@@ -13,6 +13,7 @@ import { legalPageUrl } from "../../src/config/publicWebUrl";
 import { BrandLogo } from "../../src/auth/BrandLogo";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 
+import { SignInMethodContent } from "./SignInMethodContent";
 import { type SignInMethod, SignInMethodTabs } from "./SignInMethodTabs";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
@@ -80,14 +81,10 @@ export function AuthEntryScreen({
                 onChange={onMethodChange}
               />
 
-              <View className="gap-2">
-                <Text className="text-headline font-semibold leading-snug text-foreground">
-                  {title}
-                </Text>
-                <Text className="text-body leading-normal text-muted-foreground">
-                  {helper}
-                </Text>
-              </View>
+              <SignInMethodContent method={method}
+                phone={<View className="gap-2"><Text className="text-headline font-semibold leading-snug text-foreground">{method === "phone" ? title : t("phoneTitle")}</Text><Text className="text-body leading-normal text-muted-foreground">{method === "phone" ? helper : t("phoneHelper")}</Text></View>}
+                email={<View className="gap-2"><Text className="text-headline font-semibold leading-snug text-foreground">{method === "email" ? title : t("emailTitle")}</Text><Text className="text-body leading-normal text-muted-foreground">{method === "email" ? helper : t("emailHelper")}</Text></View>}
+              />
 
               {children}
 

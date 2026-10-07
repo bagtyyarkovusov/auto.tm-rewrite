@@ -209,7 +209,7 @@ describe("auth intent return mechanism", () => {
 
   it("the phone screen cancels an abandoned sign-in", () => {
     const phoneSource = readFileSync(
-      resolve(__dirname, "../../app/(auth)/phone.tsx"),
+      resolve(__dirname, "../../components/auth/SignInEntryScreen.tsx"),
       "utf-8",
     );
     expect(phoneSource).toContain("useAuthIntentStore.getState().cancelSignIn()");
@@ -217,7 +217,7 @@ describe("auth intent return mechanism", () => {
 
   it("the email screen cancels an abandoned root sign-in", () => {
     const emailSource = readFileSync(
-      resolve(__dirname, "../../app/(auth)/email.tsx"),
+      resolve(__dirname, "../../components/auth/SignInEntryScreen.tsx"),
       "utf-8",
     );
     expect(emailSource).toContain("useAuthIntentStore.getState().cancelSignIn()");

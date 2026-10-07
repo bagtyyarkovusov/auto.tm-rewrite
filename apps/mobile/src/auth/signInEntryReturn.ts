@@ -16,3 +16,7 @@ export function selectMountedSignInEntry(method: SignInMethod): boolean {
   selectMethod(method);
   return true;
 }
+
+export function hasMountedSignInEntry(): boolean {
+  return selectMethod !== null;
+}

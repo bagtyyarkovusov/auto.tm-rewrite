@@ -598,3 +598,39 @@ Draft Turkmen copy is provisional and should be reviewed by a translator before 
 - Custom compositions live under `apps/mobile/components/auth/`, NOT `apps/mobile/components/ui/` (that path is reserved for RNR-installed primitives).
 - `OtpCells` owns the shake animation via `useImperativeHandle`; route file does NOT redeclare an `Animated.Value`.
 - Button "link" inline pattern uses `cn()` at call site, not a new CVA variant (justification: 2 call sites — promote only when third screen needs it).
+
+## In-place sign-in entry (#717)
+
+The phone and email entry URLs stay valid and render the same SignInEntryScreen
+with the corresponding initial method. Their values, validation and request
+errors belong to that mounted screen, separately for each method. A switch is
+local state: it performs no navigation and never cancels the pending action.
+One native input stays mounted while its value, label, country prefix and
+keyboard type change; focus is retained/refreshed without Keyboard.dismiss.
+
+The common close/language header, wordmark, segmented control, Get code and
+legal line remain in place. Title/helper text reserves the taller measured
+localized copy and cross-fades; method helpers do the same. The field changes
+opacity quickly, with no slide. The segmented capsule uses the existing snappy
+180ms critically damped spring with overshoot clamped; labels cross-fade.
+Motion uses the system reduction policy. A changed method gives one best-effort
+selection tick (Android system Clock_Tick, elsewhere selectionAsync); choosing
+the already selected method does nothing. Expo Haptics ~55.0.18 is the same
+approved version as #718 and adds Android VIBRATE through its native manifest.
+No egress or runtime permission prompt is added; hardware feedback needs proof.
+
+Entry close or Android Back exits once. Only leaving the root entry abandons an
+unfinished sign-in intent; success preserves replay. With an entry still mounted
+under Code, header/native Back and Change identifier pop to it, and Use phone
+instead selects its retained phone field before popping. A standalone Code link
+keeps its legacy valid-entry/cancel fallbacks. Account add/change screens remain
+fixed signed-in method purposes: they have no segmented switch or sibling method
+navigation. Their existing shared entry chrome, verify route and refusal rules
+remain separate and unchanged.
+
+Rendered tests cover no-route switching, retained values/native input instance,
+keyboard-type props, one close/back/cancel, localized roles, actual OTP request,
+Code return and completed replay. Native proof remains required for stationary
+geometry, keyboard continuity, actual navigation/back, animation/reduced motion,
+haptics and account-purpose flows. Capture phone/email in light/dark EN/RU/TK,
+record a switch, and exercise Code return, single exit and account add/change.

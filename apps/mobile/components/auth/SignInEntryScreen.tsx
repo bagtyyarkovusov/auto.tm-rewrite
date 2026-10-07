@@ -1,6 +1,6 @@
 import { router, useIsFocused, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BackHandler, TextInput, View } from "react-native";
+import { BackHandler, type TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 
@@ -14,6 +14,7 @@ import { registerSignInEntryReturn } from "../../src/auth/signInEntryReturn";
 import { usePhoneField } from "../../src/auth/usePhoneField";
 
 import { AuthEntryScreen } from "./AuthEntryScreen";
+import { SignInMethodContent } from "./SignInMethodContent";
 import type { SignInMethod } from "./SignInMethodTabs";
 
 import { Input } from "@/components/ui/input";
@@ -84,7 +85,8 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
   const isPhone = method === "phone";
   const destination = isPhone ? phone.canonicalPhone : canonicalEmail;
   const showError = isPhone ? phone.showError : emailTouched && canonicalEmail === null || emailError !== null;
-  const helper = isPhone ? phone.helperText : emailError ?? (showError ? t("emailFormatError") : t("emailInputHelper"));
+  const emailShowError = emailTouched && canonicalEmail === null || emailError !== null;
+  const emailHelper = emailError ?? (emailShowError ? t("emailFormatError") : t("emailInputHelper"));
 
   async function submit() {
     if (isPhone) phone.touch(); else setEmailTouched(true);
@@ -148,7 +150,10 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
             placeholder={t(isPhone ? "phonePlaceholder" : "emailPlaceholder")}
           />
         </View>
-        <Text className={showError ? "text-callout leading-snug text-destructive" : "text-callout leading-snug text-muted-foreground"}>{helper}</Text>
+        <SignInMethodContent method={method}
+          phone={<Text className={phone.showError ? "text-callout leading-snug text-destructive" : "text-callout leading-snug text-muted-foreground"}>{phone.helperText}</Text>}
+          email={<Text className={emailShowError ? "text-callout leading-snug text-destructive" : "text-callout leading-snug text-muted-foreground"}>{emailHelper}</Text>}
+        />
       </Animated.View>
     </AuthEntryScreen>
   );

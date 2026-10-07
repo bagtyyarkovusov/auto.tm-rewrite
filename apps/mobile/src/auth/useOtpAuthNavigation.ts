@@ -3,7 +3,7 @@ import { usePreventRemove } from "@react-navigation/native";
 import type { Router } from "expo-router";
 
 import { useAuthIntentStore } from "./intentStore";
-import { selectMountedSignInEntry } from "./signInEntryReturn";
+import { hasMountedSignInEntry, selectMountedSignInEntry } from "./signInEntryReturn";
 
 type SignInMethod = "phone" | "email";
 
@@ -50,6 +50,13 @@ export function useOtpAuthNavigation(router: Router) {
           ? "/(auth)/email"
           : "/(auth)/phone",
       );
+      return;
+    }
+
+    // Code Back edits the method already under it. Only leaving that entry
+    // abandons sign-in; a standalone Code route retains its legacy fallback.
+    if (exit === "cancel" && hasMountedSignInEntry()) {
+      router.back();
       return;
     }
 
