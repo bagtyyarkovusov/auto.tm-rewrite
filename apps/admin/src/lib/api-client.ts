@@ -7,12 +7,7 @@ import {
   setAuthCookies,
 } from "./cookies";
 
-const configuredApiUrl =
-  process.env["API_BASE_URL"] ||
-  process.env["NEXT_PUBLIC_API_URL"] ||
-  "http://localhost:3006/api/v1";
-const base = configuredApiUrl.replace(/\/+$/, "");
-const API_BASE_URL = base.endsWith("/api/v1") ? base : `${base}/api/v1`;
+import { getApiBaseUrl } from "./api-config";
 
 export class ApiError extends Error {
   constructor(
@@ -30,7 +25,7 @@ async function doFetch(
   path: string,
   options: Omit<RequestInit, "body"> & { body?: unknown } = {},
 ): Promise<Response> {
-  const url = `${API_BASE_URL}${path}`;
+  const url = `${getApiBaseUrl()}${path}`;
   const headers = new Headers(options.headers);
   if (!headers.has("Content-Type") && options.body != null) {
     headers.set("Content-Type", "application/json");
