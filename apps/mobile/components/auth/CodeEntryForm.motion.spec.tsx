@@ -69,6 +69,8 @@ function renderWrongCode(locale: "en" | "ru" | "tk" = "en") {
     />,
     { locale },
   );
+  // The form also focuses on mount; measure the wrong-code focus reset only.
+  native.focus.mockClear();
   return { view, verify };
 }
 
