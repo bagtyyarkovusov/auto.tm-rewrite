@@ -466,7 +466,7 @@ export default function Step2Photos({
             onRetry={onRetryPhoto}
             onRemove={removePhoto}
           />
-          {stillUploading && continuesWhileUploading && (
+          {stillUploading && continuesWhileUploading && photos.length >= ListingsSchemas.MIN_LISTING_PHOTOS && (
             <Text className="text-sm text-muted-foreground">
               {t("photosKeepUploading")}
             </Text>
