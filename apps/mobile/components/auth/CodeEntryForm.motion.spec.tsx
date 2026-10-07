@@ -53,13 +53,13 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function renderWrongCode(locale: "en" | "ru" | "tk" = "en") {
-  const verify = vi.fn(async () => {
+function renderWrongCode(locale: "en" | "ru" | "tk" = "en", method: "phone" | "email" = "phone") {
+  const verify = vi.fn(async (): Promise<void> => {
     throw new ApiError("INVALID_OTP", 400, "Invalid code");
   });
   const view = renderMobile(
     <CodeEntryForm
-      method="phone"
+      method={method}
       displayedDestination="+993 61 ** ** 67"
       initialResendSeconds={0}
       verify={verify}
@@ -81,15 +81,30 @@ async function enterWrongCode(view: ReturnType<typeof renderMobile>) {
 }
 
 describe("wrong code through the real form and cells", () => {
-  it("uses instant error, digit clearing and focus reset when Reduce Motion is on", async () => {
+  it.each([
+    ["en", "phone", "Wrong code. Try again."],
+    ["ru", "phone", "Неверный код. Попробуйте еще раз."],
+    ["tk", "phone", "Kod nädogry. Täzeden synanyşyň."],
+    ["en", "email", "Wrong code. Try again."],
+    ["ru", "email", "Неверный код. Попробуйте еще раз."],
+    ["tk", "email", "Kod nädogry. Täzeden synanyşyň."],
+  ] as const)("uses instant error, digit clearing and focus reset in %s for %s under Reduce Motion", async (locale, method, error) => {
     native.reducedMotion = true;
-    const { view, verify } = renderWrongCode();
+    const { view, verify } = renderWrongCode(locale, method);
     await enterWrongCode(view);
     expect(verify).toHaveBeenCalledWith("123456");
-    expect(view.getByText("Wrong code. Try again.")).toBeTruthy();
+    expect(view.getByText(error)).toBeTruthy();
     expect(view.getByDisplayValue("").props.editable).toBe(true);
     expect(native.focus).toHaveBeenCalledOnce();
     expect(native.animate).not.toHaveBeenCalled();
+
+    // The instant error does not prevent correcting the code on the same form.
+    verify.mockResolvedValueOnce(undefined);
+    await act(async () => {
+      fireEvent.changeText(view.getByDisplayValue(""), "654321");
+    });
+    expect(verify).toHaveBeenLastCalledWith("654321");
+    expect(view.queryByText(error)).toBeNull();
   });
 
   it("keeps the normal shake, digit clearing and focus reset when Reduce Motion is off", async () => {
