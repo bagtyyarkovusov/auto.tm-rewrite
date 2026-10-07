@@ -61,7 +61,7 @@ it("keeps pending intent through a switch and cancels it exactly once on close/u
   fireEvent.press(view.getByText("Email"));
   expect(cancel).not.toHaveBeenCalled();
   expect(useAuthIntentStore.getState().intent).not.toBeNull();
-  fireEvent.press(view.getByRole("button", { name: "Close" }));
+  fireEvent.press(view.getByRole("button", { name: /^[Cc]lose$/ }));
   view.unmount();
   expect(cancel).toHaveBeenCalledOnce();
   expect(routerMock.dismissTo).toHaveBeenCalledWith("/(tabs)/favorites");
