@@ -4,7 +4,7 @@ The internal web app provides moderation, content-report review, inspection-inte
 
 The browser never receives API tokens. Server-side code stores them in HTTP-only cookies and forwards bearer authentication to the API. Preserve production `__Host-` cookie restrictions, origin validation on browser-posted handlers, and local-only `returnTo` validation. Authenticated layout checks supplement middleware's missing-cookie redirect.
 
-`API_BASE_URL` accepts an http(s) origin or an address ending in `/api/v1`, with an optional trailing slash. Production requires it and validates it at server initialization, before accepting requests. Development retains the public-URL/local fallback. The network regression in `apps/api/test/admin-api-bridge.spec.ts` uses the real admin client and running API OTP controller; it does not replace `fetch`.
+`API_BASE_URL` accepts an http(s) origin or an address ending in `/api/v1`, with an optional trailing slash. Production requires it and validates it at server initialization, before accepting requests. Development retains the public-URL/local fallback. The network regression in `apps/api/src/modules/identity/presentation/AdminApiBridge.spec.ts` uses the real admin client and running API OTP controller; it does not replace `fetch`.
 
 Sign-in creates an ordinary session. Admin access additionally needs TOTP elevation. Pending enrollment reuses the same secret until verification; refresh does not extend the elevation deadline. Logout clears local cookies even if API revocation fails. Keep token and credential values out of logs and errors.
 

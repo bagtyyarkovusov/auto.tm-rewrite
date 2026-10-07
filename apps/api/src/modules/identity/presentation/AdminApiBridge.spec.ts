@@ -2,27 +2,26 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { Test } from "@nestjs/testing";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 
-import { AuthController } from "../src/modules/identity/presentation/AuthController";
-import { RequestOtp } from "../src/modules/identity/application/RequestOtp";
-import { VerifyOtp } from "../src/modules/identity/application/VerifyOtp";
-import { RefreshSession } from "../src/modules/identity/application/RefreshSession";
-import { Logout } from "../src/modules/identity/application/Logout";
-import { LogoutAll } from "../src/modules/identity/application/LogoutAll";
-import { GlobalErrorFilter } from "../src/common/error.filter";
+import { AuthController } from "./AuthController";
+import { RequestOtp } from "../application/RequestOtp";
+import { VerifyOtp } from "../application/VerifyOtp";
+import { RefreshSession } from "../application/RefreshSession";
+import { Logout } from "../application/Logout";
+import { LogoutAll } from "../application/LogoutAll";
+import { GlobalErrorFilter } from "../../../common/error.filter";
 
 // There is no Next request context in this network test. Only cookie storage
 // is replaced; the admin API client, fetch, API router and controller are real.
-vi.mock("../../admin/src/lib/cookies", () => ({
+vi.mock("../../../../../admin/src/lib/cookies", () => ({
   getAccessToken: async () => undefined,
   getRefreshToken: async () => undefined,
   setAuthCookies: vi.fn(),
   clearAuthCookies: vi.fn(),
 }));
 
-
 // Loading the UI bridge as a test fixture must not pull its DOM/Next types
 // into the API's CommonJS production compilation.
-const adminClientPath = "../../admin/src/lib/api-client";
+const adminClientPath = "../../../../../admin/src/lib/api-client";
 type AdminClient = {
   apiFetch(path: string, options: { method: string; body: unknown }): Promise<unknown>;
   ApiError: typeof Error;

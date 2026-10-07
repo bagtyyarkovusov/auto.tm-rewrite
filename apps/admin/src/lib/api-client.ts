@@ -6,7 +6,6 @@ import {
   getRefreshToken,
   setAuthCookies,
 } from "./cookies";
-
 import { getApiBaseUrl } from "./api-config";
 
 export class ApiError extends Error {
