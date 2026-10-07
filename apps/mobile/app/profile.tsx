@@ -305,8 +305,8 @@ function SignedInProfile() {
             <AlertDialogDescription>{t("permD")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onPress={photo.dismissCameraDenied}><Text>{t("common:cancel")}</Text></AlertDialogCancel>
-            <AlertDialogAction onPress={() => { photo.dismissCameraDenied(); void Linking.openSettings(); }}>
+            <AlertDialogCancel accessibilityRole="button" onPress={photo.dismissCameraDenied}><Text>{t("common:cancel")}</Text></AlertDialogCancel>
+            <AlertDialogAction accessibilityRole="button" onPress={() => { photo.dismissCameraDenied(); void Linking.openSettings(); }}>
               <Text>{t("openSettings")}</Text>
             </AlertDialogAction>
           </AlertDialogFooter>

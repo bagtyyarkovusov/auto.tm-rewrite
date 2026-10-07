@@ -115,6 +115,12 @@ vi.mock("@rn-primitives/avatar", async () => {
   return { Root: native.View, Image: native.Image, Fallback: native.View };
 });
 
+vi.mock("expo-image-picker", () => ({
+  launchImageLibraryAsync: vi.fn(async () => ({ canceled: true, assets: null })),
+  launchCameraAsync: vi.fn(async () => ({ canceled: true, assets: null })),
+  requestCameraPermissionsAsync: vi.fn(async () => ({ granted: false })),
+}));
+
 // Expo modules that load `expo-modules-core`, which needs the native runtime.
 // A spec that exercises one of them mocks it itself and wins over these stubs.
 vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => false), openURL: vi.fn(async () => {}) }));
