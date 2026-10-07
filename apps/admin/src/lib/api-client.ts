@@ -7,10 +7,12 @@ import {
   setAuthCookies,
 } from "./cookies";
 
-const API_BASE_URL =
+const configuredApiUrl =
   process.env["API_BASE_URL"] ||
   process.env["NEXT_PUBLIC_API_URL"] ||
   "http://localhost:3006/api/v1";
+const base = configuredApiUrl.replace(/\/+$/, "");
+const API_BASE_URL = base.endsWith("/api/v1") ? base : `${base}/api/v1`;
 
 export class ApiError extends Error {
   constructor(
