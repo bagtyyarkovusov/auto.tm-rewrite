@@ -1,4 +1,6 @@
 import * as RN from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import { Profiler } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { waitFor } from "@testing-library/react-native";
@@ -156,9 +158,45 @@ function answerNotDamaged(screen: Screen, locale: keyof typeof localized) {
 beforeEach(() => {
   routeParams.id = id;
   routerMock.canGoBack.mockReturnValue(true);
+  vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) => ({ exists: false, uri }));
 });
 
 describe("the section list of a published Listing (#589)", () => {
+  it("never asks to fill in existing photos while loading or on the first ready render (#736)", async () => {
+    createListingApi();
+    let finishReadingPhotos = () => {};
+    const photoRead = new Promise<{ exists: false; uri: string }>((resolve) => {
+      finishReadingPhotos = () => resolve({ exists: false, uri: `file:///doc/listing-staging/edit-${id}/` });
+    });
+    vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) =>
+      uri === `file:///doc/listing-staging/edit-${id}/` ? photoRead : { exists: false, uri },
+    );
+
+    const photoRows: string[] = [];
+    let screen: Screen | undefined;
+    screen = renderMobile(
+      <Profiler id="edit-photos" onRender={() => {
+        const row = screen?.queryAllByTestId("check-section")
+          .find((item) => String(item.props.accessibilityLabel).startsWith("Photos, "));
+        if (row) photoRows.push(String(row.props.accessibilityLabel));
+      }}>
+        <ToastProvider><EditListingScreen /></ToastProvider>
+      </Profiler>,
+    );
+    await screen.findByRole("header", { name: "Edit listing" });
+    expect(photoRows.length).toBeGreaterThan(0);
+    expect(screen.queryByText("Photos: 4")).toBeNull();
+
+    await act(async () => { finishReadingPhotos(); });
+    await screen.findByText("Photos: 4");
+
+    // Profiler observes each commit before the queue-to-payload effect can
+    // settle it. A findBy query alone can skip the incorrect intermediate row.
+    expect(photoRows.find((row) => row.includes("Photos: 4")))
+      .toBe("Photos, Photos: 4, Change");
+    expect(photoRows.filter((row) => row.includes("Fill in"))).toEqual([]);
+  });
+
   it("opens on the Listing's sections under Edit listing, with the note about saving", async () => {
     createListingApi();
     const screen = await openEdit();
