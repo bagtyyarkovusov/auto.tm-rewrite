@@ -82,6 +82,8 @@ describe("conditional image protocol on digest-pinned hosted MinIO (#725)", () =
     expect(fixture.headers["if-match"]).toBeTruthy();
     expect(new URL(fixture.signed.url).searchParams.get("X-Amz-SignedHeaders")?.split(";"))
       .toContain("if-match");
+    expect([...new URL(fixture.signed.url).searchParams.keys()]
+      .some((name) => /^x-amz-checksum-/i.test(name))).toBe(false);
     for (const Key of manifest(fixture.key)) {
       expect((await s3.send(new HeadObjectCommand({ Bucket: bucket, Key }))).ContentLength).toBe(0);
     }
