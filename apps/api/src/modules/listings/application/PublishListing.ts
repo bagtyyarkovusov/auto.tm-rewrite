@@ -240,7 +240,9 @@ export class PublishListing {
 
     await Promise.all(
       attachedPhotos.map((photo) =>
-        this.variantGenerator.generate(photo.key as string),
+        this.variantGenerator.generate(photo.key as string, {
+          writeProtocol: uploads.find((upload) => upload.key === photo.key)?.writeProtocol ?? "legacy",
+        }),
       ),
     );
 

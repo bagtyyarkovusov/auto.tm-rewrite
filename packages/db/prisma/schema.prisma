@@ -499,6 +499,8 @@ model MediaUpload {
   contentType String
   // Null for rows backfilled from media that existed before the table.
   sizeBytes   Int?
+  writeProtocol String @default("legacy")
+  objectKeys String[] @default([])
   createdAt   DateTime      @default(now())
   media       ListingMedia?
 
