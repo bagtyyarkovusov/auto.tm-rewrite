@@ -13,7 +13,7 @@ Use the [glossary](docs/domain/GLOSSARY.md) when interpreting or changing domain
 | Task | Read before changing it |
 |---|---|
 | Shape, ticket, implement, resume, or review an issue | [Coding workflow](docs/agents/coding-workflow.md) and its linked skill |
-| Work a founder-ordered queue of issues from one orchestrator session | [`run-queue`](.claude/skills/run-queue/SKILL.md), then the coding workflow |
+| Work a founder-ordered queue or explicitly delegated outcome from one orchestrator session | [`run-queue`](.claude/skills/run-queue/SKILL.md), then the coding workflow |
 | Small fix without an issue, or a fix for a review finding | [Small changes](docs/agents/coding-workflow.md#small-changes-adr-0065) ([ADR-0065](docs/adr/0065-small-changes-skip-the-issue-ceremony.md)) |
 | API domain logic, cross-context ownership, or domain documentation | [Domain guidance](docs/agents/domain.md) |
 | External library, framework, SDK, API, CLI, or cloud service | [Documentation lookups](docs/agents/documentation-lookups.md); resolve and query Context7 before relying on library APIs |
