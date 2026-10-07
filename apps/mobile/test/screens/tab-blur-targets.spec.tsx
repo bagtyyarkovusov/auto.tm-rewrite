@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { View } from "react-native";
 import { beforeEach, expect, it, vi } from "vitest";
 
@@ -28,6 +29,52 @@ it("provides the focused target after its first mount and removes it on unmount"
   view.rerender(<Screen mounted={false} />);
   expect(view.queryByTestId("focused-blur")).toBeNull();
   expect(view.getByText("Search")).toBeTruthy();
+});
+
+it("keeps the bar's blur and its children mounted while a lazily mounted tab registers", async () => {
+  const { Platform } = await import("react-native");
+  Object.assign(Platform, { OS: "android", Version: 31 });
+  const { TabBlurTargets, TabBlurTarget, useTabBlurTarget } = await import("../../components/navigation/TabBlurTargets");
+  let mounts = 0;
+  function Tabs() {
+    useEffect(() => { mounts += 1; }, []);
+    return <Text>Tabs</Text>;
+  }
+  function Bar({ focused }: { focused: string }) {
+    return <GlassSurface blurTarget={useTabBlurTarget(focused)}><Tabs /></GlassSurface>;
+  }
+  // Favorites is lazy: its screen mounts, and registers, only after it is focused.
+  function Screen({ focused, favoritesMounted }: { focused: string; favoritesMounted: boolean }) {
+    return (
+      <TabBlurTargets>
+        <Bar focused={focused} />
+        <TabBlurTarget routeKey="search"><View /></TabBlurTarget>
+        {favoritesMounted ? <TabBlurTarget routeKey="favorites"><View /></TabBlurTarget> : null}
+      </TabBlurTargets>
+    );
+  }
+  const view = renderMobile(<Screen focused="search" favoritesMounted={false} />);
+  const searchTarget = view.getByTestId("focused-blur").props.blurTarget;
+  expect(searchTarget).toBeDefined();
+  const mountsWithBlur = mounts;
+
+  view.rerender(<Screen focused="favorites" favoritesMounted={false} />);
+  expect(view.getByTestId("focused-blur").props.blurTarget).toBe(searchTarget);
+  expect(mounts).toBe(mountsWithBlur);
+
+  view.rerender(<Screen focused="favorites" favoritesMounted />);
+  const favoritesTarget = view.getByTestId("focused-blur").props.blurTarget;
+  expect(favoritesTarget).toBeDefined();
+  expect(favoritesTarget).not.toBe(searchTarget);
+  expect(mounts).toBe(mountsWithBlur);
+  view.unmount();
+
+  // Focusing and mounting in one commit, as the navigator does, must not remount either.
+  const once = renderMobile(<Screen focused="search" favoritesMounted={false} />);
+  const mountsBefore = mounts;
+  once.rerender(<Screen focused="favorites" favoritesMounted />);
+  expect(once.getByTestId("focused-blur").props.blurTarget).toBeDefined();
+  expect(mounts).toBe(mountsBefore);
 });
 
 it.each([30, 29])("keeps Android API%s screen content without a blur target", async (version) => {
