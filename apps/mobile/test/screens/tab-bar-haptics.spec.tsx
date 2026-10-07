@@ -44,6 +44,13 @@ describe("Tab bar selection feedback", () => {
     expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
     expect(navigation.dispatch).toHaveBeenCalledTimes(1);
   });
+  it("does not repeat feedback before an accepted tap updates focus", () => {
+    const { view } = renderBar();
+    const favorites = view.getByRole("tab", { name: "Favorites" });
+    fireEvent.press(favorites);
+    fireEvent.press(favorites);
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+  });
   it("does not tick when the open tab is tapped", () => {
     const { view } = renderBar();
     fireEvent.press(view.getByRole("tab", { name: "Search" }));
