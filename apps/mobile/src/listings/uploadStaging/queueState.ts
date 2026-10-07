@@ -1,4 +1,4 @@
-import { WizardSchemas, type ListingsSchemas } from "@auto-tm/contracts";
+import { WizardSchemas, ListingsSchemas } from "@auto-tm/contracts";
 
 import { getStagingPath, listLocalPhotoIds } from "./stagingDir";
 import type { StagedPhoto, UploadQueue, PublishGateResult, UploadError } from "./types";
@@ -14,7 +14,7 @@ export function computePublishGate(queue: UploadQueue): PublishGateResult {
   const blockers: string[] = [];
 
   const hasPhotos = queue.photos.length > 0;
-  if (!hasPhotos) {
+  if (queue.photos.length < ListingsSchemas.MIN_LISTING_PHOTOS) {
     blockers.push(WIZARD_ERROR_KEYS.photosRequired);
   }
 
@@ -31,11 +31,11 @@ export function computePublishGate(queue: UploadQueue): PublishGateResult {
     blockers.push(WIZARD_ERROR_KEYS.uploadsFailed);
   }
 
-  const hasAttached = queue.photos.some(
-    (p) => p.state === "attached" || p.state === "uploaded",
-  );
+  const hasAttached = queue.photos.filter(
+    (p) => !!p.key && (p.state === "attached" || p.state === "uploaded"),
+  ).length >= ListingsSchemas.MIN_LISTING_PHOTOS;
   if (!hasAttached && hasPhotos) {
-    blockers.push(WIZARD_ERROR_KEYS.noPhotoAttached);
+    if (!blockers.includes(WIZARD_ERROR_KEYS.photosRequired)) blockers.push(WIZARD_ERROR_KEYS.photosRequired);
   }
 
   return {

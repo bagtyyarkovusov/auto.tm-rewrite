@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 
 import { Listing } from "../domain/Listing";
 import { ListingMedia } from "../domain/ListingMedia";
+import { DomainError } from "../domain/types";
 import type { ListingRepository } from "../domain/ports/ListingRepository";
 import type { ListingMediaRepository } from "../domain/ports/ListingMediaRepository";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
@@ -68,9 +69,13 @@ class FakeListingMediaRepository implements ListingMediaRepository {
 
   async deleteReleasingUpload(
     id: string,
+    minimumPhotos?: number,
   ): Promise<{ removed: boolean; ownedKey: string | null }> {
     const row = this.media.find((m) => m.id === id);
     if (!row) return { removed: false, ownedKey: null };
+    if (minimumPhotos !== undefined && this.media.filter((m) => m.listingId === row.listingId && m.kind === "image" && m.id !== id).length < minimumPhotos) {
+      throw new DomainError("PHOTO_MINIMUM_REQUIRED", "At least three photos are required");
+    }
     this.media = this.media.filter((m) => m.id !== id);
     const shared = this.media.some((m) => m.key === row.key);
     return { removed: true, ownedKey: row.uploadId && !shared ? row.key : null };
@@ -161,6 +166,24 @@ describe("RemoveMedia", () => {
     storage = new FakeMediaStorage();
   });
 
+  it("keeps all three photos when removal would leave a published Listing with two", async () => {
+    seedActiveListing(repo);
+    for (let i = 0; i < 3; i++) mediaRepo.media.push(ListingMedia.create({
+      id: `floor-${i}`, listingId: "listing-1", kind: "image", key: `floor-${i}.jpg`, sortOrder: i,
+    }));
+    await expect(makeUseCase(repo, mediaRepo, storage).execute({
+      listingId: "listing-1", mediaId: "floor-0", userId: "user-1",
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(mediaRepo.media).toHaveLength(3);
+    expect(storage.deletedKeys).toEqual([]);
+  });
+
+  const keepMinimumPhotos = () => {
+    for (let i = 0; i < 3; i++) mediaRepo.media.push(ListingMedia.create({
+      id: `kept-${i}`, listingId: "listing-1", kind: "image", key: `kept-${i}.jpg`, sortOrder: i + 1,
+    }));
+  };
+
   it("deletes the media row and leaves every stored object to the cleanup worker", async () => {
     seedActiveListing(repo);
     mediaRepo.media.push(
@@ -174,11 +197,12 @@ describe("RemoveMedia", () => {
       }),
     );
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" });
 
     // ADR-0088: the request retires the upload; it never deletes bytes itself.
-    expect(mediaRepo.media).toHaveLength(0);
+    expect(mediaRepo.media).toHaveLength(3);
     expect(storage.deletedKeys).toEqual([]);
   });
 
@@ -194,10 +218,11 @@ describe("RemoveMedia", () => {
       }),
     );
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" });
 
-    expect(mediaRepo.media).toHaveLength(0);
+    expect(mediaRepo.media).toHaveLength(3);
     expect(storage.deletedKeys).toEqual([]);
   });
 
@@ -215,9 +240,13 @@ describe("RemoveMedia", () => {
     );
     // findById sees the row, then a concurrent remove wins before this delete.
     const racing = Object.assign(Object.create(mediaRepo) as FakeListingMediaRepository, {
+      // A stale ID read preceded the winner's delete; a later count sees only
+      // the three kept images. The atomic release still decides this is 404.
+      findByListingId: async () => mediaRepo.media.filter((m) => m.id !== "media-1"),
       deleteReleasingUpload: async () => ({ removed: false, ownedKey: null }),
     });
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, racing, storage);
     await expect(
       uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" }),
@@ -228,6 +257,7 @@ describe("RemoveMedia", () => {
   it("returns 404 for non-owner", async () => {
     seedActiveListing(repo);
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await expect(
       uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-2" }),
@@ -246,6 +276,7 @@ describe("RemoveMedia", () => {
       }),
     );
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await expect(
       uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" }),

@@ -57,3 +57,10 @@ describe("publishFailureMessage (#588)", () => {
     );
   });
 });
+
+// Installed publish envelopes keep INVALID_DRAFT_PAYLOAD and formErrors.
+it("maps the new photo refusal and old installed envelope to the minimum helper", () => {
+  for (const code of ["AT_LEAST_THREE_PHOTOS_REQUIRED", "AT_LEAST_ONE_PHOTO_REQUIRED"]) {
+    expect(publishFailureOf(new ApiError("INVALID_DRAFT_PAYLOAD", 400, "Invalid", { formErrors: [code] }))).toBe("photos");
+  }
+});

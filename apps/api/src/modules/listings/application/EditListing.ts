@@ -11,7 +11,7 @@ import { toPriceTmt } from "../domain/Price";
 import { resolveDamagedAnswer } from "../domain/damagedAnswer";
 import { DomainError, LISTING_ERROR_CODES, LOCKED_FIELDS } from "../domain/types";
 import type { ConditionDisclosure } from "../domain/types";
-import type { ListingsSchemas } from "@auto-tm/contracts";
+import { ListingsSchemas } from "@auto-tm/contracts";
 import {
   LISTING_REPOSITORY,
   type ListingRepository,
@@ -63,6 +63,17 @@ export class EditListing {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Listing is banned and cannot be edited",
+      });
+    }
+
+    const photoCount = await this.prisma.listingMedia.count({
+      where: { listingId: existing.id, kind: "image" },
+    });
+    if (photoCount < ListingsSchemas.MIN_LISTING_PHOTOS) {
+      throw new BadRequestException({
+        code: LISTING_ERROR_CODES.PHOTO_MINIMUM_REQUIRED,
+        message: `At least ${ListingsSchemas.MIN_LISTING_PHOTOS} photos are required`,
+        details: { minimum: ListingsSchemas.MIN_LISTING_PHOTOS },
       });
     }
 

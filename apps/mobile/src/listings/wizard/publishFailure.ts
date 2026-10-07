@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { ApiError } from "../../api/client";
 
 /** Why a publish did not go through, as Check and publish words it. */
-export type PublishFailure = "offline" | "rateMissing" | "server";
+export type PublishFailure = "offline" | "rateMissing" | "photos" | "server";
 
 /**
  * Sorts a publish error into the three failures Check and publish explains. The
@@ -16,6 +16,10 @@ export type PublishFailure = "offline" | "rateMissing" | "server";
  */
 export function publishFailureOf(error: unknown): PublishFailure {
   if (error instanceof ApiError) {
+    const details = error.details as { formErrors?: unknown } | undefined;
+    if (error.code === ListingsSchemas.ListingsErrorCode.PhotoMinimumRequired ||
+      (error.code === "INVALID_DRAFT_PAYLOAD" && Array.isArray(details?.formErrors) &&
+        details.formErrors.some((code) => code === "AT_LEAST_THREE_PHOTOS_REQUIRED" || code === "AT_LEAST_ONE_PHOTO_REQUIRED"))) return "photos";
     if (error.code === "NETWORK_ERROR" || error.status === 0) return "offline";
     if (error.code === ListingsSchemas.ListingsErrorCode.ExchangeRateMissing) return "rateMissing";
   }
@@ -24,6 +28,7 @@ export function publishFailureOf(error: unknown): PublishFailure {
 
 /** The line shown above Publish. `currency` is the draft's, for the missing-rate message. */
 export function publishFailureMessage(t: TFunction, failure: PublishFailure | null, currency = "USD"): string {
+  if (failure === "photos") return t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS });
   if (failure === "offline") return t("publishErrorOffline");
   if (failure === "rateMissing") return t("publishErrorRateMissing", { currency });
   return t("publishErrorServer");

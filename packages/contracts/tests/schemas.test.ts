@@ -1000,6 +1000,7 @@ describe("ExchangeRatesResponseSchema", () => {
 const validUuid = "550e8400-e29b-41d4-a716-446655440000";
 const otherUuid = "550e8400-e29b-41d4-a716-446655440001";
 const validPhoto = { photoId: validUuid, key: "uploads/abc.jpg", sortOrder: 0 };
+const validPhotos = [0, 1, 2].map((index) => ({ photoId: `550e8400-e29b-41d4-a716-${String(index).padStart(12, "0")}`, key: `uploads/${index}.jpg`, sortOrder: index }));
 
 describe("WizardStepSchema", () => {
   it("lists the seven steps in the Sell wizard order", () => {
@@ -1032,26 +1033,31 @@ describe("WizardStepSchema", () => {
 });
 
 describe("StepPhotosSchema", () => {
-  // Continue needs one picked photo, not one uploaded photo (#584): uploads keep
+  // Continue needs three picked photos; upload keys are not required here (#584): uploads keep
   // running while the seller fills in the later steps, and Publish waits for them.
   const picked = { photoId: validUuid, sortOrder: 0 };
 
-  it("accepts photos with at least one key", () => {
-    expect(StepPhotosSchema.safeParse({ photos: [validPhoto] }).success).toBe(
+  it("accepts three uploaded photos", () => {
+    expect(StepPhotosSchema.safeParse({ photos: validPhotos }).success).toBe(
       true,
     );
   });
 
-  it("accepts one picked photo that has no upload key yet", () => {
-    expect(StepPhotosSchema.safeParse({ photos: [picked] }).success).toBe(true);
+  it("accepts three picked photos without upload keys", () => {
+    expect(StepPhotosSchema.safeParse({ photos: validPhotos.map(({ key: _key, ...photo }) => photo) }).success).toBe(true);
   });
 
   it("accepts a mix of picked and uploaded photos", () => {
     expect(
       StepPhotosSchema.safeParse({
-        photos: [validPhoto, { ...picked, photoId: otherUuid, sortOrder: 1 }],
+        photos: [validPhoto, { ...picked, photoId: otherUuid, sortOrder: 1 }, validPhotos[2]],
       }).success,
     ).toBe(true);
+  });
+
+  it("rejects two picked photos and accepts three", () => {
+    expect(StepPhotosSchema.safeParse({ photos: validPhotos.slice(0, 2) }).success).toBe(false);
+    expect(StepPhotosSchema.safeParse({ photos: validPhotos }).success).toBe(true);
   });
 
   it("rejects empty photos array", () => {
@@ -1349,14 +1355,14 @@ describe("validateStep", () => {
   });
 
   it("returns valid for photos with uploaded key", () => {
-    const result = validateStep("photos", { photos: [validPhoto] });
+    const result = validateStep("photos", { photos: validPhotos });
     expect(result.valid).toBe(true);
     expect(result.fieldErrors).toEqual({});
   });
 
-  it("returns valid for a picked photo that has no key yet", () => {
+  it("returns valid for three picked photos without keys", () => {
     const result = validateStep("photos", {
-      photos: [{ photoId: validUuid, sortOrder: 0 }],
+      photos: validPhotos.map(({ key: _key, ...photo }) => photo),
     });
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);

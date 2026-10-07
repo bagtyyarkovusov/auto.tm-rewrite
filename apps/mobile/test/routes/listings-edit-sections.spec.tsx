@@ -73,6 +73,7 @@ function createListingApi(overrides: Record<string, unknown> = {}) {
     media: [
       { id: coverId, kind: "image", key: `listings/${id}/${coverId}/original.jpg`, variants, sortOrder: 0 },
       { id: secondId, kind: "image", key: `listings/${id}/${secondId}/original.jpg`, variants, sortOrder: 1 },
+      ...[2, 3].map((index) => ({ id: `550e8400-e29b-41d4-a716-${String(900 + index).padStart(12, "0")}`, kind: "image", key: `support-${index}.jpg`, variants, sortOrder: index })),
     ],
     viewCount: 0, favoriteCount: 0, publishedAt: "2026-09-30T00:00:00.000Z",
     createdAt: "2026-09-30T00:00:00.000Z", updatedAt: "2026-09-30T00:00:00.000Z",
@@ -112,7 +113,7 @@ function createListingApi(overrides: Record<string, unknown> = {}) {
 async function openEdit({ locale = "en", heading = "Edit listing" } = {}) {
   const screen = renderMobile(<ToastProvider><EditListingScreen /></ToastProvider>, { locale });
   await screen.findByRole("header", { name: heading });
-  await screen.findByText(/^Photos: 2$|^Фото: 2$|^Suratlar: 2$/);
+  await screen.findByText(/^Photos: 4$|^Фото: 4$|^Suratlar: 4$/);
   return screen;
 }
 
@@ -165,13 +166,13 @@ describe("the section list of a published Listing (#589)", () => {
       .toEqual([
         "Car, Toyota Camry, 2020 · VIN WBA1234567890ABCD, Brand, model, generation, year and VIN cannot be changed after publishing.",
         "Details and condition, 10,000 km · Damaged / needs repair: No, Change",
-        "Photos, Photos: 2, Change",
+        "Photos, Photos: 4, Change",
         "Price, 100,000 TMT, Change",
         "Description and place, One owner, Change",
         "Contact, +99361000000 · Phone calls, In-app chat, Change",
       ]);
     expect(screen.getByRole("button", { name: "Price, 100,000 TMT, Change" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Photos, Photos: 2, Change" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Photos, Photos: 4, Change" })).toBeTruthy();
     // Edit has no buyer preview, no Posting rules line and no Publish.
     expect(screen.queryByTestId("check-preview")).toBeNull();
     expect(screen.queryByText("This is how buyers will see your listing")).toBeNull();
@@ -301,10 +302,10 @@ describe("Save changes (#589)", () => {
     const screen = await openEdit();
 
     openStep(screen, /^Photos, .*Change$/, "Photos");
-    fireEvent.press(screen.getByRole("button", { name: "Remove: Photo 2 of 2" }));
+    fireEvent.press(screen.getByRole("button", { name: "Remove: Photo 2 of 4" }));
     fireEvent.press(screen.getByRole("button", { name: "Done" }));
 
-    expect(screen.getByRole("button", { name: "Photos, Photos: 1, Change" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Photos, Photos: 3, Change" })).toBeTruthy();
     expect(isDisabled(saveButton(screen))).toBe(false);
   });
 

@@ -8,6 +8,7 @@ import {
 } from "../auth/session";
 
 import { apiClient, ApiError } from "./client";
+import { publishFailureOf } from "../listings/wizard/publishFailure";
 
 vi.mock("../auth/session", () => ({
   loadAuthSession: vi.fn(),
@@ -44,6 +45,19 @@ describe("apiClient", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    ["/listings/fixture/republish", { code: "PHOTO_MINIMUM_REQUIRED", details: { minimum: 3 } }],
+    ["/listings/drafts/fixture/publish", { code: "INVALID_DRAFT_PAYLOAD", details: { formErrors: ["AT_LEAST_THREE_PHOTOS_REQUIRED"] } }],
+    ["/listings/drafts/fixture/publish", { code: "INVALID_DRAFT_PAYLOAD", details: { formErrors: ["AT_LEAST_ONE_PHOTO_REQUIRED"] } }],
+  ])("preserves the photo refusal through the real HTTP parser for %s", async (path, body) => {
+    mockedLoadAuthSession.mockResolvedValue(null);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ ...body, message: "Photo minimum required" }, 400));
+    const error = await apiClient.post(path, {}).catch((failure: unknown) => failure);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ code: body.code, status: 400, details: body.details });
+    expect(publishFailureOf(error)).toBe("photos");
   });
 
   describe("auth header attachment", () => {

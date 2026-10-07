@@ -10,8 +10,11 @@ import {
 
 const validUuid = "550e8400-e29b-41d4-a716-446655440000";
 const validPhoto = { photoId: validUuid, key: "uploads/abc.jpg", sortOrder: 0 };
+const validPhotos = [validPhoto, ...[1, 2].map((index) => ({
+  photoId: `550e8400-e29b-41d4-a716-${String(index).padStart(12, "0")}`, key: `uploads/support-${index}.jpg`, sortOrder: index,
+}))];
 const completePayload = {
-  photos: [validPhoto],
+  photos: validPhotos,
   brandId: validUuid,
   modelId: validUuid,
   year: 2020,
@@ -175,7 +178,7 @@ describe("INIT", () => {
     const next = wizardMachineReducer(createInitialState(), {
       type: "INIT",
       draftId: "draft-1",
-      payload: { ...car, photos: [validPhoto], ...price, allowCalls: true, allowChat: true },
+      payload: { ...car, photos: validPhotos, ...price, allowCalls: true, allowChat: true },
     });
 
     // Details has no mileage or Damaged answer, so the seller lands there,
@@ -191,7 +194,7 @@ describe("INIT", () => {
         payload: {
           currentStep: 1,
           vin: "WBA1234567890ABCD",
-          photos: [validPhoto],
+          photos: validPhotos,
           ...car,
           // The old wizard validated vin, photos and vehicle; the new order puts
           // Details second and it is still empty.
@@ -212,7 +215,7 @@ describe("INIT", () => {
         payload: {
           ...car,
           ...details,
-          photos: [validPhoto],
+          photos: validPhotos,
           ...price,
           ...place,
           allowCalls: true,
@@ -288,7 +291,7 @@ describe("NEXT", () => {
       payload: {},
     });
     const visited = [state.currentStep];
-    const fill = [car, details, { photos: [validPhoto] }, price, { ...place, description: "Great car" }, { contactPhone: "+99361234567", allowCalls: true, allowChat: false }];
+    const fill = [car, details, { photos: validPhotos }, price, { ...place, description: "Great car" }, { contactPhone: "+99361234567", allowCalls: true, allowChat: false }];
     for (const updates of fill) {
       state = wizardMachineReducer(state, { type: "UPDATE_FIELDS", updates });
       state = wizardMachineReducer(state, { type: "NEXT" });
@@ -304,7 +307,7 @@ describe("NEXT", () => {
       type: "INIT",
       draftId: "draft-1",
       payload: {
-        photos: [validPhoto],
+        photos: validPhotos,
         brandId: validUuid,
         modelId: validUuid,
         year: 2020,
@@ -394,7 +397,7 @@ describe("UPDATE_FIELDS", () => {
     const state = wizardMachineReducer(createInitialState(), {
       type: "INIT",
       draftId: "draft-1",
-      payload: { ...car, ...details, photos: [validPhoto] },
+      payload: { ...car, ...details, photos: validPhotos },
     });
     expect(state.validatedSteps).toEqual(["vehicle", "specs", "photos"]);
 
@@ -700,7 +703,7 @@ describe("New draft resume with field-derived completion (ADR-0080)", () => {
 });
 
 describe("Resume at the step the seller left (#585)", () => {
-  const upToPrice = { ...car, ...details, photos: [validPhoto] };
+  const upToPrice = { ...car, ...details, photos: validPhotos };
   const init = (payload: WizardSchemas.WizardDraftPayload) =>
     wizardMachineReducer(createInitialState(), { type: "INIT", draftId: "draft-1", payload });
 
@@ -780,7 +783,7 @@ describe("isUntouchedPayload (#585)", () => {
   it("is false once any field differs from the starting payload", () => {
     expect(isUntouchedPayload({ ...created, brandId: validUuid })).toBe(false);
     expect(isUntouchedPayload({ ...created, vin: "W" })).toBe(false);
-    expect(isUntouchedPayload({ ...created, photos: [validPhoto] })).toBe(false);
+    expect(isUntouchedPayload({ ...created, photos: validPhotos })).toBe(false);
     expect(isUntouchedPayload({ ...created, allowCalls: false })).toBe(false);
     expect(isUntouchedPayload({ ...created, priceCurrency: "USD" })).toBe(false);
     expect(isUntouchedPayload({ ...created, condition: "new" })).toBe(false);

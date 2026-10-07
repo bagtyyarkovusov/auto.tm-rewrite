@@ -5,10 +5,11 @@ import EditListingScreen from "../../app/listings/[id]/edit";
 
 const fixture = vi.hoisted(() => {
   const id = "550e8400-e29b-41d4-a716-446655440000";
-  const media = [{ id, kind: "image", key: "photo.jpg", variants: {
+  const media = [0, 1, 2].map((index) => ({ id: index === 0 ? id : `550e8400-e29b-41d4-a716-${String(900 + index).padStart(12, "0")}`, kind: "image", key: index === 0 ? "photo.jpg" : `support-${index}.jpg`, variants: {
     thumbnail: "t.jpg", list: "l.jpg", detail: "d.jpg", fullscreen: "f.jpg",
-  }, sortOrder: 0 }];
+  }, sortOrder: index }));
   return {
+    savedPhotos: media.map((m) => ({ photoId: m.id, key: m.key, sortOrder: m.sortOrder, state: "attached", retryCount: 0 })),
     id, pending: false, save: vi.fn().mockResolvedValue(true), show: vi.fn(),
     retry: vi.fn().mockResolvedValue(true),
     deleteDraftDir: vi.fn().mockResolvedValue(undefined),
@@ -29,7 +30,7 @@ const fixture = vi.hoisted(() => {
     gate: { canPublish: true, blockers: [] as string[] },
   };
 });
-fixture.photos = [fixture.saved];
+fixture.photos = fixture.savedPhotos;
 fixture.listing = { ...fixture.baseline };
 vi.mock("../../src/api/listings/useListingDetail", () => ({ useListingDetail: () => ({ data: fixture.listing }) }));
 vi.mock("../../src/listings/uploadStaging/useUploadQueue", () => ({ useUploadQueue: () => ({
@@ -77,7 +78,7 @@ beforeEach(() => {
   fixture.saveState = { status: "idle", error: null, opStates: {} };
   fixture.pending = false;
   fixture.listing = { ...fixture.baseline };
-  fixture.photos = [fixture.saved];
+  fixture.photos = fixture.savedPhotos;
   fixture.gate = { canPublish: true, blockers: [] };
 });
 

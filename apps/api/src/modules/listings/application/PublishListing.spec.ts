@@ -266,6 +266,8 @@ describe("PublishListing", () => {
     contactPhones = new InMemoryContactPhones();
     clock = { now: () => new Date() };
     presignedUpload("photo1.jpg");
+    presignedUpload("photo2.jpg");
+    presignedUpload("photo3.jpg");
     presignedUpload("p1.jpg");
     presignedUpload("p2.jpg");
     draftRepo = new FakeListingDraftRepository();
@@ -289,7 +291,11 @@ describe("PublishListing", () => {
     contactPhone: "+99361234567",
     allowCalls: true,
     allowChat: true,
-    photos: [{ photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 }],
+    photos: [
+      { photoId: "00000000-0000-0000-0000-000000000005", key: "photo1.jpg", sortOrder: 0 },
+      { photoId: "00000000-0000-0000-0000-000000000006", key: "photo2.jpg", sortOrder: 1 },
+      { photoId: "00000000-0000-0000-0000-000000000007", key: "photo3.jpg", sortOrder: 2 },
+    ],
     conditionDisclosure: {
       damaged: true,
       knownIssuesText: "Small scratch on rear bumper",
@@ -413,6 +419,40 @@ describe("PublishListing", () => {
     });
   });
 
+  it("refuses two attached photos without publishing or discarding the draft", async () => {
+    seedDraft(draftRepo, { ...validPayload, photos: validPayload.photos.slice(0, 2) });
+    const error = await makeUseCase(draftRepo, prisma).execute({ draftId: "draft-1", userId: "user-1" }).catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      code: "INVALID_DRAFT_PAYLOAD",
+      details: { formErrors: ["AT_LEAST_THREE_PHOTOS_REQUIRED"] },
+    });
+    expect(prisma.createdListings).toEqual([]);
+    expect(prisma.deletedDrafts).toEqual([]);
+  });
+
+  it.each([1, 2])("refuses three draft slots containing only %i uploaded keys", async (keyedCount) => {
+    const photos = validPayload.photos.map((photo, index) => index < keyedCount ? photo : { photoId: photo.photoId, sortOrder: photo.sortOrder });
+    seedDraft(draftRepo, { ...validPayload, photos });
+    const error = await makeUseCase(draftRepo, prisma).execute({ draftId: "draft-1", userId: "user-1" }).catch((err: unknown) => err);
+    expect((error as BadRequestException).getResponse()).toMatchObject({ code: "INVALID_DRAFT_PAYLOAD", details: { formErrors: ["AT_LEAST_THREE_PHOTOS_REQUIRED"] } });
+    expect(prisma.createdMedia).toEqual([]);
+    expect(prisma.deletedDrafts).toEqual([]);
+  });
+
+  it("refuses twenty-one attached photos without publication", async () => {
+    const photos = Array.from({ length: 21 }, (_, index) => ({
+      photoId: `00000000-0000-0000-0000-${String(100 + index).padStart(12, "0")}`,
+      key: `cap-${index}.jpg`, sortOrder: index,
+    }));
+    photos.forEach((photo) => presignedUpload(photo.key));
+    seedDraft(draftRepo, { ...validPayload, photos });
+    const error = await makeUseCase(draftRepo, prisma).execute({ draftId: "draft-1", userId: "user-1" }).catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({ code: "INVALID_DRAFT_PAYLOAD", details: { formErrors: ["MEDIA_LIMIT_EXCEEDED"] } });
+    expect(prisma.createdListings).toEqual([]);
+  });
+
   it("publishes a valid draft", async () => {
     seedDraft(draftRepo, validPayload);
 
@@ -427,8 +467,8 @@ describe("PublishListing", () => {
       damaged: true,
       knownIssuesText: validPayload.conditionDisclosure.knownIssuesText,
     });
-    expect(prisma.createdMedia).toHaveLength(1);
-    expect(variantGenerator.generated).toEqual(["photo1.jpg"]);
+    expect(prisma.createdMedia).toHaveLength(3);
+    expect(variantGenerator.generated).toEqual(["photo1.jpg", "photo2.jpg", "photo3.jpg"]);
     expect(prisma.deletedDrafts).toContain("draft-1");
     expect(prisma.auditLogs).toHaveLength(1);
     expect(prisma.auditLogs[0]).toMatchObject({
@@ -574,14 +614,15 @@ describe("PublishListing", () => {
       photos: [
         { photoId: "00000000-0000-0000-0000-000000000005", key: "p1.jpg", sortOrder: 0 },
         { photoId: "00000000-0000-0000-0000-000000000006", key: "p2.jpg", sortOrder: 1 },
+        { photoId: "00000000-0000-0000-0000-000000000007", key: "photo3.jpg", sortOrder: 2 },
       ],
     });
 
     const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
     await uc.execute({ draftId: "draft-1", userId: "user-1" });
 
-    expect(prisma.createdMedia).toHaveLength(2);
-    expect(variantGenerator.generated).toEqual(["p1.jpg", "p2.jpg"]);
+    expect(prisma.createdMedia).toHaveLength(3);
+    expect(variantGenerator.generated).toEqual(["p1.jpg", "p2.jpg", "photo3.jpg"]);
   });
 
   // #536: User B's Listing publicly exposes its media key, so a known key must
@@ -589,7 +630,10 @@ describe("PublishListing", () => {
   describe("upload ownership (#536, ADR-0079)", () => {
     const photoDraft = (key: string) => ({
       ...validPayload,
-      photos: [{ photoId: "00000000-0000-0000-0000-000000000005", key, sortOrder: 0 }],
+      photos: [
+        { photoId: "00000000-0000-0000-0000-000000000005", key, sortOrder: 0 },
+        ...validPayload.photos.slice(1),
+      ],
     });
 
     async function publishError() {
@@ -685,12 +729,14 @@ describe("PublishListing", () => {
         photos: [
           { photoId: "00000000-0000-0000-0000-000000000005", key: "p1.jpg", sortOrder: 0 },
           { photoId: "00000000-0000-0000-0000-000000000006", key: "p1.jpg", sortOrder: 1 },
+          { photoId: "00000000-0000-0000-0000-000000000007", key: "photo3.jpg", sortOrder: 2 },
         ],
       });
 
       const err = await publishError();
 
       expect(err).toBeInstanceOf(BadRequestException);
+      expect((err as BadRequestException).getResponse()).toMatchObject({ message: "A photo key can be used only once" });
       expectNothingPublished();
     });
 
@@ -707,33 +753,34 @@ describe("PublishListing", () => {
     });
 
     // #721, ADR-0088: the common claim, not the unique link, decides the adopter.
-    const twoPhotoDraft = () => ({
+    const DRAFT_KEYS = ["p1.jpg", "p2.jpg", "photo3.jpg"];
+    const threePhotoDraft = () => ({
       ...validPayload,
-      photos: [
-        { photoId: "00000000-0000-0000-0000-000000000005", key: "p1.jpg", sortOrder: 0 },
-        { photoId: "00000000-0000-0000-0000-000000000006", key: "p2.jpg", sortOrder: 1 },
-      ],
+      photos: DRAFT_KEYS.map((key, sortOrder) => ({
+        photoId: `00000000-0000-0000-0000-00000000000${sortOrder + 5}`, key, sortOrder,
+      })),
     });
+    const draftStates = () => DRAFT_KEYS.map((key) => world.stateOfKey(key));
 
     it("reserves every photo for the new Listing before generating any variant", async () => {
-      seedDraft(draftRepo, twoPhotoDraft());
+      seedDraft(draftRepo, threePhotoDraft());
       const seen: string[] = [];
       variantGenerator.during = () => {
-        seen.push(`${world.stateOfKey("p1.jpg")},${world.stateOfKey("p2.jpg")}`);
+        seen.push(draftStates().join());
       };
 
       const uc = makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator);
       const { listing } = await uc.execute({ draftId: "draft-1", userId: "user-1" });
 
-      expect(seen).toEqual(["PREPARING,PREPARING", "PREPARING,PREPARING"]);
+      expect(seen).toEqual(Array(3).fill("PREPARING,PREPARING,PREPARING"));
       expect(world.claimOf("upload-p1.jpg")).toMatchObject({
         state: "ADOPTED", target: { type: "listing", id: listing.id },
       });
-      expect(world.stateOfKey("p2.jpg")).toBe("ADOPTED");
+      expect(draftStates()).toEqual(["ADOPTED", "ADOPTED", "ADOPTED"]);
     });
 
     it("publishes and generates nothing when a Profile Photo is preparing one of the photos", async () => {
-      seedDraft(draftRepo, twoPhotoDraft());
+      seedDraft(draftRepo, threePhotoDraft());
       await world.claims.reserve({
         userId: "user-1", uploadIds: ["upload-p2.jpg"], target: { type: "profile", id: "user-1" },
       });
@@ -745,8 +792,8 @@ describe("PublishListing", () => {
         code: "UPLOAD_ALREADY_ATTACHED",
       });
       expectNothingPublished();
-      // All or none: the photo nobody else holds is not left reserved.
-      expect(world.stateOfKey("p1.jpg")).toBe("AVAILABLE");
+      // All or none: the photos nobody else holds are not left reserved.
+      expect(draftStates()).toEqual(["AVAILABLE", "PREPARING", "AVAILABLE"]);
     });
 
     it("reports an unavailable upload, with nothing published, when its reservation was retired meanwhile", async () => {
@@ -772,19 +819,20 @@ describe("PublishListing", () => {
 
       await expect(publishError()).resolves.toBe(failure);
       expect(prisma.createdListings).toHaveLength(0);
-      expect(world.stateOfKey("photo1.jpg")).toBe("RETIRED");
-      expect(world.cleanups).toEqual(["upload-photo1.jpg"]);
+      const draftUploads = ["upload-photo1.jpg", "upload-photo2.jpg", "upload-photo3.jpg"];
+      expect(draftUploads.map((id) => world.claimOf(id).state)).toEqual(["RETIRED", "RETIRED", "RETIRED"]);
+      expect([...world.cleanups].sort()).toEqual(draftUploads);
     });
 
     it("retires every reserved photo when generation fails", async () => {
-      seedDraft(draftRepo, twoPhotoDraft());
+      seedDraft(draftRepo, threePhotoDraft());
       variantGenerator.during = (key) => {
         if (key === "p2.jpg") throw new Error("Sharp failed");
       };
 
       await expect(publishError()).resolves.toMatchObject({ message: "Sharp failed" });
       expect(prisma.createdListings).toHaveLength(0);
-      expect([world.stateOfKey("p1.jpg"), world.stateOfKey("p2.jpg")]).toEqual(["RETIRED", "RETIRED"]);
+      expect(draftStates()).toEqual(["RETIRED", "RETIRED", "RETIRED"]);
     });
   });
 

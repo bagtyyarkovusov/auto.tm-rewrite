@@ -172,13 +172,7 @@ describe("ReportsController e2e", () => {
     allowCalls: true,
     allowChat: true,
     conditionDisclosure: { damaged: false },
-    photos: [
-      {
-        photoId: suite.id("photo-1"),
-        key: "photo1.jpg",
-        sortOrder: 0,
-      },
-    ],
+    photos: [0, 1, 2].map((index) => ({ photoId: suite.id(`photo-${index + 1}`), key: `photo1.jpg-${index}`, sortOrder: index })),
   };
 
   describe("POST /api/v1/listings/:id/inspection-interest", () => {

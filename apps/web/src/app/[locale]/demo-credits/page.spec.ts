@@ -65,6 +65,18 @@ describe("demo photo credits page", () => {
     }
   });
 
+  it.each(["ru", "tk", "en"])("credits the three bundled reviewer photographs publicly in %s", async (locale) => {
+    const reviewerManifest = JSON.parse(readFileSync(path.resolve(__dirname, "../../../../../../packages/db/scripts/reviewer-fixtures/photos.manifest.json"), "utf8")) as { photos: ManifestPhoto[] };
+    expect(reviewerManifest.photos).toHaveLength(3);
+    const html = await render(locale);
+    for (const photo of reviewerManifest.photos) {
+      expect(credits.photos).toContainEqual(expect.objectContaining({ sourceFile: photo.sourceFile, author: photo.author, license: photo.license }));
+      expect(html).toContain(`href="${escapeHtml(photo.sourcePage)}"`);
+      expect(html).toContain(escapeHtml(photo.author));
+      expect(html).toContain(`href="${escapeHtml(photo.licenseUrl)}"`);
+    }
+  });
+
   it("falls back to the default locale and stays out of search indexes", async () => {
     expect(await render("de")).toContain("Авторы фотографий");
     const metadata = await generateMetadata({ params: Promise.resolve({ locale: "en" }) });

@@ -21,10 +21,11 @@ export interface ListingMediaRepository {
    * another caller already deleted it. `ownedKey` is the storage key the caller
    * may now delete, and is non-null only for the one caller that released an
    * adopted upload while no other row references any key or poster in its cleanup
-   * directory. A row without
+   * directory. When supplied, minimumPhotos is checked under a Listing lock
+   * before deletion, so concurrent removals cannot cross the floor. A row without
    * provenance never yields a key.
    */
-  deleteReleasingUpload(id: string): Promise<{ removed: boolean; ownedKey: string | null }>;
+  deleteReleasingUpload(id: string, minimumPhotos?: number): Promise<{ removed: boolean; ownedKey: string | null }>;
   updateSortOrder(
     listingId: string,
     orders: { mediaId: string; sortOrder: number }[],

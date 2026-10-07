@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "../../src/api/client";
 import SellScreen from "../../app/(tabs)/sell";
 import { act, fireEvent, renderMobile, routeParams, routerMock, within } from "../render";
 
@@ -8,7 +9,7 @@ import { ToastProvider } from "@/components/ui/toast";
 
 const fixture = vi.hoisted(() => {
   const id = "550e8400-e29b-41d4-a716-446655440000";
-  const photos = [{ photoId: id, key: "photo.jpg", sortOrder: 0, state: "uploaded" }];
+  const photos = [0, 1, 2].map((index) => ({ photoId: index === 0 ? id : `550e8400-e29b-41d4-a716-${String(900 + index).padStart(12, "0")}`, key: index === 0 ? "photo.jpg" : `support-${index}.jpg`, sortOrder: index, state: "uploaded" }));
   return {
     id, photos, publish: vi.fn(), forceSave: vi.fn(), flush: vi.fn(), save: vi.fn(),
     drafts: { items: [{ id, payload: {
@@ -67,6 +68,19 @@ function renderWizard() {
 describe("Sell publish toasts", () => {
   // #588: a failure is worded above Publish, where it stays; it is no longer a toast
   // that had to be kept clear of the wizard header.
+  it.each([
+    ["en", "At least 3 photos are required"],
+    ["ru", "Нужно не менее 3 фотографий"],
+    ["tk", "Iň azyndan 3 surat gerek"],
+  ])("shows the same minimum helper after the server refuses publication in %s", async (locale, message) => {
+    fixture.publish.mockRejectedValue(new ApiError("INVALID_DRAFT_PAYLOAD", 400, "Draft is missing required fields", { formErrors: ["AT_LEAST_THREE_PHOTOS_REQUIRED"] }));
+    const screen = renderMobile(<ToastProvider><SellScreen /></ToastProvider>, { locale });
+    const publishName = locale === "ru" ? "Опубликовать" : locale === "tk" ? "Neşir et" : "Publish";
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: publishName })); });
+    expect(within(screen.getByRole("alert")).getByText(message)).toBeTruthy();
+    expect(routerMock.replace).not.toHaveBeenCalled();
+  });
+
   it("shows a publish failure above Publish, not as a toast, and keeps the wizard open", async () => {
     const { screen } = renderWizard();
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });

@@ -1,3 +1,4 @@
+import { ListingsSchemas } from "@auto-tm/contracts";
 import { useCallback, useRef, useState } from "react";
 import {
   View,
@@ -407,7 +408,7 @@ export default function Step2Photos({
   );
   const [actionsPhotoId, setActionsPhotoId] = useState<string | null>(null);
 
-  const maxReached = photos.length >= 20;
+  const maxReached = photos.length >= ListingsSchemas.MAX_LISTING_PHOTOS;
   const photosError = showErrors || removedOne ? fieldErrors?.photos : undefined;
   const hasPhotos = photos.length > 0;
   const stillUploading = countUploads(photos).inflight > 0;
@@ -420,6 +421,17 @@ export default function Step2Photos({
         {t("photosUnder5MB")}
       </Text>
 
+      <Text className="text-callout font-medium text-foreground">
+        {t("photosGoalCounter", { count: photos.length, goal: ListingsSchemas.RECOMMENDED_LISTING_PHOTOS })}
+      </Text>
+      <Text className="text-callout text-muted-foreground">
+        {photos.length < ListingsSchemas.MIN_LISTING_PHOTOS
+          ? t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS })
+          : photos.length < ListingsSchemas.RECOMMENDED_LISTING_PHOTOS
+            ? t("photosGoalRemaining", { remaining: ListingsSchemas.RECOMMENDED_LISTING_PHOTOS - photos.length })
+            : t("photosGoalReached")}
+      </Text>
+
       <PhotoActions
         disabled={disabled ?? false}
         maxReached={maxReached}
@@ -427,7 +439,7 @@ export default function Step2Photos({
         onPickFromLibrary={pickFromLibrary}
       />
 
-      {photosError && <InlineError message={photosError} />}
+      {photosError && photosError !== t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS }) && <InlineError message={photosError} />}
 
       {maxReached && (
         <Text className="text-callout text-muted-foreground">
@@ -454,7 +466,7 @@ export default function Step2Photos({
             onRetry={onRetryPhoto}
             onRemove={removePhoto}
           />
-          {stillUploading && continuesWhileUploading && (
+          {stillUploading && continuesWhileUploading && photos.length >= ListingsSchemas.MIN_LISTING_PHOTOS && (
             <Text className="text-callout text-muted-foreground">
               {t("photosKeepUploading")}
             </Text>
