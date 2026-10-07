@@ -1,5 +1,8 @@
+import { onlineManager } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { http, HttpResponse } from "msw";
+import { profilePhotoUploadStore } from "../../src/identity/useProfilePhotoUpload";
+import { profileNoticeStore } from "../../src/identity/profileNotice";
 import { AuthSchemas } from "@auto-tm/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -43,12 +46,30 @@ const me = {
   createdAt: "2026-01-15T00:00:00.000Z", deletionScheduledAt: null,
 } satisfies AuthSchemas.MeResponse;
 let currentMe: AuthSchemas.MeResponse = me;
+const requests = { presigns: [] as unknown[], sets: [] as unknown[] };
 
 beforeEach(async () => {
   storage.clear();
   resetPhotoDevice();
   currentMe = me;
-  server.use(http.get("*/me", () => HttpResponse.json(currentMe)));
+  requests.presigns = [];
+  requests.sets = [];
+  onlineManager.setOnline(true);
+  profilePhotoUploadStore.setState({ state: { status: "idle" } });
+  profileNoticeStore.getState().clear();
+  server.use(
+    http.get("*/me", () => HttpResponse.json(currentMe)),
+    http.post("*/uploads/presign", async ({ request }) => {
+      requests.presigns.push(await request.json());
+      return HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: `pending/new${requests.presigns.length}/original.jpg`, expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"', "content-type": "image/jpeg" } });
+    }),
+    http.put("*/me/photo", async ({ request }) => {
+      const body = await request.json() as { key: string };
+      requests.sets.push(body);
+      currentMe = { ...currentMe, avatarKey: body.key };
+      return HttpResponse.json(currentMe);
+    }),
+  );
   await storeAuthSession({
     accessToken: "aman", refreshToken: "refresh-aman",
     user: { id: me.id, phone: me.phone, email: null, displayName: me.displayName, role: "buyer" },
@@ -136,6 +157,70 @@ describe("Profile photo", () => {
     view.rerender(<ToastProvider><CabinetScreen /></ToastProvider>);
     await view.findByRole("button", { name: "Aman, +993 65 XX-XX-56" });
     expect(view.UNSAFE_queryAllByType("Image" as never)[0]?.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/pending/new/thumbnail.jpg" });
+  });
+
+  it.each(["storage", "attachment"])("keeps the earlier avatar on %s failure, retries the same photo and can cancel", async (phase) => {
+    currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
+    choosePhoto();
+    if (phase === "attachment") server.use(http.put("*/me/photo", () => HttpResponse.json({ code: "INTERNAL" }, { status: 500 })));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    await act(async () => { picker.finish(phase === "storage" ? 500 : 200); });
+    const error = await view.findByText("Couldn't upload the photo.");
+    expect(error.props.accessibilityLiveRegion).toBe("assertive");
+    expect(view.UNSAFE_queryAllByType("Image" as never)[0]?.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/pending/old/thumbnail.jpg" });
+    fireEvent.press(view.getByRole("button", { name: "Retry" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(2));
+    expect(picker.library).toHaveBeenCalledOnce();
+    expect(picker.sent[1]?.uri).toBe(picker.sent[0]?.uri);
+    await act(async () => { picker.finish(500); });
+    await view.findByText("Couldn't upload the photo.");
+    fireEvent.press(view.getByRole("button", { name: "Cancel" }));
+    expect(view.queryByText("Couldn't upload the photo.")).toBeNull();
+    expect(view.getByRole("button", { name: "Change profile photo" }).props.accessibilityState.disabled).toBe(false);
+  });
+
+  it("shows the offline sentence without a request and retries when online", async () => {
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    onlineManager.setOnline(false);
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    expect(await view.findByText("No internet connection. Try again when you are online.")).toBeTruthy();
+    expect(requests.presigns).toEqual([]);
+    expect(picker.sent).toEqual([]);
+    onlineManager.setOnline(true);
+    fireEvent.press(view.getByRole("button", { name: "Retry" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    await act(async () => { picker.finish(); });
+    expect(await view.findByText("Photo updated")).toBeTruthy();
+    expect(picker.library).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["oversize", "This photo is too large. Choose one up to 5 MB."],
+    ["unreadable", "This file can't be used. Choose a JPEG, PNG or WebP photo."],
+    ["wrong type", "This file can't be used. Choose a JPEG, PNG or WebP photo."],
+  ])("refuses %s before requests and offers another photo or cancel", async (problem, message) => {
+    choosePhoto(problem === "wrong type" ? { mimeType: "image/gif" } : {});
+    if (problem === "oversize") picker.size = 5242881;
+    if (problem === "unreadable") picker.readable = false;
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    expect(await view.findByText(message)).toBeTruthy();
+    expect(requests.presigns).toEqual([]);
+    expect(requests.sets).toEqual([]);
+    expect(view.queryByRole("button", { name: "Retry" })).toBeNull();
+    fireEvent.press(view.getByRole("button", { name: "Choose another photo" }));
+    expect(view.getByText("Profile photo")).toBeTruthy();
+    fireEvent.press(view.getByRole("button", { name: "Close" }));
+    expect(view.queryByText(message)).toBeNull();
   });
 
 });
