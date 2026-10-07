@@ -1,5 +1,4 @@
 import * as Linking from "expo-linking";
-import { router } from "expo-router";
 import type { ReactNode } from "react";
 import {
   ActivityIndicator,
@@ -12,7 +11,6 @@ import { useTranslation } from "react-i18next";
 
 import { legalPageUrl } from "../../src/config/publicWebUrl";
 import { BrandLogo } from "../../src/auth/BrandLogo";
-import { closeAuth } from "../../src/auth/closeAuth";
 import { LocaleSwitcher } from "../../src/auth/LocaleSwitcher";
 
 import { type SignInMethod, SignInMethodTabs } from "./SignInMethodTabs";
@@ -30,6 +28,8 @@ interface AuthEntryScreenProps {
   canSubmit: boolean;
   isSubmitting: boolean;
   onSubmit: () => Promise<void>;
+  onMethodChange: (method: SignInMethod) => void;
+  onClose: () => void;
   children: ReactNode;
 }
 
@@ -40,6 +40,8 @@ export function AuthEntryScreen({
   canSubmit,
   isSubmitting,
   onSubmit,
+  onMethodChange,
+  onClose,
   children,
 }: AuthEntryScreenProps) {
   const { colorScheme } = useColorScheme();
@@ -62,8 +64,8 @@ export function AuthEntryScreen({
             leading={
               <BackButton
                 kind="close"
-                accessibilityLabel={t("close")}
-                onPress={() => closeAuth(router)}
+                accessibilityLabel={t("common:close")}
+                onPress={onClose}
               />
             }
             trailing={<LocaleSwitcher />}
@@ -75,13 +77,7 @@ export function AuthEntryScreen({
 
               <SignInMethodTabs
                 value={method}
-                onChange={(nextMethod) =>
-                  router.navigate(
-                    nextMethod === "email"
-                      ? "/(auth)/email"
-                      : "/(auth)/phone",
-                  )
-                }
+                onChange={onMethodChange}
               />
 
               <View className="gap-2">

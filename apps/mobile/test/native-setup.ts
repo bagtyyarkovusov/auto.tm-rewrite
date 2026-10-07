@@ -26,6 +26,12 @@ vi.mock("lucide-react-native", async () => {
   return new Proxy({}, { has: () => true, get: (_, name) => name === "then" ? undefined
     : name === "__esModule" ? true : () => React.createElement("Icon", { name }) });
 });
+// Expo haptics needs a native module; hardware feedback stays a runtime gate.
+vi.mock("expo-haptics", () => ({
+  selectionAsync: async () => {},
+  performAndroidHapticsAsync: async () => {},
+  AndroidHaptics: { Clock_Tick: "clock-tick" },
+}));
 vi.mock("expo-image", async () => ({ Image: (await import("react-native")).Image }));
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),

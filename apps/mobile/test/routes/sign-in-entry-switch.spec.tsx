@@ -43,7 +43,7 @@ it("switches in place, retains both values and keeps the same native field for k
   fireEvent.press(view.getByText("Email"));
   expect(routerMock.navigate).not.toHaveBeenCalled();
   expect(routerMock.push).not.toHaveBeenCalled();
-  const email = view.getByLabelText("Email");
+  const email = view.getByPlaceholderText("name@example.com");
   expect(email).toBe(input);
   expect(email.props.keyboardType).toBe("email-address");
   fireEvent.changeText(email, "held@example.com");
@@ -96,8 +96,9 @@ it("requests the selected method and opens the existing code route with its purp
   }));
   const view = renderMobile(<PhoneScreen />);
   fireEvent.press(view.getByText("Email"));
-  fireEvent.changeText(view.getByLabelText("Email"), "held@example.com");
+  fireEvent.changeText(view.getByPlaceholderText("name@example.com"), "held@example.com");
   await act(async () => { fireEvent.press(view.getByRole("button", { name: "Get code" })); });
+  await vi.waitFor(() => expect(routerMock.push).toHaveBeenCalled());
   expect(body).toEqual({ email: "held@example.com" });
   expect(routerMock.push).toHaveBeenCalledWith({ pathname: "/(auth)/otp", params: { method: "email", destination: "held@example.com", requestId: "00000000-0000-4000-8000-000000000001", resendInSeconds: "60" } });
 });
