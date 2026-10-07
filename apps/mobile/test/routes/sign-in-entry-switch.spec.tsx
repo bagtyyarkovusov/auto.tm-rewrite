@@ -40,16 +40,16 @@ it("switches in place, retains both values and keeps the same native field for k
   const view = renderMobile(<PhoneScreen />);
   const input = view.getByLabelText("Phone number");
   fireEvent.changeText(input, "61234567");
-  fireEvent.press(view.getByRole("tab", { name: "Email" }));
+  fireEvent.press(view.getByText("Email"));
   expect(routerMock.navigate).not.toHaveBeenCalled();
   expect(routerMock.push).not.toHaveBeenCalled();
   const email = view.getByLabelText("Email");
   expect(email).toBe(input);
   expect(email.props.keyboardType).toBe("email-address");
   fireEvent.changeText(email, "held@example.com");
-  fireEvent.press(view.getByRole("tab", { name: "Phone" }));
+  fireEvent.press(view.getByText("Phone"));
   expect(view.getByDisplayValue("61 23-45-67").props.keyboardType).toBe("phone-pad");
-  fireEvent.press(view.getByRole("tab", { name: "Email" }));
+  fireEvent.press(view.getByText("Email"));
   expect(view.getByDisplayValue("held@example.com")).toBeTruthy();
   expect(native.focus).toHaveBeenCalled();
 });
@@ -58,7 +58,7 @@ it("keeps pending intent through a switch and cancels it exactly once on close/u
   pendingIntent();
   const cancel = vi.spyOn(useAuthIntentStore.getState(), "cancelSignIn");
   const view = renderMobile(<PhoneScreen />);
-  fireEvent.press(view.getByRole("tab", { name: "Email" }));
+  fireEvent.press(view.getByText("Email"));
   expect(cancel).not.toHaveBeenCalled();
   expect(useAuthIntentStore.getState().intent).not.toBeNull();
   fireEvent.press(view.getByRole("button", { name: "Close" }));
@@ -71,7 +71,7 @@ it("single Android Back leaves either local method and cancels once", async () =
   pendingIntent();
   const cancel = vi.spyOn(useAuthIntentStore.getState(), "cancelSignIn");
   const view = renderMobile(<EmailScreen />);
-  fireEvent.press(view.getByRole("tab", { name: "Phone" }));
+  fireEvent.press(view.getByText("Phone"));
   const module = await import("react-native");
   const back = module as unknown as { pressHardwareBack: () => boolean };
   act(() => { expect(back.pressHardwareBack()).toBe(true); });
@@ -82,9 +82,9 @@ it("single Android Back leaves either local method and cancels once", async () =
 
 it("gives selection feedback only for a changed method, without navigation", () => {
   const view = renderMobile(<PhoneScreen />);
-  fireEvent.press(view.getByRole("tab", { name: "Phone" }));
+  fireEvent.press(view.getByText("Phone"));
   expect(native.selection).not.toHaveBeenCalled();
-  fireEvent.press(view.getByRole("tab", { name: "Email" }));
+  fireEvent.press(view.getByText("Email"));
   expect(native.selection).toHaveBeenCalledOnce();
 });
 
@@ -95,7 +95,7 @@ it("requests the selected method and opens the existing code route with its purp
     return HttpResponse.json({ requestId: "00000000-0000-4000-8000-000000000001", resendInSeconds: 60 });
   }));
   const view = renderMobile(<PhoneScreen />);
-  fireEvent.press(view.getByRole("tab", { name: "Email" }));
+  fireEvent.press(view.getByText("Email"));
   fireEvent.changeText(view.getByLabelText("Email"), "held@example.com");
   await act(async () => { fireEvent.press(view.getByRole("button", { name: "Get code" })); });
   expect(body).toEqual({ email: "held@example.com" });
