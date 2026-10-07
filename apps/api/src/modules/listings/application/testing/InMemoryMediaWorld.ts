@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 
-import { mediaCleanupPrefix } from "../../domain/mediaCleanupPrefix";
 import { ListingMedia } from "../../domain/ListingMedia";
 import type {
   NewMediaUpload,
@@ -165,15 +164,13 @@ export class InMemoryMediaWorld {
       await yieldToOtherCallers();
       if (media.uploadId) {
         if (!this.uploads.some((u) => u.id === media.uploadId)) throw notAvailable();
-        // Without a reservation only the unique upload link stands, as before ADR-0088.
-        const outcome = claim
-          ? await this.claims.finalize(null, {
-              token: claim.token,
-              uploadIds: [media.uploadId],
-              target: { type: "listing", id: media.listingId },
-              ...(claim.posterUploadId ? { referencedUploadIds: [claim.posterUploadId] } : {}),
-            })
-          : "adopted";
+        if (!claim) throw new Error("An adopting media row needs its reservation");
+        const outcome = await this.claims.finalize(null, {
+          token: claim.token,
+          uploadIds: [media.uploadId],
+          target: { type: "listing", id: media.listingId },
+          ...(claim.posterUploadId ? { referencedUploadIds: [claim.posterUploadId] } : {}),
+        });
         const existing = this.media.find((m) => m.uploadId === media.uploadId);
         if (outcome === "already" && existing) return existing;
         if (existing) throw alreadyAttached();
@@ -189,16 +186,13 @@ export class InMemoryMediaWorld {
     deleteReleasingUpload: async (id) => {
       await yieldToOtherCallers();
       const row = this.media.find((m) => m.id === id);
-      if (!row) return { removed: false, ownedKey: null };
+      if (!row) return { removed: false };
       this.media = this.media.filter((m) => m.id !== id);
-      if (!row.uploadId) return { removed: true, ownedKey: null };
-      const prefix = mediaCleanupPrefix(row.key);
-      const stillReferenced = prefix === null || this.media.some(
-        (m) => m.key.startsWith(prefix) || m.posterKey?.startsWith(prefix),
-      );
-      const matches = this.uploads.some((u) => u.id === row.uploadId && u.key === row.key);
-      const retired = matches && this.retireRecord(row.uploadId);
-      return { removed: true, ownedKey: retired && !stillReferenced ? row.key : null };
+      const uploadId = row.uploadId;
+      if (uploadId && this.uploads.some((u) => u.id === uploadId && u.key === row.key)) {
+        this.retireRecord(uploadId);
+      }
+      return { removed: true };
     },
     updateSortOrder: async () => {},
   };

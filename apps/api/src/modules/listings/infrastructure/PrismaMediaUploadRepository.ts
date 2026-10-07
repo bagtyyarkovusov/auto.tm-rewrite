@@ -40,7 +40,7 @@ export class PrismaMediaUploadRepository implements MediaUploadRepository {
       writeProtocol: row.writeProtocol as "legacy" | "conditional-v1",
       objectKeys: row.objectKeys,
       createdAt: row.createdAt,
-      adopted: row.media !== null,
+      adopted: row.state === "ADOPTED" || row.media !== null,
       state: row.state as UploadState,
     }));
   }

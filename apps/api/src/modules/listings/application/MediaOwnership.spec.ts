@@ -147,7 +147,7 @@ describe("Listing media upload ownership (#536)", () => {
       guard,
       world.claims,
     );
-    remove = new RemoveMedia(listings, world.mediaRepo, world.storage);
+    remove = new RemoveMedia(listings, world.mediaRepo);
   });
 
   describe("legitimate flow", () => {

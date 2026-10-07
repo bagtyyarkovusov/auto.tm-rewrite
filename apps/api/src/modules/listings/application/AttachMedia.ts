@@ -113,7 +113,7 @@ export class AttachMedia {
     if (input.posterKey !== undefined) {
       claims.push({ key: input.posterKey, kind: "image" });
     }
-    const [upload] = await this.uploadGuard.authorize(input.userId, claims);
+    const [upload, poster] = await this.uploadGuard.authorize(input.userId, claims);
     if (!upload) {
       throw new Error("Upload guard returned no upload for the media key");
     }
@@ -121,65 +121,70 @@ export class AttachMedia {
       throw this.alreadyAttached();
     }
 
-    const classification = await this.classifier.classify(input.key);
-    if (!classification.isAcceptable) {
-      // Branch exists for Phase 2 ML classifier; in S4 this never triggers
-      return {
-        media: ListingMedia.create({
-          id: randomUUID(),
-          listingId: input.listingId,
-          kind: input.kind,
-          key: input.key,
-          sortOrder: input.sortOrder,
-          ...(input.width !== undefined ? { width: input.width } : {}),
-          ...(input.height !== undefined ? { height: input.height } : {}),
-          ...(input.durationMs !== undefined ? { durationMs: input.durationMs } : {}),
-          ...(input.posterKey !== undefined ? { posterKey: input.posterKey } : {}),
-        }),
-      };
+    // Reserve before any byte is prepared (ADR-0088): from here this Listing
+    // holds the upload, or the request stops without touching storage.
+    const reservation = await this.claims
+      .reserve({
+        userId: input.userId,
+        uploadIds: [upload.id],
+        target: { type: "listing", id: input.listingId },
+      })
+      .catch((err: unknown) => {
+        throw this.rejection(err);
+      });
+    if ("alreadyAdopted" in reservation) {
+      // An earlier attempt of this same attachment committed in the meantime.
+      const winner = (await this.mediaRepo.findByListingId(input.listingId)).find(
+        (m) => m.uploadId === upload.id,
+      );
+      if (winner) return { media: winner };
+      throw this.alreadyAttached();
     }
 
-    if (input.kind === "image") {
-      await this.variantGenerator.generate(input.key, { writeProtocol: upload.writeProtocol ?? "legacy" });
-    }
-
-    const media = ListingMedia.create({
+    const details = {
       id: randomUUID(),
       listingId: input.listingId,
       kind: input.kind,
       key: input.key,
       sortOrder: input.sortOrder,
-      uploadId: upload.id,
       ...(input.width !== undefined ? { width: input.width } : {}),
       ...(input.height !== undefined ? { height: input.height } : {}),
       ...(input.durationMs !== undefined ? { durationMs: input.durationMs } : {}),
       ...(input.posterKey !== undefined ? { posterKey: input.posterKey } : {}),
-    });
-
+    };
     try {
-      const saved = await this.mediaRepo.save(media);
+      const classification = await this.classifier.classify(input.key);
+      if (!classification.isAcceptable) {
+        // Branch exists for Phase 2 ML classifier; in S4 this never triggers.
+        // Nothing adopts the upload, so its preparation ends here.
+        await this.claims.abandon(reservation.token);
+        return { media: ListingMedia.create(details) };
+      }
+
+      if (input.kind === "image") {
+        await this.variantGenerator.generate(input.key, { writeProtocol: upload.writeProtocol ?? "legacy" });
+      }
+
+      const saved = await this.mediaRepo.save(
+        ListingMedia.create({ ...details, uploadId: upload.id }),
+        { token: reservation.token, ...(poster ? { posterUploadId: poster.id } : {}) },
+      );
       return { media: saved };
     } catch (err) {
-      if (
-        err instanceof DomainError &&
-        err.code === LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE
-      ) {
-        throw new BadRequestException({ code: err.code, message: "Upload is not available for this User" });
-      }
-      if (
-        err instanceof DomainError &&
-        err.code === LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED
-      ) {
-        // A concurrent attach adopted the upload first. If that was this same
-        // retry on this Listing, return its row; anything else is a conflict.
-        const winner = (await this.mediaRepo.findByListingId(input.listingId)).find(
-          (m) => m.uploadId === upload.id,
-        );
-        if (winner) return { media: winner };
-        throw this.alreadyAttached();
-      }
-      throw err;
+      // A failed preparation is terminal: the upload is retired, never retried.
+      // If this cannot be recorded now, the storage scanner retires it later.
+      await this.claims.abandon(reservation.token).catch(() => undefined);
+      throw this.rejection(err);
     }
+  }
+
+  private rejection(err: unknown): unknown {
+    if (!(err instanceof DomainError)) return err;
+    if (err.code === LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED) return this.alreadyAttached();
+    if (err.code === LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE) {
+      return new BadRequestException({ code: err.code, message: "Upload is not available for this User" });
+    }
+    return err;
   }
 
   private alreadyAttached(): ConflictException {

@@ -143,9 +143,10 @@ class FakePrisma {
   $transaction = async <T>(work: Promise<T>[] | ((tx: FakePrisma) => Promise<T>)): Promise<T | T[]> => {
     if (typeof work === "function") {
       try {
-        const result = await work(this);
+        // An interactive transaction is atomic, so a failure adopts nothing:
+        // the in-memory claim is not reached rather than undone.
         if (this.failTransaction) throw this.failTransaction();
-        return result;
+        return await work(this);
       } catch (err) {
         this.rollBack();
         throw err;

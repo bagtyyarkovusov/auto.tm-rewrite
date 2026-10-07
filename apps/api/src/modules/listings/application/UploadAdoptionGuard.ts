@@ -21,9 +21,8 @@ export interface UploadClaim {
  * nothing by itself: the server must hold an upload this User presigned, of the
  * expected kind, whose stored object still matches what presign recorded.
  *
- * It does not decide whether an already-adopted upload is acceptable. Retrying
- * the same attachment is idempotent while another Listing's adoption is not, so
- * each caller inspects `adopted` itself.
+ * It does not decide who adopts. That is the common claim's job (ADR-0088):
+ * each caller reserves the uploads this guard returns before preparing bytes.
  */
 @Injectable()
 export class UploadAdoptionGuard {
@@ -34,17 +33,6 @@ export class UploadAdoptionGuard {
     private readonly objects: MediaObjectInspector,
   ) {}
 
-  /** Whether any of these uploads is adopted now, read fresh after a failed write. */
-  async anyAdopted(keys: string[]): Promise<boolean> {
-    return (await this.uploads.findByKeys(keys)).some((upload) => upload.adopted);
-  }
-
-  /** Whether a previously authorized upload disappeared before a failed write. */
-  async anyUnavailable(keys: string[]): Promise<boolean> {
-    const recorded = await this.uploads.findByKeys(keys);
-    return keys.some((key) => !recorded.some((upload) => upload.key === key));
-  }
-
   /** Returns the authorizing upload for each claim, in claim order. */
   async authorize(userId: string, claims: UploadClaim[]): Promise<MediaUpload[]> {
     const recorded = await this.uploads.findByKeys(claims.map((c) => c.key));
@@ -52,9 +40,10 @@ export class UploadAdoptionGuard {
 
     const authorized: MediaUpload[] = claims.map((claim) => {
       const upload = byKey.get(claim.key);
-      // Unknown, forged, another User's and wrong-kind keys are indistinguishable
-      // on purpose: object keys are public in Listing detail.
-      if (!upload || upload.userId !== userId || upload.kind !== claim.kind) {
+      // Unknown, forged, another User's, wrong-kind and retired keys are
+      // indistinguishable on purpose: object keys are public in Listing detail.
+      if (!upload || upload.userId !== userId || upload.kind !== claim.kind ||
+        upload.state === "RETIRED" || upload.state === "DELETED") {
         throw new BadRequestException({
           code: LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE,
           message: "Upload is not available for this User",

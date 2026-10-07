@@ -67,18 +67,14 @@ class FakeListingMediaRepository implements ListingMediaRepository {
     this.media = this.media.filter((m) => m.id !== id);
   }
 
-  async deleteReleasingUpload(
-    id: string,
-    minimumPhotos?: number,
-  ): Promise<{ removed: boolean; ownedKey: string | null }> {
+  async deleteReleasingUpload(id: string, minimumPhotos?: number): Promise<{ removed: boolean }> {
     const row = this.media.find((m) => m.id === id);
-    if (!row) return { removed: false, ownedKey: null };
+    if (!row) return { removed: false };
     if (minimumPhotos !== undefined && this.media.filter((m) => m.listingId === row.listingId && m.kind === "image" && m.id !== id).length < minimumPhotos) {
       throw new DomainError("PHOTO_MINIMUM_REQUIRED", "At least three photos are required");
     }
     this.media = this.media.filter((m) => m.id !== id);
-    const shared = this.media.some((m) => m.key === row.key);
-    return { removed: true, ownedKey: row.uploadId && !shared ? row.key : null };
+    return { removed: true };
   }
 
   async updateSortOrder(
@@ -148,10 +144,12 @@ function makeUseCase(
   mediaRepo?: FakeListingMediaRepository,
   storage?: FakeMediaStorage,
 ) {
+  // The storage fake stays only to prove the use case never reaches storage:
+  // it is no longer a dependency (ADR-0088).
+  void storage;
   return new RemoveMedia(
     repo ?? new FakeListingRepository(),
     mediaRepo ?? new FakeListingMediaRepository(),
-    storage ?? new FakeMediaStorage(),
   );
 }
 
@@ -243,7 +241,7 @@ describe("RemoveMedia", () => {
       // A stale ID read preceded the winner's delete; a later count sees only
       // the three kept images. The atomic release still decides this is 404.
       findByListingId: async () => mediaRepo.media.filter((m) => m.id !== "media-1"),
-      deleteReleasingUpload: async () => ({ removed: false, ownedKey: null }),
+      deleteReleasingUpload: async () => ({ removed: false }),
     });
 
     keepMinimumPhotos();

@@ -1,4 +1,5 @@
-import { Inject, Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenException } from "@nestjs/common";
+import { ListingsSchemas } from "@auto-tm/contracts";
 
 import {
   LISTING_REPOSITORY,
@@ -8,15 +9,7 @@ import {
   LISTING_MEDIA_REPOSITORY,
   type ListingMediaRepository,
 } from "../domain/ports/ListingMediaRepository";
-import {
-  MEDIA_STORAGE_PORT,
-  type MediaStoragePort,
-} from "../domain/ports/MediaStoragePort";
-
-import { ListingsSchemas } from "@auto-tm/contracts";
 import { DomainError } from "../domain/types";
-
-import { mediaCleanupPrefix } from "../domain/mediaCleanupPrefix";
 
 export interface RemoveMediaInput {
   listingId: string;
@@ -26,15 +19,11 @@ export interface RemoveMediaInput {
 
 @Injectable()
 export class RemoveMedia {
-  private readonly logger = new Logger(RemoveMedia.name);
-
   constructor(
     @Inject(LISTING_REPOSITORY)
     private readonly listings: ListingRepository,
     @Inject(LISTING_MEDIA_REPOSITORY)
     private readonly mediaRepo: ListingMediaRepository,
-    @Inject(MEDIA_STORAGE_PORT)
-    private readonly storage: MediaStoragePort,
   ) {}
 
   async execute(input: RemoveMediaInput): Promise<void> {
@@ -54,12 +43,10 @@ export class RemoveMedia {
       throw new NotFoundException("Media not found");
     }
 
-    // Deleting the row also releases the upload it adopted, atomically. Only the
-    // caller that releases an adopted upload gets a key back; a row with no
-    // provenance, or whose directory another row still references, never does, so a
-    // key copied from another Listing can never reach the storage deletes below
-    // (ADR-0079).
-    const { removed, ownedKey } = await this.mediaRepo.deleteReleasingUpload(
+    // Deleting the row retires the upload it adopted in the same transaction and
+    // records its deletion work (ADR-0088). The request deletes no stored object:
+    // the cleanup worker does, once nothing live references the directory.
+    const { removed } = await this.mediaRepo.deleteReleasingUpload(
       input.mediaId, ListingsSchemas.MIN_LISTING_PHOTOS,
     ).catch((error: unknown) => {
       if (error instanceof DomainError && error.code === "PHOTO_MINIMUM_REQUIRED") {
@@ -70,39 +57,5 @@ export class RemoveMedia {
     if (!removed) {
       throw new NotFoundException("Media not found");
     }
-    if (ownedKey === null) {
-      this.logger.warn(
-        `Media ${input.mediaId} removed without storage cleanup: no exclusive upload provenance`,
-      );
-      return;
-    }
-
-    // Best-effort MinIO cleanup — errors are logged but don't fail the use-case
-    const prefix = mediaCleanupPrefix(ownedKey);
-    if (prefix === null) return;
-    const suffixes = [
-      "original.jpg",
-      "original.webp",
-      "thumbnail.jpg",
-      "thumbnail.webp",
-      "list.jpg",
-      "list.webp",
-      "detail.jpg",
-      "detail.webp",
-      "fullscreen.jpg",
-      "fullscreen.webp",
-    ];
-
-    await Promise.all(
-      suffixes.map(async (suffix) => {
-        try {
-          await this.storage.deleteObject(`${prefix}${suffix}`);
-        } catch (err) {
-          this.logger.warn(
-            `Failed to delete MinIO object ${prefix}${suffix}: ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-      }),
-    );
   }
 }

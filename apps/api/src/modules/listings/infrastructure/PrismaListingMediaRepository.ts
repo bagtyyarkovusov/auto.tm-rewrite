@@ -1,7 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
-import { mediaCleanupPrefix } from "../domain/mediaCleanupPrefix";
 import { ListingMedia } from "../domain/ListingMedia";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import type { ListingMediaClaim, ListingMediaRepository } from "../domain/ports/ListingMediaRepository";
@@ -14,51 +13,45 @@ export class PrismaListingMediaRepository implements ListingMediaRepository {
     @Inject(UPLOAD_CLAIM_PORT) private readonly claims: UploadClaimPort,
   ) {}
 
-  async save(media: ListingMedia, _claim?: ListingMediaClaim): Promise<ListingMedia> {
-    try {
-      const row = await this.prisma.listingMedia.create({
-        data: {
-          id: media.id,
-          listingId: media.listingId,
-          kind: media.kind,
-          key: media.key,
-          sortOrder: media.sortOrder,
-          width: media.width ?? null,
-          height: media.height ?? null,
-          durationMs: media.durationMs ?? null,
-          posterKey: media.posterKey ?? null,
-          createdAt: media.createdAt,
-          uploadId: media.uploadId ?? null,
-        },
+  async save(media: ListingMedia, claim?: ListingMediaClaim): Promise<ListingMedia> {
+    const data = {
+      id: media.id,
+      listingId: media.listingId,
+      kind: media.kind,
+      key: media.key,
+      sortOrder: media.sortOrder,
+      width: media.width ?? null,
+      height: media.height ?? null,
+      durationMs: media.durationMs ?? null,
+      posterKey: media.posterKey ?? null,
+      createdAt: media.createdAt,
+      uploadId: media.uploadId ?? null,
+    };
+    const uploadId = media.uploadId;
+    if (!uploadId) return this.toDomain(await this.prisma.listingMedia.create({ data }));
+    if (!claim) throw new Error("An adopting media row needs its reservation");
+
+    // The row and the adoption commit together (ADR-0088). Listing before
+    // upload is the lock order removal uses too.
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM listings WHERE id = ${media.listingId} FOR UPDATE`;
+      const outcome = await this.claims.finalize(tx, {
+        token: claim.token,
+        uploadIds: [uploadId],
+        target: { type: "listing", id: media.listingId },
+        ...(claim.posterUploadId ? { referencedUploadIds: [claim.posterUploadId] } : {}),
       });
-      return this.toDomain(row);
-    } catch (err) {
-      // listing_media.uploadId is unique, so the database decides who adopts an
-      // upload. Confirm the adopter really exists before reporting the conflict.
-      if (
-        media.uploadId &&
-        isUniqueViolation(err) &&
-        (await this.prisma.listingMedia.findUnique({ where: { uploadId: media.uploadId } }))
-      ) {
+      if (outcome === "already") {
+        // A joined retry: the other attempt committed this Listing's row first.
+        const existing = await tx.listingMedia.findUnique({ where: { uploadId } });
+        if (existing) return this.toDomain(existing);
         throw new DomainError(
           LISTING_ERROR_CODES.UPLOAD_ALREADY_ATTACHED,
           "Upload is already attached to a Listing",
         );
       }
-      // A concurrent remove released the upload between the caller's check and
-      // this insert; its row is gone, so the key can no longer be attached.
-      if (
-        media.uploadId &&
-        errorCode(err) === "P2003" &&
-        !(await this.prisma.mediaUpload.findUnique({ where: { id: media.uploadId } }))
-      ) {
-        throw new DomainError(
-          LISTING_ERROR_CODES.UPLOAD_NOT_AVAILABLE,
-          "Upload is no longer available",
-        );
-      }
-      throw err;
-    }
+      return this.toDomain(await tx.listingMedia.create({ data }));
+    });
   }
 
   async findById(id: string): Promise<ListingMedia | null> {
@@ -78,13 +71,10 @@ export class PrismaListingMediaRepository implements ListingMediaRepository {
     await this.prisma.listingMedia.delete({ where: { id } });
   }
 
-  async deleteReleasingUpload(
-    id: string,
-    minimumPhotos?: number,
-  ): Promise<{ removed: boolean; ownedKey: string | null }> {
+  async deleteReleasingUpload(id: string, minimumPhotos?: number): Promise<{ removed: boolean }> {
     return this.prisma.$transaction(async (tx) => {
       let row = await tx.listingMedia.findUnique({ where: { id } });
-      if (!row) return { removed: false, ownedKey: null };
+      if (!row) return { removed: false };
 
       if (minimumPhotos !== undefined) {
         // All removals of one Listing serialize, including distinct media IDs.
@@ -92,7 +82,7 @@ export class PrismaListingMediaRepository implements ListingMediaRepository {
         // The ID read above can precede a competing delete. Re-read after the
         // Listing lock so a lost same-ID removal is 404 before any floor check.
         row = await tx.listingMedia.findUnique({ where: { id } });
-        if (!row) return { removed: false, ownedKey: null };
+        if (!row) return { removed: false };
         const remaining = await tx.listingMedia.count({ where: {
           listingId: row.listingId, kind: "image", id: { not: id },
         } });
@@ -101,26 +91,19 @@ export class PrismaListingMediaRepository implements ListingMediaRepository {
 
       // deleteMany reports whether this caller won; a concurrent remove sees 0.
       const { count } = await tx.listingMedia.deleteMany({ where: { id } });
-      if (count === 0) return { removed: false, ownedKey: null };
-      if (!row.uploadId) return { removed: true, ownedKey: null };
+      if (count === 0) return { removed: false };
+      if (!row.uploadId) return { removed: true };
 
-      // Releasing the upload makes its key unusable for any later attach. Another
-      // legacy row may reference a different original or poster in the same
-      // directory. Authority must cover the whole directory cleanup will delete.
-      const prefix = mediaCleanupPrefix(row.key);
-      const stillReferenced = prefix === null ? 1 : await tx.listingMedia.count({
-        where: { OR: [
-          { key: { startsWith: prefix } },
-          { posterKey: { startsWith: prefix } },
-        ] },
+      // Releasing the adopter retires its upload in this transaction: the key
+      // can never be adopted again, and deletion work is recorded for the
+      // worker, which alone decides whether the bytes may go. A row whose key
+      // is not its upload's key retires nothing.
+      const upload = await tx.mediaUpload.findUnique({
+        where: { id: row.uploadId },
+        select: { key: true },
       });
-      const released = await tx.mediaUpload.deleteMany({
-        where: { id: row.uploadId, key: row.key },
-      });
-      return {
-        removed: true,
-        ownedKey: released.count === 1 && stillReferenced === 0 ? row.key : null,
-      };
+      if (upload?.key === row.key) await this.claims.retire(tx, row.uploadId);
+      return { removed: true };
     });
   }
 
@@ -165,13 +148,4 @@ export class PrismaListingMediaRepository implements ListingMediaRepository {
       ...(row.uploadId !== null ? { uploadId: row.uploadId } : {}),
     });
   }
-}
-
-function errorCode(err: unknown): unknown {
-  return typeof err === "object" && err !== null ? (err as { code?: unknown }).code : undefined;
-}
-
-/** Prisma reports a unique-constraint violation as a known request error, code P2002. */
-function isUniqueViolation(err: unknown): boolean {
-  return errorCode(err) === "P2002";
 }
