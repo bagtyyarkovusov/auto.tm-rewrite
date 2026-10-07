@@ -173,6 +173,12 @@ describe("RemoveMedia", () => {
     expect(storage.deletedKeys).toEqual([]);
   });
 
+  const keepMinimumPhotos = () => {
+    for (let i = 0; i < 3; i++) mediaRepo.media.push(ListingMedia.create({
+      id: `kept-${i}`, listingId: "listing-1", kind: "image", key: `kept-${i}.jpg`, sortOrder: i + 1,
+    }));
+  };
+
   it("deletes media row and all variant MinIO objects", async () => {
     seedActiveListing(repo);
     mediaRepo.media.push(
@@ -186,10 +192,11 @@ describe("RemoveMedia", () => {
       }),
     );
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" });
 
-    expect(mediaRepo.media).toHaveLength(0);
+    expect(mediaRepo.media).toHaveLength(3);
     expect(storage.deletedKeys.length).toBe(10); // original.jpg/webp + 4 variants × 2 formats
     expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/original.jpg");
     expect(storage.deletedKeys).toContain("pending/00000000-0000-4000-8000-000000000001/thumbnail.jpg");
@@ -211,10 +218,11 @@ describe("RemoveMedia", () => {
     );
     storage.shouldThrow = true;
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" });
 
-    expect(mediaRepo.media).toHaveLength(0);
+    expect(mediaRepo.media).toHaveLength(3);
     expect(storage.deletedKeys).toHaveLength(0);
   });
 
@@ -230,10 +238,11 @@ describe("RemoveMedia", () => {
       }),
     );
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" });
 
-    expect(mediaRepo.media).toHaveLength(0);
+    expect(mediaRepo.media).toHaveLength(3);
     expect(storage.deletedKeys).toEqual([]);
   });
 
@@ -254,6 +263,7 @@ describe("RemoveMedia", () => {
       deleteReleasingUpload: async () => ({ removed: false, ownedKey: null }),
     });
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, racing, storage);
     await expect(
       uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" }),
@@ -264,6 +274,7 @@ describe("RemoveMedia", () => {
   it("returns 404 for non-owner", async () => {
     seedActiveListing(repo);
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await expect(
       uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-2" }),
@@ -282,6 +293,7 @@ describe("RemoveMedia", () => {
       }),
     );
 
+    keepMinimumPhotos();
     const uc = makeUseCase(repo, mediaRepo, storage);
     await expect(
       uc.execute({ listingId: "listing-1", mediaId: "media-1", userId: "user-1" }),

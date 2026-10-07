@@ -47,6 +47,8 @@ const { io } = createRequire(new URL("../apps/mobile/package.json", import.meta.
   "socket.io-client",
 );
 
+const { ListingsSchemas } = createRequire(new URL("../packages/contracts/package.json", import.meta.url))("@auto-tm/contracts");
+
 // The one identifier this harness has to know: the reviewer scenario's primary
 // seeded listing, from packages/db/src/reviewer-scenario-seed.ts. Everything
 // else the flow needs — brand, model, region, city — is read back off that
@@ -186,7 +188,7 @@ async function signIn(apiUrl, account) {
  * A complete draft for the seller's smoke listing. The contact phone is the
  * seller's own sign-in phone, which publish accepts without a code (ADR-0081).
  */
-export function smokeDraftBody({ catalogue, photoKey, sellerPhone, now }) {
+export function smokeDraftBody({ catalogue, photoKeys, sellerPhone, now }) {
   return {
     ...catalogue,
     year: 2019,
@@ -201,7 +203,7 @@ export function smokeDraftBody({ catalogue, photoKey, sellerPhone, now }) {
     conditionDisclosure: { damaged: false },
     acceptsExchange: false,
     installmentAvailable: false,
-    photos: [{ photoId: randomUUID(), key: photoKey, sortOrder: 0 }],
+    photos: photoKeys.map((key, sortOrder) => ({ photoId: randomUUID(), key, sortOrder })),
   };
 }
 
@@ -400,9 +402,10 @@ async function main() {
 
     // 3 — the seller creates and publishes a listing through the real wizard path
     await check("seller creates a listing (signed upload → draft → publish)", async () => {
-      const key = await uploadSignedImage(apiUrl, seller.accessToken, "/api/v1/uploads/presign", {
-        kind: "image",
-      });
+      const photoKeys = [];
+      for (let i = 0; i < ListingsSchemas.MIN_LISTING_PHOTOS; i++) {
+        photoKeys.push(await uploadSignedImage(apiUrl, seller.accessToken, "/api/v1/uploads/presign", { kind: "image" }));
+      }
       const draft = expectStatus(
         await request(apiUrl, "POST", "/api/v1/listings/drafts", {
           token: seller.accessToken,
@@ -416,7 +419,7 @@ async function main() {
           token: seller.accessToken,
           body: smokeDraftBody({
             catalogue,
-            photoKey: key,
+            photoKeys,
             sellerPhone: seller.phone,
             now: new Date(),
           }),

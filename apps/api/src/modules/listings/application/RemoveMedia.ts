@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, Logger, ForbiddenException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, BadRequestException, Logger, ForbiddenException } from "@nestjs/common";
 
 import {
   LISTING_REPOSITORY,
@@ -12,6 +12,9 @@ import {
   MEDIA_STORAGE_PORT,
   type MediaStoragePort,
 } from "../domain/ports/MediaStoragePort";
+
+import { ListingsSchemas } from "@auto-tm/contracts";
+import { DomainError } from "../domain/types";
 
 import { mediaCleanupPrefix } from "../domain/mediaCleanupPrefix";
 
@@ -56,7 +59,22 @@ export class RemoveMedia {
     // provenance, or whose directory another row still references, never does, so a
     // key copied from another Listing can never reach the storage deletes below
     // (ADR-0079).
-    const { removed, ownedKey } = await this.mediaRepo.deleteReleasingUpload(input.mediaId);
+    const photos = (await this.mediaRepo.findByListingId(input.listingId)).filter((m) => m.kind === "image");
+    if (photos.length - (media.kind === "image" ? 1 : 0) < ListingsSchemas.MIN_LISTING_PHOTOS) {
+      throw new BadRequestException({
+        code: "PHOTO_MINIMUM_REQUIRED",
+        message: `At least ${ListingsSchemas.MIN_LISTING_PHOTOS} photos are required`,
+        details: { minimum: ListingsSchemas.MIN_LISTING_PHOTOS },
+      });
+    }
+    const { removed, ownedKey } = await this.mediaRepo.deleteReleasingUpload(
+      input.mediaId, ListingsSchemas.MIN_LISTING_PHOTOS,
+    ).catch((error: unknown) => {
+      if (error instanceof DomainError && error.code === "PHOTO_MINIMUM_REQUIRED") {
+        throw new BadRequestException({ code: error.code, message: error.message, details: { minimum: ListingsSchemas.MIN_LISTING_PHOTOS } });
+      }
+      throw error;
+    });
     if (!removed) {
       throw new NotFoundException("Media not found");
     }

@@ -1,3 +1,5 @@
+import { ListingsSchemas } from "@auto-tm/contracts";
+
 const REVIEWER_SEED_AUTHORIZATION = "seed-reviewer-scenario";
 const REVIEWER_PHONE_RE = /^\+993\d{8}$/;
 const REVIEWER_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -140,6 +142,13 @@ export interface ReviewerScenarioSeedStore {
     publishedAt: Date;
     damaged: boolean;
     knownIssuesText: string | null;
+  }): Promise<void>;
+  upsertListingMedia(input: {
+    id: string;
+    listingId: string;
+    key: string;
+    sortOrder: number;
+    fixtureIndex: number;
   }): Promise<void>;
   upsertConversation(input: {
     id: string;
@@ -461,6 +470,18 @@ export async function runReviewerScenarioSeed(
     damaged: true,
     knownIssuesText: "Rear bumper needs repainting. Demo data only.",
   });
+
+  for (const listingId of [PRIMARY_LISTING_ID, REPORTABLE_LISTING_ID]) {
+    for (let index = 0; index < ListingsSchemas.MIN_LISTING_PHOTOS; index++) {
+      await store.upsertListingMedia({
+        id: `${listingId.slice(0, -3)}${String(100 + index).padStart(3, "0")}`,
+        listingId,
+        key: `reviewer-scenario/${listingId}/${index}/original.jpg`,
+        sortOrder: index,
+        fixtureIndex: index,
+      });
+    }
+  }
 
   const firstMessageAt = new Date(options.now.getTime() - 60_000);
   await store.upsertConversation({

@@ -65,9 +65,9 @@ describe("computePublishGate", () => {
     expect(result.blockers).toContain("wizardErrors.uploadsFailed");
   });
 
-  it("returns canPublish=true when photo is in attached state", () => {
+  it("returns canPublish=true with three keyed attached photos", () => {
     const result = computePublishGate(
-      makeQueue([makePhoto({ state: "attached" })]),
+      makeQueue([0, 1, 2].map((i) => makePhoto({ photoId: `p${i}`, key: `p${i}.jpg`, state: "attached" }))),
     );
     expect(result.canPublish).toBe(true);
     expect(result.blockers).toHaveLength(0);

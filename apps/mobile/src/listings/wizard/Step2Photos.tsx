@@ -1,3 +1,4 @@
+import { ListingsSchemas } from "@auto-tm/contracts";
 import { useCallback, useRef, useState } from "react";
 import {
   View,
@@ -407,7 +408,7 @@ export default function Step2Photos({
   );
   const [actionsPhotoId, setActionsPhotoId] = useState<string | null>(null);
 
-  const maxReached = photos.length >= 20;
+  const maxReached = photos.length >= ListingsSchemas.MAX_LISTING_PHOTOS;
   const photosError = showErrors || removedOne ? fieldErrors?.photos : undefined;
   const hasPhotos = photos.length > 0;
   const stillUploading = countUploads(photos).inflight > 0;
@@ -418,6 +419,17 @@ export default function Step2Photos({
     <View className="gap-5 py-5">
       <Text className="text-sm text-muted-foreground leading-relaxed">
         {t("photosUnder5MB")}
+      </Text>
+
+      <Text className="text-sm font-medium text-foreground">
+        {t("photosGoalCounter", { count: photos.length, goal: ListingsSchemas.RECOMMENDED_LISTING_PHOTOS })}
+      </Text>
+      <Text className="text-sm text-muted-foreground">
+        {photos.length < ListingsSchemas.MIN_LISTING_PHOTOS
+          ? t("wizardErrors.photosRequired", { minimum: ListingsSchemas.MIN_LISTING_PHOTOS })
+          : photos.length < ListingsSchemas.RECOMMENDED_LISTING_PHOTOS
+            ? t("photosGoalRemaining", { remaining: ListingsSchemas.RECOMMENDED_LISTING_PHOTOS - photos.length })
+            : t("photosGoalReached")}
       </Text>
 
       <PhotoActions

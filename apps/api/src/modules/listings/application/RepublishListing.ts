@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
+import { ListingsSchemas } from "@auto-tm/contracts";
 
 import {
   IDENTITY_CLOCK_PORT,
@@ -65,6 +66,17 @@ export class RepublishListing {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Listing is banned and cannot be republished",
+      });
+    }
+
+    const photoCount = await this.prisma.listingMedia.count({
+      where: { listingId: existing.id, kind: "image" },
+    });
+    if (photoCount < ListingsSchemas.MIN_LISTING_PHOTOS) {
+      throw new BadRequestException({
+        code: LISTING_ERROR_CODES.PHOTO_MINIMUM_REQUIRED,
+        message: `At least ${ListingsSchemas.MIN_LISTING_PHOTOS} photos are required`,
+        details: { minimum: ListingsSchemas.MIN_LISTING_PHOTOS },
       });
     }
 

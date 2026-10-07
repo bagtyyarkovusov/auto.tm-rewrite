@@ -24,7 +24,7 @@ const fixture = vi.hoisted(() => {
     payloads: {
       // Car and Details are done, so a resumed draft opens on Photos.
       atPhotos: { ...car, ...details },
-      complete: { ...car, ...details, photos: [{ photoId: ids.a, key: `${ids.a}.jpg`, sortOrder: 0 }], ...rest },
+      complete: { ...car, ...details, photos: Object.values(ids).map((photoId, sortOrder) => ({ photoId, key: `${photoId}.jpg`, sortOrder })), ...rest },
     } as Record<string, Record<string, unknown>>,
     payload: {} as Record<string, unknown>,
     queuePhotos: [] as StagedPhoto[],
@@ -92,6 +92,9 @@ const staged = (photoId: string, sortOrder: number, state: StagedPhoto["state"],
 const keyed = (photoId: string, sortOrder: number) => staged(photoId, sortOrder, "uploaded", { key: `${photoId}.jpg` });
 
 function resume(payload: "atPhotos" | "complete") {
+  if (payload === "complete") {
+    for (const id of Object.values(ids)) if (fixture.queuePhotos.length < 3 && !fixture.queuePhotos.some((p) => p.photoId === id)) fixture.queuePhotos.push(keyed(id, fixture.queuePhotos.length));
+  }
   fixture.payload = fixture.payloads[payload] ?? {};
   routeParams.resumeDraftId = fixture.id;
 }
@@ -141,8 +144,8 @@ describe("Sell wizard, Photos step", () => {
     ["failed", staged(ids.a, 0, "failed", { retryCount: 1, error: { code: "NETWORK_ERROR", message: "Offline", retryable: true } })],
     ["lost", staged(ids.a, 0, "lost", { localUri: undefined })],
     ["uploaded", keyed(ids.a, 0)],
-  ])("Continue moves on with one photo that is %s", (_name, photo) => {
-    fixture.queuePhotos = [photo];
+  ])("Continue moves on with three picked photos including one that is %s", (_name, photo) => {
+    fixture.queuePhotos = [photo, keyed(ids.b, 1), keyed(ids.c, 2)];
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
 
@@ -166,7 +169,7 @@ describe("Sell wizard, Photos step", () => {
   });
 
   it("saves nothing under photos when no picked photo has a key yet, and Publish would still need one", () => {
-    fixture.queuePhotos = [staged(ids.a, 0, "uploading")];
+    fixture.queuePhotos = [staged(ids.a, 0, "uploading"), staged(ids.b, 1, "compressed"), staged(ids.c, 2, "presigned")];
     resume("atPhotos");
     const screen = renderMobile(<SellScreen />);
     fireEvent.press(continueButton(screen));
