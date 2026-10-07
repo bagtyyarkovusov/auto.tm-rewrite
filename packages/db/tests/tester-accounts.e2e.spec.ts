@@ -52,7 +52,7 @@ describe("tester operator Prisma transaction integration", () => {
     const city = await db.city.create({ data: { slug: "tester-city", regionId: region.id, ...names } });
     const listing = await db.listing.create({ data: { sellerId: first.id, brandId: brand.id, modelId: model.id, cityId: city.id, regionId: region.id, year: 2020, mileageKm: 1000, priceAmount: 100, status: "active" } });
     const other = await db.user.create({ data: { phone: "+99371000000", phoneVerifiedAt: NOW, role: "buyer" } });
-    for (const user of [first, other]) await db.session.create({ data: { userId: user.id, refreshTokenHash: "fixture-hash", expiresAt: new Date("2026-12-01T00:00:00Z") } });
+    for (const user of [first, other]) await db.session.create({ data: { userId: user.id, refreshTokenHash: `fixture-hash:${user.id}`, expiresAt: new Date("2026-12-01T00:00:00Z") } });
     expect(await runTesterAccounts(store, input("remove"))).toMatchObject({ scheduled: 30, sessionsDeleted: 1, listingsArchived: 1 });
     expect(await db.user.findUniqueOrThrow({ where: { id: first.id } })).toMatchObject({ deletionScheduledAt: NOW });
     expect(await db.user.findUniqueOrThrow({ where: { id: other.id } })).toMatchObject({ deletionScheduledAt: null });
