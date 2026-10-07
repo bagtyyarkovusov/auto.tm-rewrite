@@ -10,7 +10,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-
 import { useReducedMotion } from "react-native-reanimated";
 
 import { Text } from "@/components/ui/text";

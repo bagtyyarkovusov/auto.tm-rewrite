@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import type * as ReactNative from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../src/api/client";
@@ -17,7 +18,7 @@ vi.mock("react-native-reanimated", () => ({
   useReducedMotion: () => native.reducedMotion,
 }));
 vi.mock("react-native", async (importOriginal) => {
-  const hosts = await importOriginal<typeof import("react-native")>();
+  const hosts = await importOriginal<typeof ReactNative>();
   const React = await import("react");
   const NativeInput = React.forwardRef<
     { focus: () => void },
