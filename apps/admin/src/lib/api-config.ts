@@ -1,7 +1,7 @@
 /** Resolve at runtime so a standalone image uses its deployment's address. */
 export function getApiBaseUrl(): string {
   const configured = process.env["API_BASE_URL"];
-  const address = process.env.NODE_ENV === "production"
+  const address = process.env["NODE_ENV"] === "production"
     ? configured
     : configured || process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:3006/api/v1";
 

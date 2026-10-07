@@ -20,6 +20,14 @@ vi.mock("../../admin/src/lib/cookies", () => ({
 }));
 
 
+// Loading the UI bridge as a test fixture must not pull its DOM/Next types
+// into the API's CommonJS production compilation.
+const adminClientPath = "../../admin/src/lib/api-client";
+type AdminClient = {
+  apiFetch(path: string, options: { method: string; body: unknown }): Promise<unknown>;
+  ApiError: typeof Error;
+};
+
 describe("real admin-to-API sign-in routing", () => {
   let app: NestFastifyApplication;
   let origin: string;
@@ -45,7 +53,7 @@ describe("real admin-to-API sign-in routing", () => {
   it.each(["", "/", "/api/v1", "/api/v1/"])(
     "reaches the running API's real OTP controller with suffix '%s'", async (suffix) => {
       vi.stubEnv("API_BASE_URL", `${origin}${suffix}`);
-      const { apiFetch } = await import("../../admin/src/lib/api-client");
+      const { apiFetch } = await import(adminClientPath) as AdminClient;
       await expect(apiFetch("/auth/otp/request", {
         method: "POST", body: { phone: "not-a-phone" },
       })).rejects.toMatchObject({
@@ -56,7 +64,7 @@ describe("real admin-to-API sign-in routing", () => {
 
   it("detects a misrouted API prefix over real HTTP", async () => {
     vi.stubEnv("API_BASE_URL", `${origin}/api/v2`);
-    const { apiFetch, ApiError } = await import("../../admin/src/lib/api-client");
+    const { apiFetch, ApiError } = await import(adminClientPath) as AdminClient;
     try {
       await apiFetch("/auth/otp/request", { method: "POST", body: { phone: "not-a-phone" } });
       expect.fail("A wrong prefix must fail the admin-to-API gate");
