@@ -4,6 +4,8 @@ Use one linked worktree per agent session and retire it after its PR merges. Thi
 
 The canonical `agent/issue-<N>` branch and its pull request are the durable reservation and recovery record. Codex desktop, Claude Code desktop, the `claude-kimi` CLI, or another supported client that finds either resumes it after inspecting the issue, local and remote heads, worktree, PR body/comments/checks, running processes, and diff. It never creates a parallel attempt because the prior chat is unavailable. It resumes in the found worktree only when no other session or agent owns it; otherwise it works in its own new worktree from the pushed branch.
 
+Load the procedure for the current role and phase. Startup needs the section below; queue dispatch, merge and cleanup load their references only when reached.
+
 ## Start in the worktree you already have
 
 Some hosts create a linked worktree and a `claude/<name>` or `codex/<name>` branch before the task begins.
@@ -17,73 +19,20 @@ Write only in your own worktree and in `/tmp`. Never create a worktree for anoth
 
 ## Queue implementer worktrees
 
-[ADR-0069](../adr/0069-queue-implementers-run-in-host-created-worktrees.md), amended for Codex by [ADR-0071](../adr/0071-codex-queue-models-and-owned-worktrees.md), sets who owns each worktree under [run-queue](../../.claude/skills/run-queue/SKILL.md).
-
-- **Who creates it on Claude Code.** The orchestrator launches each implementer with worktree isolation, such as Claude Code's Agent tool with `isolation: "worktree"`. The host creates the worktree under `.claude/worktrees/` on a throwaway `worktree-agent-<id>` branch. Only its implementer writes there. An issue has at most one writing worktree at a time; each fix round or resume gets a new one, and earlier ones follow the cleanup rules below.
-- **Who creates it on Codex.** Each writing subagent creates and owns a fresh separate linked worktree. Fetch the supplied base, then create an absolute unique path with `git worktree add --detach <absolute-path> <base>`, where the base is `origin/main`, the stacked parent head, or the pushed canonical issue branch for a resume. All subsequent commands and edits target that absolute directory. The coordinator supplies scope and base but never creates or writes in a writer's worktree. The parent chat's worktree stays in place. Reservation, checkpoint, refusal, and cleanup rules below still apply.
-- **How it reaches the issue branch.** The first implementer runs `git fetch origin`, then `git switch -c agent/issue-<N> origin/main`, or starts from the parent branch head when stacked, and pushes the reservation. A later implementer runs `git fetch origin`, then `git switch --detach origin/agent/issue-<N>` and pushes with `git push origin HEAD:agent/issue-<N>`, because the named branch may be checked out in an earlier worktree.
-- **Checkpoints.** Implementers commit and push small checkpoints often. Only pushed work survives an agent that stops.
-- **Who retires it.** Claude's host may remove an unchanged worktree or sweep an eligible one. Otherwise the orchestrator or integration session retires it by running the [cleanup script](#run-the-cleanup-gate) after the PR merges and at queue end ([ADR-0076](../adr/0076-orchestrator-runs-the-worktree-cleanup-gate-after-every-merge.md)); a worktree that passes the gate needs no separate user approval, and the user can still keep any worktree. The orchestrator never removes a worktree by hand and never removes one the script keeps. A removed worktree can leave its unchanged `worktree-agent-<id>` branch behind; the script's stale-branch report lists it and `--apply` deletes it conditionally.
-- **A stopped implementer.** A fresh implementer continues from the pushed branch in its own new worktree. It may read the stopped worktree to salvage uncommitted drafts, but never writes there or runs git against it. The stopped worktree is retired by the cleanup script once it passes the gate; while it holds uncommitted files the gate keeps it, and the user removes it.
-- **Hosts without either isolation route.** The orchestrator does not create or write to issue worktrees. The founder runs one `run-issue` session per issue in the queue order, and each session uses the worktree its host gave it or creates its own under this lifecycle.
+Before creating, dispatching or resuming a queue writer, read [Queue writer worktrees](worktree-queue-writers.md#queue-implementer-worktrees). It owns Claude/Codex creation routes, branch/checkpoint ownership, stopped-writer recovery and retirement responsibilities.
 
 ## Treat merge and cleanup as separate results
 
-`gh pr merge --squash --delete-branch` can merge the PR and delete the remote branch, then exit non-zero because the local branch is still checked out in a linked worktree. Always verify the PR state and merge commit independently from the command's exit status.
-
-After a successful merge, record this cleanup tuple:
-
-- linked worktree path;
-- local task branch and any unchanged host scaffold branch;
-- task branch HEAD, which must equal the PR's final `headRefOid`. For a queue implementer's worktree on a detached HEAD, record the detached HEAD SHA instead of a task branch;
-- PR URL and merge commit.
-
-An agent whose live session uses that linked worktree reports the tuple instead of deleting its own working directory. The root or integration session removes it after the worker session finishes by running the [cleanup script](#run-the-cleanup-gate), which finds the worktree by the same gate. The tuple remains the manual record when the script is unavailable.
+After a merge attempt, read [Merge and cleanup](worktree-merge-cleanup.md#treat-merge-and-cleanup-as-separate-results). Verify remote merge independently from local cleanup and record the exact cleanup tuple. A live task retains its checkout and reports that tuple to its integration session.
 
 ## Safe cleanup gate
 
-The root or integration session retires a completed worktree, with the [cleanup script](#run-the-cleanup-gate) as the normal route and the user or the host as the alternative, only when every condition holds:
-
-- the worker session has finished and the worktree is not locked or active;
-- `git status --porcelain` in the worktree is empty;
-- the PR is `MERGED` into `main` and the issue is closed when the PR should close it;
-- the worktree HEAD equals the PR's final `headRefOid`, so no post-PR commit would be lost. For a queue implementer's worktree, a clean HEAD that is an ancestor of the final `headRefOid` also passes (check with `git merge-base --is-ancestor <HEAD> <final headRefOid>`), because earlier fix rounds end on older commits. The check needs the PR head object in the local object store, so run `git fetch origin` first; a worktree whose PR head is missing is kept as "no PR match"; and
-- the branch is not an evidence, prototype, research, active draft-PR, or app-managed Codex worktree.
-
-Age, a quiet terminal, or an absent agent session never satisfies the cleanup gate by itself.
-
-By hand, remove without force, then delete refs conditionally:
-
-```bash
-git worktree remove <path>
-git update-ref -d refs/heads/<task-branch> <expected-head-sha>
-git update-ref -d refs/heads/<unchanged-scaffold-branch> <recorded-start-sha>
-git worktree prune
-```
-
-Delete a remaining remote task branch only after verifying the PR merged and the remote ref still points at the recorded PR head. A failed gate preserves the worktree and reports the exact reason.
+Before retiring any worktree, read and satisfy [the complete safety gate](worktree-merge-cleanup.md#safe-cleanup-gate). Keep every tree whose gate fails; age or an absent session is not completion evidence. Use the script rather than ad hoc deletion.
 
 ## Run the cleanup gate
 
-[`scripts/worktree-gc.mjs`](../../scripts/worktree-gc.mjs) is the gate as code, recorded in [ADR-0076](../adr/0076-orchestrator-runs-the-worktree-cleanup-gate-after-every-merge.md). The orchestrator or integration session runs it after each merge, once the PR is verified merged and its issue closed and `git fetch origin` has run, and again at queue end.
-
-```bash
-pnpm worktree:gc          # read-only report
-pnpm worktree:gc:apply    # same report, then removes the `remove` rows
-```
-
-`pnpm worktree:gc -- --apply` is equivalent. Other flags are `--json`, `--no-size` and `--no-railway`.
-
-For each linked worktree the report shows its path, branch, HEAD, size, lock state, changed-path count, matching PR and a verdict: `remove`, or `keep: <exact reason>`. The reasons are the main checkout, the running session's own worktree, a Codex app-managed worktree (any path containing `/.codex/worktrees/`, whatever `HOME` is), a lock (another session's lock included), a running agent process or a live Claude session (`claude agents --json`) in the directory, a missing directory, an unborn branch, an evidence, prototype or research worktree (named so by its branch or by its directory, as git lists it or as it resolves), a dirty tree, an open PR (including this branch's own open PR when another branch's merged PR contains HEAD), a PR closed without merging, a PR merged into a branch other than `main` (a stacked parent; the work is not on `main` yet), a HEAD already on `main` that belongs to no PR, and no PR match. The script compares real paths, so a working directory reached through a symlink still matches. Untracked files count as a dirty tree whatever `status.showUntrackedFiles` says. The first matching reason is printed; a worktree is removed only when none applies and a PR merged into `main` has a head that equals HEAD or descends from it.
-
-Every run also prints what its scans covered. The process scan has three states and says `includes this process (N processes)`, `does not include this process (N processes), so running agents may be missed`, or `not checked (the process list could not be read)`. The Claude session scan has two: `checked (N with a directory)`, which adds the count of sessions with no working directory when there are any, or `not checked`. Neither line claims the scan saw everything: it only says what the scan could and could not see. The `--json` output carries the same states under `scans`.
-
-A missing `claude` binary does not stop `--apply`: it continues with a warning and reports Claude sessions as `not checked`, so run it only when no session works in an unlocked worktree. An unreadable session list does stop it. That covers `claude` exiting non-zero, timing out after 60 seconds or printing nothing, output that is not JSON, a list that is not an array, an entry that is not a plain object, and a non-empty list in which no entry has a working directory, which looks like a changed format rather than an empty one. A list in which only some entries lack a directory (a remote session, say) is still usable: those entries are counted, reported as not matched to any worktree, and warned about.
-
-`--apply` removes only `remove` rows with `git worktree remove` and never `--force`. Git refuses a locked tree, and by default a dirty one, but with `status.showUntrackedFiles=no` it does not refuse untracked files, so the script's own pre-removal recheck (HEAD unchanged, no changed or untracked path) is the guard for those. It then deletes the removed worktrees' `agent/issue-*` and `worktree-agent-*` branches, plus local branches of those forms that no worktree holds and whose tip is inside a merged PR head, each with `git update-ref -d refs/heads/<branch> <expected-sha>`, and runs `git worktree prune`. The report labels a stale branch whose tip is already on `main` as `on main`. It stops at the first failure, and stops before removing anything when it cannot read the process list or the Claude session list, when the process scan does not include the script's own process (a sandbox can hide processes, so the scan is partial), or when the PR list may be truncated. It refuses `--prs-file`, which exists only for read-only experiments and needs a path. A Claude subagent's worktree has no session of its own, and a Codex writer that uses absolute working directories may never hold a cwd in its worktree, so such a worktree is protected only by a lock or a dirty tree; run `--apply` only when no implementer is mid-run. It does not touch other branches, remote refs, Codex app-managed worktrees or the shared pnpm store.
-
-Every run also reports Railway PR environments whose PR is closed, from `railway environment list --json`. That part is report only; Railway deletes the environment itself ([ADR-0075](../adr/0075-railway-pr-backends-for-agent-native-sessions.md)). Keep a worktree by locking it, leaving it dirty, or naming its branch or directory for evidence, prototype or research work.
+The integration owner reads [Cleanup execution](worktree-cleanup.md#run-the-cleanup-gate) before running the report or applying it after merges and at queue end. That reference owns commands, scan coverage, stop conditions, exceptions and the immediate pre-removal recheck. Detailed diagnostics are consulted when a scan or verdict needs interpretation.
 
 ## Completion report
 
-`--apply` prints it. Report worktrees removed, local and remote refs removed, worktrees deliberately preserved with their reasons, what the process scan and the Claude session scan covered, stale Railway environments, and any cleanup tuple still waiting for its worker session to end.
+After the cleanup phase, return [the completion report](worktree-cleanup.md#completion-report), including preserved trees, reasons, scan coverage and pending tuples.
