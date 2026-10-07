@@ -80,6 +80,8 @@ class FakeReviewerScenarioSeedStore implements ReviewerScenarioSeedStore {
   deletedSessionUserIds: string[] = [];
   invalidatedDeviceUserIds: string[] = [];
   catalogSeeded = false;
+  media = new Map<string, { id: string; listingId: string; key: string; sortOrder: number }>();
+  async upsertListingMedia(input: { id: string; listingId: string; key: string; sortOrder: number }): Promise<void> { this.media.set(input.id, input); }
 
   async findUserById(id: string): Promise<ReviewerScenarioUser | null> {
     return this.users.get(id) ?? null;
@@ -444,4 +446,17 @@ describe("runReviewerScenarioSeed", () => {
     expect(store.deletedSessionUserIds).toEqual(result.revokedUserIds);
     expect(store.auditLogs.at(-1)?.action).toBe("REVIEWER_SCENARIO_REVOKE");
   });
+});
+
+it("gives each fixed reviewer Listing three ordered fixture images and keeps them on rerun", async () => {
+  const store = new FakeReviewerScenarioSeedStore();
+  await runReviewerScenarioSeed(store, seedOptions());
+  for (const listingId of [reviewerScenarioSeedIds.primaryListingId, reviewerScenarioSeedIds.reportableListingId]) {
+    const photos = [...store.media.values()].filter((m) => m.listingId === listingId);
+    expect(photos).toHaveLength(3);
+    expect(photos.map((m) => m.sortOrder)).toEqual([0, 1, 2]);
+    expect(new Set(photos.map((m) => m.key)).size).toBe(3);
+  }
+  await runReviewerScenarioSeed(store, seedOptions());
+  expect(store.media.size).toBe(6);
 });
