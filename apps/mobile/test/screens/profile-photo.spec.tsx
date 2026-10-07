@@ -1,3 +1,4 @@
+import { AccessibilityInfo } from "react-native";
 import { onlineManager } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { http, HttpResponse } from "msw";
@@ -386,6 +387,40 @@ describe("Profile photo", () => {
     expect(view.getByText("Merdan")).toBeTruthy();
     expect(view.queryByText("Photo updated")).toBeNull();
     expect(view.UNSAFE_queryAllByType("Image" as never)).toHaveLength(0);
+  });
+
+  it("announces upload progress and failures on iOS, where live regions do not speak", async () => {
+    const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
+    expect(announce).toHaveBeenCalledWith("Uploading photo... 25%");
+    await act(async () => { picker.finish(500); });
+    await view.findByText("Couldn't upload the photo.");
+    expect(announce).toHaveBeenCalledWith("Couldn't upload the photo.");
+  });
+
+  it("ignores a late removal failure after another User signs in", async () => {
+    currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
+    let complete: ((response: Response) => void) | undefined;
+    server.use(http.delete("*/me/photo", () => new Promise<Response>((resolve) => { complete = resolve; })));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Remove photo" }));
+    await vi.waitFor(() => expect(complete).toBeDefined());
+    await act(async () => { await clearAuthSession(); view.queryClient.clear(); });
+    currentMe = { ...me, id: "00000000-0000-4000-8000-00000000000b", displayName: "Merdan" };
+    await act(async () => { await storeAuthSession({ accessToken: "merdan", refreshToken: "refresh-merdan", user: { id: currentMe.id, phone: me.phone, email: null, displayName: "Merdan", role: "buyer" } }); });
+    await view.findByText("Merdan");
+    expect(view.getByRole("button", { name: "Change profile photo" }).props.accessibilityState.disabled).toBe(false);
+    await act(async () => { complete?.(HttpResponse.json({ code: "INTERNAL" }, { status: 500 })); });
+    expect(view.queryByText("Couldn't remove the photo.")).toBeNull();
+    expect(view.queryByText("Photo removed")).toBeNull();
   });
 
 });
