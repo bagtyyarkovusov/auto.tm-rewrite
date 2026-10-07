@@ -1,4 +1,4 @@
-# Queue queue loop
+# Queue loop
 
 ## Per-issue loop
 
