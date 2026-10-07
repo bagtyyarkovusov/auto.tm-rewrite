@@ -165,6 +165,22 @@ describe("Profile photo", () => {
     expect(view.UNSAFE_queryAllByType("Image" as never)[0]?.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/pending/new/thumbnail.jpg" });
   });
 
+  it("falls back to the assigned car mark when the local preview fails while preserving upload progress", async () => {
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
+    fireEvent(view.UNSAFE_getByType("Image" as never), "error");
+    expect(view.UNSAFE_queryAllByType("Image" as never)).toHaveLength(0);
+    expect(view.UNSAFE_queryAllByType("Path" as never)[0]?.props.d).toBe("M11.5 12H21M17 12v3M20 12v2.4M6.5 12h.01");
+    expect(view.getByRole("progressbar").props.accessibilityValue.now).toBe(25);
+    await act(async () => { picker.finish(); });
+    expect(await view.findByText("Photo updated")).toBeTruthy();
+  });
+
   it.each(["storage", "attachment"])("keeps the earlier avatar on %s failure, retries the same photo and can cancel", async (phase) => {
     currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
     choosePhoto();
