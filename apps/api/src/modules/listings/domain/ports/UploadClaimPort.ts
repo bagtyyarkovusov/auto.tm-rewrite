@@ -4,8 +4,13 @@ export interface UploadClaimTarget {
   id: string;
 }
 
-/** `alreadyAdopted` answers a retry whose earlier attempt committed for the same target. */
-export type UploadReservation = { token: string } | { alreadyAdopted: true };
+/**
+ * `token` claims the upload for this attempt. `joined` is true when this call
+ * attached to an attempt already in flight for the same target instead of
+ * creating the token; only the creating attempt (`joined: false`) may abandon
+ * it. `alreadyAdopted` answers a retry whose earlier attempt committed.
+ */
+export type UploadReservation = { token: string; joined: boolean } | { alreadyAdopted: true };
 
 export interface UploadFinalization {
   token: string;

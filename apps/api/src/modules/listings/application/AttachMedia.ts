@@ -152,12 +152,17 @@ export class AttachMedia {
       ...(input.durationMs !== undefined ? { durationMs: input.durationMs } : {}),
       ...(input.posterKey !== undefined ? { posterKey: input.posterKey } : {}),
     };
+    const abandon = () =>
+      // Only the attempt that created the token abandons it; a joined retry
+      // holds the same in-flight claim as another attempt's and retires
+      // nothing (review P1 at 9fc23c13).
+      reservation.joined ? Promise.resolve() : this.claims.abandon(reservation.token);
     try {
       const classification = await this.classifier.classify(input.key);
       if (!classification.isAcceptable) {
         // Branch exists for Phase 2 ML classifier; in S4 this never triggers.
         // Nothing adopts the upload, so its preparation ends here.
-        await this.claims.abandon(reservation.token);
+        await abandon();
         return { media: ListingMedia.create(details) };
       }
 
@@ -172,8 +177,10 @@ export class AttachMedia {
       return { media: saved };
     } catch (err) {
       // A failed preparation is terminal: the upload is retired, never retried.
-      // If this cannot be recorded now, the storage scanner retires it later.
-      await this.claims.abandon(reservation.token).catch(() => undefined);
+      // Only the attempt that created the token abandons it; a joined retry
+      // must not retire a claim another attempt is still preparing. If this
+      // cannot be recorded now, the storage scanner retires it later.
+      await abandon().catch(() => undefined);
       throw this.rejection(err);
     }
   }

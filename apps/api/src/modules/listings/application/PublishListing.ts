@@ -394,8 +394,10 @@ export class PublishListing {
     } catch (err) {
       // A failed preparation is terminal (ADR-0088): whatever this attempt still
       // holds is retired, which is a no-op once the transaction has committed.
-      // If it cannot be recorded now, the storage scanner retires it later.
-      await this.claims.abandon(reservation.token).catch(() => undefined);
+      // Only the attempt that created the token abandons it; a joined retry
+      // must not retire a claim another attempt is still preparing. If it
+      // cannot be recorded now, the storage scanner retires it later.
+      if (!reservation.joined) await this.claims.abandon(reservation.token).catch(() => undefined);
       throw claimRejection(err);
     }
   }

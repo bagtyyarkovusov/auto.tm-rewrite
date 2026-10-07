@@ -3,6 +3,10 @@ import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
 
+import {
+  IDENTITY_CLOCK_PORT,
+  type ClockPort,
+} from "../../identity/identity.public";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import type {
   UploadClaimPort,
@@ -44,7 +48,10 @@ const heldBy = (upload: LockedUpload, target: UploadClaimTarget) =>
  */
 @Injectable()
 export class PrismaUploadClaims implements UploadClaimPort {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(IDENTITY_CLOCK_PORT) private readonly clock: ClockPort,
+  ) {}
 
   async reserve(input: Parameters<UploadClaimPort["reserve"]>[0]): Promise<UploadReservation> {
     return this.prisma.$transaction(async (tx) => {
@@ -55,10 +62,11 @@ export class PrismaUploadClaims implements UploadClaimPort {
       }
       const mine = uploads.every((upload) => heldBy(upload, input.target));
       if (mine && uploads.every((upload) => upload.state === "ADOPTED")) return { alreadyAdopted: true };
-      // A retry for the same target joins the attempt already in flight.
+      // A retry for the same target joins the attempt already in flight. The
+      // joiner must not abandon the token: only the attempt that created it may.
       const joined = uploads[0]?.claimToken;
       if (mine && joined && uploads.every((u) => u.state === "PREPARING" && u.claimToken === joined)) {
-        return { token: joined };
+        return { token: joined, joined: true };
       }
       if (uploads.some((upload) => upload.state !== "AVAILABLE") ||
         (await this.adopters(tx, input.uploadIds)) > 0) {
@@ -66,12 +74,15 @@ export class PrismaUploadClaims implements UploadClaimPort {
       }
 
       const token = randomUUID();
+      // From the injected clock (UTC), not database now(): the worker ledger
+      // compares the deadline against its own clock, so both must agree.
+      const deadline = new Date(this.clock.now().getTime() + PREPARATION_MINUTES * 60_000);
       await tx.$executeRaw`
         UPDATE media_uploads SET "state" = 'PREPARING', "claimToken" = ${token},
           "claimTargetType" = ${input.target.type}, "claimTargetId" = ${input.target.id},
-          "claimDeadline" = now() + ${PREPARATION_MINUTES}::int * interval '1 minute'
+          "claimDeadline" = ${deadline}
         WHERE id = ANY(${input.uploadIds}::text[])`;
-      return { token };
+      return { token, joined: false };
     });
   }
 
@@ -102,7 +113,7 @@ export class PrismaUploadClaims implements UploadClaimPort {
     const [upload] = await this.lock(db, [uploadId]);
     if (!upload || closed(upload)) return false;
     await db.$executeRaw`
-      UPDATE media_uploads SET "state" = 'RETIRED', "retiredAt" = now(),
+      UPDATE media_uploads SET "state" = 'RETIRED', "retiredAt" = ${this.clock.now()},
         "claimToken" = NULL, "claimDeadline" = NULL
       WHERE id = ${uploadId}`;
     // The exact manifest is copied so the work outlives this row. An unfenced

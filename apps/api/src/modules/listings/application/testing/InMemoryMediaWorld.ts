@@ -102,12 +102,12 @@ export class InMemoryMediaWorld {
       }
       const joined = records[0]?.token;
       if (joined && records.every((r) => r.state === "PREPARING" && r.token === joined && sameTarget(r.target, target))) {
-        return { token: joined };
+        return { token: joined, joined: true };
       }
       if (records.some((r) => r.state !== "AVAILABLE")) throw alreadyAttached();
       const token = randomUUID();
       for (const id of uploadIds) this.claimRecords.set(id, { state: "PREPARING", token, target });
-      return { token };
+      return { token, joined: false };
     },
     finalize: async (_tx, { token, uploadIds, target, referencedUploadIds }) => {
       for (const id of referencedUploadIds ?? []) {

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -46,7 +46,7 @@ describe("common upload claim on Postgres (#721)", () => {
 
   beforeAll(() => {
     prisma = new PrismaService();
-    claims = new PrismaUploadClaims(prisma);
+    claims = new PrismaUploadClaims(prisma, { now: () => new Date() });
     mediaRepo = new PrismaListingMediaRepository(prisma, claims);
   });
 
@@ -249,6 +249,23 @@ describe("common upload claim on Postgres (#721)", () => {
       expect(await stateOf(upload.id)).toBe("PREPARING");
       expect((await prisma.user.findUniqueOrThrow({ where: { id: OWNER } })).avatarUploadId).toBeNull();
     });
+
+    it("writes the claim deadline and retirement time from the injected UTC clock", async () => {
+      // The worker ledger compares claimDeadline against its own clock, so the
+      // claim must record the injected clock's time, not the database session's
+      // now() (review P3 at 9fc23c13).
+      const at = new Date("2030-01-01T00:00:00.000Z");
+      const timed = new PrismaUploadClaims(prisma, { now: () => at });
+      const upload = await presigned("conditional-v1");
+
+      await timed.reserve({ userId: OWNER, uploadIds: [upload.id], target: listingTarget });
+      const reserved = await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } });
+      expect(reserved.claimDeadline?.getTime()).toBe(at.getTime() + 10 * 60 * 1000);
+
+      await prisma.$transaction((tx) => timed.retire(tx, upload.id));
+      const retired = await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } });
+      expect(retired.retiredAt?.getTime()).toBe(at.getTime());
+    });
   });
 
   describe("retirement", () => {
@@ -353,10 +370,17 @@ describe("common upload claim on Postgres (#721)", () => {
     await prisma.listingMedia.create({ data: {
       listingId: LISTING, kind: "image", key: claimed.key, sortOrder: 0, uploadId: claimed.id,
     } });
+    // The migration ships in every checkout (implementation commit 6161871b),
+    // so there is no existsSync guard. Its UPDATE is scoped to this test's
+    // rows: the database is shared with other suites, and an unscoped backfill
+    // would adopt their in-flight uploads too.
     const file = resolve(__dirname,
       "../../../../../../packages/db/prisma/migrations/20261007130100_backfill_upload_adoption_state/migration.sql");
-
-    if (existsSync(file)) await prisma.$executeRawUnsafe(readFileSync(file, "utf8"));
+    const scope = ` AND u."id" IN ('${claimed.id}', '${unclaimed.id}')`;
+    const sql = readFileSync(file, "utf8")
+      .replace(`u."state" = 'AVAILABLE'`, `u."state" = 'AVAILABLE'${scope}`);
+    expect(sql).toContain(scope.trim());
+    await prisma.$executeRawUnsafe(sql);
 
     expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { id: claimed.id } })).toMatchObject({
       state: "ADOPTED", claimTargetType: "listing", claimTargetId: LISTING, writeProtocol: "legacy",
