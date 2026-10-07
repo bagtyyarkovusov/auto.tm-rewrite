@@ -188,6 +188,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
     editPayload,
     { restoreLocalPhotos: false },
   );
+  const photosReady = uploadQueue.isReady !== false;
 
   const saveEdit = useSaveListingEdit(
     listingId,
@@ -209,14 +210,16 @@ function EditListingSession({ listingId }: { listingId: string }) {
     }
   }, [sessionListing]);
 
-  // Sync upload queue photos into payload so wizard validation and review see changes
+  // Until restoration finishes, the empty queue is not the Listing's photo set.
+  // Keep the seeded photos valid while loading; sync actual edits once ready.
   useEffect(() => {
+    if (!photosReady) return;
     const photosFromQueue = buildPayloadPhotos(uploadQueue.photos);
     dispatch({
       type: "UPDATE_FIELDS",
       updates: { photos: photosFromQueue },
     });
-  }, [uploadQueue.photos]);
+  }, [photosReady, uploadQueue.photos]);
 
   // The contact-phone code flow returns here with the confirmed number; put it
   // in the edit and clear the param so a rerender does not reapply it.
@@ -253,7 +256,6 @@ function EditListingSession({ listingId }: { listingId: string }) {
 
   // The upload queue starts empty and then holds the Listing's own photos; until
   // then its photos say nothing about what the seller changed.
-  const photosReady = uploadQueue.isReady !== false;
   // A failed save may have applied part of the edit (ADR-0025), so the session
   // counts as changed until a save succeeds, whatever the fields now hold.
   const hasChanges =
