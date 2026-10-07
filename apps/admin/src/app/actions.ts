@@ -119,7 +119,7 @@ export async function verifyOtp(
           error: "Слишком много попыток. Подождите и попробуйте снова.",
         };
       }
-      if (err.status === 401) {
+      if (err.status === 401 || (err.status === 400 && err.code === "INVALID_OTP")) {
         return {
           ok: false,
           error: "Неверный код. Попробуйте ещё раз.",
