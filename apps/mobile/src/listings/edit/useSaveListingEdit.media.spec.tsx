@@ -236,7 +236,7 @@ describe("useSaveListingEdit server media IDs", () => {
     const { result } = renderSave({ photos, seed, payload: { description: "Replaced photo" } });
     await result.current.save().catch(() => undefined);
     await waitFor(() => expect(result.current.status).toBe("succeeded"));
-    expect(api.requests.remove).toEqual([seed[0]!.id]);
+    expect(api.requests.remove).toEqual(["550e8400-e29b-41d4-a716-000000000100"]);
   });
 
   it("reorders a new attachment by the ID attach returned, not its local staging UUID", async () => {
