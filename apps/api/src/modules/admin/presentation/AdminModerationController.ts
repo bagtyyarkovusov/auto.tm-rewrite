@@ -192,13 +192,32 @@ export class AdminModerationController {
     };
   }
 
-  // Skeleton for the failing-test checkpoint (#642); no route or behaviour yet.
+  /** Removes a User's Profile Photo; their Assigned Avatar shows again. */
+  @Post("users/:id/remove-photo")
+  @HttpCode(200)
   async removeUserPhoto(
-    _userId: string,
-    _body: unknown,
-    _req: FastifyRequest,
-  ): Promise<Awaited<ReturnType<RemoveUserPhoto["execute"]>> | undefined> {
-    return undefined;
+    @Param("id") userId: string,
+    @Body() body: unknown,
+    @Req() req: FastifyRequest,
+  ) {
+    this.assertModerationActionsEnabled();
+    const adminUserId = this.userId(req);
+    const parsed = this.parseOrThrow(AdminSchemas.RemoveUserPhotoRequestSchema, body);
+
+    const result = await this.removeUserPhotoUC.execute({
+      userId,
+      adminUserId,
+      reason: parsed.reason,
+      reportId: parsed.reportId,
+    });
+
+    return {
+      targetId: result.targetId,
+      targetState: result.targetState,
+      ...(result.reportId !== undefined ? { reportId: result.reportId } : {}),
+      ...(result.reportStatus !== undefined ? { reportStatus: result.reportStatus } : {}),
+      auditLogId: result.auditLogId,
+    };
   }
 
   private userId(req: FastifyRequest): string {
