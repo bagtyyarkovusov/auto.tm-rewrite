@@ -264,4 +264,74 @@ describe("Profile photo", () => {
     expect(picker.library).not.toHaveBeenCalled();
   });
 
+  it("waits for a preparing upload and retries the same key without failing or uploading again", async () => {
+    choosePhoto();
+    server.use(http.put("*/me/photo", async ({ request }) => {
+      const body = await request.json();
+      requests.sets.push(body);
+      if (requests.sets.length === 1) return HttpResponse.json({ code: "UPLOAD_ALREADY_ATTACHED", details: { reason: "UPLOAD_PREPARING" } }, { status: 409 });
+      currentMe = { ...me, avatarKey: "pending/new1/original.jpg" };
+      return HttpResponse.json(currentMe);
+    }));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    await act(async () => { picker.finish(); });
+    expect(await view.findByText("Preparing photo...")).toBeTruthy();
+    expect(view.queryByText("Couldn't upload the photo.")).toBeNull();
+    expect(view.getByRole("progressbar").props.accessibilityValue.now).toBe(100);
+    expect(await view.findByText("Photo updated", {}, { timeout: 3000 })).toBeTruthy();
+    expect(requests.sets).toEqual([{ key: "pending/new1/original.jpg" }, { key: "pending/new1/original.jpg" }]);
+    expect(picker.sent).toHaveLength(1);
+    expect(picker.library).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [400, "UPLOAD_NOT_AVAILABLE", undefined, "Couldn't upload the photo."],
+    [400, "UPLOAD_OBJECT_INVALID", undefined, "Couldn't upload the photo."],
+    [409, "UPLOAD_ALREADY_ATTACHED", "UPLOAD_ATTACHED_TO_LISTING", "This upload belongs to a listing. Retry to upload a new copy."],
+  ])("freshly presigns after %s %s %s, keeping the chosen photo", async (status, code, reason, message) => {
+    choosePhoto();
+    server.use(http.put("*/me/photo", async ({ request }) => {
+      const body = await request.json() as { key: string };
+      requests.sets.push(body);
+      if (requests.sets.length === 1) return HttpResponse.json({ code, details: reason ? { reason } : undefined }, { status });
+      currentMe = { ...me, avatarKey: body.key };
+      return HttpResponse.json(currentMe);
+    }));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    await act(async () => { picker.finish(); });
+    expect(await view.findByText(message)).toBeTruthy();
+    expect(view.queryByText("Photo updated")).toBeNull();
+    fireEvent.press(view.getByRole("button", { name: "Retry" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(2));
+    await act(async () => { picker.finish(); });
+    expect(await view.findByText("Photo updated")).toBeTruthy();
+    expect(requests.presigns).toHaveLength(2);
+    expect(requests.sets).toEqual([{ key: "pending/new1/original.jpg" }, { key: "pending/new2/original.jpg" }]);
+    expect(picker.library).toHaveBeenCalledOnce();
+  });
+
+  it.each(["USER_SUSPENDED", "FORBIDDEN"])("keeps the earlier photo for 403 %s and offers no futile retry", async (code) => {
+    choosePhoto();
+    currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
+    server.use(http.put("*/me/photo", () => HttpResponse.json({ code, details: { reason: "USER_SUSPENDED" } }, { status: 403 })));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    await act(async () => { picker.finish(); });
+    expect(await view.findByText("Your account is restricted. Contact support if you think this is a mistake.")).toBeTruthy();
+    expect(view.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(view.getByRole("button", { name: "Cancel" })).toBeTruthy();
+    expect(view.UNSAFE_queryAllByType("Image" as never)[0]?.props.source).toEqual({ uri: "https://media.autotm.tm/listing-photos/pending/old/thumbnail.jpg" });
+  });
+
 });
