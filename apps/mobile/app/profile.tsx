@@ -317,13 +317,14 @@ function SignedInProfile() {
         className="px-4 pb-3 text-center text-footnote text-muted-foreground"
       >{t("uploading", { p: photo.state.percent })}</Text> : null}
 
+      {photo.state.status === "uploading" && photo.state.preparing ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoPreparing")}</Text> : null}
       {photo.state.status === "removing" ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoRemoving")}</Text> : null}
       {photo.state.status !== "idle" && photo.state.status !== "uploading" && photo.state.status !== "removing" ? <View className="mx-4 mb-4 gap-2 rounded-2xl bg-destructive/10 px-4 py-3">
         <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" className="text-body text-destructive">
-          {photo.state.status === "offline" ? t("common:offline") : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail")}
+          {photo.state.reason === "suspended" ? t("common:accountRestrictedDescription") : photo.state.reason === "listing" ? t("photoAttached") : photo.state.status === "offline" ? t("common:offline") : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail")}
         </Text>
         <View className="flex-row flex-wrap gap-2">
-          {photo.state.status === "failed" || photo.state.status === "offline" ?
+          {photo.state.reason === "suspended" ? null : photo.state.status === "failed" || photo.state.status === "offline" ?
             <Button variant="ghost" className="min-h-11" onPress={() => void photo.retry()}><Text>{t("common:retry")}</Text></Button> :
             <Button variant="ghost" className="min-h-11" onPress={() => { photo.cancel(); setPhotoSheetOpen(true); }}><Text>{t("chooseOther")}</Text></Button>}
           <Button variant="ghost" className="min-h-11" onPress={photo.cancel}><Text>{t("common:cancel")}</Text></Button>

@@ -670,6 +670,8 @@ export const resources: Resource = {
       signInToManageDescription: "Войдите, чтобы управлять объявлениями и черновиками.",
     },
     account: {
+      photoPreparing: "Подготовка фото...",
+      photoAttached: "Это фото уже используется в объявлении. Повторите загрузку новой копии.",
       photoRemoved: "Фото удалено",
       photoRmFail: "Не удалось удалить фото.",
       photoRemoving: "Удаление фото...",
@@ -1489,6 +1491,8 @@ export const resources: Resource = {
       signInToManageDescription: "Bildirişleri we garalamalary dolandyrmak üçin giriň.",
     },
     account: {
+      photoPreparing: "Surat taýýarlanýar...",
+      photoAttached: "Bu surat bildirişde ulanylýar. Täze nusgasyny ýükläp, täzeden synanyşyň.",
       photoRemoved: "Surat aýryldy",
       photoRmFail: "Suraty aýryp bolmady.",
       photoRemoving: "Surat aýrylýar...",
@@ -2306,6 +2310,8 @@ export const resources: Resource = {
       signInToManageDescription: "Sign in to manage your listings and drafts.",
     },
     account: {
+      photoPreparing: "Preparing photo...",
+      photoAttached: "This upload belongs to a listing. Retry to upload a new copy.",
       photoRemoved: "Photo removed",
       photoRmFail: "Couldn't remove the photo.",
       photoRemoving: "Removing photo...",

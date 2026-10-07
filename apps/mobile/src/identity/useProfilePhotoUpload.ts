@@ -3,7 +3,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { create } from "zustand";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import { UploadsSchemas } from "@auto-tm/contracts";
+import { IdentitySchemas, UploadsSchemas } from "@auto-tm/contracts";
 
 import { ApiError, apiClient } from "../api/client";
 import { useRemoveProfilePhoto } from "../api/identity/useRemoveProfilePhoto";
@@ -14,9 +14,9 @@ import { profileNoticeStore } from "./profileNotice";
 
 type PhotoUploadState =
   | { status: "idle" }
-  | { status: "uploading"; uri: string; percent: number }
+  | { status: "uploading"; uri: string; percent: number; preparing?: boolean }
   | { status: "removing" }
-  | { status: "failed" | "offline" | "too_large" | "unsupported"; operation?: "remove" };
+  | { status: "failed" | "offline" | "too_large" | "unsupported"; operation?: "remove"; reason?: "listing" | "suspended" };
 let selected: { asset: ImagePicker.ImagePickerAsset; compressed?: CompressionResult } | null = null;
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -65,14 +65,25 @@ export function useProfilePhotoUpload() {
       });
       const result = await task.uploadAsync();
       if (!result || result.status < 200 || result.status >= 300) throw new Error("Photo upload failed");
-      await setPhoto.mutateAsync({ key: presign.key });
+      for (;;) {
+        try {
+          await setPhoto.mutateAsync({ key: presign.key });
+          break;
+        } catch (error) {
+          if (conflictReason(error) !== IdentitySchemas.ProfilePhotoConflictReason.UploadPreparing) throw error;
+          profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent: 100, preparing: true } });
+          // This is still the same adoption, not another upload. The server's
+          // claim expires after ten minutes if the original request died.
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
       profilePhotoUploadStore.setState({ state: { status: "idle" } });
       profileNoticeStore.getState().show({ kind: "photoSaved" });
       await discard();
     } catch (error) {
       const status = error instanceof CompressionError ? "unsupported"
         : !onlineManager.isOnline() || (error instanceof ApiError && (error.status === 0 || error.code === "NETWORK_ERROR")) ? "offline" : "failed";
-      profilePhotoUploadStore.setState({ state: { status } });
+      profilePhotoUploadStore.setState({ state: { status, reason: refusalReason(error) } });
     }
   }
 
@@ -84,7 +95,7 @@ export function useProfilePhotoUpload() {
       profileNoticeStore.getState().show({ kind: "photoRemoved" });
     } catch (error) {
       const status = !onlineManager.isOnline() || (error instanceof ApiError && error.status === 0) ? "offline" : "failed";
-      profilePhotoUploadStore.setState({ state: { status, operation: "remove" } });
+      profilePhotoUploadStore.setState({ state: { status, operation: "remove", reason: refusalReason(error) } });
     }
   }
 
@@ -123,4 +134,17 @@ export function useProfilePhotoUpload() {
   }
 
   return { state, pick, remove, retry: () => "operation" in state && state.operation === "remove" ? remove() : upload(), cancel, cameraDenied, dismissCameraDenied: () => setCameraDenied(false) };
+}
+
+function conflictReason(error: unknown): IdentitySchemas.ProfilePhotoConflictReason | undefined {
+  if (!(error instanceof ApiError) || error.status !== 409 || error.code !== IdentitySchemas.ProfilePhotoErrorCode.UploadAlreadyAttached) return undefined;
+  const parsed = IdentitySchemas.ProfilePhotoConflictDetailsSchema.safeParse(error.details);
+  return parsed.success ? parsed.data.reason : undefined;
+}
+
+function refusalReason(error: unknown): "listing" | "suspended" | undefined {
+  if (conflictReason(error) === IdentitySchemas.ProfilePhotoConflictReason.UploadAttachedToListing) return "listing";
+  if (error instanceof ApiError && error.status === 403 &&
+    (error.code === "USER_SUSPENDED" || (typeof error.details === "object" && error.details !== null && "reason" in error.details && error.details.reason === "USER_SUSPENDED"))) return "suspended";
+  return undefined;
 }
