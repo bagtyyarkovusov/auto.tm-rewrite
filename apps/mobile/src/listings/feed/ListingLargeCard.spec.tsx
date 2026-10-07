@@ -91,7 +91,8 @@ describe("Results photo strip", () => {
     let parent = view.getByTestId("listing-photo-strip").parent;
     while (parent) {
       if (typeof parent.type === "string" && parent.props.onPress) {
-        act(() => parent!.props.onPress());
+        const release = parent.props.onPress;
+        act(() => release());
         break;
       }
       parent = parent.parent;
