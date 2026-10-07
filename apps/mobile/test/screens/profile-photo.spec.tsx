@@ -423,4 +423,30 @@ describe("Profile photo", () => {
     expect(view.queryByText("Photo removed")).toBeNull();
   });
 
+  it("never moves progress backwards when native byte events arrive out of order", async () => {
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    act(() => { picker.progress({ totalBytesSent: 1536, totalBytesExpectedToSend: 2048 }); });
+    act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
+    expect(view.getByRole("progressbar").props.accessibilityValue.now).toBe(75);
+    await act(async () => { picker.finish(); });
+    await view.findByText("Photo updated");
+  });
+
+  it("does not upload if a legacy server omits the conditional write headers", async () => {
+    choosePhoto();
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880 })));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    expect(await view.findByText("Couldn't upload the photo.")).toBeTruthy();
+    expect(picker.sent).toEqual([]);
+    expect(requests.sets).toEqual([]);
+  });
+
 });
