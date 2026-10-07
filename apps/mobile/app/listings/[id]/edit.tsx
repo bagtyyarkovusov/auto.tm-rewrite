@@ -188,6 +188,8 @@ function EditListingSession({ listingId }: { listingId: string }) {
     editPayload,
     { restoreLocalPhotos: false },
   );
+  // The upload queue starts empty and then holds the Listing's own photos; until
+  // then its photos say nothing about what the seller changed.
   const photosReady = uploadQueue.isReady !== false;
 
   const saveEdit = useSaveListingEdit(
@@ -254,8 +256,6 @@ function EditListingSession({ listingId }: { listingId: string }) {
     [],
   );
 
-  // The upload queue starts empty and then holds the Listing's own photos; until
-  // then its photos say nothing about what the seller changed.
   // A failed save may have applied part of the edit (ADR-0025), so the session
   // counts as changed until a save succeeds, whatever the fields now hold.
   const hasChanges =

@@ -153,31 +153,32 @@ function answerNotDamaged(screen: Screen, locale: keyof typeof localized) {
 beforeEach(() => {
   routeParams.id = id;
   routerMock.canGoBack.mockReturnValue(true);
-  vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) => ({ exists: false, uri }));
+  vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) => ({ exists: false, uri, isDirectory: false }));
 });
 
 describe("the section list of a published Listing (#589)", () => {
   it("never asks to fill in existing photos while loading or on the first ready render (#736)", async () => {
     createListingApi();
     let finishReadingPhotos = () => {};
-    const photoRead = new Promise<{ exists: false; uri: string }>((resolve) => {
-      finishReadingPhotos = () => resolve({ exists: false, uri: `file:///doc/listing-staging/edit-${id}/` });
+    const photoRead = new Promise<FileSystem.FileInfo>((resolve) => {
+      finishReadingPhotos = () => resolve({ exists: false, uri: `file:///doc/listing-staging/edit-${id}/`, isDirectory: false });
     });
     vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) =>
-      uri === `file:///doc/listing-staging/edit-${id}/` ? photoRead : { exists: false, uri },
+      uri === `file:///doc/listing-staging/edit-${id}/` ? photoRead : { exists: false, uri, isDirectory: false },
     );
 
     const photoRows: string[] = [];
-    let screen: Screen | undefined;
-    screen = renderMobile(
+    const observedScreen: { current?: Screen } = {};
+    const screen = renderMobile(
       <Profiler id="edit-photos" onRender={() => {
-        const row = screen?.queryAllByTestId("check-section")
+        const row = observedScreen.current?.queryAllByTestId("check-section")
           .find((item) => String(item.props.accessibilityLabel).startsWith("Photos, "));
         if (row) photoRows.push(String(row.props.accessibilityLabel));
       }}>
         <ToastProvider><EditListingScreen /></ToastProvider>
       </Profiler>,
     );
+    observedScreen.current = screen;
     await screen.findByRole("header", { name: "Edit listing" });
     expect(photoRows.length).toBeGreaterThan(0);
     expect(screen.queryByText("Photos: 4")).toBeNull();
