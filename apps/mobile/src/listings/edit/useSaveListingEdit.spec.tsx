@@ -310,7 +310,7 @@ describe("useSaveListingEdit", () => {
 
     await waitFor(() => expect(result.current.status).toBe("succeeded"));
 
-    expect(callLog).toEqual(["fields", "attach", "remove", "reorder"]);
+    expect(callLog).toEqual(["attach", "fields", "remove", "reorder"]);
     expect(result.current.opStates["fields"]).toBe("succeeded");
     expect(result.current.opStates["attach:new1"]).toBe("succeeded");
     expect(result.current.opStates["remove:550e8400-e29b-41d4-a716-446655440002"]).toBe("succeeded");
@@ -394,7 +394,7 @@ describe("useSaveListingEdit", () => {
 
     await waitFor(() => expect(result.current.status).toBe("failed"));
 
-    expect(result.current.opStates["fields"]).toBe("succeeded");
+    expect(result.current.opStates["fields"]).toBe("pending");
     expect(result.current.opStates["attach:new1"]).toBe("failed");
     expect(result.current.opStates["remove:550e8400-e29b-41d4-a716-446655440002"]).toBe("pending");
     expect(result.current.opStates["reorder"]).toBe("pending");
@@ -406,9 +406,9 @@ describe("useSaveListingEdit", () => {
     await waitFor(() => expect(result.current.status).toBe("succeeded"));
 
     expect(callLog).toEqual([
-      "fields",
       "attach-1", // first attempt fails
       "attach-2", // retry succeeds
+      "fields"
       "remove",
       "reorder",
     ]);

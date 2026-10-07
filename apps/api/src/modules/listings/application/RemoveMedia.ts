@@ -59,14 +59,6 @@ export class RemoveMedia {
     // provenance, or whose directory another row still references, never does, so a
     // key copied from another Listing can never reach the storage deletes below
     // (ADR-0079).
-    const photos = (await this.mediaRepo.findByListingId(input.listingId)).filter((m) => m.kind === "image");
-    if (photos.length - (media.kind === "image" ? 1 : 0) < ListingsSchemas.MIN_LISTING_PHOTOS) {
-      throw new BadRequestException({
-        code: "PHOTO_MINIMUM_REQUIRED",
-        message: `At least ${ListingsSchemas.MIN_LISTING_PHOTOS} photos are required`,
-        details: { minimum: ListingsSchemas.MIN_LISTING_PHOTOS },
-      });
-    }
     const { removed, ownedKey } = await this.mediaRepo.deleteReleasingUpload(
       input.mediaId, ListingsSchemas.MIN_LISTING_PHOTOS,
     ).catch((error: unknown) => {

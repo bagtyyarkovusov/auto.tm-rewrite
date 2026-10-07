@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 
 import { Listing } from "../domain/Listing";
 import { ListingMedia } from "../domain/ListingMedia";
+import { DomainError } from "../domain/types";
 import type { ListingRepository } from "../domain/ports/ListingRepository";
 import type { ListingMediaRepository } from "../domain/ports/ListingMediaRepository";
 import type { MediaStoragePort } from "../domain/ports/MediaStoragePort";
@@ -68,9 +69,13 @@ class FakeListingMediaRepository implements ListingMediaRepository {
 
   async deleteReleasingUpload(
     id: string,
+    minimumPhotos?: number,
   ): Promise<{ removed: boolean; ownedKey: string | null }> {
     const row = this.media.find((m) => m.id === id);
     if (!row) return { removed: false, ownedKey: null };
+    if (minimumPhotos !== undefined && this.media.filter((m) => m.listingId === row.listingId && m.kind === "image" && m.id !== id).length < minimumPhotos) {
+      throw new DomainError("PHOTO_MINIMUM_REQUIRED", "At least three photos are required");
+    }
     this.media = this.media.filter((m) => m.id !== id);
     const shared = this.media.some((m) => m.key === row.key);
     return { removed: true, ownedKey: row.uploadId && !shared ? row.key : null };
@@ -260,6 +265,9 @@ describe("RemoveMedia", () => {
     );
     // findById sees the row, then a concurrent remove wins before this delete.
     const racing = Object.assign(Object.create(mediaRepo) as FakeListingMediaRepository, {
+      // A stale ID read preceded the winner's delete; a later count sees only
+      // the three kept images. The atomic release still decides this is 404.
+      findByListingId: async () => mediaRepo.media.filter((m) => m.id !== "media-1"),
       deleteReleasingUpload: async () => ({ removed: false, ownedKey: null }),
     });
 
