@@ -81,6 +81,21 @@ describe("Sell publish toasts", () => {
     expect(routerMock.replace).not.toHaveBeenCalled();
   });
 
+  // #735: the server answers UPLOAD_NOT_AVAILABLE when a draft photo's upload was
+  // retired; the seller must re-add that photo. The alert names the step.
+  it.each([
+    ["en", "One photo is no longer available. Re-add it in the Photos step and try again."],
+    ["ru", "Одна из фотографий больше недоступна. Добавьте её заново на шаге «Фото» и попробуйте ещё раз."],
+    ["tk", "Suratlaryňyzden biri indi elýeterli däl. Ony «Surat» ädiminde täzeden goşuň we täzeden synanyşyň."],
+  ])("names the re-add step when the server answers UPLOAD_NOT_AVAILABLE for a photo (%s)", async (locale, message) => {
+    fixture.publish.mockRejectedValue(new ApiError("UPLOAD_NOT_AVAILABLE", 400, "A photo upload is no longer available"));
+    const screen = renderMobile(<ToastProvider><SellScreen /></ToastProvider>, { locale });
+    const publishName = locale === "ru" ? "Опубликовать" : locale === "tk" ? "Neşir et" : "Publish";
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: publishName })); });
+    expect(within(screen.getByRole("alert")).getByText(message)).toBeTruthy();
+    expect(routerMock.replace).not.toHaveBeenCalled();
+  });
+
   it("shows a publish failure above Publish, not as a toast, and keeps the wizard open", async () => {
     const { screen } = renderWizard();
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
