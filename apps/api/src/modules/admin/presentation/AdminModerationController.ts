@@ -22,6 +22,7 @@ import { UnbanListing } from "../application/UnbanListing";
 import { SuspendUser } from "../application/SuspendUser";
 import { UnsuspendUser } from "../application/UnsuspendUser";
 import { DismissReport } from "../application/DismissReport";
+import { RemoveUserPhoto } from "../application/RemoveUserPhoto";
 
 type AuthenticatedRequest = FastifyRequest & { user?: { sub?: string } };
 
@@ -39,6 +40,8 @@ export class AdminModerationController {
     private readonly unsuspendUserUC: UnsuspendUser,
     @Inject(DismissReport)
     private readonly dismissReportUC: DismissReport,
+    @Inject(RemoveUserPhoto)
+    private readonly removeUserPhotoUC: RemoveUserPhoto,
     @Inject(ConfigService)
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -187,6 +190,15 @@ export class AdminModerationController {
       },
       auditLogId: result.auditLogId,
     };
+  }
+
+  // Skeleton for the failing-test checkpoint (#642); no route or behaviour yet.
+  async removeUserPhoto(
+    _userId: string,
+    _body: unknown,
+    _req: FastifyRequest,
+  ): Promise<Awaited<ReturnType<RemoveUserPhoto["execute"]>> | undefined> {
+    return undefined;
   }
 
   private userId(req: FastifyRequest): string {
