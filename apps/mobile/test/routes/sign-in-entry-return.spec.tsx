@@ -7,9 +7,10 @@ import OtpScreen from "../../app/(auth)/otp";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 
+const navigation = vi.hoisted(() => ({ back: () => {} }));
 vi.mock("@react-navigation/native", () => ({
   DefaultTheme: { dark: false, colors: {} }, DarkTheme: { dark: true, colors: {} },
-  usePreventRemove: () => {},
+  usePreventRemove: (_enabled: boolean, callback: () => void) => { navigation.back = callback; },
 }));
 vi.mock("react-native", async (importOriginal) => {
   const hosts = await importOriginal<typeof Native>();
@@ -56,4 +57,33 @@ it("Change email returns to the selected method with its typed value and no inte
   fireEvent.press(code.getByRole("button", { name: "Change email" }));
   expect(routerMock.back).toHaveBeenCalledOnce();
   expect(entry.getByDisplayValue("held@example.com")).toBeTruthy();
+});
+
+
+it("Code header Back returns to the held selected method without abandoning intent", () => {
+  useAuthIntentStore.getState().requireSignIn(routerMock, { returnTo: "/(tabs)/favorites" });
+  routeParams.authRoot = "1";
+  const entry = renderMobile(<PhoneScreen />);
+  fireEvent.press(entry.getByText("Email"));
+  fireEvent.changeText(entry.getByPlaceholderText("name@example.com"), "held@example.com");
+  const code = openEmailCode();
+  fireEvent.press(code.getByRole("button", { name: /^[Bb]ack$/ }));
+  expect(routerMock.back).toHaveBeenCalledOnce();
+  expect(routerMock.dismissTo).not.toHaveBeenCalled();
+  expect(entry.getByDisplayValue("held@example.com")).toBeTruthy();
+  expect(useAuthIntentStore.getState().intent).not.toBeNull();
+});
+
+it("the Code native Back guard returns to the same entry and leaves intent live", () => {
+  useAuthIntentStore.getState().requireSignIn(routerMock, { returnTo: "/(tabs)/favorites" });
+  routeParams.authRoot = "1";
+  const entry = renderMobile(<PhoneScreen />);
+  fireEvent.press(entry.getByText("Email"));
+  fireEvent.changeText(entry.getByPlaceholderText("name@example.com"), "held@example.com");
+  openEmailCode();
+  act(() => navigation.back());
+  expect(routerMock.back).toHaveBeenCalledOnce();
+  expect(routerMock.dismissTo).not.toHaveBeenCalled();
+  expect(entry.getByDisplayValue("held@example.com")).toBeTruthy();
+  expect(useAuthIntentStore.getState().intent).not.toBeNull();
 });
