@@ -107,7 +107,7 @@ export function useProfilePhotoUpload() {
       }, ({ totalBytesSent, totalBytesExpectedToSend }) => {
         const known = Number.isFinite(totalBytesExpectedToSend) && totalBytesExpectedToSend > 0 && Number.isFinite(totalBytesSent) && totalBytesSent >= 0;
         const percent = known ? Math.max(lastPercent ?? 0, Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend))) : null;
-        lastPercent = percent;
+        if (percent !== null) lastPercent = percent;
         if (selected === photo && transferring) profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent } });
       });
       let cancelled = false;
