@@ -1,9 +1,12 @@
 import * as RN from "react-native";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as FileSystem from "expo-file-system/legacy";
+import { Profiler } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { waitFor } from "@testing-library/react-native";
 
 import EditListingScreen from "../../app/listings/[id]/edit";
+import { getDraftDir } from "../../src/listings/uploadStaging/stagingDir";
 import { server } from "../msw";
 import { act, fireEvent, renderMobile, routeParams, routerMock, screenFocus, screenOptions } from "../render";
 
@@ -114,11 +117,6 @@ async function openEdit({ locale = "en", heading = "Edit listing" } = {}) {
   const screen = renderMobile(<ToastProvider><EditListingScreen /></ToastProvider>, { locale });
   await screen.findByRole("header", { name: heading });
   await screen.findByText(/^Photos: 4$|^Фото: 4$|^Suratlar: 4$/);
-  // The count comes from the upload queue; the row's action follows one render
-  // later, once the queue's photos reach the wizard payload. Wait for that too.
-  await screen.findByRole("button", {
-    name: /Photos: 4, Change$|Фото: 4, Изменить$|Suratlar: 4, Üýtget$/,
-  });
   return screen;
 }
 
@@ -158,7 +156,49 @@ beforeEach(() => {
   routerMock.canGoBack.mockReturnValue(true);
 });
 
+afterEach(() => {
+  vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) => ({ exists: false, uri, isDirectory: false }));
+});
+
 describe("the section list of a published Listing (#589)", () => {
+  it("never asks to fill in existing photos while loading or on the first ready render (#736)", async () => {
+    createListingApi();
+    const photoDir = getDraftDir(`edit-${id}`);
+    let finishReadingPhotos = () => {};
+    const photoRead = new Promise<FileSystem.FileInfo>((resolve) => {
+      finishReadingPhotos = () => resolve({ exists: false, uri: photoDir, isDirectory: false });
+    });
+    vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) =>
+      uri === photoDir ? photoRead : { exists: false, uri, isDirectory: false },
+    );
+
+    const photoRows: string[] = [];
+    const observedScreen: { current?: Screen } = {};
+    const screen = renderMobile(
+      <Profiler id="edit-photos" onRender={() => {
+        const row = observedScreen.current?.queryAllByTestId("check-section")
+          .find((item) => String(item.props.accessibilityLabel).startsWith("Photos, "));
+        if (row) photoRows.push(String(row.props.accessibilityLabel));
+      }}>
+        <ToastProvider><EditListingScreen /></ToastProvider>
+      </Profiler>,
+    );
+    observedScreen.current = screen;
+    await screen.findByRole("header", { name: "Edit listing" });
+    expect(photoRows.length).toBeGreaterThan(0);
+    expect(screen.queryByText("Photos: 4")).toBeNull();
+    expect(screen.queryByText("At least 3 photos are required")).toBeNull();
+
+    await act(async () => { finishReadingPhotos(); });
+    await screen.findByText("Photos: 4");
+
+    // Profiler observes each commit before the queue-to-payload effect can
+    // settle it. A findBy query alone can skip the incorrect intermediate row.
+    expect(photoRows.find((row) => row.includes("Photos: 4")))
+      .toBe("Photos, Photos: 4, Change");
+    expect(photoRows.filter((row) => row.includes("Fill in"))).toEqual([]);
+  });
+
   it("opens on the Listing's sections under Edit listing, with the note about saving", async () => {
     createListingApi();
     const screen = await openEdit();
@@ -280,6 +320,52 @@ describe("changing a section (#589)", () => {
 });
 
 describe("Save changes (#589)", () => {
+  it("cannot save an edited field before existing photos finish loading (#736)", async () => {
+    const api = createListingApi();
+    const photoDir = getDraftDir(`edit-${id}`);
+    let finishReadingPhotos = () => {};
+    const photoRead = new Promise<FileSystem.FileInfo>((resolve) => {
+      finishReadingPhotos = () => resolve({ exists: false, uri: photoDir, isDirectory: false });
+    });
+    vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) =>
+      uri === photoDir ? photoRead : { exists: false, uri, isDirectory: false },
+    );
+    const screen = renderMobile(<ToastProvider><EditListingScreen /></ToastProvider>);
+    await screen.findByRole("header", { name: "Edit listing" });
+    changePrice(screen, "100000", "179000");
+    expect(screen.queryByText("Photos: 4")).toBeNull();
+    expect(isDisabled(saveButton(screen))).toBe(true);
+
+    try {
+      // Exercise the rendered callback too: a disabled Pressable alone must
+      // not be the guard against planning removals from an unloaded queue.
+      await act(async () => { await saveButton(screen).props.onPress(); });
+      expect(api.patches).toEqual([]);
+      expect(api.removed).toEqual([]);
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => { finishReadingPhotos(); });
+    }
+
+    await screen.findByText("Photos: 4");
+    expect(isDisabled(saveButton(screen))).toBe(false);
+    await act(async () => { fireEvent.press(saveButton(screen)); });
+    await waitFor(() => expect(api.patches).toEqual([expect.objectContaining({ priceAmount: 179000 })]));
+    expect(api.removed).toEqual([]);
+  });
+
+  it("asks to fill in a ready photo set when fewer than three photos remain (#736)", async () => {
+    createListingApi();
+    const screen = await openEdit();
+    openStep(screen, /^Photos, .*Change$/, "Photos");
+    fireEvent.press(screen.getByRole("button", { name: "Remove: Photo 4 of 4" }));
+    fireEvent.press(screen.getByRole("button", { name: "Remove: Photo 3 of 3" }));
+    fireEvent.press(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.getByRole("button", { name: "Photos, Photos: 2, Fill in" })).toBeTruthy();
+    expect(isDisabled(saveButton(screen))).toBe(true);
+  });
+
   it("is disabled until a field differs from the published Listing, and again once the change is undone", async () => {
     createListingApi();
     const screen = await openEdit();
