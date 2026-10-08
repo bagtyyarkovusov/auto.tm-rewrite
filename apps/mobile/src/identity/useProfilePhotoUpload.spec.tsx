@@ -4,10 +4,8 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { server } from "../../test/msw";
-import { setupPhotoHook, signInPhotoUser } from "../../test/profile-photo-api";
+import { PHOTO_ME, setupPhotoHook, signInPhotoUser } from "../../test/profile-photo-api";
 import { choosePhoto, photoDevice, resetPhotoDevice } from "../../test/profile-photo-device";
-
-import { PHOTO_ME } from "../../test/profile-photo-api";
 
 import { profilePhotoUploadStore, resetProfilePhotoUpload, useProfilePhotoUpload } from "./useProfilePhotoUpload";
 
@@ -59,7 +57,7 @@ describe("useProfilePhotoUpload", () => {
   });
 
   it("releases a rejected native transfer before retrying the retained photo", async () => {
-    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"' } })),
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"' } })),
       http.put("*/me/photo", () => HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" })));
     choosePhoto();
     const { result } = setupPhotoHook(useProfilePhotoUpload);
@@ -77,7 +75,7 @@ describe("useProfilePhotoUpload", () => {
   });
 
   it("keeps rapid Retry taps in one transfer instead of sharing a selection across competing jobs", async () => {
-    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"' } })),
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"' } })),
       http.put("*/me/photo", () => HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" })));
     choosePhoto();
     const { result } = setupPhotoHook(useProfilePhotoUpload);
@@ -85,7 +83,7 @@ describe("useProfilePhotoUpload", () => {
     act(() => { picking = result.current.pick("library"); });
     await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(1));
     await act(async () => { photoDevice.finish(500); await picking; });
-    let retries!: Promise<void[]>;
+    let retries!: Promise<unknown>;
     act(() => { retries = Promise.all([result.current.retry(), result.current.retry()]); });
     await vi.waitFor(() => expect(photoDevice.sent.length).toBeGreaterThanOrEqual(2));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 25)); });

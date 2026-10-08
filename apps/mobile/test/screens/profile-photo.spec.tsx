@@ -220,7 +220,7 @@ describe("Profile photo", () => {
     await view.findByText("Aman");
     fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
-    expect(await view.findByText("Uploading photo... 0%")).toBeTruthy();
+    expect(await view.findByText("Loading...")).toBeTruthy();
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     expect(presign).toEqual({ kind: "image", writeProtocol: "conditional-v1", contentType: "image/jpeg", sizeBytes: 2048 });
     expect(picker.sent[0]).toMatchObject({ url: "https://storage.example/photo", options: { httpMethod: "PUT", uploadType: 0, headers: { "if-match": '"etag"', "content-type": "image/jpeg" } } });
@@ -478,13 +478,13 @@ describe("Profile photo", () => {
     currentMe = { ...me, id: "00000000-0000-4000-8000-00000000000b", displayName: "Merdan", avatarIndex: 2 };
     await act(async () => { await storeAuthSession({ accessToken: "merdan", refreshToken: "refresh-merdan", user: { id: currentMe.id, phone: me.phone, email: null, displayName: "Merdan", role: "buyer" } }); });
     await view.findByText("Merdan");
-    expect(view.queryByText("Uploading photo... 0%")).toBeNull();
+    expect(view.queryByText("Loading...")).toBeNull();
     expect(view.UNSAFE_queryAllByType("Image" as never)).toHaveLength(0);
     await act(async () => {
       if (phase === "attachment") complete?.(HttpResponse.json({ ...me, avatarKey: "pending/new1/original.jpg" }));
       else picker.finish();
     });
-    await vi.waitFor(() => expect(view.queryByText("Uploading photo... 0%")).toBeNull());
+    await vi.waitFor(() => expect(view.queryByText("Loading...")).toBeNull());
     expect(sentTo).toEqual(phase === "attachment" ? ["Bearer aman"] : []);
     expect(view.getByText("Merdan")).toBeTruthy();
     expect(view.queryByText("Photo updated")).toBeNull();
@@ -648,15 +648,15 @@ describe("Profile photo", () => {
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     for (const bytes of [512, 1024, 1536, 2048]) act(() => { picker.progress({ totalBytesSent: bytes, totalBytesExpectedToSend: 2048 }); });
-    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%"]);
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Loading..."]);
     await act(async () => { picker.finish(ending === "failed" ? 500 : 200); });
     if (ending === "preparing") {
       await vi.waitFor(() => expect(view.getByText("Preparing photo...")).toBeTruthy());
-      expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%", "Preparing photo..."]);
+      expect(announce.mock.calls.map(([message]) => message)).toEqual(["Loading...", "Preparing photo..."]);
       await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     }
     await vi.waitFor(() => expect(view.getByText(ending === "failed" ? "Couldn't upload the photo." : "Photo updated")).toBeTruthy());
-    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%", ...(ending === "preparing" ? ["Preparing photo..."] : []), ending === "failed" ? "Couldn't upload the photo." : "Photo updated"]);
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Loading...", ...(ending === "preparing" ? ["Preparing photo..."] : []), ending === "failed" ? "Couldn't upload the photo." : "Photo updated"]);
   });
 
   it("announces removal start and result once on iOS", async () => {
