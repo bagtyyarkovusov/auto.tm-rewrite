@@ -10,14 +10,16 @@ it("renders a Russian error page and retries without exposing the API error", as
   const container = document.createElement("div");
   const root = createRoot(container);
   const reset = vi.fn();
+  const retry = vi.fn();
   try {
-    await act(async () => root.render(<ErrorPage error={new Error("secret API detail")} reset={reset} />));
+    await act(async () => root.render(<ErrorPage error={new Error("secret API detail")} reset={reset} unstable_retry={retry} />));
     expect(container.textContent).toContain("Временно недоступно. Попробуйте ещё раз.");
     expect(container.textContent).not.toContain("secret API detail");
-    const retry = container.querySelector("button");
-    if (!retry) throw new Error("missing retry button");
-    await act(async () => retry.click());
-    expect(reset).toHaveBeenCalledOnce();
+    const button = container.querySelector("button");
+    if (!button) throw new Error("missing retry button");
+    await act(async () => button.click());
+    expect(retry).toHaveBeenCalledOnce();
+    expect(reset).not.toHaveBeenCalled();
   } finally {
     await act(async () => root.unmount());
     vi.unstubAllGlobals();
