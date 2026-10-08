@@ -6,11 +6,12 @@ import { server } from "../../test/msw";
 import { PHOTO_ME, photoApiStorage, setupPhotoHook, signInPhotoUser } from "../../test/profile-photo-api";
 import { choosePhoto, photoDevice, resetPhotoDevice } from "../../test/profile-photo-device";
 import { clearAuthSession, loadAuthSession, storeAuthSession } from "../auth/session";
-import { capturePhotoSession } from "../identity/profilePhotoSession";
+import { capturePhotoSession, PhotoSessionEnded } from "../identity/profilePhotoSession";
 import { resetProfilePhotoUpload, useProfilePhotoUpload } from "../identity/useProfilePhotoUpload";
 
 import { useRemoveProfilePhoto } from "./identity/useRemoveProfilePhoto";
 import { useSetProfilePhoto } from "./identity/useSetProfilePhoto";
+import { apiClient } from "./client";
 
 vi.mock("expo-secure-store", async () => {
   const { photoApiStorage } = await import("../../test/profile-photo-storage");
@@ -37,6 +38,37 @@ async function expireToken() {
 
 const cases = (["presign", "set", "remove"] as const).flatMap((operation) => (["expired", "401"] as const).map((trigger) => ({ operation, trigger })));
 describe("Profile photo uses the shared authentication lifecycle", () => {
+  it("fences a photo mutation that joins another request's refresh before sign-out", async () => {
+    await expireToken();
+    let complete!: (response: Response) => void;
+    let started = false;
+    let sets = 0;
+    server.use(
+      http.post("*/auth/refresh", () => { started = true; return new Promise<Response>((resolve) => { complete = resolve; }); }),
+      http.get("*/probe", () => HttpResponse.json({ ok: true })),
+      http.put("*/me/photo", () => { sets += 1; return HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" }); }),
+    );
+    const publicRequest = apiClient.get("/probe");
+    await vi.waitFor(() => expect(started).toBe(true));
+    const session = await capturePhotoSession();
+    const { result } = setupPhotoHook(useSetProfilePhoto);
+    let photoRequest!: Promise<unknown>;
+    await act(async () => {
+      photoRequest = result.current.mutateAsync({ request: { key: "pending/new/original.jpg" }, session }).catch((error: unknown) => error);
+      // Drain native-storage microtasks so this request joins the pending refresh.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await clearAuthSession();
+    const next = { accessToken: "merdan", refreshToken: "merdan-refresh", user: { id: "00000000-0000-4000-8000-00000000000b", phone: PHOTO_ME.phone, email: null, displayName: "Merdan", role: "buyer" as const } };
+    await storeAuthSession(next);
+    await act(async () => { complete(HttpResponse.json({ accessToken: "old-fresh", refreshToken: "old-refresh" })); });
+    expect(await photoRequest).toBeInstanceOf(PhotoSessionEnded);
+    expect(await publicRequest).toEqual({ ok: true });
+    expect(sets).toBe(0);
+    expect((await loadAuthSession())?.user.id).toBe(next.user.id);
+    session.dispose();
+  });
+
   it.each(cases)("refreshes $trigger credentials for $operation", async ({ operation, trigger }) => {
     if (trigger === "expired") await expireToken();
     const events: string[] = [];
