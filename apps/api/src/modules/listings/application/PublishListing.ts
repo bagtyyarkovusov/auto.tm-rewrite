@@ -9,7 +9,7 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { PrismaService } from "@auto-tm/db";
-import { AuthSchemas, ListingsSchemas } from "@auto-tm/contracts";
+import { AuthSchemas, ListingsSchemas, WizardSchemas } from "@auto-tm/contracts";
 import type { z } from "zod";
 
 import {
@@ -62,6 +62,8 @@ const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.requi
   // Required even when calls are off (D7); whether it is confirmed is the
   // policy check after parsing (ADR-0081).
   contactPhone: AuthSchemas.PhoneTm,
+  // Only first publication uses this schema. Edits and republish keep legacy VINs.
+  vin: WizardSchemas.VinSchema,
 }).refine(
   (data) => data.allowCalls || data.allowChat,
   { message: "CONTACT_METHOD_REQUIRED" },
