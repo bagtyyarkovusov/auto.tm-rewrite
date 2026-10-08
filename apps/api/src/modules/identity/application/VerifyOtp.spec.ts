@@ -25,6 +25,8 @@ import type {
   ReviewerOtpBypassConfig,
 } from "../domain/ports/ReviewerOtpBypassConfig";
 import { VerifyOtp } from "./VerifyOtp";
+import { AuthController } from "../presentation/AuthController";
+import type { FastifyRequest } from "fastify";
 import { VerifySignInCode } from "./VerifySignInCode";
 import { parseReviewerOtpBypassConfig } from "../infrastructure/ReviewerOtpBypassConfigFactory";
 
@@ -385,6 +387,16 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
   );
 }
 
+// Only verification is exercised; these other controller actions are unused.
+function makeAuthController(verifyOtp: VerifyOtp) {
+  type Dependencies = ConstructorParameters<typeof AuthController>;
+  return new AuthController(
+    {} as Dependencies[0], verifyOtp, {} as Dependencies[2],
+    {} as Dependencies[3], {} as Dependencies[4],
+  );
+}
+const VERIFY_REQUEST = { headers: {} } as FastifyRequest;
+
 describe("VerifyOtp", () => {
   let otpRepo: FakeOtpRequestRepository;
   let userRepo: FakeUserRepository;
@@ -570,6 +582,51 @@ describe("VerifyOtp", () => {
     await expect(
       uc.execute({ phone: "+99361234567", code: "000000" }),
     ).rejects.toThrow("Invalid OTP code");
+  });
+
+  it("keeps an ordinary phone code usable after four wrong attempts", async () => {
+    const request = makeOtpRequest();
+    otpRepo.addRecord(request);
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo });
+
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      await expect(uc.execute({ phone: request.destination, code: "000000" }))
+        .rejects.toThrow("Invalid OTP code");
+      expect((await otpRepo.findById(request.id))?.attempts).toBe(attempt);
+      expect((await otpRepo.findById(request.id))?.verifiedAt).toBeNull();
+      expect(sessionRepo.sessions).toHaveLength(0);
+    }
+    await expect(uc.execute({ phone: request.destination, code: "123456" }))
+      .resolves.toMatchObject({ user: { phone: request.destination } });
+    expect(sessionRepo.sessions).toHaveLength(1);
+    await expect(uc.execute({ phone: request.destination, code: "123456" }))
+      .rejects.toThrow("OTP code has already been used");
+  });
+
+  it("refuses even the correct ordinary phone code after five wrong attempts", async () => {
+    const request = makeOtpRequest();
+    otpRepo.addRecord(request);
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo });
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      await expect(uc.execute({ phone: request.destination, code: "000000" }))
+        .rejects.toThrow(attempt === 5 ? "Too many attempts" : "Invalid OTP code");
+    }
+    await expect(uc.execute({ phone: request.destination, code: "123456" }))
+      .rejects.toThrow("Too many attempts");
+    expect((await otpRepo.findById(request.id))?.attempts).toBe(5);
+    expect(sessionRepo.sessions).toHaveLength(0);
+  });
+
+  it("refuses an expired ordinary phone code without spending attempts", async () => {
+    const request = makeOtpRequest({ expiresAt: new Date(NOW.getTime() - 1) });
+    otpRepo.addRecord(request);
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo });
+    for (const code of ["000000", "123456"]) {
+      await expect(uc.execute({ phone: request.destination, code }))
+        .rejects.toThrow("OTP code has expired");
+    }
+    expect((await otpRepo.findById(request.id))?.attempts).toBe(0);
+    expect(sessionRepo.sessions).toHaveLength(0);
   });
 
   // --- Too many attempts ---
@@ -1130,7 +1187,7 @@ describe("VerifyOtp", () => {
       ).rejects.toThrow("No Sign-in Code request found");
     });
 
-    it("uses the normal safe failure path for a reserved number with the wrong fixed code", async () => {
+    it("reports a wrong reviewer phone code and accepts the fixed code without resending", async () => {
       const existingUser = makeUser({ phone: account1.phone, role: "buyer" });
       userRepo.users.push(existingUser);
 
@@ -1143,9 +1200,14 @@ describe("VerifyOtp", () => {
       });
 
       await expect(
-        uc.execute({ phone: account1.phone, code: "999999" }),
-      ).rejects.toThrow("No Sign-in Code request found");
+        makeAuthController(uc).otpVerify({ phone: account1.phone, code: "999999" }, VERIFY_REQUEST),
+      ).rejects.toMatchObject({
+        response: { code: "INVALID_OTP" }, status: 400,
+      });
       expect(sessionRepo.sessions).toHaveLength(0);
+      expect(otpRepo.records).toHaveLength(0);
+      await expect(uc.execute({ phone: account1.phone, code: account1.code }))
+        .resolves.toMatchObject({ user: { id: existingUser.id } });
     });
 
     it("compares reserved phone and fixed code through the constant-time seam", async () => {
@@ -1366,7 +1428,7 @@ describe("VerifyOtp", () => {
       }
     }
 
-    it("fails a tester phone with the wrong code", async () => {
+    it("reports a wrong tester phone code and accepts the fixed code without resending", async () => {
       const existingUser = makeUser({ phone: tester.phone, role: "buyer" });
       userRepo.users.push(existingUser);
 
@@ -1380,13 +1442,18 @@ describe("VerifyOtp", () => {
       });
 
       await expect(
-        uc.execute({ phone: tester.phone, code: "000000" }),
-      ).rejects.toThrow("No Sign-in Code request found");
+        makeAuthController(uc).otpVerify({ phone: tester.phone, code: "000000" }, VERIFY_REQUEST),
+      ).rejects.toMatchObject({
+        response: { code: "INVALID_OTP" }, status: 400,
+      });
       expect(sessionRepo.sessions).toHaveLength(0);
       expect(eventBus.emit).not.toHaveBeenCalledWith(
         "ReviewerOtpBypassAuthenticated",
         expect.anything(),
       );
+      expect(otpRepo.records).toHaveLength(0);
+      await expect(uc.execute({ phone: tester.phone, code: tester.code }))
+        .resolves.toMatchObject({ user: { id: existingUser.id } });
     });
 
     it("still refuses a reviewer entry while the reviewer flag is off", async () => {

@@ -72,6 +72,7 @@ async function pressResend(screen: ReturnType<typeof renderMobile>) {
 beforeEach(() => {
   // Metro defines __DEV__; the form reads it for the development code chip.
   vi.stubGlobal("__DEV__", false);
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => { callback(); return 0; });
   vi.useFakeTimers();
 });
 
@@ -264,5 +265,31 @@ describe("CodeEntryForm countdown", () => {
     [960, "16:00"],
   ])("formats %i seconds as %s", (seconds, text) => {
     expect(formatResendWait(seconds)).toBe(text);
+  });
+});
+
+
+describe("CodeEntryForm wrong-code recovery", () => {
+  it.each(["phone", "email"] as const)("shows wrong code for %s and accepts another attempt without resending", async (method) => {
+    const verify = vi.fn()
+      .mockRejectedValueOnce(new ApiError("INVALID_OTP", 400, "Invalid OTP code"))
+      .mockResolvedValueOnce(undefined);
+    const { screen, props } = renderForm({ method, verify });
+
+    await act(async () => {
+      fireEvent.changeText(screen.getByLabelText("Code"), "000000");
+    });
+    expect(screen.getByText("Wrong code. Try again.")).toBeTruthy();
+    expect(screen.queryByText("Code expired. Request a new one.")).toBeNull();
+    expect(screen.getByLabelText("Code").props.editable).toBe(true);
+    expect(screen.getByLabelText("Code").props.value).toBe("");
+
+    await act(async () => {
+      fireEvent.changeText(screen.getByLabelText("Code"), "123456");
+    });
+    expect(verify).toHaveBeenNthCalledWith(1, "000000");
+    expect(verify).toHaveBeenNthCalledWith(2, "123456");
+    expect(screen.queryByText("Wrong code. Try again.")).toBeNull();
+    expect(props.resend).not.toHaveBeenCalled();
   });
 });
