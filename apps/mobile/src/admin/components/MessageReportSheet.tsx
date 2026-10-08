@@ -136,7 +136,7 @@ export function MessageReportSheet({
           <View className="flex-row items-center justify-between">
             <SheetTitle>{t("report")}</SheetTitle>
             <SheetClose asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" accessibilityLabel={t("close")}>
                 <Icon as={X} className="size-5 text-foreground" />
               </Button>
             </SheetClose>

@@ -87,7 +87,7 @@ function SheetContent({
         <DialogPrimitive.Content
           className={cn(
             'z-50 w-full max-w-none self-stretch flex-col gap-4 overflow-hidden rounded-t-3xl bg-popover p-5 shadow-overlay',
-            compact ? 'max-h-[70%]' : 'max-h-[85%]',
+            avoidKeyboard ? 'max-h-full min-h-0 shrink' : compact ? 'max-h-[70%]' : 'max-h-[85%]',
             Platform.select({
               web: 'animate-in fade-in-0 slide-in-from-bottom-10 duration-300',
             }),
