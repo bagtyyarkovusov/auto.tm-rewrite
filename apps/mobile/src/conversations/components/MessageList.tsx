@@ -128,12 +128,13 @@ export function MessageList({
 }: MessageListProps) {
   const { t, i18n } = useTranslation();
   const listRef = useRef<FlatList<MessageRow<MessageItem>>>(null);
-  const pendingOwnId = messages.find((message) => message.senderId === currentUserId && message.status === "pending")?.id;
+  const newestMessage = messages[0];
+  const newestOwnId = newestMessage?.senderId === currentUserId ? newestMessage.id : undefined;
   useEffect(() => {
-    // Sending from older history must reveal the optimistic row. Incoming
-    // Messages and older-page loads leave the reader's position alone.
-    if (pendingOwnId) listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [pendingOwnId]);
+    // Reveal outgoing rows even when a fast ack skips the pending render.
+    // Incoming Messages and older-page loads leave the reader's position alone.
+    if (newestOwnId) listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [newestOwnId]);
   const reported = reportedMessageIds ?? new Set<string>();
   const [actionTargetId, setActionTargetId] = useState<string | null>(null);
   const rows = useMemo(
