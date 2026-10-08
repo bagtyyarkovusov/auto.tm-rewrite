@@ -13,7 +13,7 @@ const mockState = vi.hoisted(() => ({
   },
   redirect: vi.fn((url: string) => {
     const err = new Error(`NEXT_REDIRECT:${url}`);
-    (err as Error & { digest?: string }).digest = `NEXT_REDIRECT;replace;${url};307`;
+    (err as Error & { digest?: string }).digest = `NEXT_REDIRECT;replace;${url};307;`;
     throw err;
   }),
 }));
@@ -22,7 +22,8 @@ vi.mock("next/headers", () => ({
   cookies: vi.fn(() => Promise.resolve(mockState.cookieStore)),
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...await importOriginal<typeof import("next/navigation")>(),
   redirect: mockState.redirect,
 }));
 

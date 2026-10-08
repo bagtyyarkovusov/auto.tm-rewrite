@@ -12,6 +12,7 @@ import {
   verifyTotp,
 } from "../actions";
 
+import { SESSION_EXPIRED_MESSAGE } from "@/lib/auth-cookie-options";
 import { validateReturnTo } from "@/lib/validators";
 
 type Step =
@@ -56,7 +57,9 @@ function LoginPageContent() {
   const returnTo = validateReturnTo(searchParams.get("returnTo")) ?? "/reports";
   const forcedMode = searchParams.get("mode"); // "totp" forces TOTP re-verify
 
-  const [step, setStep] = useState<Step>({ kind: "phone", phone: "" });
+  const [step, setStep] = useState<Step>(() => searchParams.get("reason") === "session-expired"
+    ? { kind: "phone", phone: "", error: SESSION_EXPIRED_MESSAGE }
+    : { kind: "phone", phone: "" });
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
 

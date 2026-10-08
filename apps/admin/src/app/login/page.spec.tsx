@@ -4,7 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({ params: new URLSearchParams(), push: vi.fn() }));
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...await importOriginal<typeof import("next/navigation")>(),
   useSearchParams: () => navigation.params,
   useRouter: () => ({ push: navigation.push }),
   redirect: vi.fn(),

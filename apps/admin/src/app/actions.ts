@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { AuthSchemas, ErrorCode } from "@auto-tm/contracts";
 
 import { apiFetch, apiFetchOptional, ApiError } from "@/lib/api-client";
@@ -40,6 +40,7 @@ export async function requestOtp(
     }
     return response;
   } catch (err) {
+    unstable_rethrow(err);
     if (err instanceof ApiError) {
       if (err.code === ErrorCode.RateLimited) {
         return { ok: false, error: "Слишком много попыток. Попробуйте позже." };
@@ -112,6 +113,7 @@ export async function verifyOtp(
 
     return { ok: true, next: "totp", totpEnrolled: totpStatus.enrolled };
   } catch (err) {
+    unstable_rethrow(err);
     if (err instanceof ApiError) {
       if (err.code === ErrorCode.RateLimited) {
         return {
@@ -178,6 +180,7 @@ export async function enrollTotp(): Promise<TotpEnrollResult> {
     const qrCodeDataUrl = await generateTotpQrCodeDataUrl(result.qrCodeUrl);
     return { ok: true, qrCodeDataUrl };
   } catch (err) {
+    unstable_rethrow(err);
     if (err instanceof ApiError) {
       if (
         err.code === ErrorCode.Conflict &&
@@ -226,6 +229,7 @@ export async function verifyTotp(
     }
     return response;
   } catch (err) {
+    unstable_rethrow(err);
     if (err instanceof ApiError) {
       if (err.code === ErrorCode.RateLimited) {
         return {
@@ -286,11 +290,10 @@ export async function requireAuthWithReturnTo(
   );
 
   if (!status) {
-    // Note: cannot clearAuthCookies() here because this helper is called
-    // from Server Component layouts where cookies().set() is not allowed.
-    // Stale cookies are harmless — they will be replaced on next login.
+    // Cookie clearing belongs to the writable proxy on the login GET.
     const safeReturnTo = validateReturnTo(returnTo);
     const url = new URL("/login", "http://localhost");
+    url.searchParams.set("reason", "session-expired");
     if (safeReturnTo) url.searchParams.set("returnTo", safeReturnTo);
     redirect(url.pathname + url.search);
   }

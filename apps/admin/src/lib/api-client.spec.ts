@@ -7,7 +7,7 @@ const mockState = vi.hoisted(() => ({
   },
   redirect: vi.fn((url: string) => {
     const err = new Error(`NEXT_REDIRECT:${url}`);
-    (err as Error & { digest?: string }).digest = `NEXT_REDIRECT;replace;${url};307`;
+    (err as Error & { digest?: string }).digest = `NEXT_REDIRECT;replace;${url};307;`;
     throw err;
   }),
 }));

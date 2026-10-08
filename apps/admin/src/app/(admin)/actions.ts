@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import type { AdminSchemas, ReportsSchemas } from "@auto-tm/contracts";
 
 import { apiFetch, ApiError } from "@/lib/api-client";
@@ -20,6 +21,7 @@ export type ActionResult<T> =
   | { ok: false; error: string; code?: string; details?: unknown };
 
 function handleApiError(err: unknown): ActionResult<never> {
+  unstable_rethrow(err);
   if (err instanceof ApiError) {
     return {
       ok: false,

@@ -158,4 +158,64 @@ describe("admin session renewal before request dispatch", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("never hands one operator's rotated pair to another refresh token", async () => {
+    const access = jwt(Math.floor(Date.now() / 1000) + 900);
+    const otherRefresh = "c".repeat(64);
+    const otherRotated = "d".repeat(64);
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ accessToken: access, refreshToken: rotatedRefresh }))
+      .mockResolvedValueOnce(Response.json({ accessToken: access, refreshToken: otherRotated }));
+    const { proxy } = await import("./proxy");
+    const first = await proxy(expiredRequest());
+    const other = await proxy(expiredRequest("GET", otherRefresh));
+    const handoff = await proxy(expiredRequest());
+    expect(first.cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
+    expect(other.cookies.get("auto_tm_admin_refresh")?.value).toBe(otherRotated);
+    expect(handoff.cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("bounds the cache at 128 owners without evicting an in-flight rotation", async () => {
+    vi.useFakeTimers();
+    const access = jwt(Math.floor(Date.now() / 1000) + 900);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    vi.mocked(fetch).mockImplementation(async () => { await gate; return Response.json({ accessToken: access, refreshToken: rotatedRefresh }); });
+    const { proxy } = await import("./proxy");
+    const token = (n: number) => n.toString(16).padStart(64, "0");
+    const owners = Array.from({ length: 128 }, (_, i) => proxy(expiredRequest("GET", token(i + 1))));
+    const duplicate = proxy(expiredRequest("GET", token(1)));
+    const overflow = await proxy(expiredRequest("GET", token(129)));
+    expect(overflow.status).toBe(303);
+    expect(fetch).toHaveBeenCalledTimes(128);
+    release();
+    expect((await duplicate).cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
+    await Promise.all(owners);
+    await vi.advanceTimersByTimeAsync(5_001);
+    expect((await proxy(expiredRequest("GET", token(129)))).status).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(129);
+  });
+
+  it("writes production Host cookies with unchanged lifetimes and restrictions", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const access = jwt(Math.floor(Date.now() / 1000) + 900);
+    vi.mocked(fetch).mockResolvedValue(Response.json({ accessToken: access, refreshToken: rotatedRefresh }));
+    const { proxy } = await import("./proxy");
+    const response = await proxy(new NextRequest("https://admin.auto.tm/reports", {
+      headers: { cookie: `__Host-auto_tm_admin_refresh=${refresh}` },
+    }));
+    expect(response.cookies.get("__Host-auto_tm_admin_access")).toMatchObject({ value: access, maxAge: 900, secure: true, httpOnly: true, sameSite: "lax", path: "/" });
+    expect(response.cookies.get("__Host-auto_tm_admin_refresh")).toMatchObject({ value: rotatedRefresh, maxAge: 2592000, secure: true, httpOnly: true, sameSite: "lax", path: "/" });
+  });
+
+  it("aborts a stalled rotation after ten seconds and ends at login", async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetch).mockImplementation(async (_url, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+    }));
+    const { proxy } = await import("./proxy");
+    const pending = proxy(expiredRequest("POST"));
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect((await pending).status).toBe(303);
+  });
+
 });

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { authCookieSettings } from "./src/lib/auth-cookie-options";
 import { hasCurrentAccessToken, renewSession } from "./src/lib/session-renewal";
-import { ADMIN_RETURN_TO_HEADER, validateReturnTo } from "./src/lib/validators";
+import { ADMIN_RETURN_TO_HEADER, validateOrigin, validateReturnTo } from "./src/lib/validators";
 
 const PROTECTED_PREFIXES = ["/reports", "/audit", "/listings", "/users", "/catalog"];
 
@@ -13,7 +13,7 @@ export async function proxy(request: NextRequest) {
   const refreshToken = request.cookies.get(settings.refreshName)?.value;
 
   // Login GET never renews: rejected sessions must end here without a loop.
-  if (pathname === "/login" && request.nextUrl.searchParams.get("reason") === "session-expired") {
+  if (request.method === "GET" && pathname === "/login" && request.nextUrl.searchParams.get("reason") === "session-expired") {
     const response = NextResponse.next();
     clearCookies(response);
     return response;
@@ -24,6 +24,10 @@ export async function proxy(request: NextRequest) {
   // a refresh cookie stays public and can request/verify a Sign-in Code.
   const loginAction = pathname === "/login" && request.method === "POST" && Boolean(refreshToken);
   if (!protectedRoute && !loginAction) return NextResponse.next();
+
+  if (request.method === "POST" && !validateOrigin(request)) {
+    return new NextResponse(null, { status: 403 });
+  }
 
   const safeReturnTo = validateReturnTo(`${pathname}${request.nextUrl.search}`);
   let tokens: Awaited<ReturnType<typeof renewSession>> = null;
