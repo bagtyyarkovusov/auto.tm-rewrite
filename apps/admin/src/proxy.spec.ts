@@ -61,6 +61,17 @@ describe("admin session renewal before request dispatch", () => {
     vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals();
   });
 
+  it("renews the root GET before its redirect to reports", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ accessToken: jwt(Math.floor(Date.now() / 1000) + 900), refreshToken: rotatedRefresh }));
+    const { proxy } = await import("./proxy");
+    const response = await proxy(new NextRequest("http://admin.auto.tm/", {
+      headers: { cookie: `auto_tm_admin_refresh=${refresh}` },
+    }));
+    expect(response.cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
+    expect(response.headers.get("x-middleware-request-x-admin-return-to")).toBe("/");
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("renews an expired GET and forwards/stores both rotated tokens", async () => {
     const access = jwt(Math.floor(Date.now() / 1000) + 900);
     vi.mocked(fetch).mockResolvedValue(Response.json({ accessToken: access, refreshToken: rotatedRefresh }));
