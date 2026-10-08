@@ -12,6 +12,7 @@ import { resetProfilePhotoUpload, useProfilePhotoUpload } from "../identity/useP
 import { useRemoveProfilePhoto } from "./identity/useRemoveProfilePhoto";
 import { useSetProfilePhoto } from "./identity/useSetProfilePhoto";
 import { apiClient } from "./client";
+import { queryKeys } from "./queryKeys";
 
 vi.mock("expo-secure-store", async () => {
   const { photoApiStorage } = await import("../../test/profile-photo-storage");
@@ -38,6 +39,67 @@ async function expireToken() {
 
 const cases = (["presign", "set", "remove"] as const).flatMap((operation) => (["expired", "401"] as const).map((trigger) => ({ operation, trigger })));
 describe("Profile photo uses the shared authentication lifecycle", () => {
+  it.each(["expired", "401"])("stores rotated tokens for unrelated callers after a photo session is disposed during %s refresh", async (trigger) => {
+    if (trigger === "expired") await expireToken();
+    let complete!: (response: Response) => void;
+    let refreshes = 0;
+    let writes = 0;
+    server.use(
+      http.post("*/auth/refresh", () => {
+        if (++refreshes > 1) return HttpResponse.json({ code: "UNAUTHENTICATED" }, { status: 401 });
+        return new Promise<Response>((resolve) => { complete = resolve; });
+      }),
+      http.get("*/probe", ({ request }) => request.headers.get("authorization") === "Bearer fresh"
+        ? HttpResponse.json({ ok: true }) : HttpResponse.json({ code: "UNAUTHENTICATED" }, { status: 401 })),
+      http.put("*/me/photo", ({ request }) => {
+        if (request.headers.get("authorization") !== "Bearer fresh") return HttpResponse.json({ code: "UNAUTHENTICATED" }, { status: 401 });
+        writes += 1;
+        return HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" });
+      }),
+    );
+    const session = await capturePhotoSession();
+    const { result, client } = setupPhotoHook(useSetProfilePhoto);
+    let photoRequest!: Promise<unknown>;
+    act(() => { photoRequest = result.current.mutateAsync({ request: { key: "pending/new/original.jpg" }, session }).catch((error: unknown) => error); });
+    await vi.waitFor(() => expect(refreshes).toBe(1));
+    const unrelatedRequest = apiClient.get("/probe").catch((error: unknown) => error);
+    // Let the unrelated request join the same pending refresh before disposal.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    session.dispose();
+    await act(async () => { complete(HttpResponse.json({ accessToken: "fresh", refreshToken: "fresh-refresh" })); });
+    const unrelatedResult = await unrelatedRequest;
+    const photoResult = await photoRequest;
+    expect.soft(unrelatedResult).toEqual({ ok: true });
+    expect.soft(await loadAuthSession()).toMatchObject({ accessToken: "fresh", refreshToken: "fresh-refresh", user: { id: PHOTO_ME.id } });
+    expect.soft(refreshes).toBe(1);
+    expect(photoResult).toBeInstanceOf(PhotoSessionEnded);
+    expect(writes).toBe(0);
+    expect(client.getQueryData(queryKeys.me())).toEqual(PHOTO_ME);
+  });
+
+  it("keeps the User signed in and the cache unchanged when a photo upload is cancelled during refresh", async () => {
+    await expireToken();
+    let complete!: (response: Response) => void;
+    let started = false;
+    let presigns = 0;
+    server.use(
+      http.post("*/auth/refresh", () => { started = true; return new Promise<Response>((resolve) => { complete = resolve; }); }),
+      http.post("*/uploads/presign", () => { presigns += 1; return HttpResponse.json({ code: "UNAUTHORIZED" }, { status: 401 }); }),
+    );
+    choosePhoto();
+    const { result, client } = setupPhotoHook(useProfilePhotoUpload);
+    let picking!: Promise<void>;
+    act(() => { picking = result.current.pick("library"); });
+    await vi.waitFor(() => expect(started).toBe(true));
+    await act(async () => { result.current.cancel(); });
+    await act(async () => { complete(HttpResponse.json({ accessToken: "fresh", refreshToken: "fresh-refresh" })); await picking; });
+    expect(await loadAuthSession()).toMatchObject({ accessToken: "fresh", refreshToken: "fresh-refresh", user: { id: PHOTO_ME.id } });
+    expect(result.current.state.status).toBe("idle");
+    expect(presigns).toBe(0);
+    expect(photoDevice.sent).toHaveLength(0);
+    expect(client.getQueryData(queryKeys.me())).toEqual(PHOTO_ME);
+  });
+
   it("fences a photo mutation that joins another request's refresh before sign-out", async () => {
     await expireToken();
     let complete!: (response: Response) => void;
@@ -136,5 +198,33 @@ describe("Profile photo uses the shared authentication lifecycle", () => {
     await vi.waitFor(() => expect(result.current.state.status).toBe("idle"));
     expect((await loadAuthSession())?.user.id).toBe(next.user.id);
     expect(presigns).toBe(0);
+  });
+});
+
+describe("Shared refresh belongs to the stored auth session, independently of photo callers", () => {
+  const races = (["signed-out", "different-user", "same-user-new-token"] as const).flatMap((transition) =>
+    (["success", "rejected", "malformed"] as const).map((response) => ({ transition, response })));
+  it.each(races)("does not overwrite or clear $transition after an old $response refresh", async ({ transition, response }) => {
+    await expireToken();
+    let complete!: (response: Response) => void;
+    let started = false;
+    server.use(
+      http.post("*/auth/refresh", () => { started = true; return new Promise<Response>((resolve) => { complete = resolve; }); }),
+      http.get("*/probe", () => HttpResponse.json({ ok: true })),
+    );
+    const request = apiClient.get("/probe");
+    await vi.waitFor(() => expect(started).toBe(true));
+    await clearAuthSession();
+    if (transition !== "signed-out") {
+      await storeAuthSession({ accessToken: "new-sign-in", refreshToken: "new-sign-in-refresh", user: {
+        id: transition === "different-user" ? "00000000-0000-4000-8000-00000000000b" : PHOTO_ME.id,
+        phone: PHOTO_ME.phone, email: null, displayName: "Signed in again", role: "buyer",
+      } });
+    }
+    const expectedSession = await loadAuthSession();
+    complete(response === "success" ? HttpResponse.json({ accessToken: "old-fresh", refreshToken: "old-refresh" })
+      : response === "rejected" ? HttpResponse.json({ code: "UNAUTHENTICATED" }, { status: 401 }) : HttpResponse.json({ wrong: true }));
+    expect(await request).toEqual({ ok: true });
+    expect(await loadAuthSession()).toEqual(expectedSession);
   });
 });
