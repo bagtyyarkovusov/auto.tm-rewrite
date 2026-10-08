@@ -8,6 +8,8 @@ Sign-in creates an ordinary session. Admin access additionally needs TOTP elevat
 
 The Brands page (`/catalog/brands`) lists every brand with its logo or a letter fallback and uploads, replaces, or removes a logo through server actions. The browser sends the file to the server action, which checks type and size, asks the API for a presigned PUT, uploads the file to storage from the server, and confirms the key with the API; the API owns the full validation.
 
+The reports queue labels and filters Message reports in Russian. Detail shows only the reported Message, its attachment marker and sender, links to that sender's User page, and permits suspension or dismissal. Deleted Messages and senders stay readable; unavailable or already suspended senders have no suspension action. Staff content access is audited by the API.
+
 Tests beside the API client, cookies, validators, and server actions cover these boundaries. `/healthz` remains independent of the API and data stores.
 
 ## Start here

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, ForbiddenException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Enums } from "@auto-tm/contracts";
 import type { User } from "../domain/User";
@@ -23,6 +23,8 @@ import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "../infrastructure/PrismaSessionRepository";
 import { BcryptHasherAdapter } from "../infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
+import type { IdentityCheckPort } from "../domain/ports/IdentityCheckPort";
+import { IDENTITY_TOKENS } from "../identity.tokens";
 import { VerifySignInCode } from "./VerifySignInCode";
 
 const MAX_SESSIONS = 10;
@@ -72,6 +74,8 @@ export class VerifyOtp {
     private readonly verifySignInCode: VerifySignInCode,
     @Inject(RANDOM_SOURCE_PORT)
     private readonly random: RandomSourcePort,
+    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    private readonly identityCheck: IdentityCheckPort,
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
@@ -144,6 +148,14 @@ export class VerifyOtp {
     // Bind the consumed code to the signed-in User
     await this.otpRequestRepo.markVerified(otpRequest.id, user.id);
 
+    const result = await this.createSessionResult({
+      user,
+      now,
+      deviceLabel: input.deviceLabel,
+      userAgent: input.userAgent,
+      deletionScheduledAt,
+    });
+
     if (isReviewerEmail) {
       this.emitReviewerBypassAuthenticated(user, now);
     }
@@ -157,13 +169,7 @@ export class VerifyOtp {
       });
     }
 
-    return this.createSessionResult({
-      user,
-      now,
-      deviceLabel: input.deviceLabel,
-      userAgent: input.userAgent,
-      deletionScheduledAt,
-    });
+    return result;
   }
 
   private async tryReviewerBypass(input: {
@@ -229,6 +235,13 @@ export class VerifyOtp {
     deletionScheduledAt: Date | null;
   }): Promise<VerifyOtpResult> {
     const { user, now } = input;
+    if (await this.identityCheck.isSuspended(user.id)) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "User is suspended",
+        details: { reason: "USER_SUSPENDED" },
+      });
+    }
 
     const sessionCount = await this.sessionRepo.countByUserId(user.id);
     if (sessionCount > 0) {

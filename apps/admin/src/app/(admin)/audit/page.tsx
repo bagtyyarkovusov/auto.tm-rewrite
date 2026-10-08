@@ -25,6 +25,7 @@ function actionLabel(action: string): string {
     USER_UNSUSPEND: "Разблокировка пользователя",
     USER_PHOTO_REMOVE: "Удаление фото профиля",
     CONTENT_REPORT_RESOLVE: "Обработка жалобы",
+    REPORTED_MESSAGE_READ: "Просмотр сообщения по жалобе",
   };
   return map[action] ?? action;
 }

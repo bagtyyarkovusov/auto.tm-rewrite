@@ -18,6 +18,8 @@ An image Message hands its storage key to the other participant, whose app loads
 
 Watermarks advance monotonically. HTTP refetch remains authoritative after reconnect. A socket room name does not grant access: conversation joins must validate the participant and applicable restrictions. Keep image staging, message persistence, and fanout as separate failure boundaries.
 
+The staff report-detail reader uses `MessageModerationReadPort`, implemented inside Conversations. It returns only the reported Message's body, sender ID, sent/deleted timestamps and an attachment boolean. It hides deleted text, does not fetch surrounding Messages or a Conversation, and returns no storage key or Prisma row. Admin owns authorization and access auditing.
+
 ## Start here
 
 - [Module composition](conversations.module.ts)
