@@ -36,6 +36,16 @@ async function submit() {
 }
 
 describe("operator login errors", () => {
+  it("resets a mounted TOTP form when an expired action redirects within login", async () => {
+    navigation.params.set("mode", "totp");
+    await render();
+    expect(container.querySelector('input[name="code"]')).not.toBeNull();
+    navigation.params = new URLSearchParams("reason=session-expired");
+    await render();
+    expect(container.textContent).toContain("Сессия истекла. Войдите снова.");
+    expect(container.querySelector('input[name="phone"]')).not.toBeNull();
+    expect(container.querySelector('input[name="code"]')).toBeNull();
+  });
   it("renders the Russian expired-session message with a fresh sign-in form", async () => {
     navigation.params.set("reason", "session-expired");
     await render();

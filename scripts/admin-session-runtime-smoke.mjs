@@ -13,7 +13,7 @@ const entry = resolve(root, "apps/admin/.next/standalone/apps/admin/server.js");
 const manifest = JSON.parse(await readFile(resolve(root, "apps/admin/.next/server/server-reference-manifest.json"), "utf8"));
 const actionId = Object.entries(manifest.node).find(([, value]) => value.exportedName === "dismissReport")?.[0];
 assert(actionId, "built dismissReport Server Action must exist");
-const jwt = (exp) => `e30.${Buffer.from(JSON.stringify({ exp })).toString("base64url")}.test-signature`;
+const jwt = (exp) => `e30.${Buffer.from(JSON.stringify({ exp, jti: randomBytes(8).toString("hex") })).toString("base64url")}.test-signature`;
 const expired = jwt(1);
 const sessions = new Map();
 let rotations = 0;
