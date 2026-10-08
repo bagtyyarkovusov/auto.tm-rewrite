@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import Svg, { Circle } from "react-native-svg";
 import { useEffect, useState } from "react";
-import { AccessibilityInfo, Platform, Pressable, ScrollView, View } from "react-native";
+import { AccessibilityInfo, ActivityIndicator, Platform, Pressable, ScrollView, View } from "react-native";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import {
@@ -252,7 +252,7 @@ function SignedInProfile() {
     : photo.state.status === "offline" ? t("common:offline")
     : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail");
   const photoStatusText = photo.state.status === "uploading" ?
-    t(photo.state.preparing ? "photoPreparing" : "uploading", { p: 0 })
+    t(photo.state.preparing ? "photoPreparing" : "uploadingIndeterminate")
     : photo.state.status === "removing" ? t("photoRemoving") : null;
   useEffect(() => {
     const announcement = photoErrorText ?? photoStatusText;
@@ -296,10 +296,10 @@ function SignedInProfile() {
               <Image source={{ uri: photo.state.uri }} contentFit="cover" onError={() => setFailedPreviewUri(previewUri)} style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }} />
             )}
             <View className="absolute inset-0 items-center justify-center bg-scrim/50">
-              <Svg width={44} height={44} viewBox="0 0 36 36" accessible={false}>
+              {photo.state.percent === null ? <ActivityIndicator size="large" color="white" accessible={false} /> : <Svg width={44} height={44} viewBox="0 0 36 36" accessible={false}>
                 <Circle cx={18} cy={18} r={15} fill="none" stroke="white" opacity={0.35} strokeWidth={3} />
                 <Circle cx={18} cy={18} r={15} fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeDasharray={`${94.25 * photo.state.percent / 100} 94.25`} rotation={-90} origin="18, 18" />
-              </Svg>
+              </Svg>}
             </View>
           </View>
         ) : <UserAvatar
@@ -332,9 +332,9 @@ function SignedInProfile() {
       {photo.state.status === "uploading" ? <Text
         accessibilityRole="progressbar"
         accessibilityLiveRegion="polite"
-        accessibilityValue={{ min: 0, max: 100, now: photo.state.percent }}
+        accessibilityValue={photo.state.percent === null ? undefined : { min: 0, max: 100, now: photo.state.percent }}
         className="px-4 pb-3 text-center text-footnote text-muted-foreground"
-      >{t("uploading", { p: photo.state.percent })}</Text> : null}
+      >{photo.state.percent === null ? t("uploadingIndeterminate") : t("uploading", { p: photo.state.percent })}</Text> : null}
 
       {photo.state.status === "uploading" && photo.state.preparing ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoPreparing")}</Text> : null}
       {photo.state.status === "uploading" && photo.state.preparing ? <Button variant="ghost" className="mx-4 mb-3 min-h-11" onPress={photo.cancel}><Text>{t("common:cancel")}</Text></Button> : null}

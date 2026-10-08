@@ -1,9 +1,10 @@
+import { Platform } from "react-native";
 import { act } from "@testing-library/react-native";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { server } from "../../test/msw";
-import { setupPhotoHook, signInPhotoUser } from "../../test/profile-photo-api";
+import { PHOTO_ME, setupPhotoHook, signInPhotoUser } from "../../test/profile-photo-api";
 import { choosePhoto, photoDevice, resetPhotoDevice } from "../../test/profile-photo-device";
 
 import { profilePhotoUploadStore, resetProfilePhotoUpload, useProfilePhotoUpload } from "./useProfilePhotoUpload";
@@ -24,6 +25,7 @@ vi.mock("expo-image-manipulator", async () => (await import("../../test/profile-
 beforeEach(async () => {
   await resetProfilePhotoUpload();
   resetPhotoDevice();
+
   profilePhotoUploadStore.setState({ state: { status: "idle" } });
   await signInPhotoUser();
 });
@@ -31,6 +33,117 @@ beforeEach(async () => {
 afterEach(resetProfilePhotoUpload);
 
 describe("useProfilePhotoUpload", () => {
+  it.each(["image/heic", "image/heif", "image/avif", "image/gif", "image/bmp"])("re-encodes a readable Android %s library photo instead of refusing its source type", async (mimeType) => {
+    const previousPlatform = Platform.OS;
+    Platform.OS = "android";
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"' } })),
+      http.put("*/me/photo", () => HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" })));
+    choosePhoto({ mimeType });
+    try {
+      const { result } = setupPhotoHook(useProfilePhotoUpload);
+      let picking!: Promise<void>;
+      act(() => { picking = result.current.pick("library"); });
+      await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(1));
+      expect(photoDevice.saves).toContainEqual({ format: "jpeg", compress: 0.8 });
+      await act(async () => { photoDevice.finish(); await picking; });
+      expect(result.current.state.status).toBe("idle");
+    } finally { Platform.OS = previousPlatform; }
+  });
+
+  it.each([
+    ["android", "library", false], ["android", "camera", false],
+    ["ios", "library", true], ["ios", "camera", true],
+  ] as const)("uses the approved crop policy for %s %s picks", async (platform, source, allowsEditing) => {
+    const previousPlatform = Platform.OS;
+    Platform.OS = platform;
+    photoDevice.cameraGranted = true;
+    try {
+      const { result } = setupPhotoHook(useProfilePhotoUpload);
+      await act(() => result.current.pick(source));
+      expect(source === "library" ? photoDevice.library : photoDevice.camera).toHaveBeenCalledWith(expect.objectContaining({ allowsEditing }));
+      expect(result.current.state.status).toBe("idle");
+    } finally { Platform.OS = previousPlatform; }
+  });
+
+  it.each([
+    ["landscape", 1920, 1080, 1920, 1080, 199, 0],
+    ["portrait", 1080, 1920, 1080, 1920, 0, 199],
+    ["square", 1024, 1024, 1024, 1024, 0, 0],
+    ["EXIF-rotated portrait", 1920, 1080, 1080, 1920, 0, 199],
+  ])("uploads a full 512-square centre crop for a %s pick", async (_shape, pickedWidth, pickedHeight, decodedWidth, decodedHeight, originX, originY) => {
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"' } })),
+      http.put("*/me/photo", () => HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" })));
+    choosePhoto({ width: Number(pickedWidth), height: Number(pickedHeight) });
+    photoDevice.dimensions = { width: Number(decodedWidth), height: Number(decodedHeight) };
+    const { result } = setupPhotoHook(useProfilePhotoUpload);
+    let picking!: Promise<void>;
+    act(() => { picking = result.current.pick("library"); });
+    await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(1));
+    expect(photoDevice.savedImages.at(-1)).toMatchObject({ width: 512, height: 512 });
+    expect(photoDevice.crops).toContainEqual({ originX, originY, width: 512, height: 512 });
+    await act(async () => { photoDevice.finish(); await picking; });
+    expect(result.current.state.status).toBe("idle");
+  });
+
+  it("rejects an unreadable Android library image without entering the native crop contract", async () => {
+    const previousPlatform = Platform.OS;
+    Platform.OS = "android";
+    choosePhoto({ width: -1, height: -1 });
+    photoDevice.library.mockImplementationOnce(async (options) => {
+      if ((options as { allowsEditing?: boolean }).allowsEditing) throw new Error("CropImageContract returned no URI");
+      return photoDevice.result;
+    });
+    try {
+      const { result } = setupPhotoHook(useProfilePhotoUpload);
+      await act(() => result.current.pick("library"));
+      expect(result.current.state.status).toBe("unsupported");
+      expect(photoDevice.sent).toHaveLength(0);
+    } finally { Platform.OS = previousPlatform; }
+  });
+
+  it("offers another photo when native image reading rejects before returning an asset", async () => {
+    photoDevice.library.mockRejectedValueOnce(Object.assign(new Error("Cannot read selected file"), { code: "ERR_FAILED_TO_READ_FILE" }));
+    const { result } = setupPhotoHook(useProfilePhotoUpload);
+    await act(() => result.current.pick("library"));
+    expect(result.current.state.status).toBe("unsupported");
+  });
+
+  it("releases a rejected native transfer before retrying the retained photo", async () => {
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"' } })),
+      http.put("*/me/photo", () => HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" })));
+    choosePhoto();
+    const { result } = setupPhotoHook(useProfilePhotoUpload);
+    let picking!: Promise<void>;
+    act(() => { picking = result.current.pick("library"); });
+    await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(1));
+    await act(async () => { photoDevice.fail(new Error("Connection reset")); await picking; });
+    expect(result.current.state.status).toBe("failed");
+    expect(photoDevice.cancelUpload).toHaveBeenCalledOnce();
+    let retrying!: Promise<void>;
+    act(() => { retrying = result.current.retry(); });
+    await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(2));
+    await act(async () => { photoDevice.finish(); await retrying; });
+    expect(result.current.state.status).toBe("idle");
+  });
+
+  it("keeps rapid Retry taps in one transfer instead of sharing a selection across competing jobs", async () => {
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"' } })),
+      http.put("*/me/photo", () => HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" })));
+    choosePhoto();
+    const { result } = setupPhotoHook(useProfilePhotoUpload);
+    let picking!: Promise<void>;
+    act(() => { picking = result.current.pick("library"); });
+    await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(1));
+    await act(async () => { photoDevice.finish(500); await picking; });
+    let retries!: Promise<unknown>;
+    act(() => { retries = Promise.all([result.current.retry(), result.current.retry()]); });
+    await vi.waitFor(() => expect(photoDevice.sent.length).toBeGreaterThanOrEqual(2));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 25)); });
+    expect(photoDevice.sent).toHaveLength(2);
+    await act(async () => { photoDevice.finish(); await retries; });
+    expect(result.current.state.status).toBe("idle");
+  });
+
   it.each(["picker", "upload", "removal"])("forgets the retained %s operation when the fixture resets", async (operation) => {
     let presigns = 0;
     let removals = 0;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Platform } from "react-native";
 import { onlineManager } from "@tanstack/react-query";
 import { create } from "zustand";
 import * as ImagePicker from "expo-image-picker";
@@ -8,17 +9,26 @@ import { AdminSchemas, IdentitySchemas, UploadsSchemas } from "@auto-tm/contract
 import { ApiError, apiClient } from "../api/client";
 import { useRemoveProfilePhoto } from "../api/identity/useRemoveProfilePhoto";
 import { useSetProfilePhoto } from "../api/identity/useSetProfilePhoto";
-import { compressPhoto, CompressionError, type CompressionResult } from "../listings/uploadStaging/compressor";
+import { CompressionError, type CompressionResult } from "../listings/uploadStaging/compressor";
 
 import { capturePhotoSession, PhotoSessionEnded, type ProfilePhotoSession } from "./profilePhotoSession";
 import { profileNoticeStore } from "./profileNotice";
+import { compressProfilePhoto } from "./compressProfilePhoto";
 
 type PhotoUploadState =
   | { status: "idle" }
-  | { status: "uploading"; uri: string; percent: number; preparing?: boolean }
+  | { status: "uploading"; uri: string; percent: number | null; preparing?: boolean }
   | { status: "removing" }
   | { status: "failed" | "offline" | "too_large" | "unsupported"; operation?: "remove"; reason?: "listing" | "suspended" };
-let selected: { asset: ImagePicker.ImagePickerAsset; compressed?: CompressionResult; session: ProfilePhotoSession; stopWaiting?: () => void } | null = null;
+interface SelectedPhoto {
+  asset: ImagePicker.ImagePickerAsset;
+  compressed?: CompressionResult;
+  session: ProfilePhotoSession;
+  job?: Promise<void>;
+  stopWaiting?: () => void;
+  stopTransfer?: () => void;
+}
+let selected: SelectedPhoto | null = null;
 let lastSource: "camera" | "library" | null = null;
 let removalSession: ProfilePhotoSession | null = null;
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -29,6 +39,7 @@ export const profilePhotoUploadStore = create<{ state: PhotoUploadState }>()(() 
 async function discardPhoto() {
   const uri = selected?.compressed?.uri;
   selected?.stopWaiting?.();
+  selected?.stopTransfer?.();
   selected?.session.dispose();
   selected = null;
   if (uri) await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
@@ -53,15 +64,21 @@ export function useProfilePhotoUpload() {
   async function upload() {
     const photo = selected;
     if (!photo) return;
-    profilePhotoUploadStore.setState({ state: { status: "uploading", uri: photo.compressed?.uri ?? photo.asset.uri, percent: 0 } });
+    // Retry taps share one job; competing attempts must not dispose its owner.
+    photo.job ??= uploadPhoto(photo).finally(() => { photo.job = undefined; });
+    return photo.job;
+  }
+
+  async function uploadPhoto(photo: SelectedPhoto) {
+    profilePhotoUploadStore.setState({ state: { status: "uploading", uri: photo.compressed?.uri ?? photo.asset.uri, percent: null } });
     try {
       await photo.session.current();
       const { asset } = photo;
-      if ((asset.mimeType && !["image/jpeg", "image/png", "image/webp"].includes(asset.mimeType)) || asset.width <= 0 || asset.height <= 0) {
+      if (asset.width <= 0 || asset.height <= 0) {
         profilePhotoUploadStore.setState({ state: { status: "unsupported" } });
         return;
       }
-      photo.compressed ??= await compressPhoto(asset.uri, `${FileSystem.cacheDirectory}profile-photo-${Date.now()}.jpg`, { maxDimension: 512, width: asset.width, height: asset.height });
+      photo.compressed ??= await compressProfilePhoto(asset.uri, `${FileSystem.cacheDirectory}profile-photo-${Date.now()}.jpg`);
       await photo.session.current();
       const compressed = photo.compressed;
       if (compressed.fileSize > MAX_BYTES) {
@@ -84,26 +101,37 @@ export function useProfilePhotoUpload() {
       if (!presign.headers || !Object.entries(presign.headers).some(([name, value]) => name.toLowerCase() === "if-match" && value.length > 0)) {
         throw new ApiError("CONTRACT_VIOLATION", 502, "Conditional upload headers are missing");
       }
-      let lastPercent = 0;
+      let lastPercent: number | null = null;
       let transferring = true;
       const task = FileSystem.createUploadTask(presign.uploadUrl, compressed.uri, {
         httpMethod: "PUT", uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT, headers: presign.headers,
       }, ({ totalBytesSent, totalBytesExpectedToSend }) => {
-        const percent = Math.max(lastPercent, totalBytesExpectedToSend > 0 ? Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend)) : 0);
-        lastPercent = percent;
+        const known = Number.isFinite(totalBytesExpectedToSend) && totalBytesExpectedToSend > 0 && Number.isFinite(totalBytesSent) && totalBytesSent >= 0;
+        const percent = known ? Math.max(lastPercent ?? 0, Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend))) : lastPercent;
+        if (percent !== null) lastPercent = percent;
         if (selected === photo && transferring) profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent } });
       });
+      let cancelled = false;
+      const stopTransfer = () => {
+        transferring = false;
+        if (cancelled) return;
+        cancelled = true;
+        // SDK 55 removes its progress subscription only after a resolved upload.
+        // cancelAsync also releases it when the native upload promise rejects.
+        void task.cancelAsync().catch(() => {});
+      };
+      photo.stopTransfer = stopTransfer;
       let uploadTimer: ReturnType<typeof setTimeout> | undefined;
       const timeout = new Promise<never>((_resolve, reject) => {
         uploadTimer = setTimeout(() => {
-          transferring = false;
-          void task.cancelAsync().catch(() => {});
+          stopTransfer();
           reject(new Error("Photo upload timed out"));
         }, 60_000);
       });
       let result: FileSystem.FileSystemUploadResult | null | undefined;
       try { result = await Promise.race([task.uploadAsync(), timeout]); }
-      finally { transferring = false; clearTimeout(uploadTimer); }
+      catch (error) { stopTransfer(); throw error; }
+      finally { transferring = false; photo.stopTransfer = undefined; clearTimeout(uploadTimer); }
       if (!result || result.status < 200 || result.status >= 300) throw new Error("Photo upload failed");
       let preparingAttempts = 0;
       for (;;) {
@@ -175,13 +203,16 @@ export function useProfilePhotoUpload() {
       owner = await capturePhotoSession(() => {
         if (selected?.session !== owner) return;
         selected.stopWaiting?.();
+        selected.stopTransfer?.();
         selected = null;
         owner.dispose();
         profilePhotoUploadStore.setState({ state: { status: "idle" } });
       });
     } catch { return; }
     const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 1,
+      // Android's crop result can throw on the native main thread for an
+      // unreadable file. Both Android sources use the app's centre crop instead.
+      mediaTypes: ["images"], allowsEditing: Platform.OS !== "android", aspect: [1, 1], quality: 1,
     };
     try {
       if (source === "camera") {
@@ -209,7 +240,8 @@ export function useProfilePhotoUpload() {
       }
       owner.dispose();
       if (error instanceof PhotoSessionEnded) return;
-      profilePhotoUploadStore.setState({ state: { status: "failed" } });
+      const unreadable = typeof error === "object" && error !== null && "code" in error && error.code === "ERR_FAILED_TO_READ_FILE";
+      profilePhotoUploadStore.setState({ state: { status: unreadable ? "unsupported" : "failed" } });
     }
   }
 
