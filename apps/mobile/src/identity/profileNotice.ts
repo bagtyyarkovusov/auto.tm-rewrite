@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 /**
  * What Profile's notice line says after a Sign-in Method was added or changed,
- * or after the name editor saved a name.
+ * after the name editor saved a name, or after a photo was set or removed.
  */
 export type ProfileNotice =
   | {
@@ -10,7 +10,7 @@ export type ProfileNotice =
       /** The new value, masked as Profile shows it. */
       value: string;
     }
-  | { kind: "nameSaved" };
+  | { kind: "nameSaved" | "photoSaved" | "photoRemoved" };
 
 interface ProfileNoticeStore {
   notice: ProfileNotice | null;
@@ -19,7 +19,7 @@ interface ProfileNoticeStore {
 }
 
 /**
- * Hands the result of the code screen or the name editor to Profile, which
+ * Hands the result of a Sign-in Method, name or photo change to Profile, which
  * shows it in the page for a few seconds. Kept outside the route so it
  * survives the dismissal.
  */

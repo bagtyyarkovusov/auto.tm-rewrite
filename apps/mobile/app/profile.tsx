@@ -1,7 +1,11 @@
+import { Image } from "expo-image";
+import Svg, { Circle } from "react-native-svg";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { AccessibilityInfo, Platform, Pressable, ScrollView, View } from "react-native";
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import {
+  Camera,
   LogOut,
   Mail,
   Pencil,
@@ -12,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { useSafeBack } from "../src/navigation/useSafeBack";
 import { useMe } from "../src/api/identity/useMe";
+import { useProfilePhotoUpload } from "../src/identity/useProfilePhotoUpload";
 import { useDisplayName } from "../src/identity/useDisplayName";
 import { useAuth } from "../src/auth/useAuth";
 import { useLogout } from "../src/auth/useLogout";
@@ -27,6 +32,7 @@ import {
   MenuRow,
   MenuSectionLabel,
 } from "@/components/account/MenuRow";
+import { ProfilePhotoSheet } from "@/components/identity/ProfilePhotoSheet";
 import { UserAvatar } from "@/components/identity/UserAvatar";
 import {
   AlertDialog,
@@ -38,6 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -143,9 +150,12 @@ function ProfileNoticeLine() {
 
   useEffect(() => {
     if (!notice) return;
+    if (Platform.OS === "ios" && (notice.kind === "photoSaved" || notice.kind === "photoRemoved")) {
+      AccessibilityInfo.announceForAccessibility(t(notice.kind));
+    }
     const timer = setTimeout(() => profileNoticeStore.getState().clear(), NOTICE_MS);
     return () => clearTimeout(timer);
-  }, [notice]);
+  }, [notice, t]);
 
   // The line keeps its height when empty, so the rows below never jump. It
   // also spaces the Sign-in methods card from the account actions below.
@@ -158,9 +168,9 @@ function ProfileNoticeLine() {
           className="text-footnote text-muted-foreground"
           numberOfLines={1}
         >
-          {notice.kind === "nameSaved"
-            ? t("nameSaved")
-            : t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })}
+          {"value" in notice
+            ? t(notice.kind === "added" ? "methodAdded" : "methodChanged", { value: notice.value })
+            : t(notice.kind)}
         </Text>
       ) : null}
     </MenuFooter>
@@ -232,6 +242,22 @@ function SignedInProfile() {
   const { t } = useTranslation("account");
   const { data, isPending, isError, error, refetch } = useMe();
   const displayNameOf = useDisplayName();
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  const [failedPreviewUri, setFailedPreviewUri] = useState<string | null>(null);
+  const photo = useProfilePhotoUpload();
+  const previewUri = photo.state.status === "uploading" ? photo.state.uri : null;
+  const photoErrorText = photo.state.status === "idle" || photo.state.status === "uploading" || photo.state.status === "removing" ? null
+    : photo.state.reason === "suspended" ? t("common:accountRestrictedDescription")
+    : photo.state.reason === "listing" ? t("photoAttached")
+    : photo.state.status === "offline" ? t("common:offline")
+    : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail");
+  const photoStatusText = photo.state.status === "uploading" ?
+    t(photo.state.preparing ? "photoPreparing" : "uploading", { p: 0 })
+    : photo.state.status === "removing" ? t("photoRemoving") : null;
+  useEffect(() => {
+    const announcement = photoErrorText ?? photoStatusText;
+    if (announcement && Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(announcement);
+  }, [photoErrorText, photoStatusText]);
 
   if (isPending) return <LoadingState />;
 
@@ -254,14 +280,38 @@ function SignedInProfile() {
     >
       {/* The avatar and the name, set or generated. The name, with its
           pencil, opens the name editor; a screen reader hears "Edit
-          name" and the name as its value. The photo editor attaches here later. */}
+          name" and the name as its value. The camera badge opens the photo sheet. */}
       <View className="items-center gap-1 px-4 pb-6 pt-2">
-        <UserAvatar
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("changePhoto")}
+          disabled={photo.state.status === "uploading" || photo.state.status === "removing"}
+          accessibilityState={{ disabled: photo.state.status === "uploading" || photo.state.status === "removing" }}
+          className="relative active:opacity-70"
+          onPress={() => setPhotoSheetOpen(true)}
+        >
+        {photo.state.status === "uploading" ? (
+          <View className="items-center justify-center overflow-hidden rounded-full" style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }}>
+            {previewUri === failedPreviewUri ? <UserAvatar size={AVATAR_SIZE} avatarIndex={data.avatarIndex} /> : (
+              <Image source={{ uri: photo.state.uri }} contentFit="cover" onError={() => setFailedPreviewUri(previewUri)} style={{ width: AVATAR_SIZE, height: AVATAR_SIZE }} />
+            )}
+            <View className="absolute inset-0 items-center justify-center bg-scrim/50">
+              <Svg width={44} height={44} viewBox="0 0 36 36" accessible={false}>
+                <Circle cx={18} cy={18} r={15} fill="none" stroke="white" opacity={0.35} strokeWidth={3} />
+                <Circle cx={18} cy={18} r={15} fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeDasharray={`${94.25 * photo.state.percent / 100} 94.25`} rotation={-90} origin="18, 18" />
+              </Svg>
+            </View>
+          </View>
+        ) : <UserAvatar
           size={AVATAR_SIZE}
           avatarIndex={data.avatarIndex}
           avatarKey={data.avatarKey}
           avatarUrl={data.avatarUrl}
-        />
+        />}
+          {photo.state.status !== "uploading" ? <View className="absolute bottom-0 right-0 items-center justify-center rounded-full border-2 border-background bg-muted p-1">
+            <Icon as={Camera} className="size-4 text-foreground" />
+          </View> : null}
+        </Pressable>
         <Pressable
           accessibilityLabel={t("editName")}
           accessibilityValue={{ text: displayNameOf(data) }}
@@ -279,9 +329,53 @@ function SignedInProfile() {
         </Pressable>
       </View>
 
+      {photo.state.status === "uploading" ? <Text
+        accessibilityRole="progressbar"
+        accessibilityLiveRegion="polite"
+        accessibilityValue={{ min: 0, max: 100, now: photo.state.percent }}
+        className="px-4 pb-3 text-center text-footnote text-muted-foreground"
+      >{t("uploading", { p: photo.state.percent })}</Text> : null}
+
+      {photo.state.status === "uploading" && photo.state.preparing ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoPreparing")}</Text> : null}
+      {photo.state.status === "uploading" && photo.state.preparing ? <Button variant="ghost" className="mx-4 mb-3 min-h-11" onPress={photo.cancel}><Text>{t("common:cancel")}</Text></Button> : null}
+      {photo.state.status === "removing" ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoRemoving")}</Text> : null}
+      {photo.state.status !== "idle" && photo.state.status !== "uploading" && photo.state.status !== "removing" ? <View className="mx-4 mb-4 gap-2 rounded-2xl bg-destructive/10 px-4 py-3">
+        <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" className="text-body text-destructive">
+          {photoErrorText}
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {photo.state.reason === "suspended" ? null : photo.state.status === "failed" || photo.state.status === "offline" ?
+            <Button variant="ghost" className="min-h-11" onPress={() => void photo.retry()}><Text>{t("common:retry")}</Text></Button> :
+            <Button variant="ghost" className="min-h-11" onPress={() => { photo.cancel(); setPhotoSheetOpen(true); }}><Text>{t("chooseOther")}</Text></Button>}
+          <Button variant="ghost" className="min-h-11" onPress={photo.cancel}><Text>{t("common:cancel")}</Text></Button>
+        </View>
+      </View> : null}
+
       <SignInMethods phone={data.phone} email={data.email} />
 
       <AccountActions />
+      <AlertDialog open={photo.cameraDenied} onOpenChange={(open) => { if (!open) photo.dismissCameraDenied(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("permT")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("permD")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel accessibilityRole="button" onPress={photo.dismissCameraDenied}><Text>{t("common:cancel")}</Text></AlertDialogCancel>
+            <AlertDialogAction accessibilityRole="button" onPress={() => { photo.dismissCameraDenied(); void Linking.openSettings(); }}>
+              <Text>{t("openSettings")}</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <ProfilePhotoSheet
+        open={photoSheetOpen}
+        onOpenChange={setPhotoSheetOpen}
+        hasPhoto={Boolean(data.avatarKey)}
+        onTakePhoto={() => void photo.pick("camera")}
+        onChoosePhoto={() => void photo.pick("library")}
+        onRemovePhoto={() => void photo.remove()}
+      />
     </ScrollView>
   );
 }

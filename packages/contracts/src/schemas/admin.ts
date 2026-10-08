@@ -60,6 +60,12 @@ export const AdminErrorReason = {
 export type AdminErrorReason =
   (typeof AdminErrorReason)[keyof typeof AdminErrorReason];
 
+/** Shared refusal details for a suspended User's authenticated actions. */
+export const UserSuspendedDetailsSchema = z.object({
+  reason: z.literal(AdminErrorReason.UserSuspended),
+});
+export type UserSuspendedDetails = z.infer<typeof UserSuspendedDetailsSchema>;
+
 export const ReportTargetType = {
   Listing: "listing",
   User: "user",

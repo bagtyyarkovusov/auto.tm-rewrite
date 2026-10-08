@@ -82,6 +82,8 @@ Search parameters (`parameters`, `SearchParametersForm`) is a full-screen form f
 
 The native Listing upload queue requests optional `conditional-v1` image presign and forwards the returned required headers unchanged, including the quoted `if-match` ETag. A response without headers uses the installed legacy PUT shape, allowing older API builds to ignore the opt-in. Do not retry an issued conditional URL without its header or recreate missing objects; queue retries obtain a new presign. Chat has its own upload path. Real deployed native upload/provider proof remains part of release verification.
 
+The shared `compressPhoto` helper accepts a target long side and source dimensions for Profile Photos. Omitting that target preserves the Listing default of 2400 points wide; Profile uses 512 on the long side and does not use the Listing queue.
+
 ## Start here
 
 - [Parent application](../../CONTEXT.md)

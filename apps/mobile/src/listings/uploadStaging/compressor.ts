@@ -25,6 +25,7 @@ export class CompressionError extends Error {
 export async function compressPhoto(
   sourceUri: string,
   destinationUri: string,
+  target?: { maxDimension: number; width: number; height: number },
 ): Promise<CompressionResult> {
   // Checkpoint 1: verify source file exists before manipulation
   const sourceInfo = await FileSystem.getInfoAsync(sourceUri);
@@ -37,7 +38,12 @@ export async function compressPhoto(
 
   try {
     const context = ImageManipulator.manipulate(sourceUri);
-    context.resize({ width: MAX_DIMENSION });
+    if (target) {
+      const longSide = Math.min(target.maxDimension, Math.max(target.width, target.height));
+      context.resize(target.width >= target.height ? { width: longSide } : { height: longSide });
+    } else {
+      context.resize({ width: MAX_DIMENSION });
+    }
     const rendered = await context.renderAsync();
     const result = await rendered.saveAsync({
       format: SaveFormat.JPEG,

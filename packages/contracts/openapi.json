@@ -61,6 +61,59 @@
           "requestId"
         ]
       },
+      "UploadObjectInvalidDetails": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "photoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "additionalProperties": false
+      },
+      "UploadObjectInvalidResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "UPLOAD_OBJECT_INVALID"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "$ref": "#/components/schemas/UploadObjectInvalidDetails"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "details",
+          "timestamp",
+          "requestId"
+        ]
+      },
       "RateLimitedDetails": {
         "type": "object",
         "properties": {
@@ -11509,52 +11562,59 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "statusCode": {
-                      "type": "integer"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/UploadObjectInvalidResponse"
                     },
-                    "code": {
-                      "type": "string",
-                      "enum": [
-                        "VALIDATION_FAILED",
-                        "UNAUTHORIZED",
-                        "FORBIDDEN",
-                        "NOT_FOUND",
-                        "USER_NOT_FOUND",
-                        "CONFLICT",
-                        "RATE_LIMITED",
-                        "OTP_EXPIRED",
-                        "OTP_ALREADY_USED",
-                        "INVALID_OTP",
-                        "OTP_LOCKED",
-                        "OTP_NOT_FOUND",
-                        "SIGN_IN_METHOD_TAKEN",
-                        "INVALID_DISPLAY_NAME",
-                        "INTERNAL"
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer"
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "USER_NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "OTP_EXPIRED",
+                            "OTP_ALREADY_USED",
+                            "INVALID_OTP",
+                            "OTP_LOCKED",
+                            "OTP_NOT_FOUND",
+                            "SIGN_IN_METHOD_TAKEN",
+                            "INVALID_DISPLAY_NAME",
+                            "INTERNAL"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "statusCode",
+                        "code",
+                        "message",
+                        "timestamp",
+                        "requestId"
                       ]
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "details": {
-                      "nullable": true
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "requestId": {
-                      "type": "string",
-                      "format": "uuid"
                     }
-                  },
-                  "required": [
-                    "statusCode",
-                    "code",
-                    "message",
-                    "timestamp",
-                    "requestId"
                   ]
                 }
               }
@@ -14160,6 +14220,463 @@
           },
           "400": {
             "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings/{id}/media/attach": {
+      "post": {
+        "tags": [
+          "Listings"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "image",
+                      "video"
+                    ]
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "width": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "durationMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "posterKey": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "kind",
+                  "sortOrder"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The attached media",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "listingId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "image",
+                        "video"
+                      ]
+                    },
+                    "key": {
+                      "type": "string"
+                    },
+                    "sortOrder": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "width": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    },
+                    "height": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    },
+                    "durationMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    },
+                    "posterKey": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "listingId",
+                    "kind",
+                    "key",
+                    "sortOrder",
+                    "createdAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "UPLOAD_OBJECT_INVALID identifies details.key; publish also identifies details.photoId. Other validation refusals use ErrorResponse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/UploadObjectInvalidResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer"
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "USER_NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "OTP_EXPIRED",
+                            "OTP_ALREADY_USED",
+                            "INVALID_OTP",
+                            "OTP_LOCKED",
+                            "OTP_NOT_FOUND",
+                            "SIGN_IN_METHOD_TAKEN",
+                            "INVALID_DISPLAY_NAME",
+                            "INTERNAL"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "statusCode",
+                        "code",
+                        "message",
+                        "timestamp",
+                        "requestId"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "UPLOAD_ALREADY_ATTACHED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/listings/drafts/{id}/publish": {
+      "post": {
+        "tags": [
+          "Listings"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The published Listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "sellerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "pending_review",
+                        "active",
+                        "sold",
+                        "archived",
+                        "rejected",
+                        "banned"
+                      ]
+                    },
+                    "brandId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "modelId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "priceAmount": {
+                      "type": "number",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    },
+                    "priceCurrency": {
+                      "type": "string",
+                      "enum": [
+                        "TMT",
+                        "USD",
+                        "AED"
+                      ]
+                    },
+                    "publishedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "sellerId",
+                    "status",
+                    "brandId",
+                    "modelId",
+                    "priceAmount",
+                    "priceCurrency",
+                    "publishedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "UPLOAD_OBJECT_INVALID identifies details.key; publish also identifies details.photoId. Other validation refusals use ErrorResponse.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/UploadObjectInvalidResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer"
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
+                            "NOT_FOUND",
+                            "USER_NOT_FOUND",
+                            "CONFLICT",
+                            "RATE_LIMITED",
+                            "OTP_EXPIRED",
+                            "OTP_ALREADY_USED",
+                            "INVALID_OTP",
+                            "OTP_LOCKED",
+                            "OTP_NOT_FOUND",
+                            "SIGN_IN_METHOD_TAKEN",
+                            "INVALID_DISPLAY_NAME",
+                            "INTERNAL"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "statusCode",
+                        "code",
+                        "message",
+                        "timestamp",
+                        "requestId"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "UPLOAD_ALREADY_ATTACHED",
             "content": {
               "application/json": {
                 "schema": {

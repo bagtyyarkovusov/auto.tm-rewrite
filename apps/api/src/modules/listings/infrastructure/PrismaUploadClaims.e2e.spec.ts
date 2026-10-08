@@ -364,6 +364,118 @@ describe("common upload claim on Postgres (#721)", () => {
     });
   });
 
+  describe("release and settle for a transient publish failure (#735)", () => {
+    it("release returns every held upload to AVAILABLE without recording work, and a retry can reserve them again", async () => {
+      const [one, two] = [await presigned("conditional-v1"), await presigned("conditional-v1")];
+      const token = await tokenOf(
+        await claims.reserve({ userId: OWNER, uploadIds: [one.id, two.id], target: listingTarget }),
+      );
+
+      await claims.release(token);
+
+      for (const upload of [one, two]) {
+        expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } })).toMatchObject({
+          state: "AVAILABLE", claimToken: null, claimDeadline: null,
+          claimTargetType: null, claimTargetId: null,
+        });
+      }
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: { in: [one.id, two.id] } } })).toBe(0);
+      const retry = await claims.reserve({ userId: OWNER, uploadIds: [one.id, two.id], target: { type: "listing", id: OTHER_LISTING } });
+      expect(retry).toMatchObject({ joined: false });
+      expect(await stateOf(one.id)).toBe("PREPARING");
+      expect(await stateOf(two.id)).toBe("PREPARING");
+      expect("token" in retry && retry.token).not.toBe(token);
+    });
+
+    it("release touches nothing a committed attempt holds", async () => {
+      const upload = await presigned();
+      const token = await tokenOf(await claims.reserve({ userId: OWNER, uploadIds: [upload.id], target: listingTarget }));
+      await mediaRepo.save(mediaFor(upload), { token });
+
+      await claims.release(token);
+
+      expect(await stateOf(upload.id)).toBe("ADOPTED");
+      expect(await prisma.listingMedia.count({ where: { uploadId: upload.id } })).toBe(1);
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: upload.id } })).toBe(0);
+    });
+
+    it("settle retires exactly one held upload with its manifest and releases the rest", async () => {
+      const [bad, good] = [await presigned("conditional-v1"), await presigned("conditional-v1")];
+      const token = await tokenOf(
+        await claims.reserve({ userId: OWNER, uploadIds: [bad.id, good.id], target: listingTarget }),
+      );
+
+      expect(await claims.settle(token, bad.id)).toBe(true);
+
+      expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { id: bad.id } }))
+        .toMatchObject({ state: "RETIRED", claimToken: null });
+      const work = await prisma.mediaUploadCleanup.findUniqueOrThrow({ where: { uploadId: bad.id } });
+      expect(work).toMatchObject({ status: "PENDING", key: bad.key });
+      expect([...work.objectKeys].sort()).toEqual(imageUploadObjectKeys(bad.key).sort());
+      expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { id: good.id } }))
+        .toMatchObject({ state: "AVAILABLE", claimToken: null });
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: good.id } })).toBe(0);
+    });
+
+    it("settle is false and retires nothing once the attempt no longer holds the upload", async () => {
+      const upload = await presigned();
+      const token = await tokenOf(await claims.reserve({ userId: OWNER, uploadIds: [upload.id], target: listingTarget }));
+      await mediaRepo.save(mediaFor(upload), { token });
+
+      expect(await claims.settle(token, upload.id)).toBe(false);
+
+      expect(await stateOf(upload.id)).toBe("ADOPTED");
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: upload.id } })).toBe(0);
+      expect(await prisma.listingMedia.count({ where: { uploadId: upload.id } })).toBe(1);
+    });
+
+    it("pre-reserve retirement refuses another User's upload and existing Listing/Profile adopters under the lock", async () => {
+      const [foreign, listed, profile] = [await presigned(), await presigned(), await presigned()];
+      // Legacy references can predate claim-state backfill and still authorize no retirement.
+      await prisma.listingMedia.create({ data: { listingId: LISTING, kind: "image", key: listed.key, uploadId: listed.id, sortOrder: 0 } });
+      await prisma.user.update({ where: { id: OWNER }, data: { avatarUploadId: profile.id, avatarKey: profile.key } });
+      const retire = claims.retireUnclaimed.bind(claims);
+      expect(await retire(foreign.id, suite.id("stranger"), async () => true)).toBe(false);
+      expect(await retire(listed.id, OWNER, async () => true)).toBe(false);
+      expect(await retire(profile.id, OWNER, async () => true)).toBe(false);
+      for (const upload of [foreign, listed, profile]) {
+        expect(await stateOf(upload.id)).toBe("AVAILABLE");
+        expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: upload.id } })).toBe(0);
+      }
+    });
+
+    it("keeps the row locked during reinspection and refuses retirement when the object is now valid", async () => {
+      const upload = await presigned();
+      let locked = false;
+      const retire = claims.retireUnclaimed.bind(claims);
+      const result = await retire(upload.id, OWNER, async () => {
+        // Another transaction cannot take the upload's row lock while storage is rechecked.
+        locked = await prisma.$transaction(async (tx) => {
+          const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM media_uploads WHERE id = ${upload.id} FOR UPDATE SKIP LOCKED`;
+          return rows.length === 0;
+        });
+        return false;
+      });
+      expect(result).toBe(false);
+      expect(locked).toBe(true);
+      expect(await stateOf(upload.id)).toBe("AVAILABLE");
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: upload.id } })).toBe(0);
+    });
+
+    it("retireUnclaimed retires an AVAILABLE upload but never an adopted or held one", async () => {
+      const [free, adopted] = [await presigned(), await presigned()];
+      const token = await tokenOf(await claims.reserve({ userId: OWNER, uploadIds: [adopted.id], target: listingTarget }));
+      await mediaRepo.save(mediaFor(adopted), { token });
+
+      expect(await claims.retireUnclaimed(adopted.id, OWNER, async () => true)).toBe(false);
+      expect(await claims.retireUnclaimed(free.id, OWNER, async () => true)).toBe(true);
+
+      expect(await stateOf(adopted.id)).toBe("ADOPTED");
+      expect(await stateOf(free.id)).toBe("RETIRED");
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: { in: [free.id, adopted.id] } } })).toBe(1);
+    });
+  });
+
   it("the migration backfill marks an existing Listing claim adopted and leaves unclaimed uploads alone", async () => {
     // Rows as they stand between the additive migration and its backfill.
     const [claimed, unclaimed] = [await presigned(), await presigned()];

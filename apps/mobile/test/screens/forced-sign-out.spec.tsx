@@ -214,3 +214,7 @@ describe("Saving an account edit after the API ended the session (#673)", () => 
     expect(await loadAuthSession()).toBeNull();
   });
 });
+
+// Profile loads these native modules; only this spec supplies its stand-ins.
+vi.mock("expo-file-system/legacy", async () => (await import("../profile-photo-device")).fileSystemFake);
+vi.mock("expo-image-manipulator", async () => (await import("../profile-photo-device")).imageManipulatorFake);

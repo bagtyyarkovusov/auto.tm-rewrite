@@ -195,3 +195,7 @@ describe("Profile account actions", () => {
     expect(view.getByRole("button", { name: view.i18n.t("account:deleteAccount") })).toBeTruthy();
   });
 });
+
+// Profile loads these native modules; only this spec supplies its stand-ins.
+vi.mock("expo-file-system/legacy", async () => (await import("../profile-photo-device")).fileSystemFake);
+vi.mock("expo-image-manipulator", async () => (await import("../profile-photo-device")).imageManipulatorFake);

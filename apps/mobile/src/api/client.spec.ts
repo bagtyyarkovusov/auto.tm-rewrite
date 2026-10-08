@@ -161,6 +161,7 @@ describe("apiClient", () => {
       mockedLoadAuthSession
         .mockResolvedValueOnce(expired())
         .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
         .mockResolvedValue({ accessToken: "fresh-token", refreshToken: "r2", user, storedAt: new Date().toISOString() });
 
       const fetchSpy = vi
@@ -193,6 +194,7 @@ describe("apiClient", () => {
 
     it("sends the request anonymously when the refresh is rejected", async () => {
       mockedLoadAuthSession
+        .mockResolvedValueOnce(expired())
         .mockResolvedValueOnce(expired())
         .mockResolvedValueOnce(expired())
         .mockResolvedValue(null);
@@ -277,6 +279,7 @@ describe("apiClient", () => {
       mockedLoadAuthSession
         .mockResolvedValueOnce(expired())
         .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
         .mockResolvedValue(null);
 
       const fetchSpy = vi
@@ -293,6 +296,8 @@ describe("apiClient", () => {
 
     it("retries the refresh on the next request after a 5xx", async () => {
       mockedLoadAuthSession
+        .mockResolvedValueOnce(expired())
+        .mockResolvedValueOnce(expired())
         .mockResolvedValueOnce(expired())
         .mockResolvedValueOnce(expired())
         .mockResolvedValueOnce(expired())
