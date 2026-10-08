@@ -10,13 +10,15 @@ The Sell wizard has seven steps in the order of `WizardSchemas.WIZARD_STEPS` (fo
 
 | # | Step name | Title | Component | Fields |
 |---|---|---|---|---|
-| 1 | `vehicle` | Car | `Step3VehicleId` with `VinField` | Brand, Model, Year, Generation, then optional VIN (17 characters at most, no Skip, no auto-fill) |
+| 1 | `vehicle` | Car | `Step3VehicleId` with `VinField` | Brand, Model, Year, Generation, then optional VIN (empty or exactly 17 ASCII letters/digits without I, O or Q; no Skip, no auto-fill) |
 | 2 | `specs` | Details and condition | `Step4Specs` | Condition, then for Used only Mileage and Damaged / needs repair, then Known issues, then a "More details (optional)" group: Body type, Transmission, Engine, Drive, Color, Power |
 | 3 | `photos` | Photos | `Step2Photos` | 3 to 20 photos; guidance toward 8 |
 | 4 | `price` | Price | `Step5Price` | Amount, then TMT, USD and AED as inline radio buttons (TMT by default; another currency clears the amount), Exchange, Installment |
 | 5 | `location` | Description and place | `Step6Location` with `DescriptionField` | Description (required, up to 2000), then "Where the car can be seen": one City picker grouped by region (`useCityGroups` loads each region's cities; picking a city saves its `regionId` too, so there is no Region row or Region error), and Area (optional, up to 200) |
 | 6 | `contact` | Contact | `Step7DescContact` with `ContactPhonePicker` | A verified contact phone (required, also when calls are off), calls and chat switches (at least one on) |
 | 7 | `review` | Check and publish | `CheckAndPublish` (create); `EditSectionList` (edit, titled Edit listing) | Create: a card preview, one row per step with Change or Fill in, and the Posting rules line. Edit: the rows only, with Car locked |
+
+A provided VIN is validated by the shared vehicle-step contract; draft storage still accepts partial input for autosave. The Photos step checks camera permission before launching and offers the same localized settings dialog as Profile when the permission can no longer be requested. Call from detail, feed, Favorites and the conversation header uses `openSellerDialer`: it attempts the native dialer directly and shows the contact number if opening fails. No Android package-visibility query is needed for this launch.
 
 The Car pickers chain in one `CatalogPickerSheet` (founder decision D3 on #354): a Brand opens Model, a Model opens Year when none is set or else Generation, and a Year opens Generation when the model has generations and none is chosen. Generation opened by the chain closes itself if the model's generations load empty; closing the sheet ends the chain and keeps every pick. A new Brand clears Model and Generation, a new Model clears Generation, and Year stays. Year is a list from `WIZARD_LIMITS.yearMax` down to 1900 with no search field; the Generation sheet lists all of a model's generations, not filtered by year, and ends with a skip row that clears the generation. The Generation row shows only when the model has generations or one is set.
 
