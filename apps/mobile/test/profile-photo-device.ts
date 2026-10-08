@@ -19,6 +19,7 @@ export const photoDevice = {
   camera: vi.fn(async (_options?: unknown) => photoDevice.result),
   permission: vi.fn(async () => ({ granted: photoDevice.cameraGranted, canAskAgain: false, status: photoDevice.cameraGranted ? "granted" : "denied" })),
   libraryPermission: vi.fn(),
+  cancelUpload: vi.fn(async () => {}),
   saves: [] as unknown[],
   deletes: [] as string[],
 };
@@ -56,7 +57,7 @@ export const fileSystemFake = {
   createUploadTask: (url: string, uri: string, options?: FileSystemUploadOptions, progress?: (data: UploadProgressData) => void) => {
     photoDevice.sent.push({ url, uri, options });
     photoDevice.progress = progress ?? (() => {});
-    return { uploadAsync: () => new Promise((resolve, reject) => {
+    return { cancelAsync: photoDevice.cancelUpload, uploadAsync: () => new Promise((resolve, reject) => {
       photoDevice.finish = (status = 200) => resolve({ status, body: "", headers: {} });
       photoDevice.fail = reject;
     }) };

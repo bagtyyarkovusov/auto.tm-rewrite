@@ -561,6 +561,36 @@ describe("Profile photo", () => {
     expect(requests.presigns).toHaveLength(0);
   });
 
+  it("times out a stalled storage PUT, ignores late events and retries the same photo", async () => {
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    const lateProgress = picker.progress;
+    const lateFinish = picker.finish;
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(view.getByText("Couldn't upload the photo.")).toBeTruthy();
+    expect(picker.cancelUpload).toHaveBeenCalledOnce();
+    await act(async () => {
+      lateProgress({ totalBytesSent: 2048, totalBytesExpectedToSend: 2048 });
+      lateFinish();
+    });
+    expect(view.queryByRole("progressbar")).toBeNull();
+    expect(requests.sets).toHaveLength(0);
+    fireEvent.press(view.getByRole("button", { name: "Retry" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(2));
+    expect(picker.sent[0]?.uri).toBe(picker.sent[1]?.uri);
+    await act(async () => { picker.finish(); });
+    await vi.waitFor(() => expect(view.getByText("Photo updated")).toBeTruthy());
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(picker.cancelUpload).toHaveBeenCalledOnce();
+    expect(view.queryByRole("alert")).toBeNull();
+    expect(picker.library).toHaveBeenCalledOnce();
+  });
+
   it("announces upload progress and failures on iOS, where live regions do not speak", async () => {
     const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
     choosePhoto();
