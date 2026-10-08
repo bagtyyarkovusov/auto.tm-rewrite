@@ -83,6 +83,44 @@ beforeEach(async () => {
 });
 
 describe("Profile photo", () => {
+  it.each(["upload", "remove"])("retries %s with refreshed credentials without reopening the picker", async (operation) => {
+    choosePhoto();
+    if (operation === "remove") currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
+    let refreshes = 0;
+    const sent: string[] = [];
+    const respond = ({ request }: { request: Request }) => {
+      const auth = request.headers.get("authorization") ?? "";
+      sent.push(auth);
+      if (auth !== "Bearer fresh") return HttpResponse.json({ code: "UNAUTHORIZED" }, { status: 401 });
+      if (sent.filter((value) => value === "Bearer fresh").length === 1) return HttpResponse.json({ code: "INTERNAL" }, { status: 500 });
+      currentMe = { ...me, avatarKey: operation === "remove" ? null : "pending/new2/original.jpg" };
+      return HttpResponse.json(currentMe);
+    };
+    server.use(http.post("*/auth/refresh", () => {
+      refreshes += 1;
+      return HttpResponse.json({ accessToken: "fresh", refreshToken: "fresh-refresh" });
+    }), operation === "remove" ? http.delete("*/me/photo", respond) : http.put("*/me/photo", respond));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: operation === "remove" ? "Remove photo" : "Choose from library" }));
+    if (operation === "upload") {
+      await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+      await act(async () => { picker.finish(); });
+    }
+    expect(await view.findByText(operation === "remove" ? "Couldn't remove the photo." : "Couldn't upload the photo.")).toBeTruthy();
+    expect(refreshes).toBe(1);
+    fireEvent.press(view.getByRole("button", { name: "Retry" }));
+    if (operation === "upload") {
+      await vi.waitFor(() => expect(picker.sent).toHaveLength(2));
+      expect(picker.sent[0]?.uri).toBe(picker.sent[1]?.uri);
+      await act(async () => { picker.finish(); });
+    }
+    expect(await view.findByText(operation === "remove" ? "Photo removed" : "Photo updated")).toBeTruthy();
+    expect(sent).toEqual(["Bearer aman", "Bearer fresh", "Bearer fresh"]);
+    expect(picker.library).toHaveBeenCalledTimes(operation === "remove" ? 0 : 1);
+  });
+
   it("opens the photo sheet from the labelled avatar and can close without a change", async () => {
     const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
     await view.findByText("Aman");
