@@ -41,7 +41,7 @@ First-release admin runs as exactly one Node process in one Railway replica unti
 
 ## References
 
-- [ADR-0012: Auth refresh strategy](0012-auth-refresh-strategy.md)
+- [ADR-0012: Multi-device sessions](0012-multi-device-sessions.md)
 - [ADR-0039: Phased cloud-first hosting](0039-phased-cloud-first-hosting.md)
 - [Admin overview](../../apps/admin/CONTEXT.md)
 - [Deployment runbook](../prd/ops/80-deployment-runbook.md)

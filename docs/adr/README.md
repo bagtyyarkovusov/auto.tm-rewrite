@@ -98,6 +98,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0086](0086-temporary-tester-accounts-with-fixed-sign-in-codes.md) | Temporary tester accounts with fixed sign-in codes, up to 30 in a separate list (amends ADR-0030 for testers only) | Accepted | 2026-10-07 |
 | [0087](0087-founder-delegated-outcome-orchestration.md) | Founder-delegated outcome orchestration (amends ADR-0058 and ADR-0066 queue selection) | Accepted | 2026-10-07 |
 | [0088](0088-exclusive-upload-adoption-and-retirement.md) | Exclusive upload adoption and retirement (extends ADR-0079 to Profile Photos) | Proposed | 2026-10-07 |
+| [0089](0089-single-process-admin-session-renewal-for-the-first-release.md) | Single-process admin session renewal for the first release | Accepted | 2026-10-08 |
 
 ## Per-app ADRs
 

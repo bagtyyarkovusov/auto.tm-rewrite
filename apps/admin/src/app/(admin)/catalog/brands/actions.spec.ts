@@ -6,7 +6,9 @@ const mockState = vi.hoisted(() => ({
     set: vi.fn(),
   },
   redirect: vi.fn((url: string) => {
-    throw new Error(`NEXT_REDIRECT:${url}`);
+    const error = new Error(`NEXT_REDIRECT:${url}`);
+    (error as Error & { digest: string }).digest = `NEXT_REDIRECT;replace;${url};307;`;
+    throw error;
   }),
 }));
 
@@ -40,6 +42,10 @@ function logoForm(bytes: number, type: string): FormData {
 }
 
 describe("brand logo server actions", () => {
+  it("propagates a session-expired redirect without treating it as an upload error", async () => {
+    mockFetchSequence([{ status: 401, body: { code: "UNAUTHORIZED" } }]);
+    await expect(removeBrandLogo("b1")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.cookieStore.get.mockReturnValue({ value: "acc_tok" });
