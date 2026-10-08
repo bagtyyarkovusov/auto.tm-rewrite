@@ -1,4 +1,3 @@
-import { showResultsCount } from "./showResultsCount";
 import { useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -7,6 +6,7 @@ import { useBrands } from "../../api/catalog/useBrands";
 import { useModels } from "../../api/catalog/useModels";
 import { useListingCount } from "../../api/listings/useListingCount";
 
+import { showResultsCount } from "./showResultsCount";
 import { BrandPicker } from "./BrandPicker";
 import { CityFilterControl } from "./CityFilterControl";
 import { ConditionFilterControl } from "./ConditionFilterControl";

@@ -1,9 +1,9 @@
-import { showResultsCount } from "./showResultsCount";
 import { useMemo, type ReactNode } from "react";
 import { Pressable, SectionList, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 
+import { showResultsCount } from "./showResultsCount";
 import type { ModelRow } from "./modelPickerLogic";
 import type { PickerActions } from "./pickerActions";
 import { useModelPicker } from "./useModelPicker";

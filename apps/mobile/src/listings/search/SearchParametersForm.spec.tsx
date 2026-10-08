@@ -404,12 +404,14 @@ describe("English filter result count", () => {
 
 describe("Filter count without Intl.PluralRules", () => {
   it.each([[1, "Показать 1 объявление"], [2, "Показать 2 объявления"], [5, "Показать 5 объявлений"], [11, "Показать 11 объявлений"], [21, "Показать 21 объявление"], [22, "Показать 22 объявления"], [25, "Показать 25 объявлений"]])("shows %i Russian matches on Hermes without plural rules", (count, label) => {
-    const descriptor = Object.getOwnPropertyDescriptor(Intl, "PluralRules")!;
+    const descriptor = Object.getOwnPropertyDescriptor(Intl, "PluralRules");
     Object.defineProperty(Intl, "PluralRules", { configurable: true, value: undefined });
     try {
       state.total = count as number;
       const screen = renderMobile(<SearchParametersForm initial={{}} returnToResults={false} onBack={vi.fn()} />, { locale: "ru" });
       expect(screen.getByRole("button", { name: label })).toBeTruthy();
-    } finally { Object.defineProperty(Intl, "PluralRules", descriptor); }
+    } finally {
+      if (descriptor) Object.defineProperty(Intl, "PluralRules", descriptor);
+    }
   });
 });

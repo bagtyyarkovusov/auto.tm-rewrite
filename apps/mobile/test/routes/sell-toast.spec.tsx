@@ -1,7 +1,7 @@
 import { BaseNavigationContainer, createNavigationContainerRef, createNavigatorFactory, useNavigationBuilder } from "@react-navigation/core";
 import { StackActions, StackRouter } from "@react-navigation/routers";
 import type { ParamListBase } from "@react-navigation/routers";
-
+import type { ReactNode } from "react";
 import { StyleSheet, View, Text } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -132,15 +132,19 @@ it("Back after publish and opening/closing Edit returns to tabs, then can leave 
   const navigation = createNavigationContainerRef<ParamListBase>();
   const detail = `/(public)/listings/${fixture.id}`;
   const edit = `/listings/${fixture.id}/edit`;
-  const Navigator = createNavigatorFactory(function TestStack({ children }: { children: import("react").ReactNode }) {
+  const Navigator = createNavigatorFactory(function TestStack({ children }: { children: ReactNode }) {
     const { state, descriptors, NavigationContent } = useNavigationBuilder(StackRouter, {
       children, initialRouteName: "(tabs)",
     });
-    return <NavigationContent>{state.routes.map((route, index) => (
-      <View key={route.key} style={{ display: index === state.index ? "flex" : "none" }}>
-        {descriptors[route.key]!.render()}
-      </View>
-    ))}</NavigationContent>;
+    return <NavigationContent>{state.routes.map((route, index) => {
+      const descriptor = descriptors[route.key];
+      if (!descriptor) throw new Error(`Missing descriptor for route ${route.key}`);
+      return (
+        <View key={route.key} style={{ display: index === state.index ? "flex" : "none" }}>
+          {descriptor.render()}
+        </View>
+      );
+    })}</NavigationContent>;
   })();
   routerMock.replace.mockImplementation((name) => navigation.dispatch(StackActions.replace(String(name))));
   routerMock.push.mockImplementation((name) => navigation.dispatch(StackActions.push(String(name))));
