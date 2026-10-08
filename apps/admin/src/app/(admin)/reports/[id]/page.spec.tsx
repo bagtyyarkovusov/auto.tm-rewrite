@@ -233,4 +233,13 @@ describe("ReportDetailPage profile photo", () => {
     expect(screen.queryByRole("button", { name: "Удалить фото" })).toBeNull();
   });
 
+  it("wraps the restored Assigned Avatar index to the bundled set", async () => {
+    mockDetail(userReport());
+    const view = await renderPage();
+    mockDetail(userReport({ status: "actioned", target: { ...userReport().target, avatarKey: null, avatarIndex: 15 } }));
+    view.rerender(await ReportDetailPage({ params: Promise.resolve({ id: "r1" }) }));
+    expect(screen.getByRole("img", { name: "Назначенный аватар" }).getAttribute("src"))
+      .toBe("/assigned-avatars/3.svg");
+  });
+
 });

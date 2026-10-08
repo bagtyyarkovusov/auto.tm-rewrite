@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { IdentitySchemas } from "@auto-tm/contracts";
+
+const { AVATAR_COUNT } = IdentitySchemas;
 
 interface UserReportPhotoProps {
   hasPhoto: boolean;
@@ -24,7 +27,7 @@ export function UserReportPhoto({ hasPhoto, photoUrl, avatarIndex }: UserReportP
 
   // Show the restored mark only after a photo disappears during this report visit.
   if (hadPhoto && avatarIndex !== undefined) {
-    return <img src={`/assigned-avatars/${avatarIndex % 12}.svg`} alt="Назначенный аватар" className="h-32 w-32 rounded-full" />;
+    return <img src={`/assigned-avatars/${avatarIndex % AVATAR_COUNT}.svg`} alt="Назначенный аватар" className="h-32 w-32 rounded-full" />;
   }
   return null;
 }
