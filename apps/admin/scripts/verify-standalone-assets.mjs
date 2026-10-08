@@ -1,8 +1,13 @@
+/* global globalThis */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { log } from "node:console";
 import { once } from "node:events";
 import { cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import path from "node:path";
+import process from "node:process";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 // Exercise the runtime image's actual COPY layout, without building Docker.
@@ -17,29 +22,59 @@ for (const copy of runtime.matchAll(/^COPY --from=build (\/app\/\S+) (\/app\S*)$
   await mkdir(path.dirname(destination), { recursive: true });
   await cp(source, destination, { recursive: true });
 }
+// A fixture API lets the built server component render a real report request.
+const api = createServer((request, response) => {
+  response.setHeader("content-type", "application/json");
+  const body = request.url === "/api/v1/auth/admin/totp/status"
+    ? { elevated: true, enrolled: true }
+    : request.url === "/api/v1/config"
+      ? { adminModerationActionsEnabled: true }
+      : {
+          id: "r1", status: "pending", reason: "other", createdAt: "2026-10-07T12:00:00Z",
+          reporter: { available: true, label: "Отправитель" },
+          target: { targetType: "user", available: true, label: "Пользователь", targetId: "u1",
+            role: "buyer", avatarKey: "pending/u1-photo/original.jpg", avatarIndex: 3 },
+          pendingReportsOnTargetCount: 1,
+        };
+  response.end(JSON.stringify(body));
+});
+api.listen(0, "127.0.0.1");
+await once(api, "listening");
+const apiPort = api.address().port;
+const runtimeMediaOrigin = "https://runtime-media.example.test";
 const port = 17492;
 const server = spawn(process.execPath, [path.join(layout, "apps/admin/server.js")], {
   cwd: layout,
-  env: { ...process.env, PORT: String(port), HOSTNAME: "127.0.0.1" },
+  env: { ...process.env, PORT: String(port), HOSTNAME: "127.0.0.1",
+    API_BASE_URL: `http://127.0.0.1:${apiPort}/api/v1`,
+    NEXT_PUBLIC_MINIO_PUBLIC_URL: runtimeMediaOrigin },
   stdio: "ignore",
 });
 try {
   let ready = false;
   for (let attempt = 0; attempt < 100; attempt++) {
     try {
-      const health = await fetch(`http://127.0.0.1:${port}/healthz`);
+      const health = await globalThis.fetch(`http://127.0.0.1:${port}/healthz`);
       if (health.ok) { ready = true; break; }
     } catch { /* server still starting */ }
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
   assert.ok(ready, "Standalone server did not start");
-  const avatar = await fetch(`http://127.0.0.1:${port}/assigned-avatars/3.svg`);
+  const avatar = await globalThis.fetch(`http://127.0.0.1:${port}/assigned-avatars/3.svg`);
   assert.equal(avatar.status, 200, "Assigned Avatar must be served by the Dockerfile runtime layout");
   assert.match(avatar.headers.get("content-type") ?? "", /image\/svg\+xml/);
   assert.match(await avatar.text(), /<svg/);
-  console.log(`PASS standalone Dockerfile layout: Assigned Avatar HTTP 200; layout=${layout}`);
+  const report = await globalThis.fetch(`http://127.0.0.1:${port}/reports/r1`, {
+    headers: { cookie: "__Host-auto_tm_admin_access=fixture-admin-session" },
+  });
+  assert.equal(report.status, 200);
+  const html = await report.text();
+  assert.ok(html.includes(`src="${runtimeMediaOrigin}/listing-photos/pending/u1-photo/thumbnail.jpg"`),
+    "Built report must use the admin service's runtime media origin, not its build-time value");
+  log(`PASS standalone Dockerfile layout + runtime media origin: Assigned Avatar HTTP 200; layout=${layout}`);
 } finally {
   const stopped = once(server, "exit");
   server.kill("SIGTERM");
   await stopped;
+  api.close();
 }
