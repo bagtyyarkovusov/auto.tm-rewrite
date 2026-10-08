@@ -5,9 +5,14 @@ import { getApiBaseUrl } from "./api-config";
 const HANDOFF_MS = 5_000;
 const MAX_ENTRIES = 128;
 const REFRESH_TIMEOUT_MS = 10_000;
-const entries = new Map<string, Promise<TokenPair | null>>();
+const handoffs = new Map<string, TokenPair>();
+let owner: { key: string; promise: Promise<RenewalResult> } | undefined;
 
 type TokenPair = { accessToken: string; refreshToken: string };
+export type RenewalResult =
+  | { kind: "tokens"; tokens: TokenPair }
+  | { kind: "rejected" }
+  | { kind: "unavailable" };
 
 /** An expiry hint only. The API still validates signatures and session state. */
 export function hasCurrentAccessToken(token: string | undefined): boolean {
@@ -21,29 +26,44 @@ export function hasCurrentAccessToken(token: string | undefined): boolean {
 }
 
 /** Only the Node proxy calls this; no render/action bundle owns a second cache. */
-export function renewSession(refreshToken: string): Promise<TokenPair | null> {
-  if (!/^[a-f0-9]{64}$/.test(refreshToken)) return Promise.resolve(null);
+export async function renewSession(refreshToken: string): Promise<RenewalResult> {
   const key = createHash("sha256").update(refreshToken).digest("hex");
-  const shared = entries.get(key);
-  if (shared) return shared;
-  // Never evict an in-flight owner: eviction could rotate the same token twice.
-  if (entries.size >= MAX_ENTRIES) return Promise.resolve(null);
-
-  const pending = rotate(refreshToken);
-  entries.set(key, pending);
-  void pending.then((tokens) => {
-    if (!tokens) {
-      entries.delete(key);
-      return;
+  const deadline = Date.now() + REFRESH_TIMEOUT_MS;
+  for (;;) {
+    const shared = handoffs.get(key);
+    if (shared) return { kind: "tokens", tokens: shared };
+    if (owner?.key === key) return owner.promise;
+    if (owner) {
+      // Serialize admission: random, unvalidated cookies cannot allocate 128
+      // pending owners. Only API-proven pairs ever enter the handoff cache.
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return { kind: "unavailable" };
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        owner.promise,
+        new Promise<void>((resolve) => { timer = setTimeout(resolve, remaining); }),
+      ]);
+      clearTimeout(timer);
+      if (Date.now() >= deadline) return { kind: "unavailable" };
+      continue;
     }
-    // Successful results alone are retained for a few seconds. The timer
-    // releases the pair even when there are no further incoming requests.
-    setTimeout(() => { entries.delete(key); }, HANDOFF_MS).unref();
-  });
-  return pending;
+    // At most 128 retained handoffs plus in-flight owners combined. An active
+    // owner is never evicted. Capacity is temporary, never an auth rejection.
+    if (handoffs.size >= MAX_ENTRIES) return { kind: "unavailable" };
+    const pending = rotate(refreshToken).then((result) => {
+      if (result.kind === "tokens") {
+        handoffs.set(key, result.tokens);
+        setTimeout(() => { handoffs.delete(key); }, HANDOFF_MS).unref();
+      }
+      owner = undefined;
+      return result;
+    });
+    owner = { key, promise: pending };
+    return pending;
+  }
 }
 
-async function rotate(refreshToken: string): Promise<TokenPair | null> {
+async function rotate(refreshToken: string): Promise<RenewalResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => { controller.abort(); }, REFRESH_TIMEOUT_MS);
   try {
@@ -52,12 +72,13 @@ async function rotate(refreshToken: string): Promise<TokenPair | null> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
     });
-    if (!response.ok) return null;
+    if (response.status === 400 || response.status === 401) return { kind: "rejected" };
+    if (!response.ok) return { kind: "unavailable" };
     const tokens = await response.json() as Partial<TokenPair>;
-    if (typeof tokens.accessToken !== "string" || !hasCurrentAccessToken(tokens.accessToken) || typeof tokens.refreshToken !== "string" || !/^[a-f0-9]{64}$/.test(tokens.refreshToken)) return null;
-    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+    if (typeof tokens.accessToken !== "string" || !hasCurrentAccessToken(tokens.accessToken) || typeof tokens.refreshToken !== "string" || !/^[a-f0-9]{64}$/.test(tokens.refreshToken)) return { kind: "unavailable" };
+    return { kind: "tokens", tokens: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken } };
   } catch {
-    return null;
+    return { kind: "unavailable" };
   } finally {
     clearTimeout(timeout);
   }

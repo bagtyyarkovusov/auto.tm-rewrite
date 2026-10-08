@@ -31,9 +31,16 @@ export async function proxy(request: NextRequest) {
   }
 
   const safeReturnTo = validateReturnTo(`${pathname}${request.nextUrl.search}`);
-  let tokens: Awaited<ReturnType<typeof renewSession>> = null;
+  let tokens: { accessToken: string; refreshToken: string } | undefined;
   if (!hasCurrentAccessToken(request.cookies.get(settings.accessName)?.value)) {
-    if (refreshToken) tokens = await renewSession(refreshToken);
+    const renewal = refreshToken ? await renewSession(refreshToken) : { kind: "rejected" as const };
+    if (renewal.kind === "unavailable") {
+      return new NextResponse("<!doctype html><html lang=\"ru\"><meta charset=\"utf-8\"><title>Временно недоступно</title><body><h1>Временно недоступно. Попробуйте ещё раз.</h1><p>Обновите страницу через несколько секунд. Сессия сохранена.</p></body></html>", {
+        status: 503,
+        headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "Retry-After": "5" },
+      });
+    }
+    if (renewal.kind === "tokens") tokens = renewal.tokens;
     if (!tokens) {
       const loginUrl = new URL("/login", process.env["ADMIN_ORIGIN"] || request.url);
       loginUrl.searchParams.set("reason", "session-expired");
