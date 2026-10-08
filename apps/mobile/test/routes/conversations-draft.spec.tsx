@@ -6,12 +6,13 @@ import ConversationDetailScreen from "../../app/conversations/[id]";
 const DRAFT = "Can I see the car?";
 
 const mocks = vi.hoisted(() => ({
-  sendTextMessage: vi.fn(async () => ({ ok: true, message: { id: "server-1" } })),
+  sendTextMessage: vi.fn(async () => ({ ok: true, message: { id: "server-1", conversationId: "conversation-1", senderId: "buyer", kind: "text", text: "Hello", createdAt: new Date().toISOString() } })),
   mutation: { mutate: vi.fn(), isPending: false },
 }));
 
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => ({ userId: "buyer" }) }));
-vi.mock("../../src/api/conversations/useConversationMessages", () => ({
+vi.mock("../../src/api/conversations/useConversationMessages", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useConversationMessages: () => ({
     data: { pages: [{ items: [] }] },
     isPending: false,

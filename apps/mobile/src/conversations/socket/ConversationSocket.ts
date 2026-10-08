@@ -73,6 +73,9 @@ export class ConversationSocket {
   private typingListeners = new Set<(event: TypingEvent) => void>();
   private presenceListeners = new Set<(event: PresenceEvent) => void>();
   private currentRoom: string | null = null;
+  private activeJoinRequest: Promise<JoinConversationAck | SocketErrorAck> | null =
+    null;
+  private readonly pendingJoins = new Map<string, Promise<JoinConversationAck | SocketErrorAck>>();
 
   constructor(private readonly options: ConversationSocketOptions = {}) {}
 
@@ -164,6 +167,7 @@ export class ConversationSocket {
     });
 
     this.socket.on("disconnect", () => {
+      this.pendingJoins.clear();
       this.setStatus("disconnected");
     });
 
@@ -211,6 +215,7 @@ export class ConversationSocket {
   }
 
   disconnect(): void {
+    this.pendingJoins.clear();
     this.currentRoom = null;
     this.socket?.disconnect();
     this.socket = null;
@@ -229,49 +234,73 @@ export class ConversationSocket {
       };
     }
 
+    const pending = this.pendingJoins.get(conversationId);
+    if (pending) return pending;
     const socket = this.socket;
 
-    return new Promise((resolve) => {
-      socket.emit(
-        "conversation:join",
-        { conversationId },
-        (ack: unknown) => {
-          const parsed =
-            ConversationsSchemas.JoinConversationResponseSchema.safeParse(ack);
-          if (parsed.success) {
-            this.currentRoom = parsed.data.room;
-            resolve({
-              ok: true,
-              conversationId: parsed.data.conversationId,
-              room: parsed.data.room,
-            });
-            return;
-          }
-
-          const errorParsed =
-            ConversationsSchemas.ConversationSocketErrorSchema.safeParse(ack);
-          if (errorParsed.success) {
-            resolve(errorParsed.data);
-            return;
-          }
-
-          resolve({
-            ok: false,
-            code: SOCKET_CLIENT_ERROR_CODES.INVALID_ACK,
-            message: "Invalid join response",
-          });
-        },
-      );
+    // Create and register the request before emitting: mocks (and some
+    // transports) can answer the acknowledgement synchronously.
+    let resolveRequest!: (
+      value: JoinConversationAck | SocketErrorAck,
+    ) => void;
+    const request = new Promise<JoinConversationAck | SocketErrorAck>((resolve) => {
+      resolveRequest = resolve;
     });
+    // The wrapper's reconnect and the mounted screen can request the same
+    // room in one connect turn. The gateway counts joins, so emit only once.
+    this.activeJoinRequest = request;
+    this.pendingJoins.set(conversationId, request);
+
+    socket.emit("conversation:join", { conversationId }, (ack: unknown) => {
+      const parsed =
+        ConversationsSchemas.JoinConversationResponseSchema.safeParse(ack);
+      if (parsed.success) {
+        // A join acknowledged after a newer join or a leave must not
+        // replace the room the socket currently belongs to.
+        if (this.activeJoinRequest === request) {
+          this.currentRoom = parsed.data.room;
+        }
+        resolveRequest({
+          ok: true,
+          conversationId: parsed.data.conversationId,
+          room: parsed.data.room,
+        });
+        return;
+      }
+
+      const errorParsed =
+        ConversationsSchemas.ConversationSocketErrorSchema.safeParse(ack);
+      if (errorParsed.success) {
+        resolveRequest(errorParsed.data);
+        return;
+      }
+
+      resolveRequest({
+        ok: false,
+        code: SOCKET_CLIENT_ERROR_CODES.INVALID_ACK,
+        message: "Invalid join response",
+      });
+    });
+
+    void request.then(() => {
+      if (this.pendingJoins.get(conversationId) === request) this.pendingJoins.delete(conversationId);
+    });
+    return request;
   }
 
   async leaveConversation(conversationId: string): Promise<void> {
+    // Leaving always clears local room state, even when the socket is
+    // currently disconnected; otherwise a reconnect would rejoin a room the
+    // User already left, and a coalesced pending join would swallow a later
+    // rejoin of the same Conversation.
+    this.pendingJoins.delete(conversationId);
+    this.activeJoinRequest = null;
+    this.currentRoom = null;
     if (!this.socket?.connected) {
       return;
     }
 
     this.socket.emit("conversation:leave", { conversationId });
-    this.currentRoom = null;
   }
 
   async markDelivered(

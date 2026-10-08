@@ -181,7 +181,8 @@ export function MessageComposer({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      enabled={Platform.OS === "ios"}
+      behavior="padding"
     >
       {showQuickReplies && (
         <QuickReplies onSelect={setText} disabled={disabled} />

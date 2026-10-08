@@ -1,14 +1,17 @@
+import * as RN from "react-native";
 import { useState, type PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
-import { Modal } from "react-native";
+import { Modal, Platform, KeyboardAvoidingView } from "react-native";
+import * as Notifications from "expo-notifications";
 import type { ConversationsSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import { waitFor } from "@testing-library/react-native";
 
 import { act, fireEvent, renderMobile, routeParams, routerMock, within } from "../render";
 import ConversationDetailScreen from "../../app/conversations/[id]";
+import { queryKeys } from "../../src/api/queryKeys";
 import { seedConversationDetail } from "../../src/api/conversations/useConversation";
 import { ApiError } from "../../src/api/client";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
@@ -26,6 +29,7 @@ const state = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
   readMessages: vi.fn(),
+  cachedMessages: false,
   messages: {
     data: { pages: [{ items: [] as unknown[] }] } as unknown,
     isPending: false,
@@ -38,7 +42,7 @@ const state = vi.hoisted(() => ({
     fetchNextPage: vi.fn(),
   },
   mutation: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false },
-  socket: { sendTextMessage: vi.fn(), sendImageMessage: vi.fn() },
+  socket: { sendTextMessage: vi.fn(), sendImageMessage: vi.fn(), deleteMessage: vi.fn() },
   toast: vi.fn(),
   clipboard: vi.fn(async (_text: string) => true),
   reportSheet: { current: null as null | { messageId: string; open: boolean; onReported: (id: string) => void } },
@@ -51,10 +55,18 @@ vi.mock("../../src/api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof ClientModule>()),
   apiClient: { get: state.get, post: state.post, delete: vi.fn() },
 }));
-vi.mock("../../src/api/conversations/useConversationMessages", () => ({
+vi.mock("../../src/api/conversations/useConversationMessages", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useConversationMessages: (options: { conversationId: string }) => {
     state.readMessages(options);
-    return state.messages;
+    const cached = useQuery({
+      queryKey: queryKeys.conversations.messages(options.conversationId),
+      queryFn: async () => state.messages.data,
+      enabled: state.cachedMessages,
+      initialData: state.cachedMessages ? state.messages.data : undefined,
+      staleTime: 30_000,
+    });
+    return state.cachedMessages ? { ...state.messages, ...cached } : { ...state.messages, data: cached.data ?? state.messages.data };
   },
 }));
 vi.mock("../../src/api/conversations/useSendTextMessage", () => ({ useSendTextMessage: () => state.mutation }));
@@ -78,10 +90,16 @@ vi.mock("../../src/conversations/socket/useConversationSocket", () => ({
     peerPresence: { online: true },
     signalTyping: vi.fn(),
     stopTyping: vi.fn(),
-    sendTextMessage: state.socket.sendTextMessage,
-    sendImageMessage: state.socket.sendImageMessage,
+    sendTextMessage: async (input: { conversationId: string; text: string; clientMessageId: string }) => {
+      const ack = await state.socket.sendTextMessage(input);
+      return ack?.ok ? { ...ack, message: { ...serverMessage(ack.message.id, state.viewerId, new Date().toISOString(), input.text), clientMessageId: input.clientMessageId, ...ack.message } } : ack;
+    },
+    sendImageMessage: async (input: { conversationId: string; metadata: unknown; clientMessageId: string }) => {
+      const ack = await state.socket.sendImageMessage(input);
+      return ack?.ok ? { ...ack, message: { ...serverMessage(ack.message.id, state.viewerId, new Date().toISOString()), kind: "image", text: null, metadata: input.metadata, clientMessageId: input.clientMessageId, ...ack.message } } : ack;
+    },
     markRead: vi.fn(async () => ({ ok: true })),
-    deleteMessage: vi.fn(),
+    deleteMessage: state.socket.deleteMessage,
   }),
 }));
 vi.mock("../../src/conversations/components/useConversationCatalogMaps", () => ({
@@ -170,6 +188,7 @@ function routeGet(routes: Record<string, () => unknown>) {
 
 beforeEach(() => {
   state.viewerId = BUYER_ID;
+  state.cachedMessages = false;
   state.get.mockReset();
   state.post.mockReset();
   state.mutation.mutate.mockReset();
@@ -184,6 +203,7 @@ beforeEach(() => {
   state.messages.fetchNextPage.mockReset();
   state.socket.sendTextMessage.mockReset();
   state.socket.sendImageMessage.mockReset();
+  state.socket.deleteMessage.mockReset();
   state.mutation.mutateAsync.mockReset();
   state.toast.mockReset();
   state.clipboard.mockClear();
@@ -768,6 +788,7 @@ describe("Conversation while signed out", () => {
     expect(state.get).not.toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
     state.viewerLoading = false;
     state.viewerId = BUYER_ID;
+  state.cachedMessages = false;
     screen.rerender(<Seeded><ConversationDetailScreen /></Seeded>);
     expect(await screen.findByText("Merdan")).toBeTruthy();
   });
@@ -786,6 +807,7 @@ describe("Conversation while signed out", () => {
     expect(routerMock.dismissTo).toHaveBeenCalledWith(conversationHref);
 
     state.viewerId = BUYER_ID;
+  state.cachedMessages = false;
     screen.rerender(<ConversationDetailScreen />);
     expect(await screen.findByText("Merdan")).toBeTruthy();
     expect(screen.queryByText("Sign in to view messages")).toBeNull();
@@ -1161,5 +1183,191 @@ describe("Conversation about a closed Listing", () => {
     expect(await screen.findByText("Sold")).toBeTruthy();
     expect(screen.queryByText(/You can keep talking/)).toBeNull();
     expect(screen.queryByRole("button", { name: "See other Toyota Camry" })).toBeNull();
+  });
+});
+
+describe("Own Message acknowledgement", () => {
+  it.each([false, true])("keeps a sent Message visible before HTTP/socket echo, existing=%s", async (existing) => {
+    state.messages.data = { pages: [{ items: existing ? [serverMessage("older", SELLER_ID)] : [] }] };
+    state.socket.sendTextMessage.mockResolvedValue({ ok: true, message: { id: "server-new" } });
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Visible immediately");
+    const scrollRequests = (RN as unknown as { scrollRequests: unknown[] }).scrollRequests;
+    scrollRequests.length = 0;
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Send message" }));
+    });
+    expect(screen.getAllByText("Visible immediately")).toHaveLength(1);
+    expect(scrollRequests).toContainEqual({ method: "scrollToOffset", offset: 0, animated: false });
+    expect(screen.queryByText("Failed to send")).toBeNull();
+    const firstSend = state.socket.sendTextMessage.mock.calls[0];
+    if (!firstSend) throw new Error("Message send missing");
+    const clientMessageId = firstSend[0].clientMessageId;
+    state.messages.data = { pages: [{ items: [{ ...serverMessage("server-new", BUYER_ID, new Date().toISOString(), "Visible immediately"), clientMessageId }] }] };
+    screen.rerender(<ConversationDetailScreen />);
+    expect(screen.getAllByText("Visible immediately")).toHaveLength(1);
+    expect(state.socket.sendTextMessage).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("First chat action notifications", () => {
+  it.each(["text", "image"] as const)("requests Android permission on the first %s send, never screen entry", async (kind) => {
+    const previousOS = Platform.OS;
+    Platform.OS = "android";
+    vi.mocked(Notifications.getPermissionsAsync).mockResolvedValue({ status: Notifications.PermissionStatus.DENIED, granted: false, canAskAgain: true, expires: "never" });
+    vi.mocked(Notifications.requestPermissionsAsync).mockResolvedValue({ status: Notifications.PermissionStatus.GRANTED, granted: true, canAskAgain: true, expires: "never" });
+    vi.mocked(Notifications.getDevicePushTokenAsync).mockResolvedValue({ data: "first-chat-token", type: "android" });
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    state.socket.sendTextMessage.mockResolvedValue({ ok: true, message: { id: "server-first" } });
+    state.socket.sendImageMessage.mockResolvedValue({ ok: true, message: { id: "server-first-image" } });
+    state.mutation.mutateAsync.mockResolvedValue({ uploadUrl: "https://upload", key: "chat-attachments/first.jpg" });
+    state.post.mockResolvedValue({});
+    try {
+      const screen = renderMobile(<ConversationDetailScreen />);
+      const field = await screen.findByPlaceholderText("Message");
+      expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+      if (kind === "text") fireEvent.changeText(field, "First action");
+      else await act(async () => { fireEvent.press(screen.getByLabelText(/attach/i)); });
+      expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+      await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+      await waitFor(() => expect(state.post).toHaveBeenCalledWith("/notifications/tokens", { token: "first-chat-token", platform: "android" }, expect.anything()));
+      expect(Notifications.requestPermissionsAsync).toHaveBeenCalledOnce();
+    } finally {
+      Platform.OS = previousOS;
+      vi.mocked(Notifications.getPermissionsAsync).mockReset();
+      vi.mocked(Notifications.requestPermissionsAsync).mockReset();
+      vi.mocked(Notifications.getDevicePushTokenAsync).mockReset();
+    }
+  });
+});
+
+describe("Conversation keyboard ownership", () => {
+  it.each(["android", "ios"] as const)("keeps the message and Send controls inside the active %s avoidance region", async (os) => {
+    const previousOS = Platform.OS;
+    Platform.OS = os;
+    state.messages.data = { pages: [{ items: [serverMessage("Read while typing", SELLER_ID)] }] };
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    try {
+      const screen = renderMobile(<ConversationDetailScreen />);
+      const field = await screen.findByPlaceholderText("Message");
+      fireEvent.changeText(field, "Above the keyboard");
+      const active = screen.UNSAFE_getAllByType(KeyboardAvoidingView).filter((view) => view.props.enabled !== false);
+      expect(active).toHaveLength(1);
+      expect(within(active[0]).getByDisplayValue("Above the keyboard")).toBeTruthy();
+      expect(within(active[0]).getByRole("button", { name: "Send message", disabled: false })).toBeTruthy();
+      if (os === "android") {
+        expect(within(active[0]).getByText("Read while typing")).toBeTruthy();
+        expect(active[0].props.behavior).toBe("padding");
+        expect(active[0].props.className).toBe("flex-1");
+      } else {
+        expect(active[0].props.behavior).toBe("padding");
+      }
+    } finally { Platform.OS = previousOS; }
+  });
+});
+
+describe("Acknowledged Message transport coverage", () => {
+  it("keeps an HTTP fallback text Message visible while the refresh is delayed", async () => {
+    state.messages.data = { pages: [{ items: [serverMessage("older", SELLER_ID)] }] };
+    state.socket.sendTextMessage.mockResolvedValue({ ok: false, code: "NOT_CONNECTED" });
+    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.(serverMessage("http-message", BUYER_ID, new Date().toISOString(), "HTTP still visible")));
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "HTTP still visible");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    expect(screen.getAllByText("HTTP still visible")).toHaveLength(1);
+    state.messages.data = { pages: [{ items: [serverMessage("http-message", BUYER_ID, new Date().toISOString(), "HTTP still visible")] }] };
+    screen.rerender(<ConversationDetailScreen />);
+    expect(screen.getAllByText("HTTP still visible")).toHaveLength(1);
+  });
+  it.each([false, true])("keeps an acknowledged image visible without an echo, HTTP=%s", async (http) => {
+    state.mutation.mutateAsync.mockResolvedValue({ uploadUrl: "https://upload", key: "chat-attachments/ack.jpg" });
+    state.socket.sendImageMessage.mockResolvedValue(http ? { ok: false, code: "NOT_CONNECTED" } : { ok: true, message: { id: "image-ack" } });
+    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.({ ...serverMessage("image-ack", BUYER_ID, new Date().toISOString()), kind: "image", text: null, metadata: { key: "chat-attachments/ack.jpg" } }));
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    await screen.findByPlaceholderText("Message");
+    await act(async () => { fireEvent.press(screen.getByLabelText(/attach/i)); });
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    expect(screen.getAllByRole("imagebutton", { name: "Photo" })).toHaveLength(1);
+    expect(within(screen.getByRole("imagebutton", { name: "Photo" })).UNSAFE_getByType(Image).props.source.uri).toContain("chat-attachments/ack.jpg");
+  });
+});
+
+describe("Acknowledged own Message actions", () => {
+  it.each([false, true])("offers Delete and redacts its acknowledged local row without echo, HTTP=%s", async (http) => {
+    const deletedAt = new Date().toISOString();
+    state.socket.sendTextMessage.mockResolvedValue({ ok: true, message: { id: "ack-to-delete" } });
+    state.socket.deleteMessage.mockResolvedValue(http ? { ok: false, code: "NOT_CONNECTED" } : { ok: true, messageId: "ack-to-delete", conversationId: CONVERSATION_ID, deletedAt });
+    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.({ messageId: "ack-to-delete", conversationId: CONVERSATION_ID, deletedAt }));
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Acknowledged and deletable");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    fireEvent(screen.getByText("Acknowledged and deletable"), "longPress");
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Delete" }));
+    expect(screen.getByText("Delete message?")).toBeTruthy();
+    await act(async () => { fireEvent.press(screen.getByText("Delete")); });
+    expect(screen.queryByText("Acknowledged and deletable")).toBeNull();
+    expect(screen.getByText("Message deleted")).toBeTruthy();
+    expect(state.socket.deleteMessage).toHaveBeenCalledWith({ conversationId: CONVERSATION_ID, messageId: "ack-to-delete" });
+  });
+});
+
+describe("Authoritative acknowledgement cache", () => {
+  it.each([false, true])("keeps the server Message across reopening within staleTime and later echo, echoFirst=%s", async (echoFirst) => {
+    state.cachedMessages = true;
+    const older = serverMessage("older-ack", SELLER_ID);
+    state.messages.data = { pages: [{ items: [older], nextCursor: "older-page" }, { items: [], nextCursor: null }], pageParams: [null, "older-page"] };
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    let acknowledge: ((value: unknown) => void) | undefined;
+    state.socket.sendTextMessage.mockImplementation(() => new Promise((resolve) => { acknowledge = resolve; }));
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Typed before server acknowledgement");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    const firstSend = state.socket.sendTextMessage.mock.calls[0];
+    if (!firstSend) throw new Error("Send missing");
+    const message = { ...serverMessage("canonical-id", BUYER_ID, "2026-10-08T12:34:56.000Z", "Canonical server text"), clientMessageId: firstSend[0].clientMessageId };
+    let finishOldRead: ((value: unknown) => void) | undefined;
+    const oldRead = !echoFirst ? screen.queryClient.fetchQuery({
+      queryKey: queryKeys.conversations.messages(CONVERSATION_ID),
+      queryFn: () => new Promise((resolve) => { finishOldRead = resolve; }),
+      staleTime: 0,
+    }).catch(() => undefined) : undefined;
+    if (echoFirst) act(() => screen.queryClient.setQueryData(queryKeys.conversations.messages(CONVERSATION_ID), { pages: [{ items: [message, older], nextCursor: "older-page" }, { items: [], nextCursor: null }], pageParams: [null, "older-page"] }));
+    await act(async () => { acknowledge?.({ ok: true, message }); });
+    await act(async () => { finishOldRead?.(state.messages.data); await oldRead; });
+    const cached = screen.queryClient.getQueryData<{ pages: { items: ConversationsSchemas.MessageSummary[]; nextCursor: string | null }[]; pageParams: unknown[] }>(queryKeys.conversations.messages(CONVERSATION_ID));
+    expect(cached?.pages.flatMap((page) => page.items).filter((row) => row.id === "canonical-id")).toEqual([message]);
+    expect(cached?.pageParams).toEqual([null, "older-page"]);
+    expect(cached?.pages[0]?.nextCursor).toBe("older-page");
+    expect(screen.getAllByText("Canonical server text")).toHaveLength(1);
+    // Same provider/client, but the route and its local outbox are remounted.
+    screen.rerender(<RN.View />);
+    screen.rerender(<ConversationDetailScreen />);
+    expect(await screen.findByText("Canonical server text")).toBeTruthy();
+    expect(screen.getAllByText("Canonical server text")).toHaveLength(1);
+  });
+});
+
+describe("Acknowledgement cannot undo a newer deletion", () => {
+  it("keeps the authoritative redaction when a send acknowledgement arrives late", async () => {
+    state.cachedMessages = true;
+    state.messages.data = { pages: [{ items: [], nextCursor: null }], pageParams: [null] };
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    let acknowledge: ((value: unknown) => void) | undefined;
+    state.socket.sendTextMessage.mockImplementation(() => new Promise((resolve) => { acknowledge = resolve; }));
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Before deletion");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    const send = state.socket.sendTextMessage.mock.calls[0];
+    if (!send) throw new Error("Send missing");
+    const message = { ...serverMessage("deleted-before-ack", BUYER_ID, new Date().toISOString(), "Before deletion"), clientMessageId: send[0].clientMessageId };
+    act(() => screen.queryClient.setQueryData(queryKeys.conversations.messages(CONVERSATION_ID), { pages: [{ items: [{ ...message, text: null, deletedAt: "2026-10-08T14:00:00.000Z" }], nextCursor: null }], pageParams: [null] }));
+    await act(async () => { acknowledge?.({ ok: true, message }); });
+    expect(screen.queryByText("Before deletion")).toBeNull();
+    expect(screen.getByText("Message deleted")).toBeTruthy();
   });
 });

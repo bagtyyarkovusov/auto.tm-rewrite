@@ -1,7 +1,7 @@
 import { mobileDuration } from '@auto-tm/ui/tokens';
 import * as DialogPrimitive from '@rn-primitives/dialog';
 import * as React from 'react';
-import { Platform, Pressable, View, type ViewProps } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, View, type ViewProps } from 'react-native';
 import { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { FullWindowOverlay as RNFullWindowOverlay } from 'react-native-screens';
 
@@ -23,10 +23,13 @@ function SheetOverlay({
   className,
   children,
   closeOnBackdropPress,
+  avoidKeyboard = false,
   ...props
 }: Omit<React.ComponentProps<typeof DialogPrimitive.Overlay>, 'asChild'> & {
   children?: React.ReactNode;
   closeOnBackdropPress?: boolean;
+  /** Opt-in for sheets with fields; the full portal viewport owns keyboard avoidance. */
+  avoidKeyboard?: boolean;
 }) {
   return (
     <FullWindowOverlay>
@@ -41,7 +44,7 @@ function SheetOverlay({
         {...props}
         asChild={Platform.OS !== 'web'}>
         <NativeOnlyAnimatedView>
-          <NativeOnlyAnimatedView className="w-full flex-1 justify-end">
+          <KeyboardAvoidingView enabled={avoidKeyboard} behavior="padding" className="w-full flex-1 justify-end">
             {/* The overlay is `asChild`, so its press lands on an Animated.View that ignores it.
                 Opt-in: this backdrop sits behind the content and closes the sheet on a tap outside.
                 Sheets that hold typed input leave it off, so a stray tap cannot discard a draft. */}
@@ -56,7 +59,7 @@ function SheetOverlay({
               </DialogPrimitive.Close>
             )}
             <>{children}</>
-          </NativeOnlyAnimatedView>
+          </KeyboardAvoidingView>
         </NativeOnlyAnimatedView>
       </DialogPrimitive.Overlay>
     </FullWindowOverlay>
@@ -69,19 +72,22 @@ function SheetContent({
   children,
   compact,
   closeOnBackdropPress,
+  avoidKeyboard = false,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   portalHost?: string;
   compact?: boolean;
   closeOnBackdropPress?: boolean;
+  /** Opt-in for sheets with fields; the full portal viewport owns keyboard avoidance. */
+  avoidKeyboard?: boolean;
 }) {
   return (
     <SheetPortal hostName={portalHost}>
-      <SheetOverlay closeOnBackdropPress={closeOnBackdropPress}>
+      <SheetOverlay closeOnBackdropPress={closeOnBackdropPress} avoidKeyboard={avoidKeyboard}>
         <DialogPrimitive.Content
           className={cn(
             'z-50 w-full max-w-none self-stretch flex-col gap-4 overflow-hidden rounded-t-3xl bg-popover p-5 shadow-overlay',
-            compact ? 'max-h-[70%]' : 'max-h-[85%]',
+            avoidKeyboard ? 'max-h-full min-h-0 shrink' : compact ? 'max-h-[70%]' : 'max-h-[85%]',
             Platform.select({
               web: 'animate-in fade-in-0 slide-in-from-bottom-10 duration-300',
             }),
@@ -92,8 +98,8 @@ function SheetContent({
           <NativeOnlyAnimatedView
             entering={SlideInDown.duration(mobileDuration.slow)}
             exiting={SlideOutDown.duration(mobileDuration.base)}
-            className={cn("min-h-0 w-full", compact ? "" : "flex-1")}>
-            <View className={cn("min-h-0 w-full flex-col gap-4", compact ? "" : "flex-1")}>
+            className={cn("min-h-0 w-full", compact ? "" : "flex-1", avoidKeyboard && "shrink")}>
+            <View className={cn("min-h-0 w-full flex-col gap-4", compact ? "" : "flex-1", avoidKeyboard && "shrink")}>
               <View className="mx-auto h-1 w-9 rounded-full bg-accent" />
               <>{children}</>
             </View>

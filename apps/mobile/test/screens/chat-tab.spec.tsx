@@ -1,6 +1,7 @@
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Image } from "expo-image";
+import * as Notifications from "expo-notifications";
 import { useFocusEffect } from "expo-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -23,9 +24,17 @@ vi.mock("react-native-safe-area-context", async () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 vi.mock("../../src/auth/useAuth", () => ({ useAuth: () => ({ isAuthenticated: state.auth, phone: "" }) }));
-vi.mock("../../src/notifications/useChatPushTokenRegistration", () => ({ useChatPushTokenRegistration: vi.fn() }));
+vi.mock("../../src/notifications/useChatPushTokenRegistration", async (importOriginal) => await importOriginal());
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => null }));
-vi.mock("expo-notifications", () => ({ addNotificationReceivedListener: () => ({ remove: vi.fn() }) }));
+vi.mock("expo-notifications", () => ({
+  addNotificationReceivedListener: () => ({ remove: vi.fn() }),
+  getPermissionsAsync: vi.fn(async () => ({ status: "undetermined", granted: false, canAskAgain: true })),
+  requestPermissionsAsync: vi.fn(async () => ({ status: "denied", granted: false })),
+  setNotificationChannelAsync: vi.fn(async () => null),
+  getDevicePushTokenAsync: vi.fn(async () => ({ data: null })),
+  PermissionStatus: { GRANTED: "granted", DENIED: "denied", UNDETERMINED: "undetermined" },
+  AndroidImportance: { HIGH: 5 }, AndroidNotificationVisibility: { PUBLIC: 1 },
+}));
 vi.mock("../../src/conversations/components/useConversationCatalogMaps", () => ({
   useConversationCatalogMaps: () => ({ brandName: () => "Toyota", modelName: () => "Camry" }),
 }));
@@ -228,5 +237,17 @@ describe("Messages tab button", () => {
     expect(renderTabBar("en").getByRole("tab", { name: "Messages" })).toBeTruthy();
     expect(renderTabBar("ru").getByRole("tab", { name: "Сообщения" })).toBeTruthy();
     expect(renderTabBar("tk").getByRole("tab", { name: "Çat" })).toBeTruthy();
+  });
+});
+
+describe("Messages tab permission timing", () => {
+  it("does not request notifications merely because the User opens Messages", async () => {
+    state.auth = true;
+    vi.mocked(Notifications.requestPermissionsAsync).mockClear();
+    api.get.mockResolvedValue(page([]));
+    const view = renderMobile(<ChatScreen />);
+    await act(async () => { await Promise.resolve(); });
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    view.unmount();
   });
 });

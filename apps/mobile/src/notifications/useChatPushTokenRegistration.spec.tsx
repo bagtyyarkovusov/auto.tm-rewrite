@@ -14,6 +14,8 @@ import {
 } from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { getPlatform } from "./getPlatform";
+import { getNotificationPermissionState } from "./requestNotificationPermission";
 import { useChatPushTokenRegistration } from "./useChatPushTokenRegistration";
 
 const mockMutate = vi.fn();
@@ -66,6 +68,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 describe("useChatPushTokenRegistration", () => {
   beforeEach(() => {
+    vi.mocked(getPlatform).mockReturnValue("android");
     mockMutate.mockReset();
     mockRequestPermissionsAsync.mockReset();
     mockGetPermissionsAsync.mockReset();
@@ -183,5 +186,35 @@ describe("useChatPushTokenRegistration", () => {
 
     expect(mockGetPermissionsAsync).not.toHaveBeenCalled();
     expect(mockMutate).not.toHaveBeenCalled();
+  });
+});
+
+describe("Android permission before the first request", () => {
+  beforeEach(() => {
+    vi.mocked(getPlatform).mockReturnValue("android");
+    mockMutate.mockReset();
+    mockAsyncStorage.getItem.mockReset();
+    mockAsyncStorage.setItem.mockReset();
+    mockRequestPermissionsAsync.mockReset();
+    mockGetPermissionsAsync.mockReset();
+    mockGetDevicePushTokenAsync.mockReset();
+  });
+  it("asks an unasked Android User even when the system reports denied and registers a granted token", async () => {
+    mockGetPermissionsAsync.mockResolvedValue({ status: PermissionStatus.DENIED, granted: false, expires: "never", canAskAgain: true });
+    mockAsyncStorage.getItem.mockResolvedValue(null);
+    mockRequestPermissionsAsync.mockResolvedValue({ status: PermissionStatus.GRANTED, granted: true, expires: "never", canAskAgain: true });
+    mockGetDevicePushTokenAsync.mockResolvedValue({ data: "fresh-fcm", type: "android" });
+    renderHook(() => useChatPushTokenRegistration(true), { wrapper });
+    await waitFor(() => expect(mockMutate).toHaveBeenCalledWith({ token: "fresh-fcm", platform: "android" }));
+    expect(mockRequestPermissionsAsync).toHaveBeenCalledOnce();
+  });
+  it("keeps a requestable Android permission undetermined rather than a User refusal", async () => {
+    mockGetPermissionsAsync.mockResolvedValue({ status: PermissionStatus.DENIED, granted: false, expires: "never", canAskAgain: true });
+    expect(await getNotificationPermissionState()).toBe("undetermined");
+  });
+  it("keeps the iOS denial semantics", async () => {
+    vi.mocked(getPlatform).mockReturnValue("ios");
+    mockGetPermissionsAsync.mockResolvedValue({ status: PermissionStatus.DENIED, granted: false, expires: "never", canAskAgain: true });
+    expect(await getNotificationPermissionState()).toBe("denied");
   });
 });

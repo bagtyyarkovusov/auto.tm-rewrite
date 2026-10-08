@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -35,6 +35,8 @@ export interface MessageItem {
 interface MessageListProps {
   messages: MessageItem[];
   currentUserId: string;
+  /** Incremented by an explicit send, never by a server acknowledgement. */
+  sendCount?: number;
   reportedMessageIds?: Set<string>;
   /** Report message is offered only while reporting is switched on for the environment. */
   reportEnabled?: boolean;
@@ -112,6 +114,7 @@ function DaySeparator({ label }: { label: string }) {
 export function MessageList({
   messages,
   currentUserId,
+  sendCount = 0,
   reportedMessageIds,
   reportEnabled = true,
   onCopy,
@@ -127,6 +130,10 @@ export function MessageList({
   afterLast,
 }: MessageListProps) {
   const { t, i18n } = useTranslation();
+  const listRef = useRef<FlatList<MessageRow<MessageItem>>>(null);
+  useEffect(() => {
+    if (sendCount > 0) listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [sendCount]);
   const reported = reportedMessageIds ?? new Set<string>();
   const [actionTargetId, setActionTargetId] = useState<string | null>(null);
   const rows = useMemo(
@@ -195,6 +202,7 @@ export function MessageList({
   return (
     <>
     <FlatList
+      ref={listRef}
       data={rows}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
@@ -210,7 +218,6 @@ export function MessageList({
       }
       ListEmptyComponent={
         <View
-          style={{ transform: [{ scaleY: -1 }] }}
           className="flex-1 items-center justify-center px-6 py-12"
         >
           <Text className="text-callout text-muted-foreground">

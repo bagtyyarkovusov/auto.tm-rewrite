@@ -1,3 +1,5 @@
+import * as RN from "react-native";
+import { StyleSheet } from "react-native";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -502,5 +504,52 @@ describe("MessageList empty", () => {
   it("shows the empty state with no Messages", () => {
     const screen = renderMobile(<MessageList currentUserId={ME} messages={[]} />);
     expect(screen.getByText("No messages yet. Start the conversation.")).toBeTruthy();
+  });
+});
+
+describe("MessageList empty layout and send scrolling", () => {
+  it("lets the native inverted list keep its empty label upright", () => {
+     const screen = renderMobile(<MessageList messages={[]} currentUserId={ME} />);
+     const label = screen.getByText("No messages yet. Start the conversation.");
+     // VirtualizedList already counter-inverts ListEmptyComponent. A second
+     // transform overrides its correction and flips the label on the device.
+     let container = label.parent;
+     while (container && !container.props.className?.includes("py-12")) container = container.parent;
+     if (!container) throw new Error("Empty-state container missing");
+     expect(StyleSheet.flatten(container.props.style)?.transform).toBeUndefined();
+   });
+  
+  it("returns to the newest Message after sending while reading older history", () => {
+    const requests = (RN as unknown as { scrollRequests: unknown[] }).scrollRequests;
+    const screen = renderMobile(<MessageList currentUserId={ME} messages={[message("old", at(1, 10), { senderId: PEER })]} />);
+    requests.length = 0;
+    screen.rerender(<MessageList currentUserId={ME} sendCount={1} messages={[
+      message("new-send", at(2, 10), { status: "pending" }),
+      message("old", at(1, 10), { senderId: PEER }),
+    ]} />);
+    expect(screen.getByText("new-send")).toBeTruthy();
+    expect(requests).toContainEqual({ method: "scrollToOffset", offset: 0, animated: false });
+  });
+  
+  it("leaves older history in place when an incoming Message arrives", () => {
+    const requests = (RN as unknown as { scrollRequests: unknown[] }).scrollRequests;
+    const screen = renderMobile(<MessageList currentUserId={ME} messages={[message("old", at(1, 10), { senderId: PEER })]} />);
+    requests.length = 0;
+    screen.rerender(<MessageList currentUserId={ME} messages={[message("incoming", at(2, 10), { senderId: PEER }), message("old", at(1, 10), { senderId: PEER })]} />);
+    expect(screen.getByText("incoming")).toBeTruthy();
+    expect(requests).toHaveLength(0);
+  });
+});
+
+describe("MessageList acknowledgement preserves reading position", () => {
+  it("scrolls for the send, but not its later acknowledgement after the User scrolls up", () => {
+    const requests = (RN as unknown as { scrollRequests: unknown[] }).scrollRequests;
+    const screen = renderMobile(<MessageList currentUserId={ME} sendCount={1} messages={[message("pending-slow", at(2, 10), { status: "pending" })]} />);
+    requests.length = 0; // The User has moved into older history during the send.
+    screen.rerender(<MessageList currentUserId={ME} sendCount={1} messages={[message("server-slow", at(2, 10))]} />);
+    expect(screen.getByText("server-slow")).toBeTruthy();
+    expect(requests).toHaveLength(0);
+    screen.rerender(<MessageList currentUserId={ME} sendCount={2} messages={[message("next-send", at(2, 11), { status: "pending" }), message("server-slow", at(2, 10))]} />);
+    expect(requests).toEqual([{ method: "scrollToOffset", offset: 0, animated: false }]);
   });
 });

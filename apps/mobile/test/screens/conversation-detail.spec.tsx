@@ -29,7 +29,7 @@ describe("ConversationDetailScreen", () => {
 
   it("uses useConversationMessages for message list", () => {
     expect(source).toContain(
-      'import { useConversationMessages } from "../../src/api/conversations/useConversationMessages"',
+      'import { cacheAcknowledgedMessage, useConversationMessages } from "../../src/api/conversations/useConversationMessages"',
     );
   });
 
@@ -65,8 +65,8 @@ describe("ConversationDetailScreen optimistic states", () => {
     expect(source).toContain('status: "pending"');
   });
 
-  it("marks pending as sent on send success", () => {
-    expect(source).toContain('status: "sent"');
+  it("reconciles pending Messages into the authoritative acknowledgement cache", () => {
+    expect(source).toContain("cacheAcknowledgedMessage(queryClient, message)");
     expect(source).toContain("onSuccess");
   });
 
@@ -115,7 +115,7 @@ describe("ConversationDetailScreen realtime text send", () => {
 
   it("marks messages confirmed on socket ack", () => {
     expect(source).toContain("markConfirmed");
-    expect(source).toContain("result.message.id");
+    expect(source).toContain("markConfirmed(clientMessageId, result.message)");
   });
 
   it("falls back to HTTP when socket is not connected", () => {

@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../src/auth/useAuth";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { ConversationList } from "../../src/conversations/components/ConversationList";
-import { useChatPushTokenRegistration } from "../../src/notifications/useChatPushTokenRegistration";
 import { LargeTitle } from "../../components/navigation/ScreenHeader";
 import { TabScreen } from "../../components/navigation/TabScreen";
 
@@ -34,8 +33,6 @@ function AnonymousChatEntry() {
 
 function ChatContent({ isAuthenticated }: { isAuthenticated: boolean | null }) {
   const { t } = useTranslation();
-
-  useChatPushTokenRegistration(isAuthenticated === true);
 
   if (isAuthenticated === false) {
     return <AnonymousChatEntry />;

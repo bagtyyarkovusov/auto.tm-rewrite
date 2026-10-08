@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { useViewer } from "../../src/auth/useViewer";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { ApiError } from "../../src/api/client";
-import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
+import { cacheAcknowledgedMessage, useConversationMessages } from "../../src/api/conversations/useConversationMessages";
 import {
   patchConversationDetail,
   useConversation,
@@ -49,6 +49,7 @@ import { useConversationCatalogMaps } from "../../src/conversations/components/u
 import { showQuickReplies } from "../../src/conversations/showQuickReplies";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
 import { outgoingStatus } from "../../src/conversations/outgoingStatus";
+import { useChatPushTokenRegistration } from "../../src/notifications/useChatPushTokenRegistration";
 import { MessageReportSheet } from "../../src/admin/components/MessageReportSheet";
 import { ReportSheet } from "../../src/admin/components/ReportSheet";
 import {
@@ -117,6 +118,10 @@ export default function ConversationDetailScreen() {
   // sign-in and returns here (see src/conversations/CONTEXT.md).
   const signedOut = viewer === null;
   const readId = viewer?.userId ? conversationId : "";
+
+  const [sendCount, setSendCount] = useState(0);
+  const [hasChatAction, setHasChatAction] = useState(false);
+  useChatPushTokenRegistration(hasChatAction && !!viewer?.userId);
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
   const readMarkedRef = useRef(false);
@@ -374,12 +379,12 @@ export default function ConversationDetailScreen() {
     );
     const pendingOrFailed = localMessages.filter(
       (lm) =>
-        lm.status !== "sent" &&
-        lm.status !== "delivered" &&
-        lm.status !== "read" &&
         !serverIds.has(lm.id) &&
         !serverClientIds.has(lm.clientMessageId),
-    );
+    ).map((message) => ({
+      ...message,
+      canDelete: !!message.canDelete && now - new Date(message.createdAt).getTime() <= deleteWindowMs,
+    }));
 
     return [...serverMessages, ...pendingOrFailed].sort(
       (a, b) =>
@@ -431,30 +436,17 @@ export default function ConversationDetailScreen() {
 
   const markConfirmed = useCallback((
     clientMessageId: string,
-    serverId: string,
-    kind: "text" | "image" = "text",
-    metadata?: { key: string; width?: number; height?: number },
+    message: ConversationsSchemas.MessageSummary,
   ) => {
-    setLocalMessages((prev) =>
-      prev.map((m) => {
-        if (m.clientMessageId !== clientMessageId) return m;
-        if (m.localImageUri) {
-          FileSystem.deleteAsync(m.localImageUri, { idempotent: true }).catch(
-            () => {},
-          );
-        }
-        return {
-          ...m,
-          id: serverId,
-          status: "sent",
-          kind,
-          metadata,
-          localImageUri: undefined,
-          imageFileSize: undefined,
-        };
-      }),
-    );
-  }, []);
+    cacheAcknowledgedMessage(queryClient, message);
+    setLocalMessages((previous) => previous.filter((local) => {
+      if (local.clientMessageId !== clientMessageId) return true;
+      if (local.localImageUri) {
+        FileSystem.deleteAsync(local.localImageUri, { idempotent: true }).catch(() => {});
+      }
+      return false;
+    }));
+  }, [queryClient]);
 
   const markFailed = useCallback((clientMessageId: string) => {
     setLocalMessages((prev) =>
@@ -470,7 +462,8 @@ export default function ConversationDetailScreen() {
         { conversationId, text },
         {
           onSuccess: (data) => {
-            markConfirmed(clientMessageId, data.id);
+            // apiClient already parsed MessageSummarySchema, including defaults.
+            markConfirmed(clientMessageId, data as ConversationsSchemas.MessageSummary);
           },
           onError: (error) => {
             markFailed(clientMessageId);
@@ -494,7 +487,8 @@ export default function ConversationDetailScreen() {
         { conversationId, metadata, clientMessageId },
         {
           onSuccess: (data) => {
-            markConfirmed(clientMessageId, data.id, "image", metadata);
+            // apiClient already parsed MessageSummarySchema, including defaults.
+            markConfirmed(clientMessageId, data as ConversationsSchemas.MessageSummary);
             FileSystem.deleteAsync(localUri, { idempotent: true }).catch(
               () => {},
             );
@@ -515,6 +509,8 @@ export default function ConversationDetailScreen() {
     async (text: string) => {
       if (!viewer?.userId || !conversationId || cannotSend) return;
 
+      setHasChatAction(true);
+      setSendCount((count) => count + 1);
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
       const pendingMessage: LocalMessage = {
@@ -537,7 +533,7 @@ export default function ConversationDetailScreen() {
       });
 
       if (result.ok) {
-        markConfirmed(clientMessageId, result.message.id);
+        markConfirmed(clientMessageId, result.message);
       } else if (result.code === "NOT_CONNECTED") {
         sendViaHttp(clientMessageId, text);
       } else {
@@ -561,6 +557,8 @@ export default function ConversationDetailScreen() {
     async (attachment: ComposerAttachment) => {
       if (!viewer?.userId || !conversationId || cannotSend) return;
 
+      setHasChatAction(true);
+      setSendCount((count) => count + 1);
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
       const pendingMessage: LocalMessage = {
@@ -607,7 +605,7 @@ export default function ConversationDetailScreen() {
         });
 
         if (result.ok) {
-          markConfirmed(clientMessageId, result.message.id, "image", metadata);
+          markConfirmed(clientMessageId, result.message);
           FileSystem.deleteAsync(attachment.uri, { idempotent: true }).catch(
             () => {},
           );
@@ -694,7 +692,7 @@ export default function ConversationDetailScreen() {
           });
 
           if (result.ok) {
-            markConfirmed(msg.clientMessageId, result.message.id, "image", metadata);
+            markConfirmed(msg.clientMessageId, result.message);
             FileSystem.deleteAsync(msg.localImageUri, { idempotent: true }).catch(
               () => {},
             );
@@ -720,7 +718,7 @@ export default function ConversationDetailScreen() {
       });
 
       if (result.ok) {
-        markConfirmed(msg.clientMessageId, result.message.id);
+        markConfirmed(msg.clientMessageId, result.message);
       } else if (result.code === "NOT_CONNECTED") {
         sendViaHttp(msg.clientMessageId, msg.text);
       } else {
@@ -742,11 +740,32 @@ export default function ConversationDetailScreen() {
     ],
   );
 
+  const markLocalDeleted = useCallback((messageId: string, deletedAt: string) => {
+    queryClient.setQueryData<InfiniteData<ConversationsSchemas.ListMessagesResponse>>(
+      queryKeys.conversations.messages(conversationId),
+      (previous) => previous && { ...previous, pages: previous.pages.map((page) => ({
+        ...page,
+        items: page.items.map((message) => message.id === messageId ? { ...message, text: null, metadata: undefined, deletedAt } : message),
+      })) },
+    );
+    // An acknowledged row may still be local while its server echo is delayed.
+    setLocalMessages((previous) => previous.map((message) => message.id === messageId ? {
+      ...message,
+      text: "",
+      metadata: undefined,
+      localImageUri: undefined,
+      deletedAt,
+      canDelete: false,
+    } : message));
+  }, [conversationId, queryClient]);
+
   const deleteViaHttp = useCallback(
     (messageId: string) => {
-      deleteHttpMessage.mutate({ conversationId, messageId });
+      deleteHttpMessage.mutate({ conversationId, messageId }, {
+        onSuccess: (data) => markLocalDeleted(messageId, data.deletedAt),
+      });
     },
-    [conversationId, deleteHttpMessage],
+    [conversationId, deleteHttpMessage, markLocalDeleted],
   );
 
   const handleDelete = useCallback(
@@ -761,9 +780,11 @@ export default function ConversationDetailScreen() {
 
       if (!result.ok) {
         deleteViaHttp(messageId);
+      } else {
+        markLocalDeleted(messageId, result.deletedAt);
       }
     },
-    [conversationId, deleteMessage, deleteViaHttp, viewer?.userId],
+    [conversationId, deleteMessage, deleteViaHttp, markLocalDeleted, viewer?.userId],
   );
 
   const confirmDeleteMessage = useCallback((messageId: string) => {
@@ -837,6 +858,8 @@ export default function ConversationDetailScreen() {
 
   return (
     <SafeScreen>
+      {/* Android needs the whole flex layout to shrink, not the footer's local frame. */}
+      <KeyboardAvoidingView enabled={Platform.OS === "android"} behavior="padding" className="flex-1">
       <ConversationHeader
         conversation={conversation}
         loading={conversationQuery.isPending && !signedOut && !notFound}
@@ -898,6 +921,7 @@ export default function ConversationDetailScreen() {
           <MessageList
             messages={allMessages}
             currentUserId={viewer.userId}
+            sendCount={sendCount}
             reportedMessageIds={reportedMessageIds}
             onRetry={handleRetry}
             onDelete={confirmDeleteMessage}
@@ -954,6 +978,8 @@ export default function ConversationDetailScreen() {
             : undefined
         }
       />
+
+      </KeyboardAvoidingView>
 
       {/* Block / Unblock confirmation */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={() => setConfirmAction(null)}>
