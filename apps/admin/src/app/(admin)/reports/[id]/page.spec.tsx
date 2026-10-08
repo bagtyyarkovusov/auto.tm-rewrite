@@ -259,7 +259,7 @@ function messageReport(targetOverrides: Record<string, unknown> = {}) {
 
 describe("Reported Message detail", () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(cleanup);
+  afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
   it("shows only the reported Message, attachment marker, sent time and sender link", async () => {
     vi.stubEnv("TZ", "UTC");
     mockDetail(messageReport());
@@ -343,5 +343,22 @@ describe("Reported Message detail", () => {
     expect(screen.getByText("Текст жалобы <script>bad()</script>")).toBeDefined();
     expect(screen.queryByRole("button", { name: "Заблокировать пользователя" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Отклонить" })).toBeNull();
+  });
+});
+
+describe("report actions with unreadable configuration", () => {
+  beforeEach(() => { vi.clearAllMocks(); vi.stubEnv("NEXT_PUBLIC_MINIO_PUBLIC_URL", "https://media.example.test"); });
+  afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
+  it.each(["listing", "user", "message"] as const)("keeps the %s report readable and hides every moderation action", async (targetType) => {
+    const report = targetType === "message" ? messageReport() : userReport(targetType === "listing" ? {
+      target: { targetType: "listing", targetId: "l1", available: true, label: "Car", status: "active" },
+      targetModerationState: { status: "active", suspendedAt: null },
+    } : {});
+    mockDetail(report);
+    mockState.getConfig.mockResolvedValue({ ok: false, code: "FORBIDDEN", error: "Нет доступа" });
+    await renderPage();
+    expect(screen.getByText("Автор жалобы:")).toBeDefined();
+    expect(screen.queryByRole("button")).toBeNull();
+    if (targetType === "user") expect(screen.getByRole("img", { name: "Фото профиля" })).toBeDefined();
   });
 });
