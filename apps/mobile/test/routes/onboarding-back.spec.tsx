@@ -1,23 +1,15 @@
 import { createRequire } from "node:module";
 
 import type * as Native from "react-native";
-import {
-  BaseNavigationContainer,
-  StackActions,
-  StackRouter,
-  createNavigationContainerRef,
-  createNavigatorFactory,
-  useNavigationBuilder,
-  type ParamListBase,
-} from "@react-navigation/core";
 import * as React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SplashScreen from "expo-splash-screen";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { act, renderMobile } from "../render";
 import RootLayout, { unstable_settings } from "../../app/_layout";
+import { OnboardingLaunch } from "../../src/onboarding/OnboardingLaunch";
 
 const FLAG = "@auto-tm/onboarding-completed";
 const LOCALE = "@auto-tm/locale";
@@ -28,6 +20,22 @@ const launch = vi.hoisted(() => ({
   stored: {} as Record<string, string>,
   push: vi.fn(),
 }));
+
+// A stored session for the root-level test: the real loadAuthSession parses it
+// through the contracts schema.
+const secureStore = vi.hoisted(() => ({ session: null as string | null }));
+const SESSION = {
+  accessToken: "access",
+  refreshToken: "refresh",
+  user: {
+    id: "11111111-2222-4222-8222-333333333333",
+    phone: "+99361234567",
+    email: null,
+    displayName: null,
+    role: "buyer",
+  },
+  storedAt: "2026-10-09T00:00:00.000Z",
+};
 
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: {
@@ -49,9 +57,14 @@ vi.mock("react-native-gesture-handler", () => ({ GestureHandlerRootView: ({ chil
 vi.mock("@react-navigation/native", () => ({ ThemeProvider: ({ children }: React.PropsWithChildren) => <View>{children}</View>, DefaultTheme: { colors: {} }, DarkTheme: { colors: {} } }));
 vi.mock("expo-notifications", () => ({ DEFAULT_ACTION_IDENTIFIER: "default", getLastNotificationResponse: () => null, addNotificationResponseReceivedListener: () => ({ remove() {} }) }));
 vi.mock("expo-file-system/legacy", () => ({ documentDirectory: "file:///documents/" }));
+vi.mock("expo-secure-store", () => ({
+  getItemAsync: vi.fn(async () => secureStore.session),
+  setItemAsync: vi.fn(async () => {}),
+  deleteItemAsync: vi.fn(async () => {}),
+}));
 vi.mock("expo-router", async () => {
   // Model the root Stack's screens. This proves what the launch asks the router
-  // to do, not native Back dispatch; the last test runs a real stack router.
+  // to do; the dismissal path runs on the production screens in onboarding-flow.spec.
   const native = await import("react-native");
   const Stack = Object.assign(({ children }: React.PropsWithChildren) => <native.View>{children}</native.View>, {
     Screen: ({ name }: { name: string }) => <native.View testID={name} />,
@@ -78,6 +91,8 @@ beforeEach(() => {
   launch.pathname = "/";
   launch.stored = {};
   launch.push.mockClear();
+  launch.push.mockImplementation(() => {});
+  secureStore.session = null;
   vi.mocked(SplashScreen.hide).mockClear();
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.getAllKeys).mockClear();
@@ -94,16 +109,19 @@ describe("Root Back anchor", () => {
     expect(unstable_settings.initialRouteName).toBe("(tabs)");
   });
 
-  it("mounts the tabs before the onboarding group, so onboarding is never underneath Home", async () => {
-    launch.stored = { [FLAG]: "true" };
-    const screen = await launchApp();
+  it("mounts and remounts the root with a stored session without ever opening onboarding, whatever the flag says", async () => {
+    secureStore.session = JSON.stringify(SESSION);
+    launch.stored = { [FLAG]: "pending", [LOCALE]: "ru" };
+    const first = await launchApp();
 
-    type Node = { type: unknown; props: { testID?: string } };
-    const names = screen.UNSAFE_root
-      .findAll((node: Node) => typeof node.type === "string" && Boolean(node.props.testID))
-      .map((node: Node) => node.props.testID);
-    expect(names.indexOf("(tabs)")).toBeLessThan(names.indexOf("(onboarding)"));
-    expect(names.indexOf("(tabs)")).toBe(0);
+    expect(first.getByTestId("(tabs)")).toBeTruthy();
+    expect(launch.push).not.toHaveBeenCalled();
+    first.unmount();
+
+    await launchApp();
+
+    expect(launch.push).not.toHaveBeenCalled();
+    expect(launch.stored[FLAG]).toBe("true");
   });
 });
 
@@ -173,45 +191,51 @@ describe("Back after onboarding", () => {
 
     expect(launch.push).not.toHaveBeenCalled();
   });
+});
 
-  // Real NavigationBuilder and StackRouter manage history. `push` and
-  // `dismissTo` are the two calls the launch and the last onboarding button make.
-  it("leaves only the tabs in history after onboarding ends, through publish, Edit and Back", () => {
-    const navigation = createNavigationContainerRef<ParamListBase>();
-    const detail = "/(public)/listings/1";
-    const Navigator = createNavigatorFactory(function TestStack({ children }: { children: React.ReactNode }) {
-      const { state, descriptors, NavigationContent } = useNavigationBuilder(StackRouter, {
-        children, initialRouteName: unstable_settings.initialRouteName,
-      });
-      return <NavigationContent>{state.routes.map((route) => (
-        <View key={route.key}>{descriptors[route.key]?.render()}</View>
-      ))}</NavigationContent>;
-    })();
-    const names = () => navigation.getRootState().routes.map((route) => route.name);
-    renderMobile(<BaseNavigationContainer ref={navigation}>
-      <Navigator.Navigator>
-        <Navigator.Screen name="(tabs)">{() => <Text>Home</Text>}</Navigator.Screen>
-        <Navigator.Screen name="(onboarding)">{() => <Text>Onboarding</Text>}</Navigator.Screen>
-        <Navigator.Screen name={detail}>{() => <Text>Published detail</Text>}</Navigator.Screen>
-        <Navigator.Screen name="edit">{() => <Text>Edit listing</Text>}</Navigator.Screen>
-      </Navigator.Navigator>
-    </BaseNavigationContainer>);
+describe("OnboardingLaunch", () => {
+  it("pushes the Language screen above the tabs when the launch owes onboarding", () => {
+    renderMobile(<OnboardingLaunch decision="show" />);
 
-    // First launch: onboarding opens above Home.
-    act(() => navigation.dispatch(StackActions.push("(onboarding)")));
-    expect(names()).toEqual(["(tabs)", "(onboarding)"]);
-    // Skip or "Browse listings": `router.dismissTo(HOME_HREF)` pops to the tabs.
-    act(() => navigation.dispatch(StackActions.popTo("(tabs)")));
-    expect(names()).toEqual(["(tabs)"]);
+    expect(launch.push).toHaveBeenCalledWith(LANGUAGE);
+  });
 
-    // Defect 6 of the release emulator pass: publish, open and close Edit, Back, Back.
-    act(() => navigation.dispatch(StackActions.push(detail)));
-    act(() => navigation.dispatch(StackActions.push("edit")));
-    act(() => navigation.goBack());
-    act(() => navigation.goBack());
-    expect(navigation.getCurrentRoute()?.name).toBe("(tabs)");
-    expect(navigation.canGoBack()).toBe(false);
-    expect(names()).toEqual(["(tabs)"]);
+  it("lets the launch screen go at once, without pushing, when nothing is owed or a deep link won", () => {
+    const skip = renderMobile(<OnboardingLaunch decision="skip" />);
+    expect(SplashScreen.hide).toHaveBeenCalledTimes(1);
+    expect(launch.push).not.toHaveBeenCalled();
+    skip.unmount();
+
+    launch.pathname = "/listings/550e8400-e29b-41d4-a716-446655440000";
+    renderMobile(<OnboardingLaunch decision="show" />);
+    expect(launch.push).not.toHaveBeenCalled();
+    expect(SplashScreen.hide).toHaveBeenCalledTimes(2);
+  });
+
+  it("still lets the launch screen go when the push itself throws", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    launch.push.mockImplementation(() => {
+      throw new Error("router is down");
+    });
+    renderMobile(<OnboardingLaunch decision="show" />);
+
+    // The splash goes at once instead of waiting out the fallback timer.
+    expect(SplashScreen.hide).toHaveBeenCalledTimes(1);
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(SplashScreen.hide).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the fallback timer when the launch gate leaves the tree", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const screen = renderMobile(<OnboardingLaunch decision="show" />);
+    screen.unmount();
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(SplashScreen.hide).not.toHaveBeenCalled();
   });
 });
 

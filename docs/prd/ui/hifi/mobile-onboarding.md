@@ -187,7 +187,7 @@ Style, so later illustrations match:
 | Empty | N/A: no lists or user data. |
 | Error | Reading storage fails or takes over 1 s: go to Home, do not show onboarding, log a warning. A late answer is still stored, so a fresh install on slow storage sees onboarding at its next start. Writing the flag fails on Skip/finish: still go to Home; onboarding may show once more next start. Onboarding never blocks the app. |
 | Offline | N/A: onboarding makes no network request. Home handles offline after it. |
-| Returning user | Flag set: onboarding is not shown and its routes are not reachable from Back. Language stays changeable in Cabinet. |
+| Returning user | Flag set: onboarding is not shown and its routes are not reachable from Back. Opening an onboarding route by link after completion — or with a session stored — redirects to the tabs. Language stays changeable in Cabinet. |
 | Someone who already used the app, with no flag (update from a build that never showed onboarding) | Not shown. A session, or anything the app has stored (a chosen language or theme, a recent search, the notification prompt), counts as "already used" and the flag is written silently. The app stores a language only when the person picks one, so a stored language alone would miss most people. Someone who only ever opened the app and did none of these looks like a fresh install and sees onboarding once. |
 | Deep link or push on first start | The link wins: open its target and do not show onboarding in front of it. The flag stays `pending`, so onboarding shows at the next plain cold start, unless the person has signed in by then. |
 | App killed mid-flow | The flag is `pending`, so the next start begins at Language with the chosen language kept. |
@@ -197,7 +197,7 @@ Style, so later illustrations match:
 | Interaction | Trigger | Rules | Feedback | Loop/mode | Recovery |
 |---|---|---|---|---|---|
 | Choose language | Tap a 56 dp row | `localeStore.setLocale`; one row always chosen; tapping the chosen row does nothing. First paint preselects the stored language, else Russian. The app does not read the device language today: `localeStore.hydrate` resolves a missing value to `ru` before `initI18n` could detect it. Changing that would also change the language for people already using the app, so it is left for its own decision | Row press tone (`bg-accent`) under 100 ms; check moves; title, subtitle, button and picture change language at once; selection haptic | Stays until changed; no hidden mode | Tap another row |
-| Continue | Tap main button | Push value-prop page 1. Language is already stored by the row tap | `PressableScale` control press (0.96) | | Back returns to Language |
+| Continue | Tap main button | Push value-prop page 1. A tapped row has already stored the language; with no tap, Continue stores the preselected one before moving on | `PressableScale` control press (0.96) | | Back returns to Language |
 | Next | Tap main button on Find | Scroll the pager to Chat. A tap in the 380 ms after it (`duration.slow`) is ignored, so a double tap does not finish onboarding | Press scale; pages slide; dots follow | | Back button, Android Back or swipe right |
 | Swipe | Horizontal drag on the page area | Paging snaps to a page; no overscroll past Find or Chat; swiping left on Chat does not finish | Dots track the finger | | Swipe back |
 | Skip | Tap Skip (Find) | Store flag, dismiss to Home. Second tap ignored once started | Press tone; Home appears | Ends onboarding for good | Nothing to undo; the same content is not gated anywhere |
@@ -237,7 +237,7 @@ No looping animation, no autoplay between pages, no delay before a control works
 - **Targets.** Rows 56 high, full width. Main button 56. Back 44 with `hitSlop` 2 to reach 48 on Android. Skip `min-h-12` (48) and at least 48 wide.
 - **Roles and labels.** Rows: `radiogroup` labelled with the localized "Language" (today `LocaleSwitcher` hard-codes the English word), each row `radio` with `checked`, label the language's own name. Title: `accessibilityRole="header"`. Pager: the two dots are one element with a plain text label, "Page 2 of 2"; it is not a progress bar and not adjustable. Illustrations and the panel: `accessible={false}` and hidden from the tree, since the title says the same thing.
 - **Order.** Language: wordmark (label "AutoTM"), title, subtitle, rows, Continue. Slides: Back, Skip, title, body, page label, main button. Pages that are off screen are hidden from the accessibility tree (`importantForAccessibility="no-hide-descendants"`, `accessibilityElementsHidden`).
-- **Announcements.** After a page change by button, move focus to the new title. After choosing a language, announce the language's own name.
+- **Announcements.** After a page change by button, an effect on the page index moves focus to the new title, so the request fires only after the new page is unhidden from the accessibility tree. After choosing a language, announce the language's own name.
 - **Not colour alone.** The chosen row has a check and heavier label, not just red. The current dot is longer, not just brighter.
 - **Screen reader swipe.** With TalkBack or VoiceOver on, two-finger swipe pages; Next and Back are always available as buttons, so the pager never needs a gesture.
 - **Verification.** TalkBack on Android and VoiceOver on iOS through the whole flow in each language; font scale 1.3 and 2.0; Reduce Motion; light and dark; 360 × 640 with 3-button navigation.
@@ -304,8 +304,10 @@ No open severity 3–4 finding.
 ## Implementation notes
 
 - Files: `app/_layout.tsx`, `app/(onboarding)/{_layout,language,value-prop}.tsx`, `components/onboarding/{IllustrationPanel,LanguageRows,PagerDots,useOnboardingLayout}`, `src/onboarding/{onboardingFlag,onboardingGate,OnboardingLaunch}`, `src/i18n/resources.ts`, `assets/onboarding/*.svg`. `app/(onboarding)/index.tsx` is removed.
-- Specs: `src/onboarding/onboardingGate.spec.ts` (who sees onboarding), `test/routes/onboarding-back.spec.tsx` (launch, deep link, Back after publishing), `test/routes/onboarding-flow.spec.tsx` (pager, Skip, final button, language, three languages, large text), `test/routes/onboarding-padding.spec.tsx`, `src/i18n/resources.spec.ts` (key parity and banned claims).
+- Specs: `src/onboarding/onboardingGate.spec.ts` (who sees onboarding, including a rejected session read answering skip), `src/onboarding/onboardingFlag.spec.ts`, `test/routes/onboarding-back.spec.tsx` (launch, deep link, a stored session across mount and remount, OnboardingLaunch's push and splash fallback), `test/routes/onboarding-flow.spec.tsx` (pager, Skip, final button, language, accessibility focus, three languages, large text), `test/routes/onboarding-guard.spec.tsx` (onboarding routes redirect to the tabs once completed or signed in), `test/routes/onboarding-padding.spec.tsx`, `test/routes/otp-restore.spec.tsx` (signing in stores the completed flag at once), `src/i18n/resources.spec.ts` (key parity and banned claims).
 - The pager is one route with the page index in component state; Android Back is handled with `BackHandler` while the screen is focused.
+- Both screens cap their content column with the shared `ONBOARDING_MAX_WIDTH_CLASS` literal, kept in step with `ONBOARDING_MAX_WIDTH` in `useOnboardingLayout`.
+- The onboarding group's layout re-checks the flag and the session when it mounts and redirects a completed or signed-in launch to the tabs, so a link into the group cannot dead-end on Android Back.
 - `useOnboardingLayout` reads `useWindowDimensions` and the safe-area insets for the page width and for the 520 dp, 480 dp and font-scale 1.3 thresholds.
 - **Not yet checked on a device.** The layout was checked in the browser mockup and the behaviour in component specs. Still owed, in light and dark on Android and iOS: the launch (Language must appear without Home showing first), the fade to Home, dot tracking, the row haptic, TalkBack and VoiceOver, font scale 1.3 and 2.0, 360 × 640 with 3-button navigation, and the pictures as drawn by `react-native-svg`.
 - `apps/mobile/.expo/types/router.d.ts` is generated by Expo and still lists the removed `/(onboarding)` index; the next `expo start` rewrites it.
@@ -318,10 +320,12 @@ PR 760 removed the old gate for two reasons that this one respects: the storage 
 - `resolveOnboardingGate` starts first in the root layout's launch effect, beside fonts and i18n, and answers `show` or `skip` within 1 s. The native launch screen is already held for fonts and i18n, so the gate normally adds no wait.
 - The flag has three states. Nothing stored: the gate decides. `pending`: this install is owed onboarding. `true`: done, skipped, or never owed.
 - With nothing stored, a session or any other stored app data means the person already used the app: the gate writes `true` and answers `skip`. Otherwise it writes `pending` and answers `show`. `pending` is what keeps onboarding owed after the first launch, when a chosen language is already in storage.
-- On `show`, and only when the launch opened Home (path `/`, so not a deep link), `OnboardingLaunch` pushes `/(onboarding)/language` above the tabs. The Language screen hides the launch screen when it mounts; a 1 s fallback hides it anyway.
+- On `show`, and only when the launch opened Home (path `/`, so not a deep link), `OnboardingLaunch` pushes `/(onboarding)/language` above the tabs. The Language screen hides the launch screen when it mounts; a 1 s fallback hides it anyway. The fallback is armed before the push and cancelled on unmount, so a push that throws cannot leave the launch screen up.
+- Signing in settles onboarding at once: the OTP screen stores `completed` when it stores the session (including an account restore), so an established user never owes onboarding between signing in and the next gate run.
+- A session the gate cannot read is not "no session": like every other storage failure it answers `skip` without storing anything, so a broken keychain never looks like a fresh install.
 - Skip and the final button write `true` and call `router.dismissTo(HOME_HREF)`, which pops back to the tabs already underneath. After that the root stack is the tabs alone.
 
-Defect 6 of the [release emulator pass](../../../evidence/release-emulator-pass/report.md) (Back after publishing a Listing landed on onboarding) came from onboarding being the first route, under everything else. Here it is only ever above Home, it is popped when it ends, and no route in the group answers `/` any more. `onboarding-back.spec.tsx` runs publish, Edit, Back, Back on a real stack router after onboarding ends and expects only the tabs to remain.
+Defect 6 of the [release emulator pass](../../../evidence/release-emulator-pass/report.md) (Back after publishing a Listing landed on onboarding) came from onboarding being the first route, under everything else. Here it is only ever above Home, it is popped when it ends, and no route in the group answers `/` any more. `test/routes/onboarding-flow.spec.tsx` presses Skip and the final button on the production screens and expects `router.dismissTo(HOME_HREF)`, and the root's `initialRouteName` keeps the tabs the Back anchor for deep links.
 
 ## Alternatives considered
 
@@ -346,3 +350,11 @@ Deferred; neither blocks this change:
 
 1. **Native review** of the Turkmen and Russian strings listed above.
 2. **Device language on first launch.** The Language screen opens in Russian on every device, because the app resolves a missing stored language to Russian before it could read the device's. Reading the device language would also switch the app's language for people who never chose one, so it needs its own decision.
+
+## Accepted limits
+
+Accepted in the PR 774 review-fix round on 2026-10-09; these behaviours are deliberate and are not scheduled to change:
+
+- **Any stored AsyncStorage key counts as an existing user.** After an update the gate skips onboarding for anyone with any app data stored — a chosen theme, a recent search, the notification prompt — not only a chosen language or a session, and writes the flag silently.
+- **If the `pending` write fails, onboarding may not be finished on the next start.** The flag stays unset, so a later launch can treat the install as fresh and show onboarding once more; every finish path (Skip, the final button, signing in) re-stores `completed`.
+- **A late `pending` write after a gate timeout may show onboarding to a guest on the next cold start.** When storage is slow, the gate opens Home without waiting; if the flag read or write lands after that decision it can still record `pending`, which the next cold start honours.

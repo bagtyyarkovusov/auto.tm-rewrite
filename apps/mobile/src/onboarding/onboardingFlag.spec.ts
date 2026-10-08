@@ -1,11 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import {
-  getOnboardingCompleted,
-  setOnboardingCompleted,
-  resetOnboardingCompleted,
-} from "./onboardingFlag";
+import { readOnboardingFlag, setOnboardingCompleted, setOnboardingPending } from "./onboardingFlag";
 
 let mockStorage: Record<string, string> = {};
 
@@ -30,29 +26,33 @@ describe("onboardingFlag", () => {
     vi.clearAllMocks();
   });
 
-  it("returns false when no flag is stored", async () => {
-    const completed = await getOnboardingCompleted();
-    expect(completed).toBe(false);
+  it("reads null when no flag is stored", async () => {
+    expect(await readOnboardingFlag()).toBeNull();
   });
 
-  it("returns true after onboarding is marked completed", async () => {
+  it("reads completed after onboarding is marked completed", async () => {
     await setOnboardingCompleted();
-    const completed = await getOnboardingCompleted();
-    expect(completed).toBe(true);
+
+    expect(await readOnboardingFlag()).toBe("completed");
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(
       "@auto-tm/onboarding-completed",
       "true",
     );
   });
 
-  it("can reset the completed flag", async () => {
-    await setOnboardingCompleted();
-    expect(await getOnboardingCompleted()).toBe(true);
+  it("reads pending after onboarding is marked pending", async () => {
+    await setOnboardingPending();
 
-    await resetOnboardingCompleted();
-    expect(await getOnboardingCompleted()).toBe(false);
-    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
+    expect(await readOnboardingFlag()).toBe("pending");
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
       "@auto-tm/onboarding-completed",
+      "pending",
     );
+  });
+
+  it("reads null for a value it does not know", async () => {
+    mockStorage["@auto-tm/onboarding-completed"] = "garbage";
+
+    expect(await readOnboardingFlag()).toBeNull();
   });
 });

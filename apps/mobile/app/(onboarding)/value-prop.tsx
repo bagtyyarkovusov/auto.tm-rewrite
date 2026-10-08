@@ -21,7 +21,7 @@ import { setOnboardingCompleted } from "../../src/onboarding/onboardingFlag";
 
 import { IllustrationPanel } from "@/components/onboarding/IllustrationPanel";
 import { PagerDots } from "@/components/onboarding/PagerDots";
-import { useOnboardingLayout } from "@/components/onboarding/useOnboardingLayout";
+import { ONBOARDING_MAX_WIDTH_CLASS, useOnboardingLayout } from "@/components/onboarding/useOnboardingLayout";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -67,12 +67,20 @@ export default function ValuePropScreen() {
       pager.current?.scrollTo({ x: next * pageWidth, animated: !reduceMotion });
       if (reduceMotion) offset.value = next * pageWidth;
       settlesAt.current = reduceMotion ? 0 : Date.now() + duration.slow;
-      // A page changed by a button moves the screen reader to its title.
-      const title = titles.current[next];
-      if (title) AccessibilityInfo.sendAccessibilityEvent?.(title, "focus");
     },
     [offset, pageWidth, reduceMotion],
   );
+
+  // A page change moves the screen reader to its title. Running in an effect
+  // on `index`, not in goTo, the target page is already unhidden from the
+  // accessibility tree when the focus request fires.
+  const announcedIndex = useRef(0);
+  useEffect(() => {
+    if (announcedIndex.current === index) return;
+    announcedIndex.current = index;
+    const title = titles.current[index];
+    if (title) AccessibilityInfo.sendAccessibilityEvent?.(title, "focus");
+  }, [index]);
 
   // Skip and the last button end onboarding the same way. Home is already
   // underneath, so this takes the onboarding screens off the stack: nothing
@@ -127,7 +135,7 @@ export default function ValuePropScreen() {
 
   return (
     <SafeScreen>
-      <View className="w-full max-w-[480px] flex-1 self-center">
+      <View className={cn("w-full flex-1 self-center", ONBOARDING_MAX_WIDTH_CLASS)}>
         <View className="h-12 flex-row items-center justify-between px-4">
           <Button
             variant="secondary"

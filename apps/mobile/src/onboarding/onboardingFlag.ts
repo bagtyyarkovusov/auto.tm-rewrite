@@ -17,18 +17,10 @@ export async function readOnboardingFlag(): Promise<OnboardingFlag> {
   return value === PENDING ? "pending" : null;
 }
 
-export async function getOnboardingCompleted(): Promise<boolean> {
-  return (await readOnboardingFlag()) === "completed";
-}
-
 export async function setOnboardingCompleted(): Promise<void> {
   await AsyncStorage.setItem(ONBOARDING_KEY, COMPLETED);
 }
 
 export async function setOnboardingPending(): Promise<void> {
   await AsyncStorage.setItem(ONBOARDING_KEY, PENDING);
-}
-
-export async function resetOnboardingCompleted(): Promise<void> {
-  await AsyncStorage.removeItem(ONBOARDING_KEY);
 }

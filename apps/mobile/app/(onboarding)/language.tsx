@@ -9,7 +9,7 @@ import { localeStore } from "../../src/locale/localeStore";
 
 import { IllustrationPanel } from "@/components/onboarding/IllustrationPanel";
 import { LanguageRows } from "@/components/onboarding/LanguageRows";
-import { useOnboardingLayout } from "@/components/onboarding/useOnboardingLayout";
+import { ONBOARDING_MAX_WIDTH_CLASS, useOnboardingLayout } from "@/components/onboarding/useOnboardingLayout";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
@@ -23,9 +23,17 @@ import { cn } from "@/lib/utils";
 export default function LanguagePickerScreen() {
   const { t } = useTranslation("onboarding");
   const locale = localeStore((state) => state.locale) ?? "ru";
+  const setLocale = localeStore((state) => state.setLocale);
   const { compact } = useOnboardingLayout();
   const focused = useIsFocused();
   const continueLabel = t("common:continue");
+
+  function continueOnboarding() {
+    // The rows store a tapped choice. With no tap, the preselected language
+    // lives only in memory, so Continue stores it before moving on.
+    if (localeStore.getState().locale === null) setLocale(locale);
+    router.push("/(onboarding)/value-prop");
+  }
 
   // A first launch opens this screen under the native launch screen.
   useEffect(() => {
@@ -44,7 +52,7 @@ export default function LanguagePickerScreen() {
 
   return (
     <SafeScreen>
-      <View className="w-full max-w-[480px] flex-1 self-center">
+      <View className={cn("w-full flex-1 self-center", ONBOARDING_MAX_WIDTH_CLASS)}>
         <View className="h-12 justify-center px-6">
           <BrandLogo width={127} height={22} />
         </View>
@@ -75,7 +83,7 @@ export default function LanguagePickerScreen() {
           <Button
             variant="brand"
             size="pill"
-            onPress={() => router.push("/(onboarding)/value-prop")}
+            onPress={continueOnboarding}
             accessibilityLabel={continueLabel}
           >
             <Text maxFontSizeMultiplier={1.3}>{continueLabel}</Text>

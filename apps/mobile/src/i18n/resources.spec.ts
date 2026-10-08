@@ -66,13 +66,14 @@ describe("Onboarding copy", () => {
     expect(copy["pageOf"]).toContain("{{total}}");
   });
 
-  // The old slides promised VIN history, inspections, verified sellers and
-  // safe contact, and a third slide sold a free Listing. None of it ships.
+  // The old slides promised VIN history, inspections, verified sellers, honest
+  // condition disclosures, warranties and safe contact, and a third slide sold
+  // a free Listing. None of it ships.
   it.each(LOCALES)("makes no claim the app cannot back in %s", (locale) => {
     const text = Object.values(onboarding(locale)).join(" ");
 
     expect(text).not.toMatch(
-      /VIN|inspect|verif|safe|confiden|free|провер|подтвержд|безопасн|уверен|бесплатн|barla|tassykl|howpsuz|ynam|mugt/i,
+      /VIN|inspect|verif|safe|confiden|free|histor|honest|warrant|провер|подтвержд|безопасн|уверен|бесплатн|истори|честн|гарант|barla|tassykl|howpsuz|ynam|mugt|taryh|çyn|wada/i,
     );
   });
 });

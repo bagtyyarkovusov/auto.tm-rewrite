@@ -14,12 +14,13 @@ export type OnboardingDecision = "show" | "skip";
 /** The longest a launch waits for storage before it opens Home without onboarding. */
 export const ONBOARDING_GATE_TIMEOUT_MS = 1000;
 
+/**
+ * A rejected read is not "no session": it must answer `skip` like every other
+ * storage failure, so the caller never treats a broken keychain as a fresh
+ * install and shows onboarding.
+ */
 async function hasSession(): Promise<boolean> {
-  try {
-    return (await loadAuthSession()) !== null;
-  } catch {
-    return false;
-  }
+  return (await loadAuthSession()) !== null;
 }
 
 /** A failed write never changes what this launch shows. */
