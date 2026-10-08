@@ -58,12 +58,11 @@ export interface UploadClaimPort {
    */
   settle(token: string, retiredUploadId: string): Promise<boolean>;
   /**
-   * Retires one of the User's own uploads whose stored object can never match
-   * what presign recorded (not an image, corrupt, over limits), checked before
-   * any reservation exists. Only an AVAILABLE upload is retired: an adopted,
-   * held or closed upload is a live owner's property and stays untouched.
+   * Retires only the User's AVAILABLE, unreferenced upload. With its row locked,
+   * calls stillInvalid to re-inspect the positive stored-object mismatch; a
+   * missing, empty or corrected object authorizes no retirement.
    */
-  retireUnclaimed(uploadId: string): Promise<boolean>;
+  retireUnclaimed(uploadId: string, userId: string, stillInvalid: () => Promise<boolean>): Promise<boolean>;
 }
 
 export const UPLOAD_CLAIM_PORT = Symbol("UploadClaimPort");

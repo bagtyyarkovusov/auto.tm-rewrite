@@ -15,7 +15,7 @@ import type {
   UploadReservation,
 } from "../domain/ports/UploadClaimPort";
 
-/** Long enough for classification and Sharp; a stranded preparation is retired after it. */
+/** Long enough for classification and Sharp; the worker recovers a stranded publish or retires another preparation after it. */
 const PREPARATION_MINUTES = 10;
 
 type Tx = Pick<PrismaService, "$queryRaw" | "$executeRaw">;
@@ -172,12 +172,13 @@ export class PrismaUploadClaims implements UploadClaimPort {
     });
   }
 
-  async retireUnclaimed(uploadId: string): Promise<boolean> {
+  async retireUnclaimed(uploadId: string, userId: string, stillInvalid: () => Promise<boolean>): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       const [upload] = await this.lock(tx, [uploadId]);
       // AVAILABLE means unadopted and unheld: nothing a live owner references
       // is ever retired from here.
-      if (!upload || upload.state !== "AVAILABLE") return false;
+      if (!upload || upload.userId !== userId || upload.state !== "AVAILABLE" ||
+        (await this.adopters(tx, [uploadId])) > 0 || !(await stillInvalid())) return false;
       return this.retire(tx, uploadId);
     });
   }

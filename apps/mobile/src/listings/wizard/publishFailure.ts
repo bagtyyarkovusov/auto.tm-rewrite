@@ -23,7 +23,8 @@ export function publishFailureOf(error: unknown): PublishFailure {
     if (error.code === "NETWORK_ERROR" || error.status === 0) return "offline";
     if (error.code === ListingsSchemas.ListingsErrorCode.ExchangeRateMissing) return "rateMissing";
     // #735: the photo's upload is gone (retired); the seller re-adds that photo.
-    if (error.code === ListingsSchemas.ListingsErrorCode.UploadNotAvailable) return "photoUnavailable";
+    if (error.code === ListingsSchemas.ListingsErrorCode.UploadNotAvailable ||
+      error.code === ListingsSchemas.ListingsErrorCode.UploadObjectInvalid) return "photoUnavailable";
   }
   return "server";
 }

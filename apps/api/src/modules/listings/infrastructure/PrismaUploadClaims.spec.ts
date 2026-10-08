@@ -25,8 +25,7 @@ describe("pre-reserve upload retirement", () => {
   ] as const)("records no retirement for %s", async (_reason, userId, adopters, invalid) => {
     const db = database(adopters);
     const claims = new PrismaUploadClaims(db.prisma, { now: () => new Date("2026-10-08T00:00:00Z") });
-    // The baseline ignores the added authorization/reinspection arguments.
-    const retire = claims.retireUnclaimed.bind(claims) as (id: string, owner: string, stillInvalid: () => Promise<boolean>) => Promise<boolean>;
+    const retire = claims.retireUnclaimed.bind(claims);
     expect(await retire("upload-1", userId, async () => invalid)).toBe(false);
     expect(db.writes).toEqual([]);
   });

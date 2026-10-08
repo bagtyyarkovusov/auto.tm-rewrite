@@ -1102,7 +1102,7 @@ export const resources: Resource = {
       publishErrorServer: "Neşir edip bolmady. Garalama saklandy. Täzeden synanyşyň.",
       publishErrorOffline: "Internet ýok. Garalama saklandy. Baglanyşyk dikelende neşir ediň.",
       publishErrorRateMissing: "{{currency}} kursy häzir elýeterli däl. Bahany TMT-de görkeziň ýa-da soňrak synanyşyň.",
-      publishErrorPhotoUnavailable: "Suratlaryňyzden biri indi elýeterli däl. Ony «Surat» ädiminde täzeden goşuň we täzeden synanyşyň.",
+      publishErrorPhotoUnavailable: "Suratlaryňyzdan biri indi elýeterli däl. Ony «Surat» ädiminde täzeden goşuň we täzeden synanyşyň.",
       uploadChipUploading: "{{count}} ýüklenýär",
       uploadChipFailed: "{{count}} şowsuz",
       photoTileLabel: "Surat {{n}}/{{total}}",

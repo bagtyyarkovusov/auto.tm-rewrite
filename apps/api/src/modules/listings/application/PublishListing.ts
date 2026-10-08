@@ -43,6 +43,7 @@ import {
 } from "../domain/ports/UploadClaimPort";
 
 import { contactPhoneRejection } from "./contactPhoneRejection";
+import { UploadObjectInvalidError } from "./UploadObjectInvalidError";
 import { UploadAdoptionGuard } from "./UploadAdoptionGuard";
 
 const PublishablePayloadSchema = ListingsSchemas.ListingDraftPayloadSchema.required({
@@ -108,16 +109,6 @@ function claimRejection(err: unknown): unknown {
       ? "A photo upload is no longer available"
       : err.message,
   });
-}
-
-/** The key and uploadId an UPLOAD_OBJECT_INVALID rejection names, when it does. */
-function objectInvalidDetails(err: unknown): { key?: string; uploadId?: string } | null {
-  if (!(err instanceof BadRequestException)) return null;
-  const response = err.getResponse() as {
-    code?: string;
-    details?: { key?: string; uploadId?: string };
-  };
-  return response.code === LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID ? (response.details ?? {}) : null;
 }
 
 /**
@@ -265,12 +256,14 @@ export class PublishListing {
         photoKeys.map((key) => ({ key, kind: "image" as const })),
       )
       .catch(async (err: unknown) => {
-        // ADR-0089: a stored object that can never match presign is retired
-        // before any reservation exists, so it stops blocking every retry.
-        // retireUnclaimed touches only an AVAILABLE upload: one a live owner
-        // holds or has adopted stays untouched.
-        const uploadId = objectInvalidDetails(err)?.uploadId;
-        if (uploadId) await this.claims.retireUnclaimed(uploadId).catch(() => undefined);
+        if (err instanceof UploadObjectInvalidError) {
+          if (err.permanentlyInvalid) {
+            await this.claims.retireUnclaimed(err.uploadId, input.userId,
+              () => this.uploadGuard.isPermanentlyInvalid(err.upload)).catch(() => undefined);
+          }
+          const photoId = attachedPhotos.find((photo) => photo.key === err.key)?.photoId;
+          throw new UploadObjectInvalidError(err.upload, err.permanentlyInvalid, photoId);
+        }
         throw err;
       });
     if (uploads.some((upload) => upload.adopted)) {
@@ -297,7 +290,7 @@ export class PublishListing {
     }
 
     try {
-      await Promise.all(
+      const preparations = await Promise.allSettled(
         attachedPhotos.map((photo) =>
           this.variantGenerator
             .generate(photo.key as string, {
@@ -313,6 +306,12 @@ export class PublishListing {
             }),
         ),
       );
+
+      // All generators must stop before any claim can be released or retired.
+      // Prefer a permanent refusal if more than one photo failed.
+      const failure = preparations.find((result) => result.status === "rejected" && result.reason instanceof UnusablePhotoError)
+        ?? preparations.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
 
       // The Listing, its media, the draft removal, the audit entry and the
       // adoption of every upload commit together or not at all.
@@ -460,7 +459,7 @@ export class PublishListing {
         // A transient failure (storage, database, timeout) lets go: every
         // upload returns to AVAILABLE with no deletion work recorded, so a
         // retry of the same draft can adopt the same bytes. A stranded claim
-        // this release cannot record is still retired by the storage scanner.
+        // this release cannot record is released after its deadline by the worker.
         await this.claims.release(reservation.token).catch(() => undefined);
       }
       throw claimRejection(err instanceof UnusablePhotoError ? err.cause : err);

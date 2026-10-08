@@ -7,7 +7,7 @@ import {
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 
-import { stripImageMetadata } from "../../../common/stripImageMetadata";
+import { ImageTooLargeAfterCleaningError, stripImageMetadata } from "../../../common/stripImageMetadata";
 import { UPLOAD_CAPS } from "../domain/MediaUpload";
 import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerator";
@@ -98,23 +98,11 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     const input = Buffer.from(await original.Body.transformToByteArray());
     // Over the upload cap even at the lowest quality, this throws: the
     // adoption guard re-checks the stored size on a retried publish.
-    // ADR-0089: any failure here is permanent — the stored bytes cannot be
-    // decoded or can never fit the cap — so publish names the photo instead of
-    // releasing it for a retry that would fail the same way. Transport errors
-    // above stay transient.
-    let cleaned: Buffer | null;
-    try {
-      cleaned = await stripImageMetadata(
-        input,
-        isWebp ? "webp" : "jpeg",
-        UPLOAD_CAPS.image.maxSizeBytes,
-      );
-    } catch {
-      throw new DomainError(
-        LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
-        "Uploaded file is not a usable image",
-      );
-    }
+    const cleaned = await this.prepare(() => stripImageMetadata(
+      input,
+      isWebp ? "webp" : "jpeg",
+      UPLOAD_CAPS.image.maxSizeBytes,
+    ));
     const buffer = cleaned ?? input;
     if (cleaned) {
       if (conditional) {
@@ -133,18 +121,18 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
     const variantKeys: Partial<Record<VariantSpec["name"], string>> = {};
 
     for (const spec of VARIANTS) {
-      const resized = await sharp(buffer)
+      const resized = await this.prepare(() => sharp(buffer)
         .resize(spec.width, spec.height, {
           fit: spec.fit,
           withoutEnlargement: true,
         })
-        .toBuffer();
+        .toBuffer());
 
       // JPEG variant
       const jpegKey = `${base}/${spec.name}.jpg`;
-      const jpegBuffer = await sharp(resized)
+      const jpegBuffer = await this.prepare(() => sharp(resized)
         .jpeg({ quality: 85, progressive: true })
-        .toBuffer();
+        .toBuffer());
       if (conditional) {
         await conditional.write(jpegKey, jpegBuffer, "image/jpeg");
       } else await this.s3.send(
@@ -158,9 +146,9 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
 
       // WebP variant
       const webpKey = `${base}/${spec.name}.webp`;
-      const webpBuffer = await sharp(resized)
+      const webpBuffer = await this.prepare(() => sharp(resized)
         .webp({ quality: 80 })
-        .toBuffer();
+        .toBuffer());
       if (conditional) {
         await conditional.write(webpKey, webpBuffer, "image/webp");
       } else await this.s3.send(
@@ -183,6 +171,22 @@ export class SharpImageVariantGenerator implements ImageVariantGenerator {
         fullscreen: requireVariantKey(variantKeys, "fullscreen"),
       },
     };
+  }
+
+  /** Only known input/decode failures are terminal; resources and unknown failures stay retryable. */
+  private async prepare<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      const invalidInput = /^(Input buffer contains unsupported image format|Input image exceeds pixel limit)$/.test(message) ||
+        /(?:VipsJpeg|jpegload_buffer):[^\n]*(?:premature end of JPEG image|Corrupt JPEG data|JPEG file ends prematurely|Invalid JPEG file structure|JPEG datastream contains no image|Not a JPEG file)/i.test(message) ||
+        /(?:pngload_buffer|spng|webp):[^\n]*(?:invalid (?:header|signature|chunk|data)|corrupt|truncated|unexpected end|unable to parse image)/i.test(message);
+      if (error instanceof ImageTooLargeAfterCleaningError || invalidInput) {
+        throw new DomainError(LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID, "Uploaded file is not a usable image");
+      }
+      throw error;
+    }
   }
 
   private inferBucket(key: string): string {

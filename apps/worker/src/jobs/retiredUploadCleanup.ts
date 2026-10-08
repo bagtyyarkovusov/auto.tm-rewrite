@@ -11,7 +11,7 @@ export interface CleanupWork {
 
 /** The Postgres side of cleanup: leases, references and outcomes. */
 export interface RetiredUploadLedger {
-  /** Retires preparations whose deadline passed and records their work. Returns how many. */
+  /** Recovers expired preparations: releases publish claims, retires others with work. Returns how many. */
   retireExpiredPreparations(now: Date, limit: number): Promise<number>;
   /**
    * Takes up to `limit` due pieces of work. Before returning, each one's attempt

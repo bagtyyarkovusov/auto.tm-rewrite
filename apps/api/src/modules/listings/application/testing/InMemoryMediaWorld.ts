@@ -150,9 +150,13 @@ export class InMemoryMediaWorld {
       }
       return true;
     },
-    retireUnclaimed: async (uploadId) => {
-      const record = this.claimOf(uploadId);
-      if (record.state !== "AVAILABLE") return false;
+    retireUnclaimed: async (uploadId, userId, stillInvalid) => {
+      const referenced = () => this.media.some((m) => m.uploadId === uploadId) ||
+        [...this.profilePhotos.values()].some((photo) => photo.uploadId === uploadId);
+      if (this.uploads.find((upload) => upload.id === uploadId)?.userId !== userId ||
+        this.claimOf(uploadId).state !== "AVAILABLE" || referenced() || !(await stillInvalid())) return false;
+      // The fake has no database lock: recheck after the asynchronous storage read.
+      if (this.claimOf(uploadId).state !== "AVAILABLE" || referenced()) return false;
       return this.retireRecord(uploadId);
     },
   };

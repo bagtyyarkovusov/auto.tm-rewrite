@@ -14,11 +14,13 @@ ADR-0088 made every failed preparation terminal: any error after `PublishListing
 
 Publish distinguishes why preparation failed.
 
-A publish that fails for a transient reason — a storage or database error or a timeout — releases its reservation: every upload the attempt still holds returns to `AVAILABLE` with the claim cleared and no deletion work recorded, so a retry of the same draft can adopt the same bytes. The original error propagates.
+A publish that fails for a transient reason, such as a storage or database error or a timeout, releases its reservation. every upload the attempt still holds returns to `AVAILABLE` with the claim cleared and no deletion work recorded, so a retry of the same draft can adopt the same bytes. The original error propagates. Publish waits for every sibling generator to stop before releasing or settling the reservation.
 
-A publish that fails because one photo is permanently unusable — the stored object is not an image, is corrupt, or can never fit the upload cap — names that photo in the error (the draft's own photo reference) and retires only that upload, with its deletion work recorded. Every other photo is released and stays adoptable. A provably unusable stored object found before any reservation is retired the same way, so it stops blocking every retry. The variant generator reports such bytes as `UPLOAD_OBJECT_INVALID`; transport failures never carry that code.
+A process crash, or a failed attempt to record release, leaves a claim until its deadline. The worker releases an expired publish claim to `AVAILABLE` with its claim cleared and no deletion work. Publish reserves a new Listing id that does not exist until publication commits with adoption; Attach reserves an existing Listing, and Profile Photo reserves a `profile` target. The worker uses those facts under the upload row lock to distinguish stranded publish from the terminal preparations in ADR-0088. It skips any upload referenced by live Listing media, a poster, or a Profile Photo, including retained keys without upload links. A committed publish is already `ADOPTED` and is skipped.
 
-Exclusivity from ADR-0088 is unchanged. Only the attempt that created the claim token releases or settles it; a joined retry touches nothing. Releasing and retiring touch only uploads the token still holds in `PREPARING`: an upload already `ADOPTED` by a committed attempt, held by another attempt, or referenced by a live owner is never retired or cleared. While a retry holds the released photos again, no other target can adopt them. Retiring an upload before any reservation happens only while it is `AVAILABLE`.
+If one photo is permanently unusable, publish names that photo in the error using the draft's own reference and retires only that upload, with its deletion work recorded. The stored object may not be an image, may be corrupt, or may never fit the upload cap. Every other photo is released and stays adoptable. Before reservation, only a positive mismatch in a present, non-empty object, a wrong content type or a size above the cap, authorizes retirement. The caller's User id, AVAILABLE state and absence of adopters are checked under the upload row lock, and storage is re-inspected while that lock is held. A missing, empty or corrected object authorizes no retirement; a conditional PUT may still be pending. Missing and empty objects remain retryable refusals. The variant generator reports such bytes as `UPLOAD_OBJECT_INVALID`; transport and resource failures never carry that code. Metadata reading and later pixel decoding are both checked: only known decode/format failures and an image that cannot fit the cap are permanent; an unknown Sharp failure stays transient. HTTP `UPLOAD_OBJECT_INVALID` details expose `key`, plus the draft's `photoId` for publish. The authorizing upload id stays in a typed application error and is never a client field. Attach and Profile Photo expose the same key details.
+
+Exclusivity from ADR-0088 is unchanged. Only the attempt that created the claim token releases or settles it; a joined retry touches nothing. Releasing and retiring touch only uploads the token still holds in `PREPARING`: an upload already `ADOPTED` by a committed attempt, held by another attempt, or referenced by a live owner is never retired or cleared. While a retry holds the released photos again, no other target can adopt them. Retiring an upload before any reservation requires the authorized User, an unreferenced `AVAILABLE` upload and the positive storage recheck under its lock.
 
 Attach and Profile Photo preparations keep the terminal rule of ADR-0088.
 
@@ -32,13 +34,13 @@ Attach and Profile Photo preparations keep the terminal rule of ADR-0088.
 
 ### Negative / accepted costs
 
-- Publish must classify failures: only `UPLOAD_OBJECT_INVALID` from generation is permanent. A permanent condition misclassified as transient leaves the draft retryable but failing; the preparation deadline and storage scanner remain the backstop for stranded claims.
+- Publish must classify failures: only `UPLOAD_OBJECT_INVALID` from generation is permanent. A permanent condition misclassified as transient leaves the draft retryable but failing; the preparation deadline and worker recovery release stranded publish claims for retry.
 - Two settlement paths (release, settle) replace one terminal path and must both preserve the single-adopter invariant under concurrency.
 
 ### Neutral
 
 - The three-photo minimum and twenty maximum are unchanged.
-- Mobile answers `UPLOAD_NOT_AVAILABLE` with a message naming the Photos step, in EN, RU and TK.
+- Mobile answers `UPLOAD_NOT_AVAILABLE` and `UPLOAD_OBJECT_INVALID` with a message naming the Photos step, in EN, RU and TK.
 
 ## Alternatives considered
 

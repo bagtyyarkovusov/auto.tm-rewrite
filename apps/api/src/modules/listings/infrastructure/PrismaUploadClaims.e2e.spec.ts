@@ -434,8 +434,7 @@ describe("common upload claim on Postgres (#721)", () => {
       // Legacy references can predate claim-state backfill and still authorize no retirement.
       await prisma.listingMedia.create({ data: { listingId: LISTING, kind: "image", key: listed.key, uploadId: listed.id, sortOrder: 0 } });
       await prisma.user.update({ where: { id: OWNER }, data: { avatarUploadId: profile.id, avatarKey: profile.key } });
-      // Calls include the new owner and reinspection predicate; the baseline ignores them.
-      const retire = claims.retireUnclaimed.bind(claims) as (id: string, userId: string, stillInvalid: () => Promise<boolean>) => Promise<boolean>;
+      const retire = claims.retireUnclaimed.bind(claims);
       expect(await retire(foreign.id, suite.id("stranger"), async () => true)).toBe(false);
       expect(await retire(listed.id, OWNER, async () => true)).toBe(false);
       expect(await retire(profile.id, OWNER, async () => true)).toBe(false);
@@ -448,7 +447,7 @@ describe("common upload claim on Postgres (#721)", () => {
     it("keeps the row locked during reinspection and refuses retirement when the object is now valid", async () => {
       const upload = await presigned();
       let locked = false;
-      const retire = claims.retireUnclaimed.bind(claims) as (id: string, userId: string, stillInvalid: () => Promise<boolean>) => Promise<boolean>;
+      const retire = claims.retireUnclaimed.bind(claims);
       const result = await retire(upload.id, OWNER, async () => {
         // Another transaction cannot take the upload's row lock while storage is rechecked.
         locked = await prisma.$transaction(async (tx) => {
@@ -468,8 +467,8 @@ describe("common upload claim on Postgres (#721)", () => {
       const token = await tokenOf(await claims.reserve({ userId: OWNER, uploadIds: [adopted.id], target: listingTarget }));
       await mediaRepo.save(mediaFor(adopted), { token });
 
-      expect(await claims.retireUnclaimed(adopted.id)).toBe(false);
-      expect(await claims.retireUnclaimed(free.id)).toBe(true);
+      expect(await claims.retireUnclaimed(adopted.id, OWNER, async () => true)).toBe(false);
+      expect(await claims.retireUnclaimed(free.id, OWNER, async () => true)).toBe(true);
 
       expect(await stateOf(adopted.id)).toBe("ADOPTED");
       expect(await stateOf(free.id)).toBe("RETIRED");

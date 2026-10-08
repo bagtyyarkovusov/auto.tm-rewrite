@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 
-import { storedObjectMatches, type MediaUpload } from "../domain/MediaUpload";
+import { storedObjectMatches, UPLOAD_CAPS, type MediaUpload } from "../domain/MediaUpload";
 import { LISTING_ERROR_CODES, type MediaKind } from "../domain/types";
 import {
   MEDIA_OBJECT_INSPECTOR,
@@ -10,6 +10,8 @@ import {
   MEDIA_UPLOAD_REPOSITORY,
   type MediaUploadRepository,
 } from "../domain/ports/MediaUploadRepository";
+
+import { UploadObjectInvalidError } from "./UploadObjectInvalidError";
 
 export interface UploadClaim {
   key: string;
@@ -32,6 +34,17 @@ export class UploadAdoptionGuard {
     @Inject(MEDIA_OBJECT_INSPECTOR)
     private readonly objects: MediaObjectInspector,
   ) {}
+
+  /** Called under the upload row lock before recording pre-reserve retirement. */
+  async isPermanentlyInvalid(upload: MediaUpload): Promise<boolean> {
+    return this.positiveMismatch(upload, await this.objects.inspect(upload.key));
+  }
+
+  private positiveMismatch(upload: MediaUpload, object: Awaited<ReturnType<MediaObjectInspector["inspect"]>>): boolean {
+    // A missing or empty conditional-v1 object can still be awaiting its PUT.
+    return object !== null && object.sizeBytes > 0 &&
+      (object.contentType !== upload.contentType || object.sizeBytes > UPLOAD_CAPS[upload.kind].maxSizeBytes);
+  }
 
   /** Returns the authorizing upload for each claim, in claim order. */
   async authorize(userId: string, claims: UploadClaim[]): Promise<MediaUpload[]> {
@@ -57,13 +70,7 @@ export class UploadAdoptionGuard {
       authorized.map(async (upload) => {
         const object = await this.objects.inspect(upload.key);
         if (!object || !storedObjectMatches(upload, object)) {
-          // The failing upload is named so the caller can retire exactly it
-          // (ADR-0089): it can never match presign, so it must not block retries.
-          throw new BadRequestException({
-            code: LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
-            message: "Uploaded file is missing or does not match the presigned upload",
-            details: { key: upload.key, uploadId: upload.id },
-          });
+          throw new UploadObjectInvalidError(upload, this.positiveMismatch(upload, object));
         }
       }),
     );
