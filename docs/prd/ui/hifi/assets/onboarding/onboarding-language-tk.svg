@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 304 248" fill="none" role="img" aria-labelledby="t">
+  <title id="t">Three number plates reading TK, RU and EN above a car; TK is selected</title>
+  <!-- AutoTM onboarding illustration. Original artwork.
+       Ink is currentColor (set `color` to the foreground token); tonal plates are
+       currentColor at low opacity; the single accent is brand red #E60000. -->
+  <g transform="translate(90 40) rotate(-8)">
+    <rect x="-62" y="-25" width="124" height="50" rx="12" fill="currentColor" fill-opacity="0.1" stroke="currentColor" stroke-width="2.5"/>
+    <circle cx="-51" cy="0" r="2.5" fill="currentColor" fill-opacity="0.35"/>
+    <circle cx="51" cy="0" r="2.5" fill="currentColor" fill-opacity="0.35"/>
+    <g transform="translate(-21.69 11) scale(0.0310 -0.0310)" fill="currentColor">
+      <path transform="translate(0 0)" d="M74 0V710H385Q463 710 520.0 684.0Q577 658 608.5 610.5Q640 563 640 498Q640 433 605.5 388.0Q571 343 515 326Q620 311 629 204L647 0H492L479 180Q476 221 453.5 240.5Q431 260 377 260H226V0ZM226 387H368Q423 387 453.5 412.5Q484 438 484 485Q484 533 453.0 557.5Q422 582 363 582H226Z"/>
+      <path transform="translate(697 0)" d="M352 -16Q262 -16 196.5 17.5Q131 51 95.0 112.0Q59 173 59 256V710H211V256Q211 187 247.5 149.5Q284 112 352 112Q419 112 455.5 149.5Q492 187 492 256V710H644V256Q644 173 608.5 112.0Q573 51 507.0 17.5Q441 -16 352 -16Z"/>
+    </g>
+  </g>
+  <g transform="translate(232 44) rotate(7)">
+    <rect x="-62" y="-25" width="124" height="50" rx="12" fill="currentColor" fill-opacity="0.1" stroke="currentColor" stroke-width="2.5"/>
+    <circle cx="-51" cy="0" r="2.5" fill="currentColor" fill-opacity="0.35"/>
+    <circle cx="51" cy="0" r="2.5" fill="currentColor" fill-opacity="0.35"/>
+    <g transform="translate(-21.26 11) scale(0.0310 -0.0310)" fill="currentColor">
+      <path transform="translate(0 0)" d="M74 0V710H568V582H226V419H556V293H226V128H576V0Z"/>
+      <path transform="translate(622 0)" d="M74 0V710H242L524 220V710H676V0H506L226 473V0Z"/>
+    </g>
+  </g>
+  <g transform="translate(160 94) rotate(-2)">
+    <rect x="-62" y="-25" width="124" height="50" rx="12" fill="#E60000"/>
+    <circle cx="-51" cy="0" r="2.5" fill="#FFFFFF" fill-opacity="0.8"/>
+    <circle cx="51" cy="0" r="2.5" fill="#FFFFFF" fill-opacity="0.8"/>
+    <g transform="translate(-19.95 11) scale(0.0310 -0.0310)" fill="#FFFFFF">
+      <path transform="translate(0 0)" d="M223 0V582H11V710H589V582H376V0Z"/>
+      <path transform="translate(599 0)" d="M74 0V710H226V400L484 710H661L400 397L677 0H504L300 295L226 209V0Z"/>
+    </g>
+  </g>
+  <g transform="translate(40 136) scale(1.2)" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 58H7C4.2 58 2 55.8 2 53V43.5C2 39 5.3 35.2 9.8 34.7L37 31C48 14 60 6 80 6H116C132 6 143 14 157 28L184 33.5C189.8 34.7 194 39.8 194 45.7V53C194 55.8 191.8 58 189 58H172" fill="currentColor" fill-opacity="0.1"/>
+    <path d="M68 58H132"/>
+    <path d="M55 31C63 17 70 13 83 13H97V31Z" fill="currentColor" fill-opacity="0.2"/>
+    <path d="M105 13H116C128 13 136 19 147 31H105Z" fill="currentColor" fill-opacity="0.2"/>
+    <path d="M101 38V50M111 39H119M62 39H70" stroke-opacity="0.45"/>
+    <path d="M185 43H193" stroke="#E60000" stroke-width="3.33"/>
+    <path d="M3 43H9" stroke-opacity="0.45" stroke-width="3.33"/>
+    <circle cx="48" cy="58" r="15"/>
+    <circle cx="48" cy="58" r="5.5" fill="currentColor" stroke="none"/>
+    <circle cx="152" cy="58" r="15"/>
+    <circle cx="152" cy="58" r="5.5" fill="currentColor" stroke="none"/>
+  </g>
+  <path d="M14 226H306" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.9"/>
+  <path d="M44 242H120" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.3"/>
+  <path d="M150 242H204" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.3"/>
+</svg>
