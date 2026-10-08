@@ -340,3 +340,7 @@ describe("Signing out and signing in as someone else", () => {
     await act(async () => { await clearAuthSession(); });
   });
 });
+
+// Profile loads these native modules; only this spec supplies its stand-ins.
+vi.mock("expo-file-system/legacy", async () => (await import("../profile-photo-device")).fileSystemFake);
+vi.mock("expo-image-manipulator", async () => (await import("../profile-photo-device")).imageManipulatorFake);

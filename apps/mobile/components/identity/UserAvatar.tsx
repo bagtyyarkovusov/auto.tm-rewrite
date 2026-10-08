@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { useColorScheme } from "nativewind";
 import Svg, { Circle, Path } from "react-native-svg";
 
+import { buildVariantUrl } from "../../src/listings/detail/buildVariantUrl";
 import { carAvatarAt, carAvatarTint } from "../../src/identity/carAvatars";
 
 export interface UserAvatarProps {
@@ -31,7 +32,8 @@ export function UserAvatar({ size, avatarIndex, avatarKey, avatarUrl, accessibil
   const { colorScheme } = useColorScheme();
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
-  const photoUrl = avatarKey && avatarUrl && failedUrl !== avatarUrl ? avatarUrl : null;
+  const candidateUrl = avatarKey ? avatarUrl || buildVariantUrl(avatarKey, "thumbnail") : null;
+  const photoUrl = candidateUrl && failedUrl !== candidateUrl ? candidateUrl : null;
   const mark = carAvatarAt(avatarIndex);
   const tint = carAvatarTint(mark, colorScheme === "dark" ? "dark" : "light");
   const glyph = Math.round(size * 0.62);

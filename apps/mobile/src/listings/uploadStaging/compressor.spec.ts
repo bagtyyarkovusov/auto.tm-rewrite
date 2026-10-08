@@ -87,6 +87,17 @@ describe("compressPhoto", () => {
     expect((context as NonNullable<typeof context>).resize).toHaveBeenCalledWith({ width: 2400 });
   });
 
+  it.each([
+    [2048, 1024, { width: 512 }],
+    [1024, 2048, { height: 512 }],
+    [128, 256, { height: 256 }],
+  ])("bounds a profile photo's long side without upscaling %s x %s", async (width, height, resize) => {
+    setupHappyPath("file:///tmp/compressed.jpg");
+    await compressPhoto("file:///tmp/source.jpg", "file:///tmp/dest.jpg", { maxDimension: 512, width, height });
+    const context = mockManipulate.mock.results[0]?.value as { resize: ReturnType<typeof vi.fn> };
+    expect(context.resize).toHaveBeenCalledWith(resize);
+  });
+
   it("re-compresses with quality 0.6 when file size > 5MB", async () => {
     mockGetInfoAsync.mockResolvedValueOnce({ exists: true, uri: "", size: 1024, isDirectory: false, modificationTime: 0 });
     mockManipulatorChain({
