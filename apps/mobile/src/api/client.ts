@@ -40,15 +40,13 @@ interface RequestOptions<TResponse> {
   accessToken?: string;
   // Per-request timeout override (defaults to 30s)
   timeout?: number;
-  // A private operation may outlive its initiating session. Check its owner
-  // again after auth refresh, before any request or retry leaves the client.
+  // Fence this request before sending or retrying, never the shared refresh.
   assertSession?: () => Promise<unknown>;
 }
 
 type ClientOptions = Pick<RequestOptions<unknown>, "auth" | "accessToken" | "timeout" | "assertSession">;
 
 let refreshInFlight: Promise<void> | null = null;
-const refreshSessionChecks = new Set<NonNullable<ClientOptions["assertSession"]>>();
 
 async function fetchWithTimeout(
   url: string,
@@ -94,22 +92,22 @@ function refreshUnavailable(message: string): ApiError {
   return new ApiError("REFRESH_UNAVAILABLE", 503, message);
 }
 
-async function refreshOnce(assertSession?: ClientOptions["assertSession"]): Promise<void> {
-  if (assertSession) refreshSessionChecks.add(assertSession);
+async function refreshOnce(): Promise<void> {
   if (refreshInFlight) {
-    try { await refreshInFlight; }
-    finally { if (assertSession) refreshSessionChecks.delete(assertSession); }
-    return;
+    return refreshInFlight;
   }
-  // A scoped caller may join a refresh that another request started. Its
-  // session must still own the result before refresh can store or clear auth.
-  const assertRefreshOwners = () => Promise.all([...refreshSessionChecks].map((check) => check()));
 
   refreshInFlight = (async () => {
     const session = await loadAuthSession();
     if (!session) {
       throw new ApiError("UNAUTHENTICATED", 401, "No session to refresh");
     }
+    // Sign-out or new sign-in makes this response stale. Cancelling one
+    // request must not prevent storing the rotated single-use refresh token.
+    const stillOwnsSession = async () => {
+      const current = await loadAuthSession();
+      return current?.user.id === session.user.id && current.refreshToken === session.refreshToken;
+    };
 
     const res = await fetchWithTimeout(
       `${BASE_URL}/auth/refresh`,
@@ -124,11 +122,11 @@ async function refreshOnce(assertSession?: ClientOptions["assertSession"]): Prom
       REFRESH_TIMEOUT_MS,
     );
 
-    await assertRefreshOwners();
     // Only a 401 is the API rejecting the refresh token (the one rejection the
     // contract defines). Any other answer says nothing about the token, so the
     // session stays and the next request retries (ADR-0077).
     if (res.status === 401) {
+      if (!(await stillOwnsSession())) return;
       await clearAuthSession();
       throw new ApiError("UNAUTHENTICATED", 401, "Refresh failed");
     }
@@ -143,7 +141,7 @@ async function refreshOnce(assertSession?: ClientOptions["assertSession"]): Prom
       throw refreshUnavailable("Refresh answer was not readable");
     }
     const parsed = AuthSchemas.RefreshResponseSchema.safeParse(json);
-    await assertRefreshOwners();
+    if (!(await stillOwnsSession())) return;
     if (!parsed.success) {
       await clearAuthSession();
       throw new ApiError("CONTRACT_VIOLATION", 502, "Bad refresh response");
@@ -159,7 +157,6 @@ async function refreshOnce(assertSession?: ClientOptions["assertSession"]): Prom
     await refreshInFlight;
   } finally {
     refreshInFlight = null;
-    refreshSessionChecks.clear();
   }
 }
 
@@ -189,7 +186,7 @@ async function rawRequest<TResponse>(
     // below would never run for them. Refresh an expired token up front.
     if (session && !isRetry && isAccessTokenExpired(session)) {
       try {
-        await refreshOnce(opts.assertSession);
+        await refreshOnce();
       } catch {
         // A refresh the API rejected with 401, or whose 2xx JSON answer broke
         // the contract, has cleared the session, so the request goes out
@@ -223,7 +220,7 @@ async function rawRequest<TResponse>(
     !isRetry
   ) {
     await opts.assertSession?.();
-    await refreshOnce(opts.assertSession);
+    await refreshOnce();
     return rawRequest(path, opts, true);
   }
 
