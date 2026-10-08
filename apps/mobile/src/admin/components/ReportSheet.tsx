@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Check, X } from "lucide-react-native";
@@ -145,7 +145,7 @@ export function ReportSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent compact>
+      <SheetContent compact avoidKeyboard>
         <SheetHeader>
           <View className="flex-row items-center justify-between">
             <SheetTitle>{t("report")}</SheetTitle>
@@ -172,7 +172,9 @@ export function ReportSheet({
             </Button>
           </View>
         ) : (
-          <View className="gap-4">
+          <View className="min-h-0 shrink gap-4">
+            <ScrollView className="min-h-0 shrink" keyboardShouldPersistTaps="handled">
+            <View className="gap-4">
             {/* Reason list */}
             <View className="gap-1">
               {reasons.map((r) => {
@@ -238,6 +240,8 @@ export function ReportSheet({
             )}
 
             {/* Submit */}
+            </View>
+            </ScrollView>
             <Button
               variant="default"
               className="w-full"
