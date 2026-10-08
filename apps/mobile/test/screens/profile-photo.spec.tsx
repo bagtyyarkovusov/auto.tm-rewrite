@@ -591,19 +591,43 @@ describe("Profile photo", () => {
     expect(picker.library).toHaveBeenCalledOnce();
   });
 
-  it("announces upload progress and failures on iOS, where live regions do not speak", async () => {
+  it.each(["failed", "success", "preparing"])("announces start and %s result without speaking every percent on iOS", async (ending) => {
     const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
     choosePhoto();
+    let attempts = 0;
+    if (ending === "preparing") server.use(http.put("*/me/photo", () => {
+      attempts += 1;
+      if (attempts === 1) return HttpResponse.json({ code: "UPLOAD_ALREADY_ATTACHED", details: { reason: "UPLOAD_PREPARING" } }, { status: 409 });
+      return HttpResponse.json({ ...me, avatarKey: "pending/new1/original.jpg" });
+    }));
     const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
     await view.findByText("Aman");
     fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
-    act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
-    expect(announce).toHaveBeenCalledWith("Uploading photo... 25%");
-    await act(async () => { picker.finish(500); });
-    await view.findByText("Couldn't upload the photo.");
-    expect(announce).toHaveBeenCalledWith("Couldn't upload the photo.");
+    for (const bytes of [512, 1024, 1536, 2048]) act(() => { picker.progress({ totalBytesSent: bytes, totalBytesExpectedToSend: 2048 }); });
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%"]);
+    await act(async () => { picker.finish(ending === "failed" ? 500 : 200); });
+    if (ending === "preparing") {
+      await vi.waitFor(() => expect(view.getByText("Preparing photo...")).toBeTruthy());
+      expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%", "Preparing photo..."]);
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    }
+    await vi.waitFor(() => expect(view.getByText(ending === "failed" ? "Couldn't upload the photo." : "Photo updated")).toBeTruthy());
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%", ...(ending === "preparing" ? ["Preparing photo..."] : []), ending === "failed" ? "Couldn't upload the photo." : "Photo updated"]);
+  });
+
+  it("announces removal start and result once on iOS", async () => {
+    const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
+    currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
+    server.use(http.delete("*/me/photo", () => HttpResponse.json(me)));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Remove photo" }));
+    await view.findByText("Photo removed");
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Removing photo...", "Photo removed"]);
   });
 
   it("ignores a late removal failure after another User signs in", async () => {
