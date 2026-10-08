@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
+import type * as NextNavigation from "next/navigation";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({ params: new URLSearchParams(), push: vi.fn() }));
 vi.mock("next/navigation", async (importOriginal) => ({
-  ...await importOriginal<typeof import("next/navigation")>(),
+  ...await importOriginal<typeof NextNavigation>(),
   useSearchParams: () => navigation.params,
   useRouter: () => ({ push: navigation.push }),
   redirect: vi.fn(),
@@ -31,8 +32,13 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 async function render() { await act(async () => root.render(<LoginPage />)); }
+function element<T extends Element>(selector: string): T {
+  const found = container.querySelector<T>(selector);
+  if (!found) throw new Error(`missing rendered element: ${selector}`);
+  return found;
+}
 async function submit() {
-  await act(async () => container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  await act(async () => element<HTMLFormElement>("form").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
 }
 
 describe("operator login errors", () => {
@@ -58,9 +64,9 @@ describe("operator login errors", () => {
     vi.mocked(fetch).mockResolvedValueOnce(Response.json({ resendInSeconds: 60 }))
       .mockResolvedValueOnce(Response.json({ code: "INVALID_OTP", message: "Invalid OTP code" }, { status: 400 }));
     await render();
-    container.querySelector<HTMLInputElement>('input[name="phone"]')!.value = "+99365000001";
+    element<HTMLInputElement>('input[name="phone"]').value = "+99365000001";
     await submit();
-    container.querySelector<HTMLInputElement>('input[name="code"]')!.value = "654321";
+    element<HTMLInputElement>('input[name="code"]').value = "654321";
     await submit();
     expect(container.textContent).toContain("Неверный код. Попробуйте ещё раз.");
     expect(container.textContent).not.toContain("Invalid OTP code");

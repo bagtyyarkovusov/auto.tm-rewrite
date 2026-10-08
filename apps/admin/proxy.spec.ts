@@ -118,7 +118,9 @@ describe("admin session renewal before request dispatch", () => {
       expect(response.cookies.get(name)).toMatchObject({ value: "", maxAge: 0 });
     }
     expect(response.headers.get("x-middleware-next")).toBeNull();
-    const login = await proxy(new NextRequest(response.headers.get("location")!));
+    const location = response.headers.get("location");
+    if (!location) throw new Error("missing login redirect");
+    const login = await proxy(new NextRequest(location));
     expect(login.headers.get("location")).toBeNull();
   });
 

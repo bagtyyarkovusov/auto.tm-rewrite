@@ -54,8 +54,8 @@ async function rotate(refreshToken: string): Promise<TokenPair | null> {
     });
     if (!response.ok) return null;
     const tokens = await response.json() as Partial<TokenPair>;
-    if (!hasCurrentAccessToken(tokens.accessToken) || typeof tokens.refreshToken !== "string" || !/^[a-f0-9]{64}$/.test(tokens.refreshToken)) return null;
-    return { accessToken: tokens.accessToken!, refreshToken: tokens.refreshToken };
+    if (typeof tokens.accessToken !== "string" || !hasCurrentAccessToken(tokens.accessToken) || typeof tokens.refreshToken !== "string" || !/^[a-f0-9]{64}$/.test(tokens.refreshToken)) return null;
+    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
   } catch {
     return null;
   } finally {

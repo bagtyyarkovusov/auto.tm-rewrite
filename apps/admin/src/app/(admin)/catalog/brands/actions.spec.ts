@@ -1,3 +1,4 @@
+import type * as NextNavigation from "next/navigation";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 const mockState = vi.hoisted(() => ({
@@ -17,7 +18,7 @@ vi.mock("next/headers", () => ({
 }));
 
 vi.mock("next/navigation", async (importOriginal) => ({
-  ...await importOriginal<typeof import("next/navigation")>(),
+  ...await importOriginal<typeof NextNavigation>(),
   redirect: mockState.redirect,
 }));
 
