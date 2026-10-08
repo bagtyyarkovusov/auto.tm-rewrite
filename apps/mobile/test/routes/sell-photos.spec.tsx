@@ -118,7 +118,7 @@ describe("Sell wizard, Photos step", () => {
     const screen = renderMobile(<SellScreen />);
     expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: true });
     expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
-    expect(screen.getByText("2 / 8 photos")).toBeTruthy();
+    expect(screen.getByText("Photos: 2")).toBeTruthy();
     fixture.queuePhotos = [...fixture.queuePhotos, keyed(ids.c, 2)];
     screen.rerender(<SellScreen />);
     expect(continueButton(screen).props.accessibilityState).toMatchObject({ disabled: false });

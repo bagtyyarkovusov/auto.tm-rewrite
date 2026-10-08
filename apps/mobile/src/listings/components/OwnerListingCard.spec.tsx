@@ -25,10 +25,10 @@ describe("OwnerListingCard", () => {
   it("opens the Listing on tap and hands ⋯ its title", () => {
     const { view, onOpen, onMore } = renderCard("active");
     expect(view.getByText("Ashgabat")).toBeTruthy();
-    fireEvent.press(view.getByRole("button", { name: "2018 Toyota Camry" }));
+    fireEvent.press(view.getByRole("button", { name: "Toyota Camry, 2018" }));
     expect(onOpen).toHaveBeenCalledWith("camry-1");
-    fireEvent.press(view.getByRole("button", { name: "Actions for 2018 Toyota Camry" }));
-    expect(onMore).toHaveBeenCalledWith(expect.objectContaining({ id: "camry-1" }), "2018 Toyota Camry");
+    fireEvent.press(view.getByRole("button", { name: "Actions for Toyota Camry, 2018" }));
+    expect(onMore).toHaveBeenCalledWith(expect.objectContaining({ id: "camry-1" }), "Toyota Camry, 2018");
   });
 
   it.each([
@@ -37,8 +37,8 @@ describe("OwnerListingCard", () => {
   ] as const)("labels a %s Listing and keeps its actions", (status, label) => {
     const { view } = renderCard(status);
     expect(view.getByText(label)).toBeTruthy();
-    expect(view.getByRole("button", { name: `2018 Toyota Camry, ${label}` })).toBeTruthy();
-    expect(view.getByRole("button", { name: "Actions for 2018 Toyota Camry" })).toBeTruthy();
+    expect(view.getByRole("button", { name: `Toyota Camry, 2018, ${label}` })).toBeTruthy();
+    expect(view.getByRole("button", { name: "Actions for Toyota Camry, 2018" })).toBeTruthy();
   });
 
   it("shows a blocked Listing with a neutral note, no ⋯ and no tap", () => {
@@ -46,7 +46,7 @@ describe("OwnerListingCard", () => {
     expect(view.getByText("Blocked")).toBeTruthy();
     expect(view.getByText("Blocked by moderation. Buyers do not see it.")).toBeTruthy();
     expect(view.queryByRole("button")).toBeNull();
-    fireEvent.press(view.getByText("2018 Toyota Camry"));
+    fireEvent.press(view.getByText("Toyota Camry, 2018"));
     expect(onOpen).not.toHaveBeenCalled();
   });
 });

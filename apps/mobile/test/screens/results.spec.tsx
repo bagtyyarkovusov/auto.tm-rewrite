@@ -62,10 +62,15 @@ function matchAt<T>(matches: readonly T[], index: number): T {
 }
 
 describe("Results approved behavior", () => {
+  it.each([["ru", /^Цены: 70.000 – 120.000 TMT$/], ["tk", /^Bahalar: 70.000 – 120.000 TMT$/]])("labels the price range of the results on one line in %s", (locale, text) => {
+    const view = renderMobile(<ResultsScreen />, { locale: locale as string });
+    expect(view.getByText(text as RegExp).props.numberOfLines).toBe(1);
+  });
   it("shows the full feed, count, TMT price range and current sort without a brand", () => {
     const view = renderMobile(<ResultsScreen />);
     expect(view.getByText("12 listings")).toBeTruthy();
-    expect(view.getByText("70,000 – 120,000 TMT")).toBeTruthy();
+    const range = view.getByText("Prices: 70,000 – 120,000 TMT");
+    expect(range.props.numberOfLines).toBe(1);
     expect(view.getByText("Newest first")).toBeTruthy();
     expect(state.feed).toHaveBeenLastCalledWith(expect.objectContaining({ filters: { sort: "newest" } }));
   });

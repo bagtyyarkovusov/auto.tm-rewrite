@@ -15,7 +15,7 @@ const lockedHelper = {
 } as const;
 
 const vinHelper = {
-  en: "Optional. 17 characters. Shown in the Listing's specifications.",
+  en: "Optional. 17 characters. Shown in the listing's specifications.",
   ru: "Необязательно. 17 символов. Показывается в характеристиках объявления.",
   tk: "Hökman däl. 17 belgi. Bildirişiň aýratynlyklarynda görkezilýär.",
 } as const;

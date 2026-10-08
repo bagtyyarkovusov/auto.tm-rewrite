@@ -225,7 +225,7 @@ describe("Favorites screen", () => {
     server.active = [page([], { total: 2, inactive: 2 })];
     const view = await renderFavorites();
     expect(view.getByText("No active listings")).toBeTruthy();
-    expect(view.getByText("Sold Listings are hidden. Turn off “Hide sold” to see them.")).toBeTruthy();
+    expect(view.getByText("Sold listings are hidden. Turn off “Hide sold” to see them.")).toBeTruthy();
     expect(view.getByRole("switch", { name: "Hide sold" })).toBeTruthy();
     fireEvent.press(view.getByRole("button", { name: "Browse listings" }));
     expect(routerMock.navigate).toHaveBeenCalledWith(HOME_HREF);
@@ -263,7 +263,7 @@ describe("Favorites screen", () => {
     state.auth = false;
     const view = await renderFavorites();
     expect(view.getByText("Sign in to see your Favorites")).toBeTruthy();
-    expect(view.getByText("Tap ♡ on a Listing to save it here.")).toBeTruthy();
+    expect(view.getByText("Tap ♡ on a listing to save it here.")).toBeTruthy();
     fireEvent.press(view.getByRole("button", { name: "Sign in" }));
     expect(useAuthIntentStore.getState().intent).toEqual(expect.objectContaining({ returnTo: "/(tabs)/favorites" }));
     expect(api.get).not.toHaveBeenCalled();

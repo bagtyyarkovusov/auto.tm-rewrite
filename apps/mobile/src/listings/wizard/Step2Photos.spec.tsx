@@ -68,7 +68,26 @@ describe("Step2Photos", () => {
     const screen = renderMobile(<Step2Photos {...defaults()} photos={Array.from({ length: 20 }, (_, i) => photo(String(i), i))} />);
     expect(screen.getByRole("button", { name: "Camera", disabled: true })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Library", disabled: true })).toBeTruthy();
-    expect(screen.getByText("Maximum 20 photos reached")).toBeTruthy();
+    expect(screen.getByText("Photo limit reached")).toBeTruthy();
+    // The maximum is stated once, in the intro line.
+    expect(screen.getAllByText(/20/)).toHaveLength(1);
+    expect(screen.getByText("Photos under 5 MB upload faster. Add up to 20 photos.")).toBeTruthy();
+  });
+
+  it.each([
+    ["en", 2, "Photos: 2", "At least 3 photos are required"],
+    ["en", 3, "Photos: 3", "Add 5 more for a better listing"],
+    ["en", 8, "Photos: 8", "Enough photos for a detailed listing"],
+    ["ru", 2, "Фото: 2", "Нужно не менее 3 фотографий"],
+    ["ru", 3, "Фото: 3", "Добавьте ещё 5, чтобы объявление было лучше"],
+    ["tk", 2, "Surat: 2", "Iň azyndan 3 surat gerek"],
+    ["tk", 3, "Surat: 3", "Has gowy bildiriş üçin ýene 5 surat goşuň"],
+  ])("counts photos without the goal as a denominator in %s at %i photos", (locale, count, counter, hint) => {
+    const photos = Array.from({ length: count as number }, (_, i) => photo(String(i), i));
+    const screen = renderMobile(<Step2Photos {...defaults()} photos={photos} />, { locale: locale as string });
+    expect(screen.getByText(counter as string)).toBeTruthy();
+    expect(screen.queryByText(/\/ 8/)).toBeNull();
+    expect(screen.getByText(hint as string)).toBeTruthy();
   });
 });
 

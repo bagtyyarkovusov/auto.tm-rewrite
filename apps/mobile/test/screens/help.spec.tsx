@@ -18,7 +18,7 @@ describe("Help", () => {
     expect(screen.getByRole("button", { name: `Email us, ${email}` })).toBeTruthy();
     expect(screen.getByRole("button", { name: `Call us, ${shownPhone}` })).toBeTruthy();
     expect(
-      screen.getByText("Tell us the Listing number, for example No. 123456, and what happened."),
+      screen.getByText("Tell us the listing number, for example No. 123456, and what happened."),
     ).toBeTruthy();
   });
 

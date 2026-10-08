@@ -63,7 +63,7 @@ it("asks with the shared copy, without the buyer question", () => {
   );
   fireEvent.press(screen.getByRole("button", { name: "Mark as sold" }));
   expect(screen.getByText("Mark as sold?")).toBeTruthy();
-  expect(screen.getByText("Buyers will see it as Sold. A sold Listing cannot be put back on sale.")).toBeTruthy();
+  expect(screen.getByText("Buyers will see it as Sold. A sold listing cannot be put back on sale.")).toBeTruthy();
   expect(screen.queryByText(/buyer from AutoTM/)).toBeNull();
 });
 it("names the overflow actions in Russian", () => {
@@ -157,7 +157,7 @@ it("tells the seller to add a phone through Edit when a relist answer says one i
   });
   expect(
     await screen.findByText(
-      "This Listing has no contact phone. Add one through Edit, then relist.",
+      "This listing has no contact phone. Add one through Edit, then relist.",
     ),
   ).toBeTruthy();
   expect(screen.queryByText("Confirm the contact phone")).toBeNull();
@@ -172,7 +172,7 @@ it("clears the add-a-phone hint when the next action starts", async () => {
   await act(async () => {
     fireEvent.press(screen.getByText("Confirm"));
   });
-  const hint = "This Listing has no contact phone. Add one through Edit, then relist.";
+  const hint = "This listing has no contact phone. Add one through Edit, then relist.";
   expect(await screen.findByText(hint)).toBeTruthy();
 
   // The seller added a phone through Edit and relists again; this time it works.

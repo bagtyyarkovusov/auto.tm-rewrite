@@ -121,7 +121,7 @@ describe("Contact step", () => {
 
     expect(
       screen.getByRole("radio", {
-        name: "+99362000002, Current number of this Listing",
+        name: "+99362000002, Current number of this listing",
       }).props.accessibilityState,
     ).toMatchObject({ checked: true });
   });
@@ -236,7 +236,7 @@ describe("Contact step", () => {
 
     expect(
       screen.getByText(
-        "You signed in with email. Confirm a phone for this Listing. It will not become a way to sign in.",
+        "You signed in with email. Confirm a phone for this listing. It will not become a way to sign in.",
       ),
     ).toBeTruthy();
     expect(onChange).not.toHaveBeenCalled();
@@ -272,7 +272,7 @@ describe("Contact step", () => {
       confirmedPhones: [],
     });
 
-    expect(screen.getByText("Current number of this Listing")).toBeTruthy();
+    expect(screen.getByText("Current number of this listing")).toBeTruthy();
     expect(
       screen.queryByText("Confirmation expired. Tap to confirm again."),
     ).toBeNull();

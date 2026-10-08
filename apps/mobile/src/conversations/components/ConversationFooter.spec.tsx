@@ -93,8 +93,8 @@ describe("ConversationFooter", () => {
 
   describe("when the Conversation is closed to new Messages", () => {
     it.each([
-      ["listing_unavailable", "This Listing is no longer available"],
-      ["chat_disabled", "The seller has turned off messages for this Listing"],
+      ["listing_unavailable", "This listing is no longer available"],
+      ["chat_disabled", "The seller has turned off messages for this listing"],
       ["participant_unavailable", "You can't send messages in this Conversation"],
     ] as const)("replaces the composer with one line for %s", (sendRestriction, line) => {
       const screen = renderMobile(
@@ -145,7 +145,7 @@ describe("ConversationFooter", () => {
         />,
       );
       expect(screen.getByText("User blocked")).toBeTruthy();
-      expect(screen.queryByText("This Listing is no longer available")).toBeNull();
+      expect(screen.queryByText("This listing is no longer available")).toBeNull();
     });
 
     it("is localized", () => {

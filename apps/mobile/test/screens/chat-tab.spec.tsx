@@ -109,7 +109,7 @@ describe("Messages tab", () => {
     const view = await renderScreen();
 
     expect(view.getByText("No conversations yet")).toBeTruthy();
-    expect(view.getByText("Open a Listing and message the seller. The Conversation appears here.")).toBeTruthy();
+    expect(view.getByText("Open a listing and message the seller. The Conversation appears here.")).toBeTruthy();
     fireEvent.press(view.getByText("Browse listings"));
     expect(routerMock.navigate).toHaveBeenCalledWith(HOME_HREF);
   });
