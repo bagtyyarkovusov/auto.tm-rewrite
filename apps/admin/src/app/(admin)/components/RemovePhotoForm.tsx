@@ -31,14 +31,22 @@ export function RemovePhotoForm({ reportId, targetId }: RemovePhotoFormProps) {
       const result = await removeUserPhoto(targetId, trimmed, reportId);
       if (!result.ok) {
         const details = (result.details as { details?: { reason?: string } } | undefined)?.details;
-        const errors: Record<string, string> = {
-          REPORT_ALREADY_RESOLVED: "Жалоба уже обработана другим администратором. Страница обновлена.",
-          MODERATION_TARGET_STATE_CONFLICT: "Состояние цели изменилось. Страница обновлена.",
-          REPORT_TARGET_NOT_ACTIONABLE: "Цель больше не доступна для действия. Страница обновлена.",
+        const conflictErrors: Record<string, string> = {
+          REPORT_ALREADY_RESOLVED: "Жалоба уже обработана другим администратором. Обновите страницу.",
+          MODERATION_TARGET_STATE_CONFLICT: "Состояние цели изменилось. Обновите страницу.",
+          REPORT_TARGET_NOT_ACTIONABLE: "Цель больше не доступна для действия. Обновите страницу.",
+        };
+        const forbiddenErrors: Record<string, string> = {
+          ADMIN_TARGET_NOT_MODERATABLE: "Фото администраторов нельзя удалять.",
+          SELF_MODERATION_NOT_ALLOWED: "Нельзя применять действия к собственной учётной записи.",
           FEATURE_DISABLED: "Действие временно недоступно.",
         };
-        setError(errors[details?.reason ?? ""] ?? result.error);
-        router.refresh();
+        const message = result.code === "CONFLICT"
+          ? conflictErrors[details?.reason ?? ""]
+          : result.code === "FORBIDDEN" ? forbiddenErrors[details?.reason ?? ""] : undefined;
+        setError(message ?? "Не удалось выполнить действие.");
+        // Retain the failed-action feedback. Refreshing a resolved report would
+        // unmount this form and erase its alert; the moderator can reload manually.
         return;
       }
       setSuccess(true);
