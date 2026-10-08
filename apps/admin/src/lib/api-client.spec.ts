@@ -192,6 +192,13 @@ describe("apiFetchOptional", () => {
     expect(mockCookieStore.set).not.toHaveBeenCalled();
   });
 
+  it.each([403, 429, 500, 503])("surfaces optional API %s as an error without cookie writes", async (status) => {
+    global.fetch = vi.fn(async () => Response.json({ code: "UNAVAILABLE", message: "Unavailable" }, { status }));
+    await expect(apiFetchOptional("/auth/admin/totp/status")).rejects.toMatchObject({ status });
+    expect(mockState.redirect).not.toHaveBeenCalled();
+    expect(mockCookieStore.set).not.toHaveBeenCalled();
+  });
+
   it("returns parsed data on success", async () => {
     mockCookieStore.get.mockReturnValue({ value: "acc_tok" });
     global.fetch = vi.fn(() =>

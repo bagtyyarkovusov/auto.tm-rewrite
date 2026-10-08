@@ -30,7 +30,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   redirect: mockState.redirect,
 }));
 
-import { enrollTotp, verifyOtp } from "./actions";
+import { enrollTotp, requireAuthWithReturnTo, verifyOtp } from "./actions";
 
 function mockFetchQueue(responses: Array<{ status: number; body: unknown }>) {
   const queue = [...responses];
@@ -67,6 +67,18 @@ describe("admin auth server actions", () => {
     await expect(verifyOtp(null, formData)).resolves.toEqual({
       ok: false, error: "Неверный код. Попробуйте ещё раз.",
     });
+  });
+
+  it.each([429, 500, 503])("layout gate surfaces API %s without signing the operator out", async (status) => {
+    mockFetchQueue([{ status, body: { code: "UNAVAILABLE", message: "Unavailable" } }]);
+    await expect(requireAuthWithReturnTo("/reports")).rejects.toMatchObject({ status });
+    expect(mockState.redirect).not.toHaveBeenCalled();
+    expect(mockState.cookieStore.set).not.toHaveBeenCalled();
+  });
+
+  it("layout gate adds the expiry reason only after API401", async () => {
+    mockFetchQueue([{ status: 401, body: {} }]);
+    await expect(requireAuthWithReturnTo("/reports")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired&returnTo=%2Freports");
   });
 
   it("verifyOtp reports when the admin already has TOTP enrolled", async () => {
