@@ -126,7 +126,11 @@ export const StepVehicleSchema = z.object({
     .max(WIZARD_LIMITS.yearMax, KEY.yearTooLate),
   vin: z.string()
     .max(WIZARD_LIMITS.vinMaxLength, KEY.vinTooLong)
-    .regex(/^(?:[A-HJ-NPR-Z0-9]{17})?$/i, KEY.vinInvalid)
+    // Keep the existing length error alone when max() already rejects the value.
+    .refine(
+      (vin) => vin.length > WIZARD_LIMITS.vinMaxLength || /^(?:[A-HJ-NPR-Z0-9]{17})?$/i.test(vin),
+      KEY.vinInvalid,
+    )
     .optional(),
 });
 export type StepVehicleInput = z.infer<typeof StepVehicleSchema>;
