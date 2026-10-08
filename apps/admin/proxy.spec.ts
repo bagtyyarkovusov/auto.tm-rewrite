@@ -241,4 +241,11 @@ describe("admin session renewal before request dispatch", () => {
     expect(response.headers.get("x-middleware-override-headers")).not.toContain("x-admin-session-expired");
   });
 
+  it("uses the configured public admin origin for login behind a private Next listener", async () => {
+    vi.stubEnv("ADMIN_ORIGIN", "https://admin.auto.tm");
+    const { proxy } = await import("./proxy");
+    const response = await proxy(new NextRequest("http://localhost:3001/reports"));
+    expect(response.headers.get("location")).toBe("https://admin.auto.tm/login?reason=session-expired&returnTo=%2Freports");
+  });
+
 });
