@@ -43,7 +43,10 @@ describe("API supertest suites", () => {
       const name = supertestImport.exec(code)?.[1] ?? "supertest";
       const servers = count(code, `${name}(`) + count(code, `${name}.agent(`);
 
-      expect(count(code, 'app.listen(0, "127.0.0.1")')).toBe(servers);
+      // The receiver can be a second app in the same suite, e.g.
+      // `secondApp.listen(...)`; any name is fine as long as the port binds
+      // 127.0.0.1.
+      expect(count(code, '.listen(0, "127.0.0.1")')).toBe(servers);
       expect(code).not.toContain("app.init()");
       expect(code).not.toContain(".ready()");
     },
