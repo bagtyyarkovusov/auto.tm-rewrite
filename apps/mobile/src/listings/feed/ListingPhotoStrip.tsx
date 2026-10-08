@@ -11,12 +11,14 @@ import { tabularFigures } from "@/lib/font";
 
 /** The page margin either side of a Results card, in dp: none, the card spans the screen as on Auto.ru. */
 export const CARD_INSET = 0;
-/** The share of the card width one photo takes, so the next photo peeks in. */
-export const STRIP_PHOTO_SHARE = 0.8;
-/** The strip height as a share of the card width: a 4:3 photo at 80% of the width, about 240 dp on a 402 dp screen. */
-export const STRIP_HEIGHT_SHARE = 0.6;
-/** The seam between two photos (`gap-0.5`), in dp. */
-export const STRIP_GAP = 2;
+/** The gap between the card's top and left edges and the first photo, in dp. */
+export const STRIP_INSET = 8;
+/** The share of the card width one photo takes: a little over half, so close to half of the next photo shows at rest. */
+export const STRIP_PHOTO_SHARE = 0.56;
+/** The strip height as a share of the card width: a 4:3 photo at 56% of the width, about 169 dp on a 402 dp screen. */
+export const STRIP_HEIGHT_SHARE = 0.42;
+/** The seam between two photos (`w-1`), in dp. */
+export const STRIP_GAP = 4;
 
 type Tile = { kind: "photo"; key: string } | { kind: "more"; count: number };
 
@@ -39,12 +41,19 @@ interface ListingPhotoStripProps {
 }
 
 /**
- * The photos at the top of a Results card, edge to edge. One photo fills the
- * frame. Two or more scroll sideways: each is 80% of the card wide so the
- * next one peeks in, they snap one photo per swipe, and a "+N photos" tile
- * ends the strip when the Listing has more photos than the feed sent. The
- * tile, like any photo, opens the Listing through its own tap target. The
- * scrolling container has no detail-opening press handler above it.
+ * The photos at the top of a Results card, set in from the card's top and
+ * left edges by `STRIP_INSET`, each with its own rounded corners (the card's
+ * 28 dp radius less the inset). One photo fills the frame between the
+ * insets. Two or more scroll sideways: each is 56% of the card wide so close
+ * to half of the next one shows, they snap one photo per swipe, and a
+ * "+N photos" tile ends the strip when the Listing has more photos than the
+ * feed sent. The tile, like any photo, opens the Listing through its own tap
+ * target. The scrolling container has no detail-opening press handler above it.
+ *
+ * The inset is padding on the scrolling content, not on the frame around it.
+ * At rest the first photo stands clear of the card's left edge; in a swipe
+ * the photos travel under that gap and out to the card's right edge, where
+ * the card's own rounded corners clip them.
  *
  * The strip is a horizontal list inside the vertical Results list. A
  * horizontal scroll view only claims a drag that moves sideways, so a
@@ -67,15 +76,16 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition, onOpen, on
   const renderItem = useCallback<ListRenderItem<Tile>>(({ item }) => <Pressable
     accessible={false} onPress={onOpen} onPressIn={onPressIn} onPressOut={onPressOut}
   >{item.kind === "photo"
-    ? <View testID="listing-photo" style={{ width: photoWidth, height }} className="overflow-hidden bg-secondary">
+    ? <View testID="listing-photo" style={{ width: photoWidth, height }} className="overflow-hidden rounded-xl bg-secondary">
       <ListingPhoto mediaKey={item.key} emptyLabel={t("noPhotos")} variant="detail" />
     </View>
-    : <View testID="listing-photo-more" style={{ width: photoWidth, height }} className="items-center justify-center gap-0.5 bg-secondary">
+    : <View testID="listing-photo-more" style={{ width: photoWidth, height }} className="items-center justify-center gap-0.5 rounded-xl bg-secondary">
       <Text className="font-heading text-title font-semibold text-foreground" style={tabularFigures}>{`+${item.count}`}</Text>
       <Text className="text-footnote text-muted-foreground">{t("photos")}</Text>
     </View>}</Pressable>, [height, photoWidth, t, onOpen, onPressIn, onPressOut]);
 
-  const chips = <View pointerEvents="none" className="absolute bottom-3 left-3 flex-row gap-1.5">
+  // 8 dp inside the first photo's corner at rest, which also lines the chips up with the text below.
+  const chips = <View pointerEvents="none" className="absolute bottom-2 left-4 flex-row gap-1.5">
     {photoCount > 1 ? <PhotoChip icon={Camera} label={String(photoCount)} className="relative"
       accessibilityLabel={t("resultsPhotoCount", { count: photoCount })} /> : null}
     {condition === Enums.ListingCondition.New ? <PhotoChip label={t("new")} className="relative" /> : null}
@@ -85,16 +95,16 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition, onOpen, on
     const only = tiles[0];
     // Every card keeps the strip's height, so a card without a photo lines up with its neighbours
     // and the list does not change rhythm; the frame's tone and the quiet mark say there is no picture.
-    return <View testID="listing-photos" style={{ height }}>
+    return <View testID="listing-photos" style={{ height, marginTop: STRIP_INSET }}>
       <Pressable accessible={false} onPress={onOpen} onPressIn={onPressIn} onPressOut={onPressOut}
-        testID="listing-photo" className="h-full w-full overflow-hidden bg-secondary">
+        testID="listing-photo" className="mx-2 h-full overflow-hidden rounded-xl bg-secondary">
         <ListingPhoto mediaKey={only?.kind === "photo" ? only.key : undefined} emptyLabel={t("noPhotos")} variant="detail" />
       </Pressable>
       {chips}
     </View>;
   }
 
-  return <View testID="listing-photos" style={{ height }}>
+  return <View testID="listing-photos" style={{ height, marginTop: STRIP_INSET }}>
     <FlatList
       testID="listing-photo-strip"
       horizontal
@@ -102,7 +112,8 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition, onOpen, on
       keyExtractor={(item) => item.kind === "photo" ? item.key : "more"}
       renderItem={renderItem}
       ItemSeparatorComponent={StripSeam}
-      getItemLayout={(_, index) => ({ length: photoWidth, offset: interval * index, index })}
+      contentContainerStyle={STRIP_CONTENT}
+      getItemLayout={(_, index) => ({ length: photoWidth, offset: STRIP_INSET + interval * index, index })}
       snapToInterval={interval}
       snapToAlignment="start"
       decelerationRate="fast"
@@ -117,6 +128,9 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition, onOpen, on
   </View>;
 }
 
+/** The inset is padding on the scrolling content, so a swipe carries the photos through it. */
+const STRIP_CONTENT = { paddingHorizontal: STRIP_INSET };
+
 function StripSeam() {
-  return <View className="w-0.5" />;
+  return <View className="w-1" />;
 }
