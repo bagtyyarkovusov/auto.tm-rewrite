@@ -28,7 +28,7 @@ export function validateReturnTo(
 
   const path = url.split("?")[0] ?? "";
   const allowedPrefixes = ["/reports", "/audit", "/listings", "/users", "/catalog"];
-  const isAdminPath = allowedPrefixes.some(
+  const isAdminPath = path === "/" || allowedPrefixes.some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );
   if (!isAdminPath) return null;

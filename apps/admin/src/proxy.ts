@@ -15,7 +15,7 @@ export async function proxy(request: NextRequest) {
 
   const loginExpiry = request.method === "GET" && pathname === "/login" && request.nextUrl.searchParams.get("reason") === "session-expired";
 
-  const protectedRoute = PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  const protectedRoute = pathname === "/" || PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   // TOTP/logout Server Actions run on /login too. Ordinary sign-in without
   // a refresh cookie stays public and can request/verify a Sign-in Code.
   const loginAction = pathname === "/login" && request.method === "POST" && Boolean(refreshToken || request.cookies.get(settings.accessName)?.value);

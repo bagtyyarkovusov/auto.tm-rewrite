@@ -10,6 +10,8 @@ Founder-authorized FIX1–9 from [the independent review](https://github.com/bag
 
 - FIX3 red: four failures/22 passes, expiry login URL erases current, renewable and temporarily unavailable sessions without consulting the API. Command: `pnpm --filter @auto-tm/admin exec vitest run src/proxy.spec.ts`. Green: query-only expiry no longer clears a current session, healthy TOTP mode survives, refresh-only sessions renew, outages preserve cookies, and only missing/API-rejected refresh clears before rendering login without a loop.
 
+- FIX4 red: one failure/26 passes, `pnpm --filter @auto-tm/admin exec vitest run src/proxy.spec.ts`: `/` did not renew. Green: root GET renews before `src/app/page.tsx` redirects to reports. The built route manifests identify `src/app/page.tsx` as the served root; the duplicate `(admin)/page.tsx` is removed. Final built root smoke proves the route/renewal end to end.
+
 ## Live staging checklist, not performed
 
 Owner: orchestrator with the founder, after deployment. This fix round does not deploy, change Railway variables or touch production.
