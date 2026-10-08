@@ -124,7 +124,7 @@ export async function verifyOtp(
           error: "Слишком много попыток. Подождите и попробуйте снова.",
         };
       }
-      if (err.status === 401 || (err.status === 400 && err.code === "INVALID_OTP")) {
+      if (err.status === 400 && err.code === "INVALID_OTP") {
         return {
           ok: false,
           error: "Неверный код. Попробуйте ещё раз.",
@@ -243,7 +243,7 @@ export async function verifyTotp(
           error: "Слишком много попыток. Подождите и попробуйте снова.",
         };
       }
-      if (err.status === 401 || err.status === 403) {
+      if (err.status === 403 || (err.status === 400 && err.code === "INVALID_TOTP")) {
         return {
           ok: false,
           error: "Неверный код. Попробуйте ещё раз.",
