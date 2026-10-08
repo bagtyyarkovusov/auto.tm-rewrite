@@ -33,10 +33,12 @@ export default function OnboardingSplashScreen() {
   }
 
   return (
-    <SafeScreen className="items-center justify-center bg-white px-6">
+    <SafeScreen className="bg-white">
       <StatusBar style="dark" />
-      <View accessibilityLabel="AutoTM" accessibilityRole="image">
-        <LaunchMark width={160} height={115} />
+      <View className="flex-1 items-center justify-center px-6">
+        <View accessibilityLabel="AutoTM" accessibilityRole="image">
+          <LaunchMark width={160} height={115} />
+        </View>
       </View>
     </SafeScreen>
   );

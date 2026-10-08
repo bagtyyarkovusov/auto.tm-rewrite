@@ -1,0 +1,121 @@
+import { readdirSync, readFileSync } from "fs";
+import { join, resolve } from "path";
+
+import type { ReactElement } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+import { renderMobile } from "../render";
+import OnboardingSplashScreen from "../../app/(onboarding)/index";
+import LanguagePickerScreen from "../../app/(onboarding)/language";
+import ValuePropScreen from "../../app/(onboarding)/value-prop";
+
+const INSETS = { top: 24, right: 0, bottom: 16, left: 0 };
+
+vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => INSETS }));
+vi.mock("expo-status-bar", () => ({ StatusBar: () => null }));
+vi.mock("../../assets/launch-mark.svg", () => ({ default: () => null }));
+// The splash stays up while the onboarding flag is still being read.
+vi.mock("../../src/onboarding/onboardingFlag", () => ({
+  getOnboardingCompleted: () => new Promise<boolean>(() => {}),
+  setOnboardingCompleted: async () => {},
+}));
+
+type Node = {
+  type: unknown;
+  props: { className?: string; style?: { paddingBottom?: number } };
+  parent: Node | null;
+};
+
+const PADDING_CLASS = /^-?p[xytblrse]?-/;
+
+const classes = (node: Node) => (node.props.className ?? "").split(/\s+/).filter(Boolean);
+const isHostView = (node: Node) => typeof node.type === "string";
+/** SafeScreen's own view: the one that carries the device insets as inline padding. */
+const isInsetView = (node: Node) => isHostView(node) && node.props.style?.paddingBottom === INSETS.bottom;
+
+/** Padding classes on the views between a piece of content and the inset view around it. */
+function paddingInsideSafeArea(content: Node) {
+  const padding: string[] = [];
+  for (let node = content.parent; node; node = node.parent) {
+    if (isInsetView(node)) return padding;
+    if (isHostView(node)) padding.push(...classes(node).filter((name) => PADDING_CLASS.test(name)));
+  }
+  throw new Error("The content is not inside SafeScreen");
+}
+
+function render(screen: ReactElement) {
+  const view = renderMobile(screen);
+  const insetView = view.UNSAFE_root.findAll(isInsetView)[0] as Node;
+  return { ...view, insetView };
+}
+
+describe("Onboarding screen padding", () => {
+  it("keeps the language title, switcher and Continue button off the screen edges", () => {
+    const screen = render(<LanguagePickerScreen />);
+
+    const content = [
+      screen.getByText("Choose language"),
+      screen.getByLabelText("Language"),
+      screen.getByRole("button", { name: "Continue" }),
+    ];
+
+    for (const node of content) {
+      expect(paddingInsideSafeArea(node)).toEqual(expect.arrayContaining(["px-6", "py-8"]));
+    }
+  });
+
+  it("keeps the value slide text, Next button and Skip off the screen edges", () => {
+    const screen = render(<ValuePropScreen />);
+
+    const content = [
+      screen.getByText("Find real cars"),
+      screen.getByRole("button", { name: "Next" }),
+      screen.getByRole("button", { name: "Skip" }),
+    ];
+
+    for (const node of content) {
+      expect(paddingInsideSafeArea(node)).toEqual(expect.arrayContaining(["px-6", "py-8"]));
+    }
+  });
+
+  it("keeps the splash mark off the screen edges", () => {
+    const screen = render(<OnboardingSplashScreen />);
+
+    expect(paddingInsideSafeArea(screen.getByLabelText("AutoTM"))).toContain("px-6");
+  });
+
+  it.each([
+    ["language", <LanguagePickerScreen key="language" />],
+    ["value prop", <ValuePropScreen key="value-prop" />],
+    ["splash", <OnboardingSplashScreen key="splash" />],
+  ])("adds the %s padding to the safe-area inset instead of replacing it", (_name, element) => {
+    const { insetView } = render(element);
+
+    expect(insetView.props.style).toMatchObject({ paddingTop: INSETS.top, paddingBottom: INSETS.bottom });
+    expect(classes(insetView).filter((name) => PADDING_CLASS.test(name))).toEqual([]);
+  });
+});
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name === "node_modules") return [];
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(path);
+    return /\.tsx$/.test(entry.name) && !/\.spec\.tsx$/.test(entry.name) ? [path] : [];
+  });
+}
+
+describe("SafeScreen callers", () => {
+  // SafeScreen's inline inset padding wins over a padding class, so the class does nothing.
+  it("never pass a padding class to SafeScreen", () => {
+    const root = resolve(__dirname, "../..");
+    const offenders = ["app", "components", "src"].flatMap((dir) => sourceFiles(join(root, dir))).flatMap((file) => {
+      const source = readFileSync(file, "utf-8");
+      return [...source.matchAll(/<SafeScreen\b[^>]*?className=(?:"([^"]*)"|\{([^}]*)\})/g)]
+        .filter((match) => (match[1] ?? match[2] ?? "").split(/[\s"'`,()]+/).some((name) => PADDING_CLASS.test(name)))
+        .map((match) => `${file.slice(root.length + 1)}: ${match[0]}`);
+    });
+
+    expect(offenders).toEqual([]);
+  });
+});

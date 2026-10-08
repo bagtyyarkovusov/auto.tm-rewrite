@@ -27,6 +27,12 @@ import { cn } from "@/lib/utils";
  *   2. Apply the inset explicitly: `style={{ top: insets.top + 8 }}`.
  *   3. Apply safe-area padding only to scrollable/normal-flow content.
  *
+ * Padding classes on SafeScreen do nothing:
+ * The insets are an inline `style`, which wins over `className`, so a
+ * `px-6` passed to SafeScreen renders with no side padding.  Put screen
+ * padding on a `flex-1` View inside SafeScreen; it then adds to the insets.
+ * `test/routes/onboarding-padding.spec.tsx` fails on a caller that forgets.
+ *
  * HIG alignment:
  * - Top inset keeps content below the status bar / Dynamic Island.
  * - Bottom inset keeps content above the home indicator.
