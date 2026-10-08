@@ -119,6 +119,7 @@ export default function ConversationDetailScreen() {
   const signedOut = viewer === null;
   const readId = viewer?.userId ? conversationId : "";
 
+  const [sendCount, setSendCount] = useState(0);
   const [hasChatAction, setHasChatAction] = useState(false);
   useChatPushTokenRegistration(hasChatAction && !!viewer?.userId);
 
@@ -507,6 +508,7 @@ export default function ConversationDetailScreen() {
       if (!viewer?.userId || !conversationId || cannotSend) return;
 
       setHasChatAction(true);
+      setSendCount((count) => count + 1);
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
       const pendingMessage: LocalMessage = {
@@ -554,6 +556,7 @@ export default function ConversationDetailScreen() {
       if (!viewer?.userId || !conversationId || cannotSend) return;
 
       setHasChatAction(true);
+      setSendCount((count) => count + 1);
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
       const pendingMessage: LocalMessage = {
@@ -916,6 +919,7 @@ export default function ConversationDetailScreen() {
           <MessageList
             messages={allMessages}
             currentUserId={viewer.userId}
+            sendCount={sendCount}
             reportedMessageIds={reportedMessageIds}
             onRetry={handleRetry}
             onDelete={confirmDeleteMessage}

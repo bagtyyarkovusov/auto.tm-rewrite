@@ -35,6 +35,8 @@ export interface MessageItem {
 interface MessageListProps {
   messages: MessageItem[];
   currentUserId: string;
+  /** Incremented by an explicit send, never by a server acknowledgement. */
+  sendCount?: number;
   reportedMessageIds?: Set<string>;
   /** Report message is offered only while reporting is switched on for the environment. */
   reportEnabled?: boolean;
@@ -112,6 +114,7 @@ function DaySeparator({ label }: { label: string }) {
 export function MessageList({
   messages,
   currentUserId,
+  sendCount = 0,
   reportedMessageIds,
   reportEnabled = true,
   onCopy,
@@ -128,13 +131,9 @@ export function MessageList({
 }: MessageListProps) {
   const { t, i18n } = useTranslation();
   const listRef = useRef<FlatList<MessageRow<MessageItem>>>(null);
-  const newestMessage = messages[0];
-  const newestOwnId = newestMessage?.senderId === currentUserId ? newestMessage.id : undefined;
   useEffect(() => {
-    // Reveal outgoing rows even when a fast ack skips the pending render.
-    // Incoming Messages and older-page loads leave the reader's position alone.
-    if (newestOwnId) listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [newestOwnId]);
+    if (sendCount > 0) listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [sendCount]);
   const reported = reportedMessageIds ?? new Set<string>();
   const [actionTargetId, setActionTargetId] = useState<string | null>(null);
   const rows = useMemo(
