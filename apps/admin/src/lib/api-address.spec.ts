@@ -30,6 +30,29 @@ describe("admin API address", () => {
       "https://api.example.test/api/v1/auth/otp/request", expect.any(Object),
     );
   });
+  it.each([
+    ["  https://API.example.test:443/api/v1/  ", "https://api.example.test/api/v1/auth/otp/request"],
+    ["https://api.example.test/prefix/../api/v1/", "https://api.example.test/api/v1/auth/otp/request"],
+  ])("uses the validated canonical URL for %s", async (address, expected) => {
+    vi.stubEnv("API_BASE_URL", address);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ ok: true })));
+    const { apiFetch } = await import("./api-client");
+    await apiFetch("/auth/otp/request", { method: "POST" });
+    expect(fetch).toHaveBeenCalledWith(expected, expect.any(Object));
+  });
+
+  it.each([
+    "https://api.example.test?key=value", "https://api.example.test#fragment",
+    "https://user:pass@api.example.test", "https://user@api.example.test",
+    "https://api.example.test?", "https://api.example.test#",
+  ])("rejects ambiguous or credential-bearing addresses %s", async (address) => {
+    vi.stubEnv("API_BASE_URL", address);
+    vi.stubGlobal("fetch", vi.fn());
+    const { apiFetch } = await import("./api-client");
+    await expect(apiFetch("/auth/otp/request")).rejects.toThrow(/API_BASE_URL/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it.each([undefined, "", "not-a-url", "ftp://api.example.test"])(
     "rejects production API_BASE_URL %s with a named configuration error", async (address) => {
       vi.stubEnv("NODE_ENV", "production");
