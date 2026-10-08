@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 304 248" fill="none">
+  <rect x="30" y="14" width="236" height="46" rx="23" fill="currentColor" fill-opacity="0.1"/>
+  <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="58" cy="35" r="7" stroke-width="2.5"/>
+    <path d="M63.5 40.5L69 46" stroke-width="2.5"/>
+    <path d="M88 31H162" stroke-width="5"/>
+    <path d="M88 44H132" stroke-width="5" stroke-opacity="0.3"/>
+    <path d="M242 31L248 37L242 43" stroke-width="2.5" stroke-opacity="0.5"/>
+  </g>
+  <rect x="246" y="92" width="96" height="154" rx="20" fill="currentColor" fill-opacity="0.07"/>
+  <rect x="256" y="102" width="76" height="76" rx="12" fill="currentColor" fill-opacity="0.1"/>
+  <rect x="30" y="78" width="204" height="168" rx="22" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-width="2.5"/>
+  <rect x="42" y="90" width="180" height="96" rx="13" fill="currentColor" fill-opacity="0.1"/>
+  <g transform="translate(54 112) scale(0.8)" stroke="currentColor" stroke-width="3.75" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 58H7C4.2 58 2 55.8 2 53V43.5C2 39 5.3 35.2 9.8 34.7L37 31C48 14 60 6 80 6H116C132 6 143 14 157 28L184 33.5C189.8 34.7 194 39.8 194 45.7V53C194 55.8 191.8 58 189 58H172" fill="currentColor" fill-opacity="0.1"/>
+    <path d="M68 58H132"/>
+    <path d="M55 31C63 17 70 13 83 13H97V31Z" fill="currentColor" fill-opacity="0.2"/>
+    <path d="M105 13H116C128 13 136 19 147 31H105Z" fill="currentColor" fill-opacity="0.2"/>
+    <path d="M101 38V50M111 39H119M62 39H70" stroke-opacity="0.45"/>
+    <path d="M185 43H193" stroke="#E60000" stroke-width="5"/>
+    <path d="M3 43H9" stroke-opacity="0.45" stroke-width="5"/>
+    <circle cx="48" cy="58" r="15"/>
+    <circle cx="48" cy="58" r="5.5" fill="currentColor" stroke="none"/>
+    <circle cx="152" cy="58" r="15"/>
+    <circle cx="152" cy="58" r="5.5" fill="currentColor" stroke="none"/>
+  </g>
+  <g stroke="currentColor" stroke-linecap="round">
+    <path d="M46 206H116" stroke-width="7"/>
+    <path d="M46 226H158" stroke-width="5" stroke-opacity="0.3"/>
+  </g>
+  <circle cx="234" cy="168" r="42" stroke="#E60000" stroke-width="8"/>
+  <path d="M265 199L291 225" stroke="#E60000" stroke-width="12" stroke-linecap="round"/>
+</svg>

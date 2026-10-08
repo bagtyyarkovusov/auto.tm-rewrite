@@ -38,6 +38,11 @@ import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanClea
 import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
 import { AppNavigationEffects } from "../src/navigation/AppNavigationEffects";
+import { OnboardingLaunch } from "../src/onboarding/OnboardingLaunch";
+import {
+  resolveOnboardingGate,
+  type OnboardingDecision,
+} from "../src/onboarding/onboardingGate";
 import { themeStore } from "../src/theme/themeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
@@ -48,7 +53,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 // cannot auto-hide before React mounts.
 void SplashScreen.preventAutoHideAsync();
 
-// Deep links and publish results go Back to tabs.
+// Deep links and publish results go Back to tabs. Onboarding is pushed above
+// the tabs on a first launch (`OnboardingLaunch`); it is never the first route.
 export const unstable_settings = {
   initialRouteName: "(tabs)",
 };
@@ -172,9 +178,13 @@ export default function RootLayout() {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     "GeistMono-Medium": require("../assets/fonts/GeistMono-Medium.ttf"),
   });
-  const appReady = fontsLoaded && i18nReady;
+  const [onboarding, setOnboarding] = useState<OnboardingDecision | null>(null);
+  const appReady = fontsLoaded && i18nReady && onboarding !== null;
 
   useEffect(() => {
+    // Started first: the gate reads storage before anything in this launch
+    // can write to it. It answers within a second.
+    void resolveOnboardingGate().then(setOnboarding);
     void localeStore.getState().hydrate().then(() => {
       void initI18n().then(() => {
         setI18nReady(true);
@@ -192,12 +202,6 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (appReady) {
-      SplashScreen.hide();
-    }
-  }, [appReady]);
-
-  useEffect(() => {
     void NetInfo.fetch().then((state) => {
       onlineManager.setOnline(isOnline(state));
     });
@@ -209,6 +213,7 @@ export default function RootLayout() {
     return () => unsub();
   }, []);
 
+  // The native launch screen stays up until `OnboardingLaunch` lets it go.
   if (!appReady) {
     return null;
   }
@@ -225,8 +230,12 @@ export default function RootLayout() {
           <SafeAreaProvider>
             <ErrorBoundary>
               <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(onboarding)" />
                 <Stack.Screen name="(tabs)" />
+                {/* Opens under the launch screen, so it does not animate in. No swipe back to Home. */}
+                <Stack.Screen
+                  name="(onboarding)"
+                  options={{ animation: "none", gestureEnabled: false }}
+                />
                 <Stack.Screen name="(public)" />
                 <Stack.Screen name="profile" />
                 <Stack.Screen name="conversations/[id]" />
@@ -235,6 +244,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(auth)/email" />
                 <Stack.Screen name="(auth)/otp" />
               </Stack>
+              <OnboardingLaunch decision={onboarding} />
             </ErrorBoundary>
           </SafeAreaProvider>
           <PortalHost />
