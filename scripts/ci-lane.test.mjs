@@ -340,3 +340,47 @@ test("a stale event base SHA still uses the synthetic merge's current main paren
   const fetched = await select(shallow, event, async () => green(event), { fetchHistory: true });
   assert.equal(fetched.lane, "docs", fetched.reason);
 });
+
+test("a fork head takes full on an otherwise docs-eligible synchronize event", async (t) => {
+  const r = pullRequest(t);
+  r.commit({ "docs/a.md": "docs evidence\n" });
+  const event = r.finish();
+  assert.equal((await select(r, event)).lane, "docs");
+  const forkEvent = {
+    ...event,
+    pull_request: {
+      ...event.pull_request,
+      head: {
+        ...event.pull_request.head,
+        repo: { ...event.pull_request.head.repo, full_name: "fork-owner/repo" },
+      },
+    },
+  };
+  assert.equal((await select(r, forkEvent)).lane, "full");
+});
+
+test("ordinary full runs list readable changed files without a warning", (t) => {
+  const { cwd, commit } = repo(t);
+  const base = commit({ "src/app.ts": "one\n" });
+  commit({ "src/app.ts": "two\n" });
+  const script = resolve(dirname(fileURLToPath(import.meta.url)), "ci-lane.mjs");
+  const output = execFileSync(process.execPath, [script, base], {
+    cwd, encoding: "utf8",
+    env: { ...process.env, GITHUB_EVENT_NAME: "push", GITHUB_EVENT_PATH: "" },
+  });
+  assert.match(output, /Changed files:\nsrc\/app\.ts/);
+  assert.doesNotMatch(output, /::warning::/);
+  assert.match(output, /CI lane: full/);
+});
+
+test("an unreadable diff still warns and takes full", (t) => {
+  const { cwd, commit } = repo(t);
+  commit({ "docs/a.md": "docs\n" });
+  const script = resolve(dirname(fileURLToPath(import.meta.url)), "ci-lane.mjs");
+  const output = execFileSync(process.execPath, [script, "f".repeat(40)], {
+    cwd, encoding: "utf8",
+    env: { ...process.env, GITHUB_EVENT_NAME: "push", GITHUB_EVENT_PATH: "" },
+  });
+  assert.match(output, /::warning::could not list changed files/);
+  assert.match(output, /CI lane: full/);
+});
