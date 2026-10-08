@@ -1,8 +1,11 @@
 import { createRequire } from "node:module";
+
+import type * as Native from "react-native";
 import * as React from "react";
 import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { act, fireEvent, renderMobile } from "../render";
 import RootLayout, { unstable_settings } from "../../app/_layout";
 import ValuePropScreen from "../../app/(onboarding)/value-prop";
@@ -64,6 +67,6 @@ describe("Onboarding Back eligibility", () => {
 });
 
 vi.mock("react-native", async (original) => ({
-  ...await original<typeof import("react-native")>(),
+  ...await original<typeof Native>(),
   AppState: { addEventListener: () => ({ remove() {} }) },
 }));

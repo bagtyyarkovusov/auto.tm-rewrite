@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { StepVehicleSchema, validateStep } from "./wizard";
 const vehicle = { brandId: "00000000-0000-4000-8000-000000000001", modelId: "00000000-0000-4000-8000-000000000002", year: 2018 };
 describe("Optional VIN", () => {

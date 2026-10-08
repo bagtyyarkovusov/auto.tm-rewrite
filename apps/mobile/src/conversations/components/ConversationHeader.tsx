@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { View } from "react-native";
-import * as Linking from "expo-linking";
 import { BellOff, MoreHorizontal, Phone } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 
+import { openSellerDialer } from "../../listings/openSellerDialer";
 import type { ConversationDetail } from "../../api/conversations/useConversation";
 import { usePeerName } from "../usePeerName";
 
@@ -59,10 +59,7 @@ export function ConversationHeader({
 
   const handleCall = async () => {
     if (!callPhone) return;
-    const url = `tel:${callPhone}`;
-    if (await Linking.canOpenURL(url)) {
-      await Linking.openURL(url);
-    }
+    await openSellerDialer(callPhone, t);
   };
 
   return (

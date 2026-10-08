@@ -54,6 +54,7 @@ const WIZARD_ERROR_NAMES = [
   "invalidValue",
   "unknownStep",
   "vinTooLong",
+  "vinInvalid",
   "photosRequired",
   "brandRequired",
   "modelRequired",
@@ -123,7 +124,10 @@ export const StepVehicleSchema = z.object({
     .int(KEY.yearWholeNumber)
     .min(WIZARD_LIMITS.yearMin, KEY.yearTooEarly)
     .max(WIZARD_LIMITS.yearMax, KEY.yearTooLate),
-  vin: z.string().max(WIZARD_LIMITS.vinMaxLength, KEY.vinTooLong).optional(),
+  vin: z.string()
+    .max(WIZARD_LIMITS.vinMaxLength, KEY.vinTooLong)
+    .regex(/^(?:[A-HJ-NPR-Z0-9]{17})?$/i, KEY.vinInvalid)
+    .optional(),
 });
 export type StepVehicleInput = z.infer<typeof StepVehicleSchema>;
 

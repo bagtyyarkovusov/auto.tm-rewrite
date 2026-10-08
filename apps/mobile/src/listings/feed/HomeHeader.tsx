@@ -83,7 +83,9 @@ export function HomeHeader() {
         trailing={
           <Button
             variant="ghost"
-            className="h-11 px-3"
+            className="h-11 px-3 active:bg-transparent"
+            feedback="none"
+            style={({ pressed }) => ({ backgroundColor: "transparent", opacity: pressed ? 0.6 : 1 })}
             onPress={() => router.push("/(tabs)/(search)/results")}
           >
             <Text className="text-body font-medium text-foreground">{t("seeAll")}</Text>

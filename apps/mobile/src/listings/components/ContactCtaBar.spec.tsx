@@ -1,3 +1,4 @@
+import type * as Native from "react-native";
 import { Alert } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Linking from "expo-linking";
@@ -129,7 +130,7 @@ describe("ContactCtaBar", () => {
 });
 
 vi.mock("react-native", async (original) => ({
-  ...await original<typeof import("react-native")>(),
+  ...await original<typeof Native>(),
   Alert: { alert: vi.fn() },
 }));
 

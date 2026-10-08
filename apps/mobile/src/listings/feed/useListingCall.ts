@@ -1,7 +1,8 @@
 import { Enums, type ListingsSchemas } from "@auto-tm/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import * as Linking from "expo-linking";
+import { useTranslation } from "react-i18next";
 
+import { openSellerDialer } from "../openSellerDialer";
 import { listingDetailQueryOptions } from "../../api/listings/useListingDetail";
 
 /** The phone Listing detail's Call dials, or undefined when detail would not offer Call. */
@@ -19,12 +20,12 @@ export function callablePhone(detail: ListingsSchemas.ListingDetail): string | u
  */
 export function useListingCall(listingId: string) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const mutation = useMutation({
     mutationFn: async () => {
       const phone = callablePhone(await queryClient.fetchQuery(listingDetailQueryOptions(listingId)));
       if (!phone) return;
-      const url = `tel:${phone}`;
-      if (await Linking.canOpenURL(url)) await Linking.openURL(url);
+      await openSellerDialer(phone, t);
     },
   });
   return {

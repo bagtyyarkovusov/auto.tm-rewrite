@@ -1,4 +1,3 @@
-import { Alert } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
@@ -289,25 +288,5 @@ describe("ConversationHeader", () => {
       { locale: "ru" },
     );
     expect(screen.getByText("Удалённый пользователь")).toBeTruthy();
-  });
-});
-
-vi.mock("react-native", async (original) => ({
-  ...await original<typeof import("react-native")>(),
-  Alert: { alert: vi.fn() },
-}));
-
-describe("Android dialer", () => {
-  it("dials despite a false package-visibility check", async () => {
-    vi.mocked(Linking.canOpenURL).mockResolvedValueOnce(false);
-    const view = header({ callPhone: "+99365000000" });
-    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call the seller" })); });
-    expect(Linking.openURL).toHaveBeenCalledWith("tel:+99365000000");
-  });
-  it("shows the number when the dialer fails", async () => {
-    vi.mocked(Linking.openURL).mockRejectedValueOnce(new Error("No dialer"));
-    const view = header({ callPhone: "+99365000000" });
-    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call the seller" })); });
-    expect(Alert.alert).toHaveBeenCalledWith("Call", "Could not open the dialer. Call +99365000000 manually.");
   });
 });

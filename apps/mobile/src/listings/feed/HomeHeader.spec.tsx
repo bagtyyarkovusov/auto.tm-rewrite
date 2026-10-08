@@ -1,9 +1,11 @@
 import { StyleSheet } from "react-native";
 import { describe, expect, it } from "vitest";
-import { act, fireEvent, renderMobile, routerMock } from "../../../test/render";
-import { HomeHeader } from "./HomeHeader";
-import { server } from "../../../test/msw";
 import { http, HttpResponse } from "msw";
+
+import { act, fireEvent, renderMobile, routerMock } from "../../../test/render";
+import { server } from "../../../test/msw";
+
+import { HomeHeader } from "./HomeHeader";
 describe("Home See all press feedback", () => {
   it("returns to a plain label after pressing and opening Results", async () => {
     server.use(http.get("http://localhost:3006/api/v1/listings/count", () => HttpResponse.json({ totalMatching: 4 })));

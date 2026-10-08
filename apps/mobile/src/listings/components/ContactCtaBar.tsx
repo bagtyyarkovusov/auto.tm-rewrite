@@ -1,10 +1,10 @@
 import { View } from "react-native";
-import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { Phone, MessageCircle } from "lucide-react-native";
 import { Enums } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
+import { openSellerDialer } from "../openSellerDialer";
 import { useAuth } from "../../auth/useAuth";
 import {
   useAuthIntentStore,
@@ -67,11 +67,7 @@ export function ContactCtaBar({
 
   const handleCall = async () => {
     if (!canCall || !contactPhone) return;
-    const url = `tel:${contactPhone}`;
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      await Linking.openURL(url);
-    }
+    await openSellerDialer(contactPhone, t);
   };
 
   // `conversation.open` is the action body without the auth gate, so one

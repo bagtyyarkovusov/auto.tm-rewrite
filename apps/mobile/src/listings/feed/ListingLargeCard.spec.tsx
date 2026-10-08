@@ -1,7 +1,7 @@
-import { Alert } from "react-native";
+import type * as Native from "react-native";
+import { Alert , Image, StyleSheet } from "react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import * as Linking from "expo-linking";
-import { Image, StyleSheet } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderMobile, fireEvent, act } from "../../../test/render";
@@ -251,7 +251,7 @@ describe("Results card seller line", () => {
 });
 
 vi.mock("react-native", async (original) => ({
-  ...await original<typeof import("react-native")>(),
+  ...await original<typeof Native>(),
   Alert: { alert: vi.fn() },
 }));
 

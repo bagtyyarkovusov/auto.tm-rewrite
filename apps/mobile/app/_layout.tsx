@@ -39,6 +39,7 @@ import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
 import { AppNavigationEffects } from "../src/navigation/AppNavigationEffects";
 import { themeStore } from "../src/theme/themeStore";
+import { getOnboardingCompleted, subscribeOnboardingCompleted } from "../src/onboarding/onboardingFlag";
 
 import { ToastProvider } from "@/components/ui/toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -48,10 +49,10 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 // cannot auto-hide before React mounts.
 void SplashScreen.preventAutoHideAsync();
 
-// Start first-time users in the onboarding flow. Returning users are
-// redirected to the feed from the splash screen once the flag is read.
+// Deep links and publish results go Back to tabs. Onboarding is eligible
+// only until its persisted completion flag is set.
 export const unstable_settings = {
-  initialRouteName: "(onboarding)",
+  initialRouteName: "(tabs)",
 };
 
 const queryClient = new QueryClient({
@@ -157,6 +158,16 @@ export default function RootLayout() {
     theme === "system" ? (osColorScheme ?? "light") : theme;
   const scheme = resolvedScheme === "dark" ? "dark" : "light";
   const [i18nReady, setI18nReady] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const unsubscribe = subscribeOnboardingCompleted(setOnboardingCompleted);
+    void getOnboardingCompleted().then((completed) => {
+      if (mounted) setOnboardingCompleted(completed);
+    });
+    return () => { mounted = false; unsubscribe(); };
+  }, []);
 
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -174,7 +185,7 @@ export default function RootLayout() {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     "GeistMono-Medium": require("../assets/fonts/GeistMono-Medium.ttf"),
   });
-  const appReady = fontsLoaded && i18nReady;
+  const appReady = fontsLoaded && i18nReady && onboardingCompleted !== null;
 
   useEffect(() => {
     void localeStore.getState().hydrate().then(() => {
@@ -227,7 +238,9 @@ export default function RootLayout() {
           <SafeAreaProvider>
             <ErrorBoundary>
               <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(onboarding)" />
+                <Stack.Protected guard={!onboardingCompleted}>
+                  <Stack.Screen name="(onboarding)" />
+                </Stack.Protected>
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="(public)" />
                 <Stack.Screen name="profile" />

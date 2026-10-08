@@ -1,10 +1,10 @@
-import * as Linking from "expo-linking";
 import { Enums, type ListingsSchemas } from "@auto-tm/contracts";
 import { Camera, MessageCircle, Phone } from "lucide-react-native";
 import { memo } from "react";
 import { Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { openSellerDialer } from "../openSellerDialer";
 import { useOpenListingConversation } from "../../conversations/useOpenListingConversation";
 import { formatPrice } from "../formatPrice";
 import { formatListingDate } from "../feed/formatListingDate";
@@ -46,8 +46,7 @@ function ContactActions({ listing }: { listing: ListingsSchemas.FavoriteListingS
   const phone = listing.allowCalls ? listing.contactPhone : undefined;
   if (!phone && !listing.allowChat) return null;
   const call = async () => {
-    const url = `tel:${phone}`;
-    if (await Linking.canOpenURL(url)) await Linking.openURL(url);
+    if (phone) await openSellerDialer(phone, t);
   };
   return <View className="gap-2 px-4 pb-4">
     <View className="flex-row gap-2">

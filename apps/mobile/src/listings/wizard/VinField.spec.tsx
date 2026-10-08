@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { WizardSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
-import { translateWizardFieldErrors } from "./wizardErrors";
 import { describe, expect, it, vi } from "vitest";
 
 import { fireEvent, renderMobile } from "../../../test/render";
 
+import { translateWizardFieldErrors } from "./wizardErrors";
 import { VinField } from "./VinField";
 
 const lockedHelper = {
