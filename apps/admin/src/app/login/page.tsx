@@ -55,13 +55,19 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = validateReturnTo(searchParams.get("returnTo")) ?? "/reports";
-  const forcedMode = searchParams.get("mode"); // "totp" forces TOTP re-verify
+  const expiredSession = searchParams.get("reason") === "session-expired";
+  const forcedMode = expiredSession ? null : searchParams.get("mode"); // "totp" forces TOTP re-verify
 
-  const [step, setStep] = useState<Step>(() => searchParams.get("reason") === "session-expired"
+  const [step, setStep] = useState<Step>(() => expiredSession
     ? { kind: "phone", phone: "", error: SESSION_EXPIRED_MESSAGE }
     : { kind: "phone", phone: "" });
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+
+  // Query-only navigation can preserve this mounted page after a failed action.
+  useEffect(() => {
+    if (expiredSession) setStep({ kind: "phone", phone: "", error: SESSION_EXPIRED_MESSAGE });
+  }, [expiredSession]);
 
   // If forcedMode=totp and we land here with cookies, we need to check status
   // The proxy/layout will have redirected; this page just renders the TOTP verify form.
