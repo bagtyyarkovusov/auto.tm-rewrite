@@ -20,10 +20,58 @@ vi.mock("./session", () => ({
   },
 }));
 
+let mockSnapshot: unknown;
+
+vi.mock("./sessionSnapshot", () => ({
+  peekAuthSession: () => mockSnapshot,
+}));
+
 describe("useAuth", () => {
   beforeEach(() => {
     mockLoadAuthSession.mockReset();
     sessionListener = undefined;
+    mockSnapshot = undefined;
+  });
+
+  // Android recreated the Activity: every screen mounts again while the app
+  // process, and what it knows about the session, stays alive.
+  it("is signed in on its first render when the app already read the session", () => {
+    mockSnapshot = { user: { id: "user-abc", phone: "+99361000000" } };
+    mockLoadAuthSession.mockImplementation(() => new Promise(() => {}));
+
+    const { result } = renderHook(() => useAuth());
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.userId).toBe("user-abc");
+    expect(result.current.phone).toBe("+99361000000");
+  });
+
+  it("is signed out on its first render when the app already knows there is no session", () => {
+    mockSnapshot = null;
+    mockLoadAuthSession.mockImplementation(() => new Promise(() => {}));
+
+    const { result } = renderHook(() => useAuth());
+
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.userId).toBeNull();
+  });
+
+  it("does not know yet on its first render after a cold start", () => {
+    mockLoadAuthSession.mockImplementation(() => new Promise(() => {}));
+
+    const { result } = renderHook(() => useAuth());
+
+    expect(result.current.isAuthenticated).toBeNull();
+  });
+
+  it("follows the stored session when it differs from what the app remembered", async () => {
+    mockSnapshot = { user: { id: "user-abc", phone: "+99361000000" } };
+    mockLoadAuthSession.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useAuth());
+
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(false));
+    expect(result.current.userId).toBeNull();
   });
 
   it("updates mounted consumers when auth session changes", async () => {

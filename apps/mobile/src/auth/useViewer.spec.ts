@@ -12,9 +12,35 @@ vi.mock("./session", () => ({
   subscribeAuthSession: () => () => {},
 }));
 
+let mockSnapshot: unknown;
+
+vi.mock("./sessionSnapshot", () => ({
+  peekAuthSession: () => mockSnapshot,
+}));
+
 describe("useViewer", () => {
   beforeEach(() => {
     mockLoadAuthSession.mockReset();
+    mockSnapshot = undefined;
+  });
+
+  // Android recreated the Activity: the screen mounts again in the same app process.
+  it("returns the viewer on its first render when the app already read the session", () => {
+    mockSnapshot = { user: { id: "user-abc" } };
+    mockLoadAuthSession.mockImplementation(() => new Promise(() => {}));
+
+    const { result } = renderHook(() => useViewer());
+
+    expect(result.current).toEqual({ userId: "user-abc" });
+  });
+
+  it("returns null on its first render when the app already knows there is no session", () => {
+    mockSnapshot = null;
+    mockLoadAuthSession.mockImplementation(() => new Promise(() => {}));
+
+    const { result } = renderHook(() => useViewer());
+
+    expect(result.current).toBeNull();
   });
 
   it("returns null when no session exists", async () => {

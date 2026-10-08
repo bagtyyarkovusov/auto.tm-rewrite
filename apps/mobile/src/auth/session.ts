@@ -1,6 +1,8 @@
 import { AuthSchemas } from "@auto-tm/contracts";
 import * as SecureStore from "expo-secure-store";
 
+import { rememberAuthSession } from "./sessionSnapshot";
+
 const AUTH_SESSION_KEY = "auto_tm_auth_session";
 const sessionListeners = new Set<() => void>();
 const userChangeListeners = new Set<() => void>();
@@ -21,6 +23,7 @@ export async function storeAuthSession(
   };
 
   await SecureStore.setItemAsync(AUTH_SESSION_KEY, JSON.stringify(value));
+  rememberAuthSession(value);
   const previousUserId = lastUserId;
   lastUserId = session.user.id;
   // Before the session listeners, so no screen renders the new User as signed
@@ -41,6 +44,7 @@ export async function storeAuthSession(
 export async function loadAuthSession(): Promise<StoredAuthSession | null> {
   const value = await SecureStore.getItemAsync(AUTH_SESSION_KEY);
   if (!value) {
+    rememberAuthSession(null);
     return null;
   }
 
@@ -61,10 +65,12 @@ export async function loadAuthSession(): Promise<StoredAuthSession | null> {
   }
 
   lastUserId = session.data.user.id;
-  return {
+  const stored: StoredAuthSession = {
     ...session.data,
     storedAt: String((parsed as { storedAt: unknown }).storedAt),
   };
+  rememberAuthSession(stored);
+  return stored;
 }
 
 /**
@@ -83,11 +89,13 @@ export async function updateStoredSessionUser(
   };
 
   await SecureStore.setItemAsync(AUTH_SESSION_KEY, JSON.stringify(value));
+  rememberAuthSession(value);
   notifySessionChanged();
 }
 
 export async function clearAuthSession(): Promise<void> {
   await SecureStore.deleteItemAsync(AUTH_SESSION_KEY);
+  rememberAuthSession(null);
   notifySessionChanged();
 }
 

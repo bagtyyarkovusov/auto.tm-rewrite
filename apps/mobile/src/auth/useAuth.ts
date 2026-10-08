@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 
 import { loadAuthSession, subscribeAuthSession } from "./session";
+import { peekAuthSession } from "./sessionSnapshot";
 
 export function useAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  // What the app already read, if anything: a screen that mounts again after
+  // Android recreates the Activity starts signed in, without a loading state.
+  const [known] = useState(peekAuthSession);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(
+    known === undefined ? null : known !== null,
+  );
   // Empty string, not null, so consumers can pass it straight to a TextInput.
-  const [phone, setPhone] = useState("");
-  const [userId, setUserId] = useState<string | null>(null);
+  const [phone, setPhone] = useState(known?.user.phone ?? "");
+  const [userId, setUserId] = useState<string | null>(known?.user.id ?? null);
 
   useEffect(() => {
     let cancelled = false;
