@@ -178,6 +178,7 @@ export async function removeUserPhoto(
   reason: string,
   reportId?: string,
 ): Promise<ActionResult<RemoveUserPhotoResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<RemoveUserPhotoResponse>(
       `/admin/users/${id}/remove-photo`,
