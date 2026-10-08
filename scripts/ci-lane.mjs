@@ -152,18 +152,22 @@ export async function chooseLaneForEvent(base, cwd, {
       throw new Error("missing or unsupported synchronize input");
     }
     const ps = parents("HEAD", cwd);
-    if (ps.length !== 2 || ps[0] !== pr.base.sha || ps[1] !== pr.head.sha
+    if (ps.length !== 2 || !isSha(ps[0]) || ps[1] !== pr.head.sha
       || git(["rev-parse", base], cwd) !== ps[0]) throw new Error("checkout does not match event merge parents");
     let paths;
     // Start with the depth-2 checkout. Fetch exact event SHAs, never moving
     // branch tips. Stop as soon as the proof works; at most 255 more levels.
     for (let attempt = 0; ; attempt++) {
       try {
-        paths = handChangedPaths(event.before, pr.head.sha, pr.base.sha, cwd);
+        // PR base.sha can remain at the old base after main moves. The
+        // synthetic merge's first parent is the main snapshot actually used
+        // by this run. Prove the event base belongs to that history too.
+        ancestor(pr.base.sha, ps[0], cwd);
+        paths = handChangedPaths(event.before, pr.head.sha, ps[0], cwd);
         break;
       } catch (error) {
         if (!fetchHistory || attempt >= 8 || git(["rev-parse", "--is-shallow-repository"], cwd) !== "true") throw error;
-        git(["fetch", "--no-tags", `--deepen=${2 ** attempt}`, "origin", pr.head.sha, event.before, pr.base.sha], cwd);
+        git(["fetch", "--no-tags", `--deepen=${2 ** attempt}`, "origin", pr.head.sha, event.before, ps[0], pr.base.sha], cwd);
       }
     }
     if (paths.some(path => !isDocsPath(path))) return { lane: "full", paths, reason: "non-docs path changed by hand since previous head" };
