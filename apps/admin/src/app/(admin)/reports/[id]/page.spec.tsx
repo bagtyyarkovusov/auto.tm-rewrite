@@ -225,4 +225,12 @@ describe("ReportDetailPage profile photo", () => {
       .toBe("https://media.example.test/listing-photos/pending/u1-photo/thumbnail.jpg");
   });
 
+  it("shows no extra avatar on an actioned report that had only an Assigned Avatar", async () => {
+    mockDetail(userReport({ status: "actioned", target: { ...userReport().target, avatarKey: null }, targetModerationState: { suspendedAt: "2026-01-02T00:00:00Z" } }));
+    await renderPage();
+    expect(screen.queryByRole("img", { name: "Назначенный аватар" })).toBeNull();
+    expect(screen.queryByRole("img", { name: "Фото профиля" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Удалить фото" })).toBeNull();
+  });
+
 });
