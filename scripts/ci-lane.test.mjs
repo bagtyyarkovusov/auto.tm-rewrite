@@ -312,6 +312,7 @@ test("hand resolving a text code conflict or moving code into docs takes full", 
   r.commit({ "src/app.ts": "resolved code\n", "docs/a.md": "evidence\n" });
   assert.equal((await select(r, r.finish())).lane, "full");
   r.git("reset", "--hard", r.before);
+  r.git("branch", "-f", "main", r.base);
   r.git("mv", "src/app.ts", "docs/app.ts");
   r.git("commit", "-q", "-m", "move code into docs");
   assert.equal((await select(r, r.finish())).lane, "full");
