@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -127,6 +127,13 @@ export function MessageList({
   afterLast,
 }: MessageListProps) {
   const { t, i18n } = useTranslation();
+  const listRef = useRef<FlatList<MessageRow<MessageItem>>>(null);
+  const pendingOwnId = messages.find((message) => message.senderId === currentUserId && message.status === "pending")?.id;
+  useEffect(() => {
+    // Sending from older history must reveal the optimistic row. Incoming
+    // Messages and older-page loads leave the reader's position alone.
+    if (pendingOwnId) listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [pendingOwnId]);
   const reported = reportedMessageIds ?? new Set<string>();
   const [actionTargetId, setActionTargetId] = useState<string | null>(null);
   const rows = useMemo(
@@ -195,6 +202,7 @@ export function MessageList({
   return (
     <>
     <FlatList
+      ref={listRef}
       data={rows}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
