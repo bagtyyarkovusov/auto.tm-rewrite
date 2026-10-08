@@ -39,12 +39,23 @@ export function cacheAcknowledgedMessage(client: QueryClient, message: Conversat
   // A refetch started before the commit must not overwrite the acknowledged row.
   void client.cancelQueries({ queryKey: key });
   client.setQueryData<InfiniteData<ConversationsSchemas.ListMessagesResponse>>(key, (previous) => {
+    // A deletion that landed before the acknowledgement stays authoritative;
+    // the late acknowledgement must not revive the redacted Message.
+    let redacted = false;
     const pages = (previous?.pages.length ? previous.pages : [{ items: [], nextCursor: null }]).map((page) => ({
       ...page,
-      items: page.items.filter((row) => row.id !== message.id && !(message.clientMessageId && row.clientMessageId === message.clientMessageId)),
+      items: page.items.filter((row) => {
+        const sameRow = row.id === message.id || (message.clientMessageId ? row.clientMessageId === message.clientMessageId : false);
+        if (!sameRow) return true;
+        if (row.deletedAt) {
+          redacted = true;
+          return true;
+        }
+        return false;
+      }),
     }));
     const first = pages[0];
-    if (first) first.items = [message, ...first.items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    if (first && !redacted) first.items = [message, ...first.items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return { ...previous, pages, pageParams: previous?.pageParams ?? [null] };
   });
   // If the first history read was still loading, restart it after the commit to
