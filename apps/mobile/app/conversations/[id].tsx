@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -840,6 +840,8 @@ export default function ConversationDetailScreen() {
 
   return (
     <SafeScreen>
+      {/* Android needs the whole flex layout to shrink, not the footer's local frame. */}
+      <KeyboardAvoidingView enabled={Platform.OS === "android"} behavior="height" style={{ flex: 1 }}>
       <ConversationHeader
         conversation={conversation}
         loading={conversationQuery.isPending && !signedOut && !notFound}
@@ -957,6 +959,8 @@ export default function ConversationDetailScreen() {
             : undefined
         }
       />
+
+      </KeyboardAvoidingView>
 
       {/* Block / Unblock confirmation */}
       <AlertDialog open={confirmDialogOpen} onOpenChange={() => setConfirmAction(null)}>
