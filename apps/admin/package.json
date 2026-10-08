@@ -9,7 +9,8 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:unit": "vitest run --passWithNoTests"
+    "test:unit": "vitest run --passWithNoTests",
+    "verify:runtime": "pnpm build && node ../../scripts/admin-session-runtime-smoke.mjs && node scripts/verify-standalone-assets.mjs"
   },
   "dependencies": {
     "@auto-tm/contracts": "workspace:*",

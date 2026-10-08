@@ -101,6 +101,9 @@ Each environment has `api`, `worker`, `admin`, `web`, Postgres, Redis, and MinIO
 - `sleepApplication` takes effect on the service's **next deployment**, not immediately. A service already asleep on the previous revision stays asleep until it is redeployed.
 - Run `prisma migrate deploy` through the single release authority defined by Sprint 11. Never use `migrate dev` or `db push`.
 - Set `PORT` explicitly per service. Railway injects `PORT=8080` into every service and it overrides the `ENV PORT` baked into the image, so a service whose Railway domain targets the port the Dockerfile declares will return `502` with no application error until the two agree.
+- Set admin `API_BASE_URL` to the API's http(s) private origin, optionally ending in `/api/v1`. Both forms accept a trailing slash. Production admin refuses startup when the variable is absent or invalid. `/healthz` remains independent of API availability after configuration validation.
+- Required in production: set admin `ADMIN_ORIGIN` to its exact public browser origin (scheme and host, no path or trailing slash); POST origin checks and login redirects must use this origin behind the private Next listener. A mismatch returns 403 at the TOTP step and on protected actions; verify it before operator sign-in.
+- Keep admin at **one replica running exactly one Node process** for the first release (one or two operators), until a shared session store exists ([ADR-0090](../../adr/0090-single-process-admin-session-renewal-for-the-first-release.md), [#746](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/746)). Do not use a clustered Node launcher or scale admin horizontally. Renewal uses process-local single-flight coordination and a five-second, 128-entry memory handoff. A restart or second process can expose a spent refresh token to API rejection. Only missing or API-rejected refresh ends at login with both cookies cleared. Capacity, timeouts and API/network outages produce temporary unavailability with cookies intact; retry after recovery. Expired Server Actions renew before execution; failed renewal cancels the action without replay. After rejection the operator must sign in and submit it again. Possession of an old refresh token within the five-second handoff receives the cached new pair without API reuse detection; this accepted replay window is documented in ADR-0090.
 - Do not route traffic until API dependency-readiness and web/admin health checks pass. A worker queue/bootstrap failure must fail the deployment or page the operator through deploy status/logs.
 - Use private Railway networking for Postgres, Redis, and MinIO writes. Public exposure is limited to API, admin, web, and required media reads.
 - MinIO uses one persistent `/data` volume per environment. The S3 API public
@@ -189,8 +192,8 @@ then uses the audited promotion path for the privilege change. Locked in
 ```bash
 # 1. break-glass: create the operator identity only (role stays buyer)
 railway ssh --service api --environment <env> -- psql "$DATABASE_URL" -c \
-  "insert into users (id, phone, \"displayName\", locale, role, \"createdAt\", \"updatedAt\") \
-   values (gen_random_uuid(), '<operator phone>', '<label>', 'ru', 'buyer', now(), now()) \
+  "insert into users (id, phone, \"phoneVerifiedAt\", \"displayName\", locale, role, \"createdAt\", \"updatedAt\") \
+   values (gen_random_uuid(), '<operator phone>', now(), '<label>', 'ru', 'buyer', now(), now()) \
    on conflict (phone) do nothing;"
 
 # 2. audited promotion — dry-run first, then the real run
@@ -200,6 +203,10 @@ railway ssh --service api --environment <env> -- sh -c \
 railway ssh --service api --environment <env> -- sh -c \
   "cd /app && pnpm --filter @auto-tm/db admin:promote -- --phone <operator phone> --reason '<reason>'"
 ```
+
+The insert sets `"phoneVerifiedAt"` together with `phone`, as required by
+`users_phone_verified_check`. Record this break-glass identity creation under
+ADR-0045; it grants no admin privilege until the audited promotion.
 
 Then sign in once as the operator (request the OTP, read it from the API's mock
 SMS log line), `POST /auth/admin/totp/enroll`, and `POST /auth/admin/totp/verify`

@@ -1,7 +1,9 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { CatalogSchemas } from "@auto-tm/contracts";
 
+import { rejectExpiredSession } from "@/lib/action-session";
 import { apiFetch, ApiError } from "@/lib/api-client";
 
 type BrandSummary = CatalogSchemas.BrandSummary;
@@ -28,6 +30,7 @@ const REJECTION_MESSAGES: Record<CatalogSchemas.BrandLogoRejectionReason, string
 };
 
 function toError(err: unknown): { ok: false; error: string } {
+  unstable_rethrow(err);
   if (err instanceof ApiError) {
     const reason = (err.responseBody as { details?: { reason?: string } } | undefined)?.details
       ?.reason;
@@ -44,6 +47,7 @@ function toError(err: unknown): { ok: false; error: string } {
 
 /** Every brand, following the catalog cursor until the last page. */
 export async function listAllBrands(): Promise<BrandLogoActionResult<BrandSummary[]>> {
+  await rejectExpiredSession();
   const brands: BrandSummary[] = [];
   let cursor: string | null = null;
   try {
@@ -67,6 +71,7 @@ export async function uploadBrandLogo(
   brandId: string,
   formData: FormData,
 ): Promise<BrandLogoActionResult<SetBrandLogoResponse>> {
+  await rejectExpiredSession();
   const file = formData.get("logo");
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, error: "Выберите файл логотипа." };
@@ -107,6 +112,7 @@ export async function uploadBrandLogo(
 export async function removeBrandLogo(
   brandId: string,
 ): Promise<BrandLogoActionResult<{ success: boolean }>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<{ success: boolean }>(
       `/admin/catalog/brands/${encodeURIComponent(brandId)}/logo`,

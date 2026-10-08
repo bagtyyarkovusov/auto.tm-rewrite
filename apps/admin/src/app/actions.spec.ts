@@ -1,6 +1,8 @@
+import type * as NextNavigation from "next/navigation";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 const mockState = vi.hoisted(() => ({
+  requestHeaders: new Headers(),
   cookies: new Map<string, string>(),
   cookieStore: {
     get: vi.fn((name: string) => {
@@ -13,20 +15,22 @@ const mockState = vi.hoisted(() => ({
   },
   redirect: vi.fn((url: string) => {
     const err = new Error(`NEXT_REDIRECT:${url}`);
-    (err as Error & { digest?: string }).digest = `NEXT_REDIRECT;replace;${url};307`;
+    (err as Error & { digest?: string }).digest = `NEXT_REDIRECT;replace;${url};307;`;
     throw err;
   }),
 }));
 
 vi.mock("next/headers", () => ({
+  headers: async () => mockState.requestHeaders,
   cookies: vi.fn(() => Promise.resolve(mockState.cookieStore)),
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...await importOriginal<typeof NextNavigation>(),
   redirect: mockState.redirect,
 }));
 
-import { enrollTotp, verifyOtp } from "./actions";
+import { enrollTotp, requireAuthWithReturnTo, verifyOtp, verifyTotp } from "./actions";
 
 function mockFetchQueue(responses: Array<{ status: number; body: unknown }>) {
   const queue = [...responses];
@@ -42,9 +46,46 @@ function mockFetchQueue(responses: Array<{ status: number; body: unknown }>) {
 }
 
 describe("admin auth server actions", () => {
+  it("cancels a rejected auth action before validation or API work", async () => {
+    mockState.requestHeaders.set("x-admin-session-expired", "1");
+    mockFetchQueue([]);
+    await expect(verifyOtp(null, new FormData())).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(fetch).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.requestHeaders = new Headers();
     mockState.cookies.clear();
+  });
+
+  it("shows the Russian wrong-code error for API 400 INVALID_OTP", async () => {
+    mockFetchQueue([{ status: 400, body: { code: "INVALID_OTP", message: "Invalid OTP code" } }]);
+    const formData = new FormData();
+    formData.set("phone", "+99365000001");
+    formData.set("code", "654321");
+
+    await expect(verifyOtp(null, formData)).resolves.toEqual({
+      ok: false, error: "Неверный код. Попробуйте ещё раз.",
+    });
+  });
+
+  it.each([429, 500, 503])("layout gate surfaces API %s without signing the operator out", async (status) => {
+    mockFetchQueue([{ status, body: { code: "UNAVAILABLE", message: "Unavailable" } }]);
+    await expect(requireAuthWithReturnTo("/reports")).rejects.toMatchObject({ status });
+    expect(mockState.redirect).not.toHaveBeenCalled();
+    expect(mockState.cookieStore.set).not.toHaveBeenCalled();
+  });
+
+  it("layout gate adds the expiry reason only after API401", async () => {
+    mockFetchQueue([{ status: 401, body: {} }]);
+    await expect(requireAuthWithReturnTo("/reports")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired&returnTo=%2Freports");
+  });
+
+  it("shows Russian feedback for API400 INVALID_TOTP", async () => {
+    mockFetchQueue([{ status: 400, body: { code: "INVALID_TOTP", message: "Invalid TOTP code" } }]);
+    const formData = new FormData();
+    formData.set("code", "654321");
+    await expect(verifyTotp(null, formData)).resolves.toEqual({ ok: false, error: "Неверный код. Попробуйте ещё раз." });
   });
 
   it("verifyOtp reports when the admin already has TOTP enrolled", async () => {

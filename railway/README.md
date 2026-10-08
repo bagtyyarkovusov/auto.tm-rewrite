@@ -118,7 +118,7 @@ generated per environment.
 | `NEXT_PUBLIC_MINIO_PUBLIC_URL` | — | — | yes | yes | R/G (S11-02) |
 | `SESSION_SECRET` | — | — | yes | — | G |
 | `PORT` | yes | — | yes | yes | F: must match the port the image listens on; Railway injects `PORT=8080` and it overrides the Dockerfile `ENV PORT` |
-| `API_BASE_URL` | — | — | yes | yes | R: API private `*.railway.internal` origin for server-side admin calls and web's account deletion Server Functions. Required for web: the fallback to `NEXT_PUBLIC_API_URL` sends web's calls through the public edge, which overwrites web's `X-Real-IP`, so every web visitor shares one Sign-in Code budget (ADR-0078) |
+| `API_BASE_URL` | — | — | yes | yes | R: http(s) API private `*.railway.internal` origin, optionally ending in `/api/v1`, with or without a trailing slash. Required for admin in production, which validates it at startup. Used for server-side admin calls and web's account deletion Server Functions. Required for web: the fallback to `NEXT_PUBLIC_API_URL` sends web's calls through the public edge, which overwrites web's `X-Real-IP`, so every web visitor shares one Sign-in Code budget (ADR-0078) |
 | `ADMIN_ORIGIN` | — | — | yes | — | R: admin public origin |
 | `SIGNUPS_ENABLED` | yes | — | — | — | F: `false` in staging and production until public launch |
 | `CLIENT_IP_HEADER` / `CLIENT_IP_TRUSTED_HOPS` | optional | — | — | optional | F: unset on Railway, where the defaults trust the edge's `X-Real-IP` (ADR-0078); set both for another ingress. A hop count is safe only when the service cannot be reached except through those proxies |

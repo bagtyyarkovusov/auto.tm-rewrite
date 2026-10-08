@@ -1,20 +1,26 @@
+import type * as NextNavigation from "next/navigation";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 const mockState = vi.hoisted(() => ({
+  requestHeaders: new Headers(),
   cookieStore: {
     get: vi.fn(),
     set: vi.fn(),
   },
   redirect: vi.fn((url: string) => {
-    throw new Error(`NEXT_REDIRECT:${url}`);
+    const error = new Error(`NEXT_REDIRECT:${url}`);
+    (error as Error & { digest: string }).digest = `NEXT_REDIRECT;replace;${url};307;`;
+    throw error;
   }),
 }));
 
 vi.mock("next/headers", () => ({
+  headers: async () => mockState.requestHeaders,
   cookies: vi.fn(() => Promise.resolve(mockState.cookieStore)),
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...await importOriginal<typeof NextNavigation>(),
   redirect: mockState.redirect,
 }));
 
@@ -40,8 +46,19 @@ function logoForm(bytes: number, type: string): FormData {
 }
 
 describe("brand logo server actions", () => {
+  it("cancels a rejected upload before file validation or API work", async () => {
+    mockState.requestHeaders.set("x-admin-session-expired", "1");
+    mockFetchSequence([]);
+    await expect(uploadBrandLogo("b1", new FormData())).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("propagates a session-expired redirect without treating it as an upload error", async () => {
+    mockFetchSequence([{ status: 401, body: { code: "UNAUTHORIZED" } }]);
+    await expect(removeBrandLogo("b1")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+  });
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.requestHeaders = new Headers();
     mockState.cookieStore.get.mockReturnValue({ value: "acc_tok" });
   });
 

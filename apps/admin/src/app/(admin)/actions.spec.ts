@@ -1,22 +1,26 @@
+import type * as NextNavigation from "next/navigation";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 const mockState = vi.hoisted(() => ({
+  requestHeaders: new Headers(),
   cookieStore: {
     get: vi.fn(),
     set: vi.fn(),
   },
   redirect: vi.fn((url: string) => {
     const err = new Error(`NEXT_REDIRECT:${url}`);
-    (err as Error & { digest?: string }).digest = `NEXT_REDIRECT;replace;${url};307`;
+    (err as Error & { digest?: string }).digest = `NEXT_REDIRECT;replace;${url};307;`;
     throw err;
   }),
 }));
 
 vi.mock("next/headers", () => ({
+  headers: async () => mockState.requestHeaders,
   cookies: vi.fn(() => Promise.resolve(mockState.cookieStore)),
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...await importOriginal<typeof NextNavigation>(),
   redirect: mockState.redirect,
 }));
 
@@ -53,8 +57,20 @@ function mockFetchError(status: number, body: unknown) {
 }
 
 describe("moderation server actions", () => {
+  it("cancels a proxy-rejected action before calling the mutation API", async () => {
+    mockState.requestHeaders.set("x-admin-session-expired", "1");
+    mockFetchSuccess({});
+    await expect(dismissReport("r1", "Spam")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("propagates the session-expired redirect after an API rejection", async () => {
+    mockFetchError(401, { code: "UNAUTHORIZED" });
+    await expect(dismissReport("r1", "Spam")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(mockCookieStore.set).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.requestHeaders = new Headers();
     mockCookieStore.get.mockReturnValue({ value: "acc_tok" });
   });
 
@@ -530,6 +546,13 @@ describe("moderation server actions", () => {
   });
 
   describe("removeUserPhoto", () => {
+    it("cancels a proxy-rejected photo action before any API work", async () => {
+      mockState.requestHeaders.set("x-admin-session-expired", "1");
+      mockCookieStore.get.mockReturnValue(undefined);
+      mockFetchSuccess({});
+      await expect(removeUserPhoto("u1", "Reason", "r1")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+      expect(fetch).not.toHaveBeenCalled();
+    });
     it("posts reason and reportId to the moderator removal route", async () => {
       const payload = {
         targetId: "u1",
