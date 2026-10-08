@@ -64,6 +64,64 @@ describe("updateStoredSessionUser", () => {
   });
 });
 
+describe("the session the app remembers", () => {
+  /** The session and snapshot modules as a newly started app has them. */
+  async function startApp() {
+    vi.resetModules();
+    return { ...(await import("./session")), ...(await import("./sessionSnapshot")) };
+  }
+
+  beforeEach(() => {
+    store.clear();
+  });
+
+  it("is unknown until the stored session has been read", async () => {
+    await storeAuthSession(session as never);
+    const app = await startApp();
+
+    expect(app.peekAuthSession()).toBeUndefined();
+  });
+
+  it("is the stored session once it has been read", async () => {
+    await storeAuthSession(session as never);
+    const app = await startApp();
+
+    await app.loadAuthSession();
+
+    expect(app.peekAuthSession()?.user.id).toBe(session.user.id);
+  });
+
+  it("is null once a read finds no session", async () => {
+    const app = await startApp();
+
+    await app.loadAuthSession();
+
+    expect(app.peekAuthSession()).toBeNull();
+  });
+
+  it("is null once a read finds a session it cannot use", async () => {
+    store.set("auto_tm_auth_session", JSON.stringify({ storedAt: "2026-01-01", accessToken: 1 }));
+    const app = await startApp();
+
+    await app.loadAuthSession();
+
+    expect(app.peekAuthSession()).toBeNull();
+  });
+
+  it("follows sign-in, a Sign-in Method change and sign-out", async () => {
+    const app = await startApp();
+
+    await app.storeAuthSession(session as never);
+    expect(app.peekAuthSession()?.accessToken).toBe("access");
+
+    await app.updateStoredSessionUser({ phone: "+99361000000", email: null });
+    expect(app.peekAuthSession()?.user.phone).toBe("+99361000000");
+
+    await app.clearAuthSession();
+    expect(app.peekAuthSession()).toBeNull();
+  });
+});
+
 describe("subscribeAuthUserChange", () => {
   const otherSession = {
     ...session,

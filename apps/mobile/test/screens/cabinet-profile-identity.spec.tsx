@@ -62,6 +62,8 @@ async function signIn(token: string, id = AMAN_ID) {
 
 beforeEach(async () => {
   storage.clear();
+  // The app remembers the session it last read, so the previous test's User is signed out too.
+  await clearAuthSession();
   api.users.clear();
   api.meRequests = 0;
   server.use(
