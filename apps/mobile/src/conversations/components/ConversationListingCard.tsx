@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { carTitle } from "@/src/listings/carTitle";
 import { closedListingBannerKey } from "@/src/listings/detail/closedListing";
 import { buildVariantUrl } from "@/src/listings/detail/buildVariantUrl";
 import { formatPrice } from "@/src/listings/formatPrice";
@@ -65,9 +66,7 @@ export function ConversationListingCard(props: ConversationListingCardProps) {
     );
   }
 
-  const title = [listing.year ? String(listing.year) : null, brandName, modelName]
-    .filter(Boolean)
-    .join(" ");
+  const title = carTitle(brandName, modelName, listing.year);
 
   const priceText = formatPrice(listing.displayPriceTmt, i18n.language);
 

@@ -242,7 +242,7 @@ describe("My listings rows", () => {
     const view = await renderScreen();
     await openTab(view, /^Drafts/);
     expect(view.getByText("1 of 7 steps filled")).toBeTruthy();
-    expect(view.getByText("17%")).toBeTruthy();
+    expect(view.getByText("14%")).toBeTruthy();
     expect(view.queryByText("Step 3 of 7")).toBeNull();
   });
 });

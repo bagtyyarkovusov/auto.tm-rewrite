@@ -70,7 +70,8 @@ describe("Step2Photos", () => {
     expect(screen.getByRole("button", { name: "Library", disabled: true })).toBeTruthy();
     expect(screen.getByText("Photo limit reached")).toBeTruthy();
     // The maximum is stated once, in the intro line.
-    expect(screen.getAllByText(/20/)).toHaveLength(1);
+    expect(screen.getByText("Photos: 20")).toBeTruthy();
+    expect(screen.getAllByText(/20 photos|20 фото|limit of 20|Maximum 20/)).toHaveLength(1);
     expect(screen.getByText("Photos under 5 MB upload faster. Add up to 20 photos.")).toBeTruthy();
   });
 

@@ -18,6 +18,7 @@ import { PublicUserAvatar } from "@/components/identity/PublicUserAvatar";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+import { carTitle } from "@/src/listings/carTitle";
 import { buildVariantUrl } from "@/src/listings/detail/buildVariantUrl";
 import { formatPrice } from "@/src/listings/formatPrice";
 
@@ -85,13 +86,11 @@ export function ConversationListItem({
 
   const listingLine = listing
     ? [
-        [
-          listing.year ? String(listing.year) : null,
+        carTitle(
           brandName ?? listing.brandId.slice(0, 8),
           modelName ?? listing.modelId.slice(0, 8),
-        ]
-          .filter(Boolean)
-          .join(" "),
+          listing.year,
+        ),
         formatPrice(listing.displayPriceTmt, i18n.language),
       ].join(" · ")
     : tConv("listingUnavailable");

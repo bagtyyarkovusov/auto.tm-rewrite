@@ -50,6 +50,6 @@ describe("DraftCard rendered progress", () => {
     screen.rerender(card({ ...payload, priceAmount: 0 }));
     expect(screen.getByText("2 of 7 steps filled")).toBeTruthy();
     expect(screen.getByText("29%")).toBeTruthy();
-    expect(screen.getByRole("progressbar").props.accessibilityValue.now).toBe(33);
+    expect(screen.getByRole("progressbar").props.accessibilityValue.now).toBe(29);
   });
 });

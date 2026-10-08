@@ -6,6 +6,7 @@ import { Enums } from "@auto-tm/contracts";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
+import { carTitle } from "../carTitle";
 import { buildVariantUrl } from "../detail/buildVariantUrl";
 
 import { Button } from "@/components/ui/button";
@@ -59,11 +60,7 @@ export function OwnerListingCard({
     ? buildVariantUrl(listing.coverMediaKey, "list")
     : null;
 
-  const title = [
-    listing.year ? String(listing.year) : null,
-    brandName ?? listing.brandId,
-    modelName ?? listing.modelId,
-  ].filter(Boolean).join(" ");
+  const title = carTitle(brandName ?? listing.brandId, modelName ?? listing.modelId, listing.year);
 
   const isBlocked = listing.status === Enums.ListingStatus.Banned;
   const isActive = listing.status === Enums.ListingStatus.Active;

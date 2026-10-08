@@ -434,7 +434,7 @@ export default function Step2Photos({
       </Text>
 
       <Text className="text-callout font-medium text-foreground">
-        {t("photosGoalCounter", { count: photos.length, goal: ListingsSchemas.RECOMMENDED_LISTING_PHOTOS })}
+        {t("photosCounter", { count: photos.length })}
       </Text>
       <Text className="text-callout text-muted-foreground">
         {photos.length < ListingsSchemas.MIN_LISTING_PHOTOS

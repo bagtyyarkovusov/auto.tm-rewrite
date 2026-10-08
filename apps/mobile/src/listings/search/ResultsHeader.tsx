@@ -31,7 +31,7 @@ export function ResultsHeader({ count, sort, onSort, onBack }: {
         <Text className="font-heading text-subhead font-semibold text-foreground" style={tabularFigures} numberOfLines={1}>
           {count ? t("listingsCount", { total: count.totalMatching }) : t("carsBrowseTitle")}
         </Text>
-        {range ? <Text className="text-caption text-muted-foreground" style={tabularFigures} numberOfLines={1}>{range}</Text> : null}
+        {range ? <Text className="text-caption text-muted-foreground" style={tabularFigures} numberOfLines={1}>{t("resultsPriceRange", { range })}</Text> : null}
         <Text className="text-caption text-muted-foreground" numberOfLines={1}>{t(`resultsSort_${sort}`)}</Text>
       </View>
     </StackHeader>
