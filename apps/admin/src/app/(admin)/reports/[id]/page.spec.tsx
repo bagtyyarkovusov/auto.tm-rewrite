@@ -190,11 +190,15 @@ describe("ReportDetailPage profile photo", () => {
   it("keeps photo and pending report on a failed removal", async () => {
     mockDetail(userReport());
     mockState.removeUserPhoto.mockResolvedValue({ ok: false, code: "INTERNAL_ERROR", error: "Ошибка сервера" });
-    await renderPage();
+    const view = await renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
     fireEvent.change(removalReasonInput(), { target: { value: "Неприемлемое фото" } });
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
     expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Не удалось выполнить действие.");
+    const refreshedReport = userReport();
+    mockDetail(refreshedReport);
+    view.rerender(await ReportDetailPage({ params: Promise.resolve({ id: "r1" }) }));
+    expect(mockState.getReportDetail).toHaveBeenCalledTimes(2);
     expect(screen.getByText("В ожидании")).toBeDefined();
     expect(screen.getByRole("img", { name: "Фото профиля" })).toBeDefined();
     expect(screen.queryByText("Фото удалено.")).toBeNull();
