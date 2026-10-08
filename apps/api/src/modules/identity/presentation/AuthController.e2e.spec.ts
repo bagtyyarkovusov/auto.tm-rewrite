@@ -581,9 +581,24 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
     for (const account of [account1, otherAccount]) await prisma.user.create({ data: {
       phone: account.phone, phoneVerifiedAt: new Date(), role: "buyer",
     } });
-    const guesses = await Promise.all(Array.from({ length: 20 }, () =>
-      request.post("/api/v1/auth/otp/verify").send({ phone: account1.phone, code: "999999" }).expect(400),
-    ));
+    // A separate application graph has its own managed Redis client.
+    const secondModule = await Test.createTestingModule({ imports: [
+      bullTestRoot(), IdentityModule,
+      JwtModule.register({ global: true, secret: "synthetic-second-api-secret" }),
+    ] }).compile();
+    const secondApp = secondModule.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    secondApp.useGlobalFilters(new GlobalErrorFilter());
+    let guesses: Awaited<ReturnType<ReturnType<typeof supertest>["post"]>>[];
+    try {
+      await secondApp.listen(0, "127.0.0.1");
+      const secondRequest = supertest(secondApp.getHttpServer());
+      guesses = await Promise.all(Array.from({ length: 20 }, (_, index) =>
+        (index % 2 === 0 ? request : secondRequest).post("/api/v1/auth/otp/verify")
+          .send({ phone: account1.phone, code: "999999" }).expect(400),
+      ));
+    } finally {
+      await secondApp.close();
+    }
     expect(guesses.filter((response) => response.body.code === "INVALID_OTP")).toHaveLength(4);
     expect(guesses.filter((response) => response.body.code === "OTP_LOCKED")).toHaveLength(16);
     const locked = await request.post("/api/v1/auth/otp/verify")
@@ -601,12 +616,20 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
     const key = queue.toKey(`reserved-phone-attempt:${createHash("sha256").update(account1.phone).digest("hex")}`);
     expect(await redis.pttl(key)).toBeGreaterThan(890_000);
     expect(await redis.pttl(key)).toBeLessThanOrEqual(900_000);
+    // Move near the deadline, then prove blocked reads cannot refresh it.
+    await redis.pexpire(key, 10_000);
+    for (const code of [account1.code, "999999"]) {
+      const retry = await request.post("/api/v1/auth/otp/verify").send({ phone: account1.phone, code }).expect(400);
+      expect(retry.body.code).toBe("OTP_LOCKED");
+    }
+    expect(await redis.pttl(key)).toBeLessThanOrEqual(10_000);
     // Expire the real Redis key, without waiting 15 minutes in CI.
     await redis.pexpire(key, 1);
-    await eventually(async () => {
+    const recovered = await eventually(async () => {
       const response = await request.post("/api/v1/auth/otp/verify").send({ phone: account1.phone, code: account1.code });
-      expect(response.status).toBe(201);
+      return response.status === 201 ? response.body : null;
     });
+    expect(recovered.user.phone).toBe(account1.phone);
     const freshFailure = await request.post("/api/v1/auth/otp/verify").send({ phone: account1.phone, code: "999999" }).expect(400);
     expect(freshFailure.body.code).toBe("INVALID_OTP");
   });
