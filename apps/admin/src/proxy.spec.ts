@@ -176,25 +176,69 @@ describe("admin session renewal before request dispatch", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it("bounds the cache at 128 owners without evicting an in-flight rotation", async () => {
+  it("bounds proven handoffs at 128 and preserves cookies on capacity failure", async () => {
     vi.useFakeTimers();
     const access = jwt(Math.floor(Date.now() / 1000) + 900);
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
-    vi.mocked(fetch).mockImplementation(async () => { await gate; return Response.json({ accessToken: access, refreshToken: rotatedRefresh }); });
+    vi.mocked(fetch).mockImplementation(async () => Response.json({ accessToken: access, refreshToken: rotatedRefresh }));
     const { proxy } = await import("./proxy");
     const token = (n: number) => n.toString(16).padStart(64, "0");
-    const owners = Array.from({ length: 128 }, (_, i) => proxy(expiredRequest("GET", token(i + 1))));
-    const duplicate = proxy(expiredRequest("GET", token(1)));
+    for (let i = 1; i <= 128; i++) await proxy(expiredRequest("GET", token(i)));
     const overflow = await proxy(expiredRequest("GET", token(129)));
-    expect(overflow.status).toBe(303);
+    expect(overflow.status).toBe(503);
+    expect(overflow.headers.get("set-cookie")).toBeNull();
     expect(fetch).toHaveBeenCalledTimes(128);
-    release();
-    expect((await duplicate).cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
-    await Promise.all(owners);
+    expect((await proxy(expiredRequest("GET", token(1)))).cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
     await vi.advanceTimersByTimeAsync(5_001);
     expect((await proxy(expiredRequest("GET", token(129)))).status).toBe(200);
-    expect(fetch).toHaveBeenCalledTimes(129);
+  });
+
+  it("random unauthenticated refresh cookies cannot occupy the handoff capacity", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const access = jwt(Math.floor(Date.now() / 1000) + 900);
+    vi.mocked(fetch).mockImplementation(async (_url, init) => {
+      await gate;
+      const body = JSON.parse(String(init?.body)) as { refreshToken: string };
+      return body.refreshToken === refresh
+        ? Response.json({ accessToken: access, refreshToken: rotatedRefresh })
+        : Response.json({ code: "INVALID_REFRESH_TOKEN" }, { status: 401 });
+    });
+    const { proxy } = await import("./proxy");
+    const attackers = Array.from({ length: 128 }, (_, i) => proxy(expiredRequest("GET", (i + 1).toString(16).padStart(64, "0"))));
+    const operator = proxy(expiredRequest());
+    release();
+    const response = await operator;
+    await Promise.all(attackers);
+    expect(response.status).toBe(200);
+    expect(response.cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
+  });
+
+  it.each([429, 500, 503])("keeps GET and action cookies on API %s, with a retry page", async (status) => {
+    vi.mocked(fetch).mockImplementation(async () => Response.json({}, { status }));
+    const { proxy } = await import("./proxy");
+    for (const method of ["GET", "POST"]) {
+      const request = expiredRequest(method);
+      if (method === "POST") request.headers.set("next-action", "action-id");
+      const response = await proxy(request);
+      expect(response.status).toBe(503);
+      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(response.headers.get("location")).toBeNull();
+      expect(response.headers.get("x-middleware-next")).toBeNull();
+      expect(await response.text()).toContain("Временно недоступно. Попробуйте ещё раз.");
+      expect(request.cookies.get("auto_tm_admin_refresh")?.value).toBe(refresh);
+    }
+  });
+
+  it.each(["network", "malformed"])("keeps the session on %s failure and allows a subsequent retry", async (failure) => {
+    vi.mocked(fetch).mockImplementationOnce(async () => {
+      if (failure === "network") throw new Error("network unavailable");
+      return Response.json({ accessToken: "invalid", refreshToken: rotatedRefresh });
+    }).mockResolvedValueOnce(Response.json({ accessToken: jwt(Math.floor(Date.now() / 1000) + 900), refreshToken: rotatedRefresh }));
+    const { proxy } = await import("./proxy");
+    const unavailable = await proxy(expiredRequest());
+    expect(unavailable.status).toBe(503);
+    expect(unavailable.headers.get("set-cookie")).toBeNull();
+    expect((await proxy(expiredRequest())).status).toBe(200);
   });
 
   it("writes production Host cookies with unchanged lifetimes and restrictions", async () => {
@@ -209,7 +253,7 @@ describe("admin session renewal before request dispatch", () => {
     expect(response.cookies.get("__Host-auto_tm_admin_refresh")).toMatchObject({ value: rotatedRefresh, maxAge: 2592000, secure: true, httpOnly: true, sameSite: "lax", path: "/" });
   });
 
-  it("aborts a stalled rotation after ten seconds and ends at login", async () => {
+  it("aborts a stalled rotation after ten seconds without signing out", async () => {
     vi.useFakeTimers();
     vi.mocked(fetch).mockImplementation(async (_url, init) => new Promise((_resolve, reject) => {
       init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
@@ -217,7 +261,9 @@ describe("admin session renewal before request dispatch", () => {
     const { proxy } = await import("./proxy");
     const pending = proxy(expiredRequest("POST"));
     await vi.advanceTimersByTimeAsync(10_000);
-    expect((await pending).status).toBe(303);
+    const unavailable = await pending;
+    expect(unavailable.status).toBe(503);
+    expect(unavailable.headers.get("set-cookie")).toBeNull();
   });
 
   it("delegates a failed JavaScript Server Action to an early native action redirect", async () => {
