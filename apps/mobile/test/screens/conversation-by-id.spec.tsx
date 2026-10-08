@@ -1286,7 +1286,7 @@ describe("Acknowledged own Message actions", () => {
     expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "Delete" }));
     expect(screen.getByText("Delete message?")).toBeTruthy();
-    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Delete" })); });
+    await act(async () => { fireEvent.press(screen.getByText("Delete")); });
     expect(screen.queryByText("Acknowledged and deletable")).toBeNull();
     expect(screen.getByText("Message deleted")).toBeTruthy();
     expect(state.socket.deleteMessage).toHaveBeenCalledWith({ conversationId: CONVERSATION_ID, messageId: "ack-to-delete" });

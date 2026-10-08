@@ -380,7 +380,10 @@ export default function ConversationDetailScreen() {
       (lm) =>
         !serverIds.has(lm.id) &&
         !serverClientIds.has(lm.clientMessageId),
-    );
+    ).map((message) => ({
+      ...message,
+      canDelete: !!message.canDelete && now - new Date(message.createdAt).getTime() <= deleteWindowMs,
+    }));
 
     return [...serverMessages, ...pendingOrFailed].sort(
       (a, b) =>
@@ -448,6 +451,7 @@ export default function ConversationDetailScreen() {
           ...m,
           id: serverId,
           status: "sent",
+          canDelete: !m.deletedAt && Date.now() - new Date(m.createdAt).getTime() <= 5 * 60 * 1000,
           kind,
           metadata,
           localImageUri: undefined,
@@ -745,11 +749,25 @@ export default function ConversationDetailScreen() {
     ],
   );
 
+  const markLocalDeleted = useCallback((messageId: string, deletedAt: string) => {
+    // An acknowledged row may still be local while its server echo is delayed.
+    setLocalMessages((previous) => previous.map((message) => message.id === messageId ? {
+      ...message,
+      text: "",
+      metadata: undefined,
+      localImageUri: undefined,
+      deletedAt,
+      canDelete: false,
+    } : message));
+  }, []);
+
   const deleteViaHttp = useCallback(
     (messageId: string) => {
-      deleteHttpMessage.mutate({ conversationId, messageId });
+      deleteHttpMessage.mutate({ conversationId, messageId }, {
+        onSuccess: (data) => markLocalDeleted(messageId, data.deletedAt),
+      });
     },
-    [conversationId, deleteHttpMessage],
+    [conversationId, deleteHttpMessage, markLocalDeleted],
   );
 
   const handleDelete = useCallback(
@@ -764,9 +782,11 @@ export default function ConversationDetailScreen() {
 
       if (!result.ok) {
         deleteViaHttp(messageId);
+      } else {
+        markLocalDeleted(messageId, result.deletedAt);
       }
     },
-    [conversationId, deleteMessage, deleteViaHttp, viewer?.userId],
+    [conversationId, deleteMessage, deleteViaHttp, markLocalDeleted, viewer?.userId],
   );
 
   const confirmDeleteMessage = useCallback((messageId: string) => {
@@ -841,7 +861,7 @@ export default function ConversationDetailScreen() {
   return (
     <SafeScreen>
       {/* Android needs the whole flex layout to shrink, not the footer's local frame. */}
-      <KeyboardAvoidingView enabled={Platform.OS === "android"} behavior="height" style={{ flex: 1 }}>
+      <KeyboardAvoidingView enabled={Platform.OS === "android"} behavior="height" className="flex-1">
       <ConversationHeader
         conversation={conversation}
         loading={conversationQuery.isPending && !signedOut && !notFound}
