@@ -116,6 +116,7 @@ export const StepPhotosSchema = z.object({
 export type StepPhotosInput = z.infer<typeof StepPhotosSchema>;
 
 export const VinSchema = z.string()
+    .toUpperCase()
     .max(WIZARD_LIMITS.vinMaxLength, KEY.vinTooLong)
     // Keep the existing length error alone when max() already rejects the value.
     .refine(
