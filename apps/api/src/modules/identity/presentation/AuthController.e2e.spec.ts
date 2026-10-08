@@ -15,6 +15,7 @@ import { EventEmitterModule } from "@nestjs/event-emitter";
 import { JwtModule, JwtService } from "@nestjs/jwt";
 
 import { IdentityModule } from "../identity.module";
+import { IDENTITY_ADMIN_PORT, type IdentityAdminPort } from "../identity.public";
 import { AUDIT_LOG_REPOSITORY } from "../../admin/domain/ports/AuditLogRepository";
 import { RecordReviewerAuthBypassAudit } from "../../admin/application/RecordReviewerAuthBypassAudit";
 import { PrismaAuditLogRepository } from "../../admin/infrastructure/PrismaAuditLogRepository";
@@ -565,6 +566,35 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
     await prisma.otpRequest.deleteMany();
+  });
+
+  it.each(["phone", "email"] as const)("suspends and restores fixed-code %s sign-in without reviving old Sessions", async (channel) => {
+    const user = await prisma.user.create({ data: {
+      phone: account1.phone, phoneVerifiedAt: new Date(), email: account1.email,
+      emailVerifiedAt: new Date(), role: "buyer",
+    } });
+    const input = { [channel]: account1[channel], code: account1.code };
+    await request.post("/api/v1/auth/otp/request").send({ [channel]: account1[channel] }).expect(201);
+    const signedIn = await request.post("/api/v1/auth/otp/verify").send(input).expect(201);
+    const identity = app.get<IdentityAdminPort>(IDENTITY_ADMIN_PORT);
+    await expect(prisma.$transaction(async (tx) => {
+      await identity.suspendUser(user.id, user.id, "Synthetic suspension", tx);
+      throw new Error("Rollback suspension");
+    })).rejects.toThrow("Rollback suspension");
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).suspendedAt).toBeNull();
+    expect(await prisma.session.count({ where: { userId: user.id } })).toBe(1);
+    await prisma.$transaction((tx) => identity.suspendUser(user.id, user.id, "Synthetic suspension", tx));
+    expect(await prisma.session.count({ where: { userId: user.id } })).toBe(0);
+    await request.post("/api/v1/auth/refresh").send({ refreshToken: signedIn.body.refreshToken }).expect(401);
+    await request.post("/api/v1/auth/otp/request").send({ [channel]: account1[channel] }).expect(201);
+    const refused = await request.post("/api/v1/auth/otp/verify").send(input).expect(403);
+    expect(refused.body.details).toEqual({ reason: "USER_SUSPENDED" });
+    if (channel === "email") expect((await prisma.otpRequest.findFirstOrThrow({ orderBy: { createdAt: "desc" } })).verifiedAt).toBeNull();
+    await prisma.$transaction((tx) => identity.unsuspendUser(user.id, tx));
+    await request.post("/api/v1/auth/refresh").send({ refreshToken: signedIn.body.refreshToken }).expect(401);
+    const restored = await request.post("/api/v1/auth/otp/verify").send(input).expect(201);
+    expect(restored.body.user.id).toBe(user.id);
+    expect(await prisma.session.count({ where: { userId: user.id } })).toBe(1);
   });
 
   it.each(["phone", "email"] as const)("authenticates a pre-existing ordinary User by %s and persists a code-free audit row", async (channel) => {

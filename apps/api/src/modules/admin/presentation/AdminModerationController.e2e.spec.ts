@@ -12,6 +12,7 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
+import { hash } from "bcryptjs";
 import { AdminSchemas } from "@auto-tm/contracts";
 import { PrismaService } from "@auto-tm/db";
 
@@ -165,6 +166,8 @@ describe("AdminModerationController e2e smoke", () => {
       const senderToken = await createUser("seller-one");
       await createUser("admin-one", "admin");
       const adminToken = await createAdminSession(adminOneId);
+      const oldRefresh = "a".repeat(64);
+      await prisma.session.create({ data: { userId: sellerOneId, refreshTokenHash: await hash(oldRefresh, 4), expiresAt: new Date(Date.now() + 60_000) } });
       const listing = await createActiveListing(sellerOneId);
       const conversation = await prisma.conversation.create({ data: {
         listingId: listing.id, buyerId: reporterOneId, sellerId: sellerOneId,
@@ -196,6 +199,8 @@ describe("AdminModerationController e2e smoke", () => {
       expect(attachment.body.target.metadata).toBeUndefined();
       const suspended = await request.post(`/api/v1/admin/users/${sellerOneId}/suspend`).set("Authorization", `Bearer ${adminToken}`).send({ reason: "Reported spam", reportId }).expect(200);
       expect(suspended.body.reportStatus).toBe("actioned");
+      expect(await prisma.session.count({ where: { userId: sellerOneId } })).toBe(0);
+      await request.post("/api/v1/auth/refresh").send({ refreshToken: oldRefresh }).expect(401);
       const actionAudit = await prisma.auditLog.findUniqueOrThrow({ where: { id: suspended.body.auditLogId } });
       expect(actionAudit).toMatchObject({ action: "USER_SUSPEND", targetId: sellerOneId, details: { reportId, messageId: message.id } });
       expect((await prisma.contentReport.findUniqueOrThrow({ where: { id: reportId } })).status).toBe("actioned");
@@ -207,6 +212,10 @@ describe("AdminModerationController e2e smoke", () => {
       } });
       const signIn = await request.post("/api/v1/auth/otp/verify").send({ phone: suite.phone("seller-one"), code: "123456" }).expect(403);
       expect(signIn.body).toMatchObject({ code: "FORBIDDEN", details: { reason: "USER_SUSPENDED" } });
+      expect((await prisma.otpRequest.findFirstOrThrow({ where: { destination: suite.phone("seller-one") } })).verifiedAt).toBeNull();
+      await request.post(`/api/v1/admin/users/${sellerOneId}/unsuspend`).set("Authorization", `Bearer ${adminToken}`).send({ reason: "Appeal accepted" }).expect(200);
+      await request.post("/api/v1/auth/otp/verify").send({ phone: suite.phone("seller-one"), code: "123456" }).expect(201);
+      await request.post("/api/v1/auth/refresh").send({ refreshToken: oldRefresh }).expect(401);
       await prisma.message.delete({ where: { id: message.id } });
       await prisma.user.update({ where: { id: sellerOneId }, data: { phone: null, phoneVerifiedAt: null, email: null, emailVerifiedAt: null, displayName: null } });
       const deleted = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);
