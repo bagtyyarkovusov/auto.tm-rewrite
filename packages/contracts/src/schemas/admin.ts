@@ -38,6 +38,7 @@ export const AdminAuditAction = {
   UserUnsuspend: "USER_UNSUSPEND",
   UserPhotoRemove: "USER_PHOTO_REMOVE",
   ContentReportResolve: "CONTENT_REPORT_RESOLVE",
+  ReportedMessageRead: "REPORTED_MESSAGE_READ",
   ReviewerOtpBypassLogin: "REVIEWER_OTP_BYPASS_LOGIN",
 } as const;
 export type AdminAuditAction =
@@ -182,6 +183,13 @@ export const ReportDetailTargetSchema = z.object({
   messageCreatedAt: z.string().datetime().optional(),
   messageBody: z.string().optional(),
   messageDeletedAt: z.string().datetime().nullish(),
+  messageHasAttachment: z.boolean().optional(),
+  sender: z.object({
+    available: z.boolean(),
+    label: z.string(),
+    userId: z.string().uuid().optional(),
+    role: z.string().optional(),
+  }).optional(),
 });
 export type ReportDetailTarget = z.infer<typeof ReportDetailTargetSchema>;
 
@@ -224,7 +232,6 @@ export const GetReportDetailResponseSchema = z.object({
       suspensionReason: z.string().nullable().optional(),
     })
     .optional(),
-  messageContext: MessageReportContextSchema.optional(),
   reportsSubmittedByReporterCount: z.number().int().nonnegative().optional(),
   pendingReportsOnTargetCount: z.number().int().nonnegative(),
 });

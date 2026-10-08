@@ -156,8 +156,9 @@ export class ReportsController {
 
   @Get("admin/reports/:id")
   @UseGuards(AdminGuard)
-  async getReportDetail(@Param("id") reportId: string) {
-    const result = await this.getReportDetailUC.execute({ reportId });
+  async getReportDetail(@Param("id") reportId: string, @Req() req: FastifyRequest, @Res({ passthrough: true }) res?: FastifyReply) {
+    res?.header("Cache-Control", "no-store");
+    const result = await this.getReportDetailUC.execute({ reportId, adminUserId: this.userId(req) });
 
     return {
       id: result.id,
@@ -177,18 +178,6 @@ export class ReportsController {
         ? {
             ...result.targetModerationState,
             suspendedAt: result.targetModerationState.suspendedAt?.toISOString() ?? null,
-          }
-        : undefined,
-      messageContext: result.messageContext
-        ? {
-            ...result.messageContext,
-            messageCreatedAt: result.messageContext.messageCreatedAt.toISOString(),
-            messageDeletedAt: result.messageContext.messageDeletedAt?.toISOString(),
-            surroundingMessages: result.messageContext.surroundingMessages.map((m) => ({
-              ...m,
-              createdAt: m.createdAt.toISOString(),
-              deletedAt: m.deletedAt?.toISOString(),
-            })),
           }
         : undefined,
       reportsSubmittedByReporterCount: result.reportsSubmittedByReporterCount,

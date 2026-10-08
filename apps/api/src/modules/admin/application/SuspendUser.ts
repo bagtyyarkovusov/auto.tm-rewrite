@@ -58,7 +58,7 @@ export class SuspendUser {
     // 1. Resolve user (required for both direct and report-backed)
     const user = await this.identityRead.findUserById(input.userId);
 
-    if (!user) {
+    if (!user || user.deleted) {
       throw new NotFoundException({
         code: "NOT_FOUND",
         message: "User not found",
@@ -98,7 +98,11 @@ export class SuspendUser {
         });
       }
 
-      if (report.targetType !== "user" || report.targetId !== input.userId) {
+      const matchesUser = report.targetType === "user" && report.targetId === input.userId;
+      const matchesMessageSender = report.targetType === "message" &&
+        report.messageContext?.messageId === report.targetId &&
+        report.messageContext.senderId === input.userId;
+      if (!matchesUser && !matchesMessageSender) {
         throw new BadRequestException({
           code: "VALIDATION_FAILED",
           message: "Report does not match the target user",
@@ -184,6 +188,7 @@ export class SuspendUser {
       };
       if (report) {
         auditDetails["reportId"] = report.id;
+        if (report.targetType === "message") auditDetails["messageId"] = report.targetId;
         (auditDetails["before"] as Record<string, unknown>)["reportStatus"] = "pending";
         (auditDetails["after"] as Record<string, unknown>)["reportStatus"] = "actioned";
       }

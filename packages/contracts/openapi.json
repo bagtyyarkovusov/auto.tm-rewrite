@@ -6845,6 +6845,31 @@
                 "type": "string",
                 "nullable": true,
                 "format": "date-time"
+              },
+              "messageHasAttachment": {
+                "type": "boolean"
+              },
+              "sender": {
+                "type": "object",
+                "properties": {
+                  "available": {
+                    "type": "boolean"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "role": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "available",
+                  "label"
+                ]
               }
             },
             "required": [
@@ -6875,79 +6900,6 @@
                 "nullable": true
               }
             }
-          },
-          "messageContext": {
-            "type": "object",
-            "properties": {
-              "conversationId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "messageId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "listingId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "senderId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "messageCreatedAt": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "messageBody": {
-                "type": "string"
-              },
-              "messageDeletedAt": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "surroundingMessages": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "senderId": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "createdAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "body": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "deletedAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "senderId",
-                    "createdAt"
-                  ]
-                }
-              }
-            },
-            "required": [
-              "conversationId",
-              "messageId",
-              "listingId",
-              "senderId",
-              "messageCreatedAt",
-              "surroundingMessages"
-            ]
           },
           "reportsSubmittedByReporterCount": {
             "type": "integer",
@@ -7407,6 +7359,7 @@
               "USER_UNSUSPEND",
               "USER_PHOTO_REMOVE",
               "CONTENT_REPORT_RESOLVE",
+              "REPORTED_MESSAGE_READ",
               "REVIEWER_OTP_BYPASS_LOGIN"
             ]
           },
@@ -7473,6 +7426,7 @@
                     "USER_UNSUSPEND",
                     "USER_PHOTO_REMOVE",
                     "CONTENT_REPORT_RESOLVE",
+                    "REPORTED_MESSAGE_READ",
                     "REVIEWER_OTP_BYPASS_LOGIN"
                   ]
                 },
