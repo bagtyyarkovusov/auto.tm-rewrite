@@ -130,3 +130,10 @@ Coordinator: use the reserved Android 16 edge-to-edge emulator in the second pas
 5. Keep destinations, codes and tokens out of screenshots and logs. Record backend commit and device result on PR #764.
 
 No review was requested, the PR stays draft and auto-merge is disabled as instructed. No independent finalization review or merge was performed. Evidence documentation is the only file outside the assigned auth/identity area.
+
+
+## Verified execution checkpoint
+
+Recorded after the evidence documentation head `2cda745c0a20c1ac5eebbfb2293a8c291e937420` passed required `pr` [37737574089](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/37737574089) through the docs lane. Its hosted log is `/tmp/issue-759-hosted-docs.log`. The source remains the fully verified code head `13ccc08a59b852ee813e1328d021c3ddb47e6ac9`; no production or test changes followed that full gate.
+
+All code-testable criteria have evidence. Confidence in the reserved-phone response fix and unchanged ordinary OTP security is high. Native/device presentation, real-number delivery, independent finalization review and merge are not claimed. PR #764 is the authoritative mutable Execution state; it stays draft with auto-merge off. Implementer attribution remains Codex, OpenAI, Codex CLI, gpt-6.1-sol, high effort. The coordinator's next action is the second device pass using the steps above.
