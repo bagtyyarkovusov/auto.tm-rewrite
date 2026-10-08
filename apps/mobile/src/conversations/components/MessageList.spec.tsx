@@ -529,3 +529,12 @@ it("returns to the newest Message after sending while reading older history", ()
   expect(screen.getByText("new-send")).toBeTruthy();
   expect(requests).toContainEqual({ method: "scrollToOffset", offset: 0, animated: false });
 });
+
+it("leaves older history in place when an incoming Message arrives", () => {
+  const requests = (RN as unknown as { scrollRequests: unknown[] }).scrollRequests;
+  const screen = renderMobile(<MessageList currentUserId={ME} messages={[message("old", at(1, 10), { senderId: PEER })]} />);
+  requests.length = 0;
+  screen.rerender(<MessageList currentUserId={ME} messages={[message("incoming", at(2, 10), { senderId: PEER }), message("old", at(1, 10), { senderId: PEER })]} />);
+  expect(screen.getByText("incoming")).toBeTruthy();
+  expect(requests).toHaveLength(0);
+});

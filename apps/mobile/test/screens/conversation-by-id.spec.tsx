@@ -1,3 +1,4 @@
+import * as RN from "react-native";
 import { useState, type PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1172,12 +1173,17 @@ describe("Own Message acknowledgement", () => {
     routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
     const screen = renderMobile(<ConversationDetailScreen />);
     fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Visible immediately");
+    const scrollRequests = (RN as unknown as { scrollRequests: unknown[] }).scrollRequests;
+    scrollRequests.length = 0;
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Send message" }));
     });
     expect(screen.getAllByText("Visible immediately")).toHaveLength(1);
+    expect(scrollRequests).toContainEqual({ method: "scrollToOffset", offset: 0, animated: false });
     expect(screen.queryByText("Failed to send")).toBeNull();
-    const clientMessageId = state.socket.sendTextMessage.mock.calls[0][0].clientMessageId;
+    const firstSend = state.socket.sendTextMessage.mock.calls[0];
+    if (!firstSend) throw new Error("Message send missing");
+    const clientMessageId = firstSend[0].clientMessageId;
     state.messages.data = { pages: [{ items: [{ ...serverMessage("server-new", BUYER_ID, new Date().toISOString(), "Visible immediately"), clientMessageId }] }] };
     screen.rerender(<ConversationDetailScreen />);
     expect(screen.getAllByText("Visible immediately")).toHaveLength(1);
@@ -1234,5 +1240,33 @@ describe("Conversation keyboard ownership", () => {
         expect(active[0].props.behavior).toBe("padding");
       }
     } finally { Platform.OS = previousOS; }
+  });
+});
+
+describe("Acknowledged Message transport coverage", () => {
+  it("keeps an HTTP fallback text Message visible while the refresh is delayed", async () => {
+    state.messages.data = { pages: [{ items: [serverMessage("older", SELLER_ID)] }] };
+    state.socket.sendTextMessage.mockResolvedValue({ ok: false, code: "NOT_CONNECTED" });
+    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.({ id: "http-message" }));
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "HTTP still visible");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    expect(screen.getAllByText("HTTP still visible")).toHaveLength(1);
+    state.messages.data = { pages: [{ items: [serverMessage("http-message", BUYER_ID, new Date().toISOString(), "HTTP still visible")] }] };
+    screen.rerender(<ConversationDetailScreen />);
+    expect(screen.getAllByText("HTTP still visible")).toHaveLength(1);
+  });
+  it.each([false, true])("keeps an acknowledged image visible without an echo, HTTP=%s", async (http) => {
+    state.mutation.mutateAsync.mockResolvedValue({ uploadUrl: "https://upload", key: "chat-attachments/ack.jpg" });
+    state.socket.sendImageMessage.mockResolvedValue(http ? { ok: false, code: "NOT_CONNECTED" } : { ok: true, message: { id: "image-ack" } });
+    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.({ id: "image-ack" }));
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    await screen.findByPlaceholderText("Message");
+    await act(async () => { fireEvent.press(screen.getByLabelText(/attach/i)); });
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    expect(screen.getAllByRole("imagebutton", { name: "Photo" })).toHaveLength(1);
+    expect(within(screen.getByRole("imagebutton", { name: "Photo" })).UNSAFE_getByType(Image).props.source.uri).toContain("chat-attachments/ack.jpg");
   });
 });

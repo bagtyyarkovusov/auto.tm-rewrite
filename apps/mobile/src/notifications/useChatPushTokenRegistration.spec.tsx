@@ -16,7 +16,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { getPlatform } from "./getPlatform";
 import { getNotificationPermissionState } from "./requestNotificationPermission";
-
 import { useChatPushTokenRegistration } from "./useChatPushTokenRegistration";
 
 const mockMutate = vi.fn();
