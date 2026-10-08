@@ -233,8 +233,13 @@ Brand red is `#E60000` in light. Dark keeps the slightly lighter `hsl(0 90% 52%)
 | Platform | Rendering |
 |---|---|
 | iOS 26 and later | System Liquid Glass through `expo-glass-effect` |
-| Android, iOS below 26 | The glass tone at 94% opacity, a hairline light edge and the `floating` shadow. No blur pass |
+| iOS below 26; Android 12 and later with a blur target | A real blur of what is behind it through `expo-blur`, under the glass tone at 80% |
+| Android otherwise | The glass tone at 94% opacity. No blur pass |
 | Reduce Transparency | The opaque raised surface with a divider edge |
+
+Below iOS 26 and on Android every rendering has the same 1 dp light rim, a sheen on its top half and the `floating` shadow. On Android a surface blurs a named view: the tab bar blurs its focused screen (`TabBlurTargets`), and a `TabScreen` with an `overlay` gives the overlay its content to blur (`GlassBackdrop`). A surface inside the view it would blur gets the 94% tone.
+
+Quiet text and icons on glass use `text-glass-muted` (`#4D4D4D` / `#CFCFD3`), not `text-muted-foreground`. With the 80% tone it keeps 4.5:1 over a white photo in dark and a black photo in light. Where the tab bar blurs, tab screens draw no edge fade under it, so content shows through the glass.
 
 ### Mobile radius
 

@@ -43,7 +43,7 @@ Both modes use the same five levels ([71-design-tokens.md](71-design-tokens.md#s
 | Raised | `#FFFFFF` | `#1B1B1D` | Lighter than the page in both modes |
 | Overlay | `#FFFFFF` with the `overlay` shadow | `#232325` | One step above raised in dark, where shadow does not show |
 | Tonal | `#E7E7E4` | `#2A2A2D` | Darker than a card in light, lighter than a card in dark: visible on the page and on a card |
-| Glass | white at 94% | `#252528` at 94% | Floating navigation; system Liquid Glass on iOS 26 |
+| Glass | white at 80% over a blur, 94% without one | `#252528` at 80% over a blur, 94% without one | Floating navigation; system Liquid Glass on iOS 26 |
 
 In light, depth comes from the white card on the off-white page and from shadow under what floats. In dark, shadow is invisible on a near-black page, so depth comes from each level being lighter than the one below it.
 
