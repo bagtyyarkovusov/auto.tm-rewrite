@@ -180,6 +180,8 @@ export const ReportDetailTargetSchema = z.object({
   model: z.string().optional(),
   status: z.string().optional(),
   role: z.string().optional(),
+  avatarKey: z.string().nullable().optional(),
+  avatarIndex: z.number().int().nonnegative().optional(),
   conversationId: z.string().uuid().optional(),
   listingId: z.string().uuid().optional(),
   senderId: z.string().uuid().optional(),

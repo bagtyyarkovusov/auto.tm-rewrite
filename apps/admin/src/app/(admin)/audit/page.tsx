@@ -23,6 +23,7 @@ function actionLabel(action: string): string {
     LISTING_UNBAN: "Разблокировка объявления",
     USER_SUSPEND: "Блокировка пользователя",
     USER_UNSUSPEND: "Разблокировка пользователя",
+    USER_PHOTO_REMOVE: "Удаление фото профиля",
     CONTENT_REPORT_RESOLVE: "Обработка жалобы",
   };
   return map[action] ?? action;
