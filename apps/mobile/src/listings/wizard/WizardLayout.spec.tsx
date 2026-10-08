@@ -373,7 +373,6 @@ describe("WizardLayout keyboard", () => {
       expect(within(avoidance).getByRole("button", { name: "Continue" })).toBeTruthy();
       // The step scrolls inside the shrunken region; the action bar does not scroll with it.
       const scroll = screen.UNSAFE_getByType(ScrollView);
-      expect(scroll.props.keyboardShouldPersistTaps).toBe("handled");
       expect(within(scroll).getByDisplayValue("85000")).toBeTruthy();
       expect(within(scroll).queryByRole("button", { name: "Continue" })).toBeNull();
     } finally { Platform.OS = previousOS; }

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -519,6 +520,10 @@ export function WizardLayout({
 }: WizardLayoutProps) {
   return (
     <SafeAreaView className="flex-1 bg-background">
+      {/* Android is edge to edge, so the window does not resize for the keyboard: the
+          whole column pads, the step scrolls and the action bar rides above the keys.
+          iOS keeps its layout. */}
+      <KeyboardAvoidingView enabled={Platform.OS === "android"} behavior="padding" className="flex-1">
       <WizardHeader
         routeTitle={routeTitle}
         stepTitle={stepTitle}
@@ -568,7 +573,7 @@ export function WizardLayout({
           publishLabel={publishLabel}
         />
       </View>
-
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
