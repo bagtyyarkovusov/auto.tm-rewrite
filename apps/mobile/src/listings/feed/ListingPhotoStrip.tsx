@@ -8,6 +8,7 @@ import { ListingPhoto, PhotoChip } from "./ListingPhoto";
 
 import { Text } from "@/components/ui/text";
 import { tabularFigures } from "@/lib/font";
+import { cn } from "@/lib/utils";
 
 /** The page margin either side of a Results card, in dp: none, the card spans the screen as on Auto.ru. */
 export const CARD_INSET = 0;
@@ -17,8 +18,8 @@ export const STRIP_INSET = 8;
 export const STRIP_PHOTO_SHARE = 0.61;
 /** The strip height as a share of the card width: a 4:3 photo at 61% of the width, about 184 dp on a 402 dp screen. */
 export const STRIP_HEIGHT_SHARE = 0.4575;
-/** The seam between two photos (`w-1`), in dp. */
-export const STRIP_GAP = 4;
+/** The seam between two photos, in dp: a thin line of the card, as on Auto.ru. */
+export const STRIP_GAP = 2;
 
 type Tile = { kind: "photo"; key: string } | { kind: "more"; count: number };
 
@@ -42,8 +43,8 @@ interface ListingPhotoStripProps {
 
 /**
  * The photos at the top of a Results card, set in from the card's top and
- * left edges by `STRIP_INSET`, each with its own rounded corners (the card's
- * 28 dp radius less the inset). One photo fills the frame between the
+ * left edges by `STRIP_INSET`. Photos meet square at a thin seam; only the two
+ * outer ends of the strip are rounded (the card's 28 dp radius less the inset). One photo fills the frame between the
  * insets. Two or more scroll sideways: each is 61% of the card wide so close
  * to half of the next one shows, they snap one photo per swipe, and a
  * "+N photos" tile ends the strip when the Listing has more photos than the
@@ -73,16 +74,20 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition, onOpen, on
   const tiles = useMemo(() => stripTiles(photoKeys, photoCount), [photoKeys, photoCount]);
   const interval = photoWidth + STRIP_GAP;
 
-  const renderItem = useCallback<ListRenderItem<Tile>>(({ item }) => <Pressable
+  // Photos meet square at a thin seam; only the strip's two outer ends are rounded.
+  const renderItem = useCallback<ListRenderItem<Tile>>(({ item, index }) => {
+    const ends = cn(index === 0 && "rounded-l-xl", index === tiles.length - 1 && "rounded-r-xl");
+    return <Pressable
     accessible={false} onPress={onOpen} onPressIn={onPressIn} onPressOut={onPressOut}
   >{item.kind === "photo"
-    ? <View testID="listing-photo" style={{ width: photoWidth, height }} className="overflow-hidden rounded-xl bg-secondary">
+    ? <View testID="listing-photo" style={{ width: photoWidth, height }} className={cn("overflow-hidden bg-secondary", ends)}>
       <ListingPhoto mediaKey={item.key} emptyLabel={t("noPhotos")} variant="detail" />
     </View>
-    : <View testID="listing-photo-more" style={{ width: photoWidth, height }} className="items-center justify-center gap-0.5 rounded-xl bg-secondary">
+    : <View testID="listing-photo-more" style={{ width: photoWidth, height }} className={cn("items-center justify-center gap-0.5 bg-secondary", ends)}>
       <Text className="font-heading text-title font-semibold text-foreground" style={tabularFigures}>{`+${item.count}`}</Text>
       <Text className="text-footnote text-muted-foreground">{t("photos")}</Text>
-    </View>}</Pressable>, [height, photoWidth, t, onOpen, onPressIn, onPressOut]);
+    </View>}</Pressable>;
+  }, [height, photoWidth, tiles.length, t, onOpen, onPressIn, onPressOut]);
 
   // 8 dp inside the first photo's corner at rest, which also lines the chips up with the text below.
   const chips = <View pointerEvents="none" className="absolute bottom-2 left-4 flex-row gap-1.5">
@@ -131,6 +136,8 @@ export function ListingPhotoStrip({ photoKeys, photoCount, condition, onOpen, on
 /** The inset is padding on the scrolling content, so a swipe carries the photos through it. */
 const STRIP_CONTENT = { paddingHorizontal: STRIP_INSET };
 
+const STRIP_SEAM = { width: STRIP_GAP };
+
 function StripSeam() {
-  return <View className="w-1" />;
+  return <View style={STRIP_SEAM} />;
 }
