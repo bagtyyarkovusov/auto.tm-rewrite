@@ -1212,7 +1212,7 @@ describe("Own Message acknowledgement", () => {
 });
 
 describe("First chat action notifications", () => {
-  it("requests Android permission on send even when the Messages tab was never opened", async () => {
+  it.each(["text", "image"] as const)("requests Android permission on the first %s send, never screen entry", async (kind) => {
     const previousOS = Platform.OS;
     Platform.OS = "android";
     vi.mocked(Notifications.getPermissionsAsync).mockResolvedValue({ status: Notifications.PermissionStatus.DENIED, granted: false, canAskAgain: true, expires: "never" });
@@ -1220,12 +1220,16 @@ describe("First chat action notifications", () => {
     vi.mocked(Notifications.getDevicePushTokenAsync).mockResolvedValue({ data: "first-chat-token", type: "android" });
     routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
     state.socket.sendTextMessage.mockResolvedValue({ ok: true, message: { id: "server-first" } });
+    state.socket.sendImageMessage.mockResolvedValue({ ok: true, message: { id: "server-first-image" } });
+    state.mutation.mutateAsync.mockResolvedValue({ uploadUrl: "https://upload", key: "chat-attachments/first.jpg" });
     state.post.mockResolvedValue({});
     try {
       const screen = renderMobile(<ConversationDetailScreen />);
       const field = await screen.findByPlaceholderText("Message");
       expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
-      fireEvent.changeText(field, "First action");
+      if (kind === "text") fireEvent.changeText(field, "First action");
+      else await act(async () => { fireEvent.press(screen.getByLabelText(/attach/i)); });
+      expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
       await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
       await waitFor(() => expect(state.post).toHaveBeenCalledWith("/notifications/tokens", { token: "first-chat-token", platform: "android" }, expect.anything()));
       expect(Notifications.requestPermissionsAsync).toHaveBeenCalledOnce();
