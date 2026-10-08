@@ -9,7 +9,7 @@ import { useAuthIntentStore } from "../../auth/intentStore";
 import { queryKeys } from "../../api/queryKeys";
 
 import { ListingLargeCard, ListingLargeCardSkeleton, formatListingDate } from "./ListingLargeCard";
-import { STRIP_GAP, stripTiles } from "./ListingPhotoStrip";
+import { STRIP_GAP, STRIP_INSET, stripTiles } from "./ListingPhotoStrip";
 
 const api = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock("../../api/client", () => ({ apiClient: { get: api.get, post: vi.fn(), delete: vi.fn() }, ApiError: class ApiError extends Error {} }));
@@ -131,6 +131,28 @@ describe("Results photo strip", () => {
     expect(strip.props.decelerationRate).toBe("fast");
     expect(strip.props.disableIntervalMomentum).toBe(true);
     expect(strip.props.nestedScrollEnabled).toBe(true);
+  });
+  it("sets the photos in from the card's top and left edges, and lets a swipe carry them through that gap", () => {
+    const { view } = renderCard({ ...feedItem, galleryKeys: ["a.jpg", "b.jpg", "c.jpg"], photoCount: 3 });
+    const strip = view.getByTestId("listing-photo-strip");
+    const frame = StyleSheet.flatten(view.getByTestId("listing-photos").props.style);
+    // The gap is padding on the scrolling content. The frame around it keeps the card's full width, so nothing clips a moving photo short of the card's edges.
+    expect(StyleSheet.flatten(strip.props.contentContainerStyle).paddingHorizontal).toBe(STRIP_INSET);
+    expect(frame.marginTop).toBe(STRIP_INSET);
+    expect(frame.marginLeft ?? frame.marginHorizontal ?? frame.paddingLeft ?? frame.paddingHorizontal).toBeUndefined();
+    // Snapped photos line up on the gap: each one's offset is the gap plus whole swipes.
+    const interval = strip.props.snapToInterval as number;
+    expect(strip.props.getItemLayout(null, 2).offset).toBe(STRIP_INSET + interval * 2);
+  });
+  it("shows about three fifths of the first photo, so over a third of the second shows at rest", () => {
+    const { view } = renderCard({ ...feedItem, galleryKeys: ["a.jpg", "b.jpg", "c.jpg"], photoCount: 3 });
+    const cardWidth = 390; // The window the test host reports (test/native-host.cjs); the card spans it.
+    const photo = StyleSheet.flatten(view.getAllByTestId("listing-photo")[0]?.props.style) as { width: number; height: number };
+    const secondShown = cardWidth - STRIP_INSET - photo.width - STRIP_GAP;
+    expect(photo.width / cardWidth).toBeGreaterThan(0.58); expect(photo.width / cardWidth).toBeLessThan(0.64);
+    expect(secondShown / cardWidth).toBeGreaterThan(0.33);
+    // The frame stays 4:3, as before, so a car is cropped no harder than it was.
+    expect(photo.width / photo.height).toBeCloseTo(4 / 3, 1);
   });
   it("ends with a +N photos tile when the Listing has more photos than keys, and the tile opens the Listing", () => {
     const { view, onPress } = renderCard({ ...feedItem, galleryKeys: Array.from({ length: 8 }, (_, index) => `photo-${index}.jpg`), photoCount: 12 });

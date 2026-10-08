@@ -13,7 +13,7 @@ import { useListingFavorite } from "../useListingFavorite";
 
 import { feedCardFields, feedCardPhotoKeys } from "./feedCardFields";
 import { formatListingDate } from "./formatListingDate";
-import { CARD_INSET, ListingPhotoStrip, STRIP_HEIGHT_SHARE } from "./ListingPhotoStrip";
+import { CARD_INSET, ListingPhotoStrip, STRIP_HEIGHT_SHARE, STRIP_INSET } from "./ListingPhotoStrip";
 import { listingSpecLine } from "./listingSpecLine";
 import { useListingCall } from "./useListingCall";
 
@@ -91,10 +91,10 @@ function SellerLine({ seller, cityName, date }: { seller: ReturnType<typeof feed
 
 /**
  * The Results card: one raised object with a 28 dp radius. The photo strip
- * fills its top edge to edge, with the photo count and a seller-stated "New"
- * on its bottom edge. Below: the price, the loudest thing on the card, in
- * bold tabular figures on a quiet tonal block; the spec line; "Brand Model,
- * year" a step quieter. Then the actions: Call full width in brand red when
+ * sits inside its top, set in from the top and left edges, with the photo
+ * count and a seller-stated "New" on its bottom edge. Below: the price, the
+ * loudest thing on the card, in plain bold tabular figures with nothing
+ * behind it; the spec line; "Brand Model, year" a step quieter. Then the actions: Call full width in brand red when
  * the seller takes calls, Message and ♡ as square tonal buttons beside it
  * (Message takes the full width, tonal, when there is no Call). Last, the
  * seller's name and "Private seller · City · date". With neither Call nor
@@ -129,9 +129,7 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
         onOpen={() => onPress(listing.id)} {...press.handlers} />
       <Pressable onPress={() => onPress(listing.id)} {...press.handlers} accessibilityRole="button" accessibilityLabel={[title, price].filter(Boolean).join(", ")}>
         <View className="items-start gap-1 px-4 pt-3.5">
-          <View className="mb-1 rounded-md bg-secondary px-2.5 py-0.5">
-            <Text className="font-heading text-headline font-bold text-foreground" style={tabularFigures} numberOfLines={1}>{price}</Text>
-          </View>
+          <Text className="mb-0.5 font-heading text-headline font-bold text-foreground" style={tabularFigures} numberOfLines={1}>{price}</Text>
           {specs ? <Text className="text-callout text-foreground" style={tabularFigures} numberOfLines={1}>{specs}</Text> : null}
           {title ? <Text className="text-callout text-muted-foreground" style={tabularFigures} numberOfLines={1}>{title}</Text> : null}
         </View>
@@ -160,16 +158,17 @@ export const ListingLargeCard = memo(function ListingLargeCard(props: ListingLar
   </EnterOnce>;
 });
 
-/** Skeleton in the card's shape: the photo strip, the price block, two lines, the action row and the seller line. */
+/** Skeleton in the card's shape: the inset photo strip, the price, two lines, the action row and the seller line. */
 export function ListingLargeCardSkeleton() {
   const { width } = useWindowDimensions();
   return <View className="overflow-hidden rounded-3xl bg-card">
-    <View testID="listing-photo-skeleton" style={{ height: Math.round((width - CARD_INSET * 2) * STRIP_HEIGHT_SHARE) }}>
-      <Skeleton className="h-full w-full rounded-none" />
+    {/* As the strip at rest: clear of the top and left edges, running out to the right one. */}
+    <View testID="listing-photo-skeleton" style={{ height: Math.round((width - CARD_INSET * 2) * STRIP_HEIGHT_SHARE), marginTop: STRIP_INSET, marginLeft: STRIP_INSET }}>
+      <Skeleton className="h-full w-full rounded-l-xl rounded-r-none" />
     </View>
-    {/* Each bar sits in its line's height (price block 30, lines 20), so the list does not jump when the cards arrive. */}
+    {/* Each bar sits in its line's height (price 28, lines 20), so the list does not jump when the cards arrive. */}
     <View className="items-start gap-1 px-4 pt-3.5">
-      <Skeleton className="mb-1 h-7 w-2/5 rounded-md" /><Skeleton className="my-1 h-3 w-4/5" /><Skeleton className="my-1 h-3 w-1/2" />
+      <Skeleton className="mb-0.5 h-7 w-2/5 rounded-md" /><Skeleton className="my-1 h-3 w-4/5" /><Skeleton className="my-1 h-3 w-1/2" />
     </View>
     <View className="gap-3 px-4 pb-4 pt-3.5">
       <View className="flex-row gap-2">
