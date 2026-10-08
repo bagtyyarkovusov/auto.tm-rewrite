@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import { getQueueToken } from "@nestjs/bullmq";
+import type { Queue } from "bullmq";
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
@@ -26,6 +28,7 @@ import {
   type EmailCodeSenderPort,
 } from "../domain/ports/EmailCodeSenderPort";
 import { toCodePurpose } from "../infrastructure/codePurpose";
+import { reservedPhoneAttemptKey } from "../infrastructure/RedisReservedPhoneAttemptLedger";
 import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 import { eventually } from "../../../../test/helpers/eventually";
 
@@ -500,6 +503,7 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
   let previousReviewAccounts: string | undefined;
   let previousTesterAccounts: string | undefined;
   const account1 = reviewEnabled ? reviewerDemoAccount(1) : { phone: "+99370000001", email: "tester1@example.invalid", code: "765432" };
+  const otherAccount = reviewEnabled ? reviewerDemoAccount(2) : { phone: "+99370000002", email: "tester2@example.invalid", code: "654321" };
   const account2 = reviewerDemoAccount(2);
   const account3 = reviewerDemoAccount(3);
 
@@ -507,7 +511,7 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
     previousReviewEnabled = process.env["REVIEW_DEMO_ACCOUNT_ENABLED"];
     previousReviewAccounts = process.env["REVIEW_DEMO_ACCOUNTS_JSON"];
     previousTesterAccounts = process.env["TESTER_ACCOUNTS_JSON"];
-    process.env["TESTER_ACCOUNTS_JSON"] = reviewEnabled ? "[]" : JSON.stringify([account1]);
+    process.env["TESTER_ACCOUNTS_JSON"] = reviewEnabled ? "[]" : JSON.stringify([account1, otherAccount]);
     process.env["REVIEW_DEMO_ACCOUNT_ENABLED"] = String(reviewEnabled);
     process.env["REVIEW_DEMO_ACCOUNTS_JSON"] = JSON.stringify([
       reviewerDemoAccount(1),
@@ -562,10 +566,72 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
   });
 
   beforeEach(async () => {
+    const queue = app.get<Queue>(getQueueToken(AuthSchemas.EMAIL_CODE_QUEUE));
+    const redis = await queue.client;
+    for (const account of [account1, otherAccount]) {
+      await redis.del(reservedPhoneAttemptKey(account.phone));
+    }
     await prisma.auditLog.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
     await prisma.otpRequest.deleteMany();
+  });
+
+  it("shares a destination budget across concurrent guesses and refuses the correct code until the lock expires", async () => {
+    for (const account of [account1, otherAccount]) await prisma.user.create({ data: {
+      phone: account.phone, phoneVerifiedAt: new Date(), role: "buyer",
+    } });
+    // A separate application graph has its own managed Redis client.
+    const secondModule = await Test.createTestingModule({ imports: [
+      bullTestRoot(), IdentityModule,
+      JwtModule.register({ global: true, secret: "synthetic-second-api-secret" }),
+    ] }).compile();
+    const secondApp = secondModule.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    secondApp.useGlobalFilters(new GlobalErrorFilter());
+    let guesses: Awaited<ReturnType<ReturnType<typeof supertest>["post"]>>[];
+    try {
+      await secondApp.listen(0, "127.0.0.1");
+      const secondRequest = supertest(secondApp.getHttpServer());
+      guesses = await Promise.all(Array.from({ length: 20 }, (_, index) =>
+        (index % 2 === 0 ? request : secondRequest).post("/api/v1/auth/otp/verify")
+          .send({ phone: account1.phone, code: "999999" }).expect(400),
+      ));
+    } finally {
+      await secondApp.close();
+    }
+    expect(guesses.filter((response) => response.body.code === "INVALID_OTP")).toHaveLength(4);
+    expect(guesses.filter((response) => response.body.code === "OTP_LOCKED")).toHaveLength(16);
+    const locked = await request.post("/api/v1/auth/otp/verify")
+      .send({ phone: account1.phone, code: account1.code }).expect(400);
+    expect(locked.body).toMatchObject({ code: "OTP_LOCKED", message: "Too many failed attempts. Wait 15 minutes and try again." });
+    expect(await prisma.session.count()).toBe(0);
+    expect(await prisma.auditLog.count()).toBe(0);
+    expect(await prisma.otpRequest.count()).toBe(0);
+    // Requesting again cannot clear a verification lock.
+    await request.post("/api/v1/auth/otp/request").send({ phone: account1.phone }).expect(201);
+    await request.post("/api/v1/auth/otp/verify").send({ phone: account1.phone, code: account1.code }).expect(400);
+    await request.post("/api/v1/auth/otp/verify").send({ phone: otherAccount.phone, code: otherAccount.code }).expect(201);
+    const queue = app.get<Queue>(getQueueToken(AuthSchemas.EMAIL_CODE_QUEUE));
+    const redis = await queue.client;
+    const key = reservedPhoneAttemptKey(account1.phone);
+    expect(await redis.pttl(key)).toBeGreaterThan(890_000);
+    expect(await redis.pttl(key)).toBeLessThanOrEqual(900_000);
+    // Move near the deadline, then prove blocked reads cannot refresh it.
+    await redis.pexpire(key, 10_000);
+    for (const code of [account1.code, "999999"]) {
+      const retry = await request.post("/api/v1/auth/otp/verify").send({ phone: account1.phone, code }).expect(400);
+      expect(retry.body.code).toBe("OTP_LOCKED");
+    }
+    expect(await redis.pttl(key)).toBeLessThanOrEqual(10_000);
+    // Expire the real Redis key, without waiting 15 minutes in CI.
+    await redis.pexpire(key, 1);
+    const recovered = await eventually(async () => {
+      const response = await request.post("/api/v1/auth/otp/verify").send({ phone: account1.phone, code: account1.code });
+      return response.status === 201 ? response.body : null;
+    });
+    expect(recovered.user.phone).toBe(account1.phone);
+    const freshFailure = await request.post("/api/v1/auth/otp/verify").send({ phone: account1.phone, code: "999999" }).expect(400);
+    expect(freshFailure.body.code).toBe("INVALID_OTP");
   });
 
   it.each(["phone", "email"] as const)("suspends and restores fixed-code %s sign-in without reviving old Sessions", async (channel) => {

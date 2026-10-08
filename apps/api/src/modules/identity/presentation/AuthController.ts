@@ -141,7 +141,7 @@ export class AuthController {
       if (err instanceof Error && err.message === "Too many attempts") {
         throw new BadRequestException({
           code: "OTP_LOCKED",
-          message: "Too many failed attempts. Please request a new code.",
+          message: "Too many failed attempts. Wait 15 minutes and try again.",
         });
       }
       if (err instanceof Error && err.message === "No Sign-in Code request found") {

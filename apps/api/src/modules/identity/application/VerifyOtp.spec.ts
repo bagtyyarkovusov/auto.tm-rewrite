@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { UserSuspendedError } from "../domain/UserSuspendedError";
+import { InMemoryReservedPhoneAttemptLedger } from "./testing/InMemoryReservedPhoneAttemptLedger";
 import { InMemoryIdentityCheck } from "./testing/InMemoryIdentityCheck";
 import { JwtService } from "@nestjs/jwt";
 import type {
@@ -24,6 +25,7 @@ import type {
 import type {
   ReviewerOtpBypassConfig,
 } from "../domain/ports/ReviewerOtpBypassConfig";
+import type { ReservedPhoneAttemptLedger } from "../domain/ports/ReservedPhoneAttemptLedger";
 import { VerifyOtp } from "./VerifyOtp";
 import { AuthController } from "../presentation/AuthController";
 import type { FastifyRequest } from "fastify";
@@ -365,6 +367,7 @@ interface MakeUseCaseOpts {
   constantTimeComparator?: ConstantTimeComparatorPort;
   random?: RandomSourcePort;
   identityCheck?: InMemoryIdentityCheck;
+  reservedPhoneAttempts?: ReservedPhoneAttemptLedger;
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
@@ -384,6 +387,7 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     new VerifySignInCode(otpRepo, clock),
     opts.random ?? new FixedRandomSource([0.5]),
     opts.identityCheck ?? new InMemoryIdentityCheck(),
+    opts.reservedPhoneAttempts ?? new InMemoryReservedPhoneAttemptLedger(clock),
   );
 }
 
@@ -1113,6 +1117,155 @@ describe("VerifyOtp", () => {
         account3,
       ],
     };
+
+    it.each(["reviewer", "tester"])("locks a %s phone after five failures without a request, then recovers after 15 minutes", async (kind) => {
+      const account = kind === "reviewer" ? account1 : {
+        phone: "+99370000001", email: "tester@example.invalid", code: "765432",
+      };
+      const user = makeUser({ phone: account.phone, role: "buyer" });
+      userRepo.users.push(user);
+      let now = new Date(NOW);
+      const uc = makeUseCase({
+        otpRepo, userRepo, sessionRepo, eventBus,
+        clock: { now: () => now },
+        reviewerBypassConfig: { enabled: true, accounts: [account, account2] },
+        constantTimeComparator,
+      });
+      const controller = makeAuthController(uc);
+      const wrong = { phone: account.phone, code: "999999" };
+      for (let i = 0; i < 4; i++) {
+        await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
+          status: 400, response: { code: "INVALID_OTP" },
+        });
+      }
+      // A correct code succeeds and resets the failure budget, so five fresh
+      // failures are needed to lock.
+      await expect(uc.execute({ phone: account.phone, code: account.code }))
+        .resolves.toMatchObject({ user: { id: user.id } });
+      await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
+        status: 400, response: { code: "INVALID_OTP" },
+      });
+      for (let i = 0; i < 3; i++) {
+        await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
+          status: 400, response: { code: "INVALID_OTP" },
+        });
+      }
+      await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
+        status: 400, response: { code: "OTP_LOCKED", message: "Too many failed attempts. Wait 15 minutes and try again." },
+      });
+      const sessionsBeforeLock = sessionRepo.sessions.length;
+      const auditBeforeLock = eventBus.emit.mock.calls.length;
+      now = new Date(NOW.getTime() + 15 * 60_000 - 1);
+      for (const code of [account.code, "999999"]) {
+        await expect(controller.otpVerify({ phone: account.phone, code }, VERIFY_REQUEST))
+          .rejects.toMatchObject({ status: 400, response: { code: "OTP_LOCKED" } });
+      }
+      expect(sessionRepo.sessions).toHaveLength(sessionsBeforeLock);
+      expect(eventBus.emit.mock.calls).toHaveLength(auditBeforeLock);
+      expect(otpRepo.records).toHaveLength(0);
+      // A blocked retry does not restart the lock.
+      now = new Date(NOW.getTime() + 15 * 60_000);
+      await expect(uc.execute({ phone: account.phone, code: account.code }))
+        .resolves.toMatchObject({ user: { id: user.id } });
+      await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
+        response: { code: "INVALID_OTP" },
+      });
+    });
+
+    it("refuses reserved phone sign-in when the ledger probe fails, without a Session", async () => {
+      userRepo.users.push(makeUser({ phone: account1.phone, role: "buyer" }));
+      const controller = makeAuthController(makeUseCase({
+        otpRepo, userRepo, sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+        reservedPhoneAttempts: {
+          recordAttempt: async () => {
+            throw new Error("redis connection lost");
+          },
+        },
+      }));
+      await expect(controller.otpVerify({ phone: account1.phone, code: account1.code }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ status: 400, response: { code: "OTP_LOCKED" } });
+      expect(sessionRepo.sessions).toHaveLength(0);
+    });
+
+    it("never probes the reserved-phone ledger for an ordinary phone", async () => {
+      const ledger: ReservedPhoneAttemptLedger = { recordAttempt: vi.fn(async () => ({ locked: false })) };
+      userRepo.users.push(makeUser({ phone: "+99361234567", role: "buyer" }));
+      otpRepo.addRecord(makeOtpRequest({ channel: "phone", destination: "+99361234567" }));
+      const controller = makeAuthController(makeUseCase({
+        otpRepo, userRepo, sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+        reservedPhoneAttempts: ledger,
+      }));
+      await expect(controller.otpVerify({ phone: "+99361234567", code: "123456" }, VERIFY_REQUEST))
+        .resolves.toBeDefined();
+      otpRepo.addRecord(makeOtpRequest({ channel: "phone", destination: "+99361234567", createdAt: new Date(NOW.getTime() + 1_000) }));
+      await expect(controller.otpVerify({ phone: "+99361234567", code: "000000" }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ status: 400, response: { code: "INVALID_OTP" } });
+      expect(ledger.recordAttempt).not.toHaveBeenCalled();
+    });
+
+    it("starts the full lock at the fifth failure and forgets older failure windows", async () => {
+      const user = makeUser({ phone: account1.phone, role: "buyer" });
+      userRepo.users.push(user);
+      let now = new Date(NOW);
+      const uc = makeUseCase({
+        otpRepo, userRepo, sessionRepo, clock: { now: () => now },
+        reviewerBypassConfig: reviewerConfig, constantTimeComparator,
+      });
+      const controller = makeAuthController(uc);
+      const wrong = { phone: account1.phone, code: "999999" };
+      for (let i = 0; i < 4; i++) await expect(controller.otpVerify(wrong, VERIFY_REQUEST))
+        .rejects.toMatchObject({ response: { code: "INVALID_OTP" } });
+      // The four old failures expire before this failure.
+      now = new Date(NOW.getTime() + 15 * 60_000);
+      for (let i = 0; i < 4; i++) await expect(controller.otpVerify(wrong, VERIFY_REQUEST))
+        .rejects.toMatchObject({ response: { code: "INVALID_OTP" } });
+      now = new Date(NOW.getTime() + 29 * 60_000);
+      await expect(controller.otpVerify(wrong, VERIFY_REQUEST))
+        .rejects.toMatchObject({ response: { code: "OTP_LOCKED" } });
+      // Expiry of the original failure window does not end the newer lock.
+      now = new Date(NOW.getTime() + 30 * 60_000);
+      await expect(controller.otpVerify({ phone: account1.phone, code: account1.code }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ response: { code: "OTP_LOCKED" } });
+      now = new Date(NOW.getTime() + 44 * 60_000);
+      await expect(uc.execute({ phone: account1.phone, code: account1.code }))
+        .resolves.toMatchObject({ user: { id: user.id } });
+    });
+
+    it.each(["reviewer", "tester"])("keeps the existing stored-request limits for %s email", async (kind) => {
+      const account = kind === "reviewer" ? account1 : { phone: "+99370000001", email: "tester@example.invalid", code: "765432" };
+      userRepo.users.push(makeUser({ phone: account.phone, email: account.email, emailVerifiedAt: NOW }));
+      otpRepo.addRecord(makeOtpRequest({ channel: "email", destination: account.email, codeHash: hashCode(account.code), expiresAt: new Date(NOW.getTime() + 10 * 60_000) }));
+      const controller = makeAuthController(makeUseCase({
+        otpRepo, userRepo, sessionRepo,
+        reviewerBypassConfig: { enabled: true, accounts: [account] }, constantTimeComparator,
+      }));
+      for (let i = 0; i < 4; i++) await expect(controller.otpVerify({ email: account.email, code: "999999" }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ response: { code: "INVALID_OTP" } });
+      await expect(controller.otpVerify({ email: account.email, code: "999999" }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ response: { code: "OTP_LOCKED" } });
+      await expect(controller.otpVerify({ email: account.email, code: account.code }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ response: { code: "OTP_LOCKED" } });
+      expect(sessionRepo.sessions).toHaveLength(0);
+    });
+
+    it.each(["absent", "admin", "moderator"])("does not reveal a fixed code at the lock threshold for an %s User", async (role) => {
+      if (role !== "absent") userRepo.users.push(makeUser({ phone: account1.phone, role: role as "admin" | "moderator" }));
+      const controller = makeAuthController(makeUseCase({
+        otpRepo, userRepo, sessionRepo, reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+      }));
+      for (let i = 0; i < 4; i++) {
+        await expect(controller.otpVerify({ phone: account1.phone, code: "999999" }, VERIFY_REQUEST))
+          .rejects.toMatchObject({ response: { code: "INVALID_OTP" } });
+      }
+      await expect(controller.otpVerify({ phone: account1.phone, code: account1.code }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ response: { code: "OTP_LOCKED" } });
+      expect(sessionRepo.sessions).toHaveLength(0);
+    });
 
     it("requires a rate-limited request before reserved email authentication", async () => {
       const existingUser = makeUser({

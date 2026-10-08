@@ -27,6 +27,7 @@ import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
 import type { IdentityCheckPort } from "../domain/ports/IdentityCheckPort";
 import { IDENTITY_TOKENS } from "../identity.tokens";
 import { VerifySignInCode } from "./VerifySignInCode";
+import { RESERVED_PHONE_ATTEMPT_LEDGER, type ReservedPhoneAttemptLedger } from "../domain/ports/ReservedPhoneAttemptLedger";
 
 const MAX_SESSIONS = 10;
 const REFRESH_TTL_DAYS = 30;
@@ -77,6 +78,8 @@ export class VerifyOtp {
     private readonly random: RandomSourcePort,
     @Inject(IDENTITY_TOKENS.IdentityCheckPort)
     private readonly identityCheck: IdentityCheckPort,
+    @Inject(RESERVED_PHONE_ATTEMPT_LEDGER)
+    private readonly reservedPhoneAttempts: ReservedPhoneAttemptLedger,
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
@@ -192,32 +195,37 @@ export class VerifyOtp {
       return null;
     }
 
-    if (
-      !matchesReviewerCredential(
-        this.reviewerBypassConfig,
-        this.constantTimeComparator,
-        SIGN_IN_CODE_CHANNELS.PHONE,
-        input.destination,
-        input.code,
-      )
-    ) {
-      // Reserved phones have no issued OTP row. Falling through would report
-      // OTP_NOT_FOUND (shown as expired) instead of a wrong fixed code.
-      if (findReviewerAccount(
-        this.reviewerBypassConfig,
-        this.constantTimeComparator,
-        SIGN_IN_CODE_CHANNELS.PHONE,
-        input.destination,
-      ) !== null) {
-        throw new Error("Invalid OTP code");
-      }
-      return null;
+    const credentialMatches = matchesReviewerCredential(
+      this.reviewerBypassConfig, this.constantTimeComparator,
+      SIGN_IN_CODE_CHANNELS.PHONE, input.destination, input.code,
+    );
+    const reservedAccount = findReviewerAccount(
+      this.reviewerBypassConfig, this.constantTimeComparator,
+      SIGN_IN_CODE_CHANNELS.PHONE, input.destination,
+    );
+    // Look up a reserved User even for a wrong code: account lookup timing and
+    // the threshold response must not confirm a correct code for a missing or
+    // privileged User (PR #764).
+    const user = reservedAccount === null ? null : await this.userRepo.findByPhone(input.destination);
+    // Ordinary phones never probe the ledger, so their sign-in keeps no Redis
+    // dependency and no new failure mode.
+    if (reservedAccount === null) return null;
+    const allowedCredential = credentialMatches && user !== null &&
+      (user.role === "buyer" || user.role === "seller");
+    // Every refused reserved credential uses the same budget. A success resets
+    // the count. A ledger failure fails closed: refusing beats an unlimited
+    // bypass, so it maps to the same lock refusal.
+    let locked: boolean;
+    try {
+      ({ locked } = await this.reservedPhoneAttempts.recordAttempt({
+        destination: input.destination,
+        failed: !allowedCredential,
+      }));
+    } catch {
+      locked = true;
     }
-
-    const user = await this.userRepo.findByPhone(input.destination);
-    if (!user || (user.role !== "buyer" && user.role !== "seller")) {
-      throw new Error("Invalid OTP code");
-    }
+    if (locked) throw new Error("Too many attempts");
+    if (!allowedCredential || user === null) throw new Error("Invalid OTP code");
 
     const deletionScheduledAt = user.deletionScheduledAt;
 
