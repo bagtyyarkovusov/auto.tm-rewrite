@@ -132,7 +132,8 @@ function openStep(screen: Screen, row: RegExp, header: string) {
 /** Types a new amount on the Price step and returns to the list with Done. */
 function changePrice(screen: Screen, from: string, to: string) {
   openStep(screen, /^Price, .*Change$/, "Price");
-  fireEvent.changeText(screen.getByDisplayValue(from), to);
+  // The price field shows grouped digits; the typed text and the saved value are plain.
+  fireEvent.changeText(screen.getByDisplayValue(Number(from).toLocaleString("en-US")), to);
   fireEvent.press(screen.getByRole("button", { name: "Done" }));
   expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
 }

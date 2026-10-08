@@ -6,6 +6,7 @@ import type { WizardSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
 import { useExchangeRates } from "../../api/exchange-rates/useExchangeRates";
+import { formatAmountInput, parseAmountInput } from "../formatPrice";
 
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -62,21 +63,20 @@ function PriceInput({
   disabled: boolean;
   inputRef: React.RefObject<TextInput | null>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <View className="gap-1.5">
       <Text className="text-callout font-medium text-foreground">{t("amount")} *</Text>
       {wrapDisabled(
         <Input
           ref={inputRef}
-          value={payload.priceAmount?.toString() ?? ""}
+          // Grouped as a displayed price; the payload keeps the plain number.
+          value={formatAmountInput(payload.priceAmount, i18n.language)}
           onChangeText={(text) => {
             onTouched();
-            const num = parseInt(text, 10);
-            const updates: Partial<WizardSchemas.WizardDraftPayload> = {
-              priceAmount: Number.isNaN(num) ? undefined : num,
-            };
-            if (!Number.isNaN(num) && !payload.priceCurrency) {
+            const num = parseAmountInput(text);
+            const updates: Partial<WizardSchemas.WizardDraftPayload> = { priceAmount: num };
+            if (num !== undefined && !payload.priceCurrency) {
               updates.priceCurrency = Enums.Currency.TMT;
             }
             onChange(updates);

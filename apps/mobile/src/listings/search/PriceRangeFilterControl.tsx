@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { formatAmountInput, parseAmountInput } from "../formatPrice";
+
 import { FilterLabel, FilterRange } from "./FilterSection";
 
 import { Input } from "@/components/ui/input";
@@ -20,7 +22,7 @@ export function PriceRangeFilterControl({
   setField,
   onValidityChange,
 }: PriceRangeFilterControlProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isInvalid =
     priceMin !== undefined && priceMax !== undefined && priceMin > priceMax;
 
@@ -28,17 +30,9 @@ export function PriceRangeFilterControl({
     onValidityChange?.(!isInvalid);
   }, [isInvalid, onValidityChange]);
 
-  const handleMinChange = (text: string) => {
-    const digits = text.replace(/\D/g, "");
-    const num = digits === "" ? undefined : parseInt(digits, 10);
-    setField("priceMin", num);
-  };
-
-  const handleMaxChange = (text: string) => {
-    const digits = text.replace(/\D/g, "");
-    const num = digits === "" ? undefined : parseInt(digits, 10);
-    setField("priceMax", num);
-  };
+  // The fields show grouped digits; the draft keeps plain numbers.
+  const handleMinChange = (text: string) => setField("priceMin", parseAmountInput(text));
+  const handleMaxChange = (text: string) => setField("priceMax", parseAmountInput(text));
 
   return (
     <View className="gap-2">
@@ -47,7 +41,7 @@ export function PriceRangeFilterControl({
         {/* The currency sits inside each field at its trailing edge, where the amount ends. */}
         <View className="min-w-0 flex-1 justify-center">
           <Input
-            value={priceMin?.toString() ?? ""}
+            value={formatAmountInput(priceMin, i18n.language)}
             onChangeText={handleMinChange}
             placeholder={t("min")}
             keyboardType="number-pad"
@@ -57,7 +51,7 @@ export function PriceRangeFilterControl({
         </View>
         <View className="min-w-0 flex-1 justify-center">
           <Input
-            value={priceMax?.toString() ?? ""}
+            value={formatAmountInput(priceMax, i18n.language)}
             onChangeText={handleMaxChange}
             placeholder={t("max")}
             keyboardType="number-pad"
