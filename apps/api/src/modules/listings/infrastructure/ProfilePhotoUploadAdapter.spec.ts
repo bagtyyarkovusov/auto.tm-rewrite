@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { AttachMedia } from "../application/AttachMedia";
 import { UploadAdoptionGuard } from "../application/UploadAdoptionGuard";
 import { InMemoryMediaWorld } from "../application/testing/InMemoryMediaWorld";
+import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import { Listing } from "../domain/Listing";
 import type { ImageVariantGenerator } from "../domain/ports/ImageVariantGenerator";
 import type { ListingRepository } from "../domain/ports/ListingRepository";
@@ -108,6 +109,16 @@ describe("ProfilePhotoUploadAdapter", () => {
       expect(response.details).toEqual({ key: KEY });
       expect(world.stateOfKey(KEY)).toBe("AVAILABLE");
     }
+  });
+
+  it.each(["attach", "profile"] as const)("%s names the unusable image key when generation rejects it, keeping terminal adoption", async (target) => {
+    presignedUpload(KEY);
+    generator.during = () => { throw new DomainError(LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID, "Corrupt image"); };
+    const error = await (target === "attach" ? attachToListing(KEY) : photos.adopt({ userId: "user-1", key: KEY }))
+      .catch((err: unknown) => err);
+    expect(error).toMatchObject({ response: { code: "UPLOAD_OBJECT_INVALID", details: { key: KEY } } });
+    expect(world.stateOfKey(KEY)).toBe("RETIRED");
+    expect(world.cleanups).toEqual([`upload-${KEY}`]);
   });
 
   describe("adopting an upload", () => {
