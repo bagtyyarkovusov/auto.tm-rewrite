@@ -79,10 +79,12 @@ function removalReasonInput() {
 describe("ReportDetailPage profile photo", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_MINIO_PUBLIC_URL", "https://media.example.test");
   });
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
   });
 
   it("shows the reported user's Profile Photo and the remove action when a photo is set", async () => {
@@ -204,6 +206,15 @@ describe("ReportDetailPage profile photo", () => {
   ])("hides removal for ineligible targets %j", async (overrides) => {
     mockDetail(userReport({ target: { ...userReport().target, ...overrides } }));
     await renderPage();
+    expect(screen.queryByRole("button", { name: "Удалить фото" })).toBeNull();
+  });
+
+  it.each([undefined, "", "   "])("shows a Russian unavailable note without a relative photo URL when media origin is %j", async (origin) => {
+    vi.stubEnv("NEXT_PUBLIC_MINIO_PUBLIC_URL", origin);
+    mockDetail(userReport());
+    await renderPage();
+    expect(screen.getByText("Фото профиля недоступно.")).toBeDefined();
+    expect(screen.queryByRole("img", { name: "Фото профиля" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Удалить фото" })).toBeNull();
   });
 
