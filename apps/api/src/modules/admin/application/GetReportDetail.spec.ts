@@ -84,13 +84,13 @@ class FakeIdentityReadPort implements IdentityReadPort {
     return false;
   }
 
-  seed(id: string, user: { displayName?: string | null; role?: string; suspendedAt?: Date | null; suspendedById?: string | null; suspensionReason?: string | null }) {
+  seed(id: string, user: { displayName?: string | null; role?: string; avatarKey?: string | null; avatarIndex?: number; suspendedAt?: Date | null; suspendedById?: string | null; suspensionReason?: string | null }) {
     this.users[id] = {
       id,
       displayName: user.displayName ?? null,
       nameNumber: 1000,
-      avatarIndex: 0,
-      avatarKey: null,
+      avatarIndex: user.avatarIndex ?? 0,
+      avatarKey: user.avatarKey ?? null,
       deleted: false,
       role: user.role ?? "buyer",
       suspendedAt: user.suspendedAt ?? null,
@@ -178,6 +178,29 @@ describe("GetReportDetail", () => {
     expect(result.target.available).toBe(true);
     expect(result.target.role).toBe("buyer");
     expect(result.target.label).toBe("Bob");
+  });
+
+  it("carries the user target's Profile Photo key", async () => {
+    repo.reports = [makeReport("r1", "user", "u1")];
+    identity.seed("u1", { displayName: "Bob", role: "buyer", avatarKey: "pending/u1-photo/original.jpg", avatarIndex: 3 });
+    identity.seed("reporter-1", { displayName: "Alice" });
+
+    const uc = makeUseCase(repo, listings, identity);
+    const result = await uc.execute({ reportId: "r1" });
+
+    expect(result.target.avatarKey).toBe("pending/u1-photo/original.jpg");
+    expect(result.target.avatarIndex).toBe(3);
+  });
+
+  it("answers a null photo key when the user target has only the Assigned Avatar", async () => {
+    repo.reports = [makeReport("r1", "user", "u1")];
+    identity.seed("u1", { displayName: "Bob", role: "buyer" });
+    identity.seed("reporter-1", { displayName: "Alice" });
+
+    const uc = makeUseCase(repo, listings, identity);
+    const result = await uc.execute({ reportId: "r1" });
+
+    expect(result.target.avatarKey).toBeNull();
   });
 
   it("handles deleted reporter", async () => {

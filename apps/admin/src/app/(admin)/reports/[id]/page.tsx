@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { AdminSchemas, Enums, ErrorCode } from "@auto-tm/contracts";
 
 import { getReportDetail, getConfig } from "../../actions";
+import { UserReportPhoto } from "../../components/UserReportPhoto";
+import { RemovePhotoForm } from "../../components/RemovePhotoForm";
 import { ReportActionForm } from "../../components/ReportActionForm";
 
 function formatDate(iso: string): string {
@@ -80,6 +82,17 @@ export default async function ReportDetailPage({ params }: PageProps) {
   const report = result.data;
   const isPending = report.status === AdminSchemas.ContentReportStatus.Pending;
   const moderationEnabled = configResult.ok ? configResult.data.adminModerationActionsEnabled : true;
+
+  // Dynamic access keeps this server-only value out of Next's build-time public env replacement.
+  const runtimeMediaOrigin = Reflect.get(process.env, "NEXT_PUBLIC_MINIO_PUBLIC_URL") as string | undefined;
+  const mediaOrigin = (runtimeMediaOrigin ?? "").trim().replace(/\/$/, "");
+  const photoBaseKey = report.target.avatarKey?.replace(/\/original\.(jpg|webp|jpeg)$/, "");
+  const photoUrl = mediaOrigin && photoBaseKey
+    ? `${mediaOrigin}/listing-photos/${photoBaseKey}/thumbnail.jpg`
+    : undefined;
+
+  const canRemovePhoto = configResult.ok && moderationEnabled &&
+    report.target.available && report.target.role !== Enums.UserRole.Admin && Boolean(photoUrl);
 
   // Determine actionable state
   const isListing = report.target.targetType === "listing";
@@ -178,6 +191,14 @@ export default async function ReportDetailPage({ params }: PageProps) {
                 {report.target.status}
               </div>
             )}
+            {isUser && report.target.available && (
+              <UserReportPhoto
+                key={id}
+                hasPhoto={Boolean(report.target.avatarKey)}
+                photoUrl={photoUrl}
+                avatarIndex={report.target.avatarIndex}
+              />
+            )}
             {isUser && report.target.role && (
               <div>
                 <span className="text-neutral-500">Роль:</span>{" "}
@@ -266,6 +287,16 @@ export default async function ReportDetailPage({ params }: PageProps) {
                   Объявление уже неактивно или недоступно для блокировки.
                 </p>
               )}
+            </div>
+          )}
+
+          {isUser && report.target.avatarKey && canRemovePhoto && (
+            <div className="rounded-md border bg-surface p-4">
+              <h3 className="text-sm font-medium mb-2">Удалить фото профиля</h3>
+              <p className="text-xs text-neutral-500 mb-3">
+                Фото будет удалено, и снова появится назначенный аватар. Жалоба будет обработана.
+              </p>
+              <RemovePhotoForm reportId={id} targetId={report.target.targetId} />
             </div>
           )}
 

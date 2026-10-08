@@ -13,6 +13,7 @@ type BanListingResponse = AdminSchemas.BanListingResponse;
 type UnbanListingResponse = AdminSchemas.UnbanListingResponse;
 type SuspendUserResponse = AdminSchemas.SuspendUserResponse;
 type UnsuspendUserResponse = AdminSchemas.UnsuspendUserResponse;
+type RemoveUserPhotoResponse = AdminSchemas.RemoveUserPhotoResponse;
 type ListAuditEntriesResponse = AdminSchemas.ListAuditEntriesResponse;
 type ConfigResponse = AdminSchemas.ConfigResponse;
 type ListInspectionInterestStatsResponse = ReportsSchemas.ListInspectionInterestStatsResponse;
@@ -165,6 +166,22 @@ export async function unsuspendUser(
         method: "POST",
         body: { reason },
       },
+    );
+    return { ok: true, data };
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+export async function removeUserPhoto(
+  id: string,
+  reason: string,
+  reportId?: string,
+): Promise<ActionResult<RemoveUserPhotoResponse>> {
+  try {
+    const data = await apiFetch<RemoveUserPhotoResponse>(
+      `/admin/users/${id}/remove-photo`,
+      { method: "POST", body: { reason, reportId } },
     );
     return { ok: true, data };
   } catch (err) {

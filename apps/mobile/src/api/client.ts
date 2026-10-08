@@ -40,7 +40,11 @@ interface RequestOptions<TResponse> {
   accessToken?: string;
   // Per-request timeout override (defaults to 30s)
   timeout?: number;
+  // Fence this request before sending or retrying, never the shared refresh.
+  assertSession?: () => Promise<unknown>;
 }
+
+type ClientOptions = Pick<RequestOptions<unknown>, "auth" | "accessToken" | "timeout" | "assertSession">;
 
 let refreshInFlight: Promise<void> | null = null;
 
@@ -98,6 +102,12 @@ async function refreshOnce(): Promise<void> {
     if (!session) {
       throw new ApiError("UNAUTHENTICATED", 401, "No session to refresh");
     }
+    // Sign-out or new sign-in makes this response stale. Cancelling one
+    // request must not prevent storing the rotated single-use refresh token.
+    const stillOwnsSession = async () => {
+      const current = await loadAuthSession();
+      return current?.user.id === session.user.id && current.refreshToken === session.refreshToken;
+    };
 
     const res = await fetchWithTimeout(
       `${BASE_URL}/auth/refresh`,
@@ -116,6 +126,7 @@ async function refreshOnce(): Promise<void> {
     // contract defines). Any other answer says nothing about the token, so the
     // session stays and the next request retries (ADR-0077).
     if (res.status === 401) {
+      if (!(await stillOwnsSession())) return;
       await clearAuthSession();
       throw new ApiError("UNAUTHENTICATED", 401, "Refresh failed");
     }
@@ -130,6 +141,7 @@ async function refreshOnce(): Promise<void> {
       throw refreshUnavailable("Refresh answer was not readable");
     }
     const parsed = AuthSchemas.RefreshResponseSchema.safeParse(json);
+    if (!(await stillOwnsSession())) return;
     if (!parsed.success) {
       await clearAuthSession();
       throw new ApiError("CONTRACT_VIOLATION", 502, "Bad refresh response");
@@ -153,6 +165,7 @@ async function rawRequest<TResponse>(
   opts: RequestOptions<TResponse>,
   isRetry: boolean,
 ): Promise<TResponse> {
+  await opts.assertSession?.();
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
@@ -189,6 +202,7 @@ async function rawRequest<TResponse>(
     }
   }
 
+  await opts.assertSession?.();
   const res = await fetchWithTimeout(
     `${BASE_URL}${path}`,
     {
@@ -205,6 +219,7 @@ async function rawRequest<TResponse>(
     opts.accessToken === undefined &&
     !isRetry
   ) {
+    await opts.assertSession?.();
     await refreshOnce();
     return rawRequest(path, opts, true);
   }
@@ -257,19 +272,19 @@ async function rawRequest<TResponse>(
 }
 
 export const apiClient = {
-  get<T>(path: string, schema?: ZodSchema<T>, opts: { auth?: boolean; accessToken?: string; timeout?: number } = {}) {
+  get<T>(path: string, schema?: ZodSchema<T>, opts: ClientOptions = {}) {
     return rawRequest<T>(path, { method: "GET", schema, ...opts }, false);
   },
-  post<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean; accessToken?: string; timeout?: number } = {}) {
+  post<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: ClientOptions = {}) {
     return rawRequest<T>(path, { method: "POST", body, schema, ...opts }, false);
   },
-  patch<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean; accessToken?: string; timeout?: number } = {}) {
+  patch<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: ClientOptions = {}) {
     return rawRequest<T>(path, { method: "PATCH", body, schema, ...opts }, false);
   },
-  put<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: { auth?: boolean; accessToken?: string; timeout?: number } = {}) {
+  put<T>(path: string, body: unknown, schema?: ZodSchema<T>, opts: ClientOptions = {}) {
     return rawRequest<T>(path, { method: "PUT", body, schema, ...opts }, false);
   },
-  delete<T>(path: string, schema?: ZodSchema<T>, opts: { auth?: boolean; accessToken?: string; timeout?: number } = {}) {
+  delete<T>(path: string, schema?: ZodSchema<T>, opts: ClientOptions = {}) {
     return rawRequest<T>(path, { method: "DELETE", schema, ...opts }, false);
   },
 };

@@ -6867,6 +6867,14 @@
               "role": {
                 "type": "string"
               },
+              "avatarKey": {
+                "type": "string",
+                "nullable": true
+              },
+              "avatarIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
               "conversationId": {
                 "type": "string",
                 "format": "uuid"

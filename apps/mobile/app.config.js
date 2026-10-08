@@ -5,6 +5,21 @@
 // every other build keeps tm.auto.app, with its own Firebase app.
 const ANDROID_PACKAGE = process.env.ANDROID_APPLICATION_ID || "tm.auto.app";
 
+const PHOTO_PERMISSIONS = {
+  en: {
+    NSCameraUsageDescription: "AutoTM uses your camera to take photos for vehicle listings and your profile photo.",
+    NSPhotoLibraryUsageDescription: "AutoTM accesses your photos so you can choose images for vehicle listings and your profile photo.",
+  },
+  ru: {
+    NSCameraUsageDescription: "AutoTM использует камеру для снимков в объявлениях об автомобилях и фото профиля.",
+    NSPhotoLibraryUsageDescription: "AutoTM получает доступ к вашим фото, чтобы вы могли выбирать снимки для объявлений об автомобилях и фото профиля.",
+  },
+  tk: {
+    NSCameraUsageDescription: "AutoTM ulag bildirişleri üçin we profil suratyňyzy düşürmek üçin kamerany ulanýar.",
+    NSPhotoLibraryUsageDescription: "AutoTM ulag bildirişleri we profil suraty üçin surat saýlamak maksady bilen suratlaryňyza girýär.",
+  },
+};
+
 const config = {
   expo: {
     name: "AutoTM",
@@ -16,6 +31,7 @@ const config = {
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     platforms: ["ios", "android"],
+    locales: Object.fromEntries(Object.entries(PHOTO_PERMISSIONS).map(([locale, ios]) => [locale, { ios }])),
     ios: {
       bundleIdentifier: "tm.auto.app",
       supportsTablet: false,
@@ -23,8 +39,8 @@ const config = {
         ? { googleServicesFile: process.env.GOOGLE_SERVICES_INFO_PLIST }
         : {}),
       infoPlist: {
-        NSCameraUsageDescription: "AutoTM uses your camera to take photos of your vehicle for listings.",
-        NSPhotoLibraryUsageDescription: "AutoTM accesses your photos so you can select vehicle images for listings.",
+        NSCameraUsageDescription: PHOTO_PERMISSIONS.en.NSCameraUsageDescription,
+        NSPhotoLibraryUsageDescription: PHOTO_PERMISSIONS.en.NSPhotoLibraryUsageDescription,
       },
     },
     android: {
@@ -54,14 +70,15 @@ const config = {
       [
         "expo-image-picker",
         {
-          photosPermission: "AutoTM accesses your photos so you can select vehicle images for listings.",
+          photosPermission: PHOTO_PERMISSIONS.en.NSPhotoLibraryUsageDescription,
+          cameraPermission: PHOTO_PERMISSIONS.en.NSCameraUsageDescription,
           microphonePermission: false,
         },
       ],
       [
         "expo-camera",
         {
-          cameraPermission: "Allow AutoTM to access your camera to take photos of your vehicle for listings.",
+          cameraPermission: PHOTO_PERMISSIONS.en.NSCameraUsageDescription,
           recordAudioAndroid: false,
         },
       ],

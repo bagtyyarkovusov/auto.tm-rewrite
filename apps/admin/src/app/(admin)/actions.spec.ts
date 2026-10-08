@@ -32,6 +32,7 @@ import {
   unbanListing,
   suspendUser,
   unsuspendUser,
+  removeUserPhoto,
   listAuditEntries,
   getConfig,
   listInspectionInterestStats,
@@ -540,6 +541,81 @@ describe("moderation server actions", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.code).toBe("INTERNAL_ERROR");
+      }
+    });
+  });
+
+  describe("removeUserPhoto", () => {
+    it("cancels a proxy-rejected photo action before any API work", async () => {
+      mockState.requestHeaders.set("x-admin-session-expired", "1");
+      mockCookieStore.get.mockReturnValue(undefined);
+      mockFetchSuccess({});
+      await expect(removeUserPhoto("u1", "Reason", "r1")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+      expect(fetch).not.toHaveBeenCalled();
+    });
+    it("posts reason and reportId to the moderator removal route", async () => {
+      const payload = {
+        targetId: "u1",
+        targetState: { avatarKey: null, avatarIndex: 3 },
+        reportId: "r1",
+        reportStatus: "actioned",
+        auditLogId: "a1",
+      };
+      mockFetchSuccess(payload);
+
+      const result = await removeUserPhoto("u1", "Неприемлемое фото", "r1");
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.reportStatus).toBe("actioned");
+        expect(result.data.targetState.avatarKey).toBeNull();
+      }
+      const [url, init] = (global.fetch as Mock).mock.calls[0] ?? [null, null];
+      expect(String(url)).toContain("/admin/users/u1/remove-photo");
+      expect((init as RequestInit).method).toBe("POST");
+      expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+        reason: "Неприемлемое фото",
+        reportId: "r1",
+      });
+    });
+
+    it("returns MODERATION_TARGET_STATE_CONFLICT when the user has no photo", async () => {
+      mockFetchError(409, {
+        statusCode: 409,
+        code: "CONFLICT",
+        message: "Target state conflict",
+        details: { reason: "MODERATION_TARGET_STATE_CONFLICT" },
+        timestamp: "2026-01-01T00:00:00Z",
+        requestId: "req-1",
+      });
+
+      const result = await removeUserPhoto("u1", "Неприемлемое фото", "r1");
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe("CONFLICT");
+        const body = result.details as { details?: { reason?: string } };
+        expect(body.details?.reason).toBe("MODERATION_TARGET_STATE_CONFLICT");
+      }
+    });
+
+    it("returns FEATURE_DISABLED when moderation actions are off", async () => {
+      mockFetchError(403, {
+        statusCode: 403,
+        code: "FORBIDDEN",
+        message: "Feature disabled",
+        details: { reason: "FEATURE_DISABLED" },
+        timestamp: "2026-01-01T00:00:00Z",
+        requestId: "req-1",
+      });
+
+      const result = await removeUserPhoto("u1", "Неприемлемое фото");
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe("FORBIDDEN");
+        const body = result.details as { details?: { reason?: string } };
+        expect(body.details?.reason).toBe("FEATURE_DISABLED");
       }
     });
   });

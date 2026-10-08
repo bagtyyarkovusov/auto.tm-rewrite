@@ -20,6 +20,25 @@ Before kicking off a release:
 - [ ] Confirm current beta feature-flag values are recorded before deploy (`SIGNUPS_ENABLED`, `LISTING_PUBLISH_ENABLED`, `LISTING_MUTATIONS_ENABLED`, `CONTACT_ENABLED`, `REPORT_ENTRY_ENABLED`, `ADMIN_MODERATION_ACTIONS_ENABLED`)
 - [ ] For schema-changing deploys, confirm the last successful restore drill used a staging/prod-like database + media backup less than 30 days old
 
+### Reported Profile Photo moderation
+
+For **both staging and production**, the API needs
+`ADMIN_MODERATION_ACTIONS_ENABLED=true` to let an elevated admin remove a reported
+User's Profile Photo from the existing report queue. With `false`, staff reads
+and audit access remain available, but moderation writes are disabled and the
+admin report page hides the removal action. The action uses
+`POST /api/v1/admin/users/:id/remove-photo`, restores the Assigned Avatar, marks
+the report actioned, and records `USER_PHOTO_REMOVE` in the audit log.
+
+Record the flag's value in each environment during the deployment checklist.
+Enable it through the existing environment deployment process; documenting the
+required value does not change staging or production configuration. The admin
+service needs `NEXT_PUBLIC_MINIO_PUBLIC_URL` set at runtime to that environment's
+public media origin to display the reported photo from `listing-photos`. The
+report page reads it in its dynamic server component on each request; it is not
+a build argument. If unset, the page shows «Фото профиля недоступно.» and hides
+photo removal until the preview can be displayed.
+
 ## Railway era — staging and reviewer-only production
 
 ### Production foundation: what duplication taught us
