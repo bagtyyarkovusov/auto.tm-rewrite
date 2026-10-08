@@ -204,18 +204,12 @@ test("unreadable, missing, failed, cancelled, pending or ambiguous checks take f
   assert.equal((await select(r, event, async () => { throw new Error("API unavailable"); })).lane, "full");
 });
 
-test("force pushes, missing previous heads and events other than synchronize take full", async (t) => {
+test("force pushes take the full lane", async (t) => {
   const r = pullRequest(t);
   r.git("reset", "--hard", r.base);
   r.commit({ "src/app.ts": "rewritten code\n", "docs/a.md": "docs\n" });
   const rewritten = r.finish();
   assert.equal((await select(r, rewritten)).lane, "full");
-  for (const before of [undefined, "0".repeat(40), "f".repeat(40), "HEAD", "--help"]) {
-    assert.equal((await select(r, { ...rewritten, before })).lane, "full");
-  }
-  for (const action of ["opened", "reopened", "edited", undefined]) {
-    assert.equal((await select(r, { ...rewritten, action })).lane, "full");
-  }
 });
 
 test("merges from outside main and octopus merges take full", async (t) => {

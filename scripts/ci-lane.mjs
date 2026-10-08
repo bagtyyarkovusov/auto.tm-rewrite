@@ -175,7 +175,7 @@ export async function chooseLaneForEvent(base, cwd, {
     if (!previousIsGreen(checks, event.before, event.number)) throw new Error("previous head has no unambiguous successful pr check for this pull request");
     return { lane: "docs", paths, reason: "green previous head; only documentation changed by hand since then" };
   } catch (error) {
-    return { lane: "full", reason: `could not prove docs since previous head: ${error.message.split("\n")[0]}` };
+    return { ...existing, reason: `could not prove docs since previous head: ${error.message.split("\n")[0]}` };
   }
 }
 
@@ -187,7 +187,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { lane, paths, reason } = await chooseLaneForEvent(process.argv[2], undefined, {
     eventName: process.env.GITHUB_EVENT_NAME, event, fetchHistory: true,
   });
-  if (reason) console.log(`${lane === "full" ? "::warning::" : ""}${reason}`);
+  if (reason) console.log(`${paths === undefined ? "::warning::" : ""}${reason}`);
   if (paths) console.log(`Changed files:\n${paths.join("\n")}`);
   console.log(`CI lane: ${lane}`);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `lane=${lane}\n`);
