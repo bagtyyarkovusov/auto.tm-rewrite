@@ -61,6 +61,21 @@ describe("ListingGridCard", () => {
     expect(source).toContain("listing.photoKeys[0] ?? listing.coverMediaKey");
   });
 
+  // `flex-1` is grow 1, shrink 1, basis 0%. Down the card (the column axis)
+  // Yoga's single-flex-child shortcut leaves a flex basis of 0 on such a view
+  // once its row stretches it, and reuses that 0 the next time the list
+  // changes height and re-measures the untouched row: the row then measures
+  // 0 tall and every such row piles up in the first one. So only the card's
+  // root, which shares the row's width, may flex; the rest sizes to content.
+  it("lets only the card's root flex, so a re-measured row keeps its height", () => {
+    const card = source.slice(
+      source.indexOf("<EnterOnce"),
+      source.indexOf("</EnterOnce>"),
+    );
+    expect(card.match(/className="[^"]*\bflex-1\b/g)).toHaveLength(1);
+    expect(card).toContain('<EnterOnce order={enterOrder} className="min-w-0 flex-1">');
+  });
+
   it("exports a skeleton with the same photo shape", () => {
     expect(source).toContain("export function ListingGridCardSkeleton");
     expect(source.match(/aspect-photo w-full/g)?.length).toBeGreaterThanOrEqual(2);
