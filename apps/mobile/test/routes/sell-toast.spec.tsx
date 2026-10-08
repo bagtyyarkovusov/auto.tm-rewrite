@@ -1,4 +1,8 @@
-import { StyleSheet } from "react-native";
+import { BaseNavigationContainer, createNavigationContainerRef, createNavigatorFactory, useNavigationBuilder } from "@react-navigation/core";
+import { StackActions, StackRouter } from "@react-navigation/routers";
+import type { ParamListBase } from "@react-navigation/routers";
+
+import { StyleSheet, View, Text } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../src/api/client";
@@ -119,4 +123,51 @@ describe("Sell publish toasts", () => {
     expect(screen.getByText("Listing published")).toBeTruthy();
     expect(top()).toBe(59 + 64 + 8);
   });
+});
+
+
+// Real NavigationBuilder and StackRouter manage history; only screen presentation
+// and Expo Router's URL-to-action adapter are replaced in this Node test.
+it("Back after publish and opening/closing Edit returns to tabs, then can leave the app", async () => {
+  const navigation = createNavigationContainerRef<ParamListBase>();
+  const detail = `/(public)/listings/${fixture.id}`;
+  const edit = `/listings/${fixture.id}/edit`;
+  const Navigator = createNavigatorFactory(function TestStack({ children }: { children: import("react").ReactNode }) {
+    const { state, descriptors, NavigationContent } = useNavigationBuilder(StackRouter, {
+      children, initialRouteName: "(tabs)",
+    });
+    return <NavigationContent>{state.routes.map((route, index) => (
+      <View key={route.key} style={{ display: index === state.index ? "flex" : "none" }}>
+        {descriptors[route.key]!.render()}
+      </View>
+    ))}</NavigationContent>;
+  })();
+  routerMock.replace.mockImplementation((name) => navigation.dispatch(StackActions.replace(String(name))));
+  routerMock.push.mockImplementation((name) => navigation.dispatch(StackActions.push(String(name))));
+  fixture.publish.mockResolvedValue({ id: fixture.id });
+  const screen = renderMobile(<ToastProvider><BaseNavigationContainer ref={navigation}>
+    <Navigator.Navigator>
+      <Navigator.Screen name="(tabs)" component={SellScreen} />
+      <Navigator.Screen name={detail}>{() => <Text>Published detail</Text>}</Navigator.Screen>
+      <Navigator.Screen name={edit}>{() => <Text>Edit listing</Text>}</Navigator.Screen>
+      <Navigator.Screen name="(onboarding)">{() => <Text>Onboarding</Text>}</Navigator.Screen>
+    </Navigator.Navigator>
+  </BaseNavigationContainer></ToastProvider>);
+  try {
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
+    expect(navigation.getCurrentRoute()?.name).toBe(detail);
+    act(() => navigation.dispatch(StackActions.push(edit)));
+    expect(navigation.getCurrentRoute()?.name).toBe(edit);
+    act(() => navigation.goBack());
+    expect(navigation.getCurrentRoute()?.name).toBe(detail);
+    expect(navigation.canGoBack()).toBe(true);
+    act(() => navigation.goBack());
+    expect(navigation.getCurrentRoute()?.name).toBe("(tabs)");
+    expect(screen.getByText("New listing")).toBeTruthy();
+    expect(navigation.canGoBack()).toBe(false);
+    expect(navigation.getRootState().routes.map((route) => route.name)).toEqual(["(tabs)"]);
+  } finally {
+    routerMock.replace.mockReset();
+    routerMock.push.mockReset();
+  }
 });
