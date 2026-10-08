@@ -134,6 +134,13 @@ describe("RepublishListing", () => {
     clock = { now: () => new Date() };
   });
 
+  it("republishes an archived Listing with a legacy VIN unchanged", async () => {
+    seedListing(repo, "archived", { vin: "Corolla" });
+    const { listing } = await makeUseCase(repo, prisma).execute({ listingId: "listing-1", userId: "user-1" });
+    expect(listing.status).toBe("active");
+    expect(listing.vin).toBe("Corolla");
+  });
+
   it("refuses two photos without changing the stored Listing", async () => {
     seedListing(repo, "archived");
     prisma.photoCount = 2;

@@ -1,6 +1,7 @@
+import type * as Native from "react-native";
+import { Alert , Image, StyleSheet } from "react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import * as Linking from "expo-linking";
-import { Image, StyleSheet } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderMobile, fireEvent, act } from "../../../test/render";
@@ -246,5 +247,27 @@ describe("Results card seller line", () => {
     const { view } = renderCard(listing);
     expect(view.queryByText(/Private seller/)).toBeNull();
     expect(view.getByText("Ashgabat · Today")).toBeTruthy();
+  });
+});
+
+vi.mock("react-native", async (original) => ({
+  ...await original<typeof Native>(),
+  Alert: { alert: vi.fn() },
+}));
+
+describe("Android dialer", () => {
+  it("dials despite a false package-visibility check", async () => {
+    vi.mocked(Linking.canOpenURL).mockResolvedValueOnce(false);
+    api.get.mockResolvedValue({ ...feedItem, contactPhone: "+99365000000" });
+    const { view } = renderCard(feedItem);
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Linking.openURL).toHaveBeenCalledWith("tel:+99365000000");
+  });
+  it("shows the number when the dialer fails", async () => {
+    vi.mocked(Linking.openURL).mockRejectedValueOnce(new Error("No dialer"));
+    api.get.mockResolvedValue({ ...feedItem, contactPhone: "+99365000000" });
+    const { view } = renderCard(feedItem);
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Alert.alert).toHaveBeenCalledWith("Call", "Could not open the dialer. Call +99365000000 manually.");
   });
 });

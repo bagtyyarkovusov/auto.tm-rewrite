@@ -6,6 +6,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
 import * as FileSystem from "expo-file-system/legacy";
 import {
   Camera,
@@ -30,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 
 interface Step2PhotosProps {
@@ -52,6 +54,7 @@ interface Step2PhotosProps {
 }
 
 function usePhotoPicker(onAddPhoto: (uri: string) => Promise<void>) {
+  const [cameraDenied, setCameraDenied] = useState(false);
   const ensurePickerTempDir = useCallback(async () => {
     const dir = `${FileSystem.documentDirectory}picker-temp/`;
     const info = await FileSystem.getInfoAsync(dir);
@@ -95,6 +98,14 @@ function usePhotoPicker(onAddPhoto: (uri: string) => Promise<void>) {
   }, [onAddPhoto, copyToPickerTemp]);
 
   const takePhoto = useCallback(async () => {
+    let permission = await ImagePicker.getCameraPermissionsAsync();
+    if (!permission.granted && permission.canAskAgain) {
+      permission = await ImagePicker.requestCameraPermissionsAsync();
+    }
+    if (!permission.granted) {
+      setCameraDenied(!permission.canAskAgain);
+      return;
+    }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
       quality: 1,
@@ -109,7 +120,7 @@ function usePhotoPicker(onAddPhoto: (uri: string) => Promise<void>) {
     }
   }, [onAddPhoto, copyToPickerTemp]);
 
-  return { pickFromLibrary, takePhoto };
+  return { pickFromLibrary, takePhoto, cameraDenied, setCameraDenied };
 }
 
 function usePhotoReorder(
@@ -401,7 +412,8 @@ export default function Step2Photos({
     setRemovedOne(true);
     onRemovePhoto(photoId);
   };
-  const { pickFromLibrary, takePhoto } = usePhotoPicker(onAddPhoto);
+  const { t: tAccount } = useTranslation("account");
+  const { pickFromLibrary, takePhoto, cameraDenied, setCameraDenied } = usePhotoPicker(onAddPhoto);
   const { handleMoveUp, handleMoveDown, handleSetAsCover } = usePhotoReorder(
     photos,
     onReorderPhotos,
@@ -475,6 +487,23 @@ export default function Step2Photos({
       ) : (
         <EmptyState />
       )}
+
+      <AlertDialog open={cameraDenied} onOpenChange={setCameraDenied}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tAccount("permT")}</AlertDialogTitle>
+            <AlertDialogDescription>{tAccount("permD")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel accessibilityRole="button" onPress={() => setCameraDenied(false)}>
+              <Text>{t("cancel")}</Text>
+            </AlertDialogCancel>
+            <AlertDialogAction accessibilityRole="button" onPress={() => { setCameraDenied(false); void Linking.openSettings(); }}>
+              <Text>{tAccount("openSettings")}</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <PhotoActionSheet
         open={actionsPhoto !== null}

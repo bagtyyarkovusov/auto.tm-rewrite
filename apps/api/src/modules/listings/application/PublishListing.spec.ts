@@ -304,6 +304,28 @@ describe("PublishListing", () => {
     },
   };
 
+
+  it.each(["Corolla", "WBA1234567890ABCQ", "WBA1234567890ABC!", "WBA1234567890ABCDE1"])(
+    "rejects invalid VIN %s at first publication before adopting photos", async (vin) => {
+      seedDraft(draftRepo, { ...validPayload, vin });
+      await expect(makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator)
+        .execute({ draftId: "draft-1", userId: "user-1" }))
+        .rejects.toMatchObject({ response: {
+          code: "INVALID_DRAFT_PAYLOAD",
+          details: { fieldErrors: { vin: expect.any(Array) } },
+        } });
+      expect(draftRepo.drafts).toHaveLength(1);
+      expect(variantGenerator.generated).toHaveLength(0);
+    },
+  );
+  it.each([undefined, "", "WBA1234567890ABCD", "wba1234567890abcd"])(
+    "allows optional or valid VIN %s at first publication", async (vin) => {
+      seedDraft(draftRepo, { ...validPayload, vin });
+      const result = await makeUseCase(draftRepo, prisma, exchangeRates, events, variantGenerator)
+        .execute({ draftId: "draft-1", userId: "user-1" });
+      expect(result.listing).toBeTruthy();
+    },
+  );
   describe("contact phone (ADR-0081)", () => {
     const DAY = 24 * 60 * 60 * 1000;
 

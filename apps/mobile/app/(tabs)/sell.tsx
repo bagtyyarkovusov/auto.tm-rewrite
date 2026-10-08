@@ -427,7 +427,7 @@ export default function SellScreen() {
         title: t("listingPublished"),
         variant: "success",
       });
-      router.replace(`/(public)/listings/${result.id}`);
+      router.push(`/(public)/listings/${result.id}`);
       // The draft is a Listing now, so the wizard closes and the Sell tab is back
       // at its entry. No success screen (founder decision D8 on #354).
       newDraftIdRef.current = null;

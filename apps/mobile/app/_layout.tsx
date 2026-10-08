@@ -48,10 +48,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 // cannot auto-hide before React mounts.
 void SplashScreen.preventAutoHideAsync();
 
-// Start first-time users in the onboarding flow. Returning users are
-// redirected to the feed from the splash screen once the flag is read.
+// Deep links and publish results go Back to tabs.
 export const unstable_settings = {
-  initialRouteName: "(onboarding)",
+  initialRouteName: "(tabs)",
 };
 
 const queryClient = new QueryClient({
@@ -157,7 +156,6 @@ export default function RootLayout() {
     theme === "system" ? (osColorScheme ?? "light") : theme;
   const scheme = resolvedScheme === "dark" ? "dark" : "light";
   const [i18nReady, setI18nReady] = useState(false);
-
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     "Geist-Light": require("../assets/fonts/Geist-Light.ttf"),

@@ -54,6 +54,7 @@ const WIZARD_ERROR_NAMES = [
   "invalidValue",
   "unknownStep",
   "vinTooLong",
+  "vinInvalid",
   "photosRequired",
   "brandRequired",
   "modelRequired",
@@ -114,6 +115,18 @@ export const StepPhotosSchema = z.object({
 });
 export type StepPhotosInput = z.infer<typeof StepPhotosSchema>;
 
+export const VinSchema = z.string()
+  // Only ASCII letters normalise; Unicode lookalikes must remain invalid.
+  .transform((vin) => vin.replace(/[a-z]/g, (letter) => letter.toUpperCase()))
+  .pipe(z.string()
+    .max(WIZARD_LIMITS.vinMaxLength, KEY.vinTooLong)
+    // Keep the existing length error alone when max() already rejects the value.
+    .refine(
+      (vin) => vin.length > WIZARD_LIMITS.vinMaxLength || /^(?:[A-HJ-NPR-Z0-9]{17})?$/.test(vin),
+      KEY.vinInvalid,
+    ))
+  .optional();
+
 export const StepVehicleSchema = z.object({
   brandId: z.string({ required_error: KEY.brandRequired }).uuid({ message: KEY.brandRequired }),
   modelId: z.string({ required_error: KEY.modelRequired }).uuid({ message: KEY.modelRequired }),
@@ -123,7 +136,7 @@ export const StepVehicleSchema = z.object({
     .int(KEY.yearWholeNumber)
     .min(WIZARD_LIMITS.yearMin, KEY.yearTooEarly)
     .max(WIZARD_LIMITS.yearMax, KEY.yearTooLate),
-  vin: z.string().max(WIZARD_LIMITS.vinMaxLength, KEY.vinTooLong).optional(),
+  vin: VinSchema,
 });
 export type StepVehicleInput = z.infer<typeof StepVehicleSchema>;
 

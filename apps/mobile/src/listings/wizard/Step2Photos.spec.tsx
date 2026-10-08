@@ -1,3 +1,4 @@
+import * as Linking from "expo-linking";
 import { describe, expect, it, vi } from "vitest";
 import { Pressable, StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -8,7 +9,7 @@ import type { StagedPhoto } from "../uploadStaging/types";
 
 import Step2Photos from "./Step2Photos";
 
-vi.mock("expo-image-picker", () => ({ launchImageLibraryAsync: vi.fn(), launchCameraAsync: vi.fn() }));
+vi.mock("expo-image-picker", () => ({ launchImageLibraryAsync: vi.fn(), launchCameraAsync: vi.fn(), getCameraPermissionsAsync: vi.fn(), requestCameraPermissionsAsync: vi.fn() }));
 vi.mock("expo-file-system/legacy", () => ({ documentDirectory: "file:///documents/",
   getInfoAsync: vi.fn(async () => ({ exists: true })), copyAsync: vi.fn(async () => {}),
   makeDirectoryAsync: vi.fn(async () => {}), deleteAsync: vi.fn(async () => {}) }));
@@ -322,3 +323,49 @@ describe("Step2Photos errors", () => {
     expect(screen.getByText("At least 3 photos are required")).toBeTruthy();
   });
 });
+
+describe("Sell camera permission", () => {
+  const permission = (granted: boolean, canAskAgain: boolean): ImagePicker.CameraPermissionResponse => ({ granted, canAskAgain, status: (granted ? "granted" : "denied") as ImagePicker.CameraPermissionResponse["status"], expires: "never" });
+  it.each([
+    ["en", "Camera", "Camera access is off", "Open settings"],
+    ["ru", "Камера", "Нет доступа к камере", "Открыть настройки"],
+    ["tk", "Kamera", "Kamera rugsady ýok", "Sazlamalary aç"],
+  ])("offers system settings after permanent denial in %s", async (locale, camera, title, settings) => {
+    vi.mocked(ImagePicker.getCameraPermissionsAsync).mockResolvedValue(permission(false, false));
+    vi.mocked(ImagePicker.launchCameraAsync).mockResolvedValue({ canceled: true, assets: null });
+    const screen = renderMobile(<Step2Photos {...defaults()} />, { locale });
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: camera })); });
+    expect(screen.getByText(title)).toBeTruthy();
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: settings })); });
+    expect(Linking.openSettings).toHaveBeenCalled();
+    expect(screen.queryByText(title)).toBeNull();
+  });
+  it("does not launch a camera when a permission request is denied", async () => {
+    vi.mocked(ImagePicker.getCameraPermissionsAsync).mockResolvedValue(permission(false, true));
+    vi.mocked(ImagePicker.requestCameraPermissionsAsync).mockResolvedValue(permission(false, true));
+    vi.mocked(ImagePicker.launchCameraAsync).mockClear();
+    vi.mocked(ImagePicker.launchCameraAsync).mockResolvedValue({ canceled: true, assets: null });
+    const screen = renderMobile(<Step2Photos {...defaults()} />);
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Camera" })); });
+    expect(ImagePicker.launchCameraAsync).not.toHaveBeenCalled();
+    expect(screen.queryByText("Camera access is off")).toBeNull();
+  });
+  it("shows settings when the last request becomes permanent denial", async () => {
+    vi.mocked(ImagePicker.getCameraPermissionsAsync).mockResolvedValue(permission(false, true));
+    vi.mocked(ImagePicker.requestCameraPermissionsAsync).mockResolvedValue(permission(false, false));
+    const screen = renderMobile(<Step2Photos {...defaults()} />);
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Camera" })); });
+    expect(screen.getByText("Camera access is off")).toBeTruthy();
+  });
+  it("adds a camera photo once permission is granted", async () => {
+    vi.mocked(ImagePicker.getCameraPermissionsAsync).mockResolvedValue(permission(false, true));
+    vi.mocked(ImagePicker.requestCameraPermissionsAsync).mockResolvedValue(permission(true, true));
+    vi.mocked(ImagePicker.launchCameraAsync).mockResolvedValue({ canceled: false, assets: [{ uri: "file:///camera/a.jpg", width: 100, height: 100 }] });
+    const props = defaults();
+    const screen = renderMobile(<Step2Photos {...props} />);
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Camera" })); });
+    expect(props.onAddPhoto).toHaveBeenCalledWith(expect.stringContaining("picker-temp/"));
+  });
+});
+
+vi.mock("expo-linking", () => ({ openSettings: vi.fn(async () => {}) }));

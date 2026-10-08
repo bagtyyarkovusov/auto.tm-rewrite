@@ -1,3 +1,5 @@
+import type * as Native from "react-native";
+import { Alert } from "react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import * as Linking from "expo-linking";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -135,5 +137,25 @@ describe("Favorites large card", () => {
     const view = renderMobile(<FavoriteListingCardSkeleton />);
     expect(view.getAllByTestId("listing-photo-skeleton")).toHaveLength(1);
     expect(within(view.getByTestId("listing-actions-skeleton")).getAllByTestId("skeleton-button")).toHaveLength(2);
+  });
+});
+
+vi.mock("react-native", async (original) => ({
+  ...await original<typeof Native>(),
+  Alert: { alert: vi.fn() },
+}));
+
+describe("Android dialer", () => {
+  it("dials despite a false package-visibility check", async () => {
+    vi.mocked(Linking.canOpenURL).mockResolvedValueOnce(false);
+    const { view } = renderCard();
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Linking.openURL).toHaveBeenCalledWith("tel:+99365000000");
+  });
+  it("shows the number when the dialer fails", async () => {
+    vi.mocked(Linking.openURL).mockRejectedValueOnce(new Error("No dialer"));
+    const { view } = renderCard();
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Alert.alert).toHaveBeenCalledWith("Call", "Could not open the dialer. Call +99365000000 manually.");
   });
 });

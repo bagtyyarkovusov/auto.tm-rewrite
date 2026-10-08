@@ -161,6 +161,18 @@ afterEach(() => {
 });
 
 describe("the section list of a published Listing (#589)", () => {
+  it("saves a price change while preserving a locked legacy VIN", async () => {
+    const api = createListingApi({ vin: "Corolla" });
+    const screen = await openEdit();
+    changePrice(screen, "100000", "120000");
+    expect(isDisabled(saveButton(screen))).toBe(false);
+    await act(async () => { fireEvent.press(saveButton(screen)); });
+    await waitFor(() => expect(api.patches).toHaveLength(1));
+    expect(api.patches[0]).toMatchObject({ priceAmount: 120000 });
+    expect(api.patches[0]).not.toHaveProperty("vin");
+    expect(api.listing.vin).toBe("Corolla");
+  });
+
   it("never asks to fill in existing photos while loading or on the first ready render (#736)", async () => {
     createListingApi();
     const photoDir = getDraftDir(`edit-${id}`);

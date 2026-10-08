@@ -1,3 +1,5 @@
+import type * as Native from "react-native";
+import { Alert } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Linking from "expo-linking";
 import { Enums } from "@auto-tm/contracts";
@@ -124,5 +126,35 @@ describe("ContactCtaBar", () => {
     fireEvent.press(screen.getByRole("button", { name: "Message" }));
     expect(state.mutate).not.toHaveBeenCalled();
     expect(state.requireSignIn).not.toHaveBeenCalled();
+  });
+});
+
+vi.mock("react-native", async (original) => ({
+  ...await original<typeof Native>(),
+  Alert: { alert: vi.fn() },
+}));
+
+describe("Android dialer", () => {
+  it("dials despite a false package-visibility check", async () => {
+    vi.mocked(Linking.canOpenURL).mockResolvedValueOnce(false);
+    const view = renderMobile(<ContactCtaBar {...props} />);
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Linking.openURL).toHaveBeenCalledWith("tel:+99361000001");
+  });
+  it.each([
+    [" +993 (61) 000-001", "tel:+99361000001"],
+    ["993-61-000-001", "tel:99361000001"],
+    ["+99361#000001;ext=2", "tel:+993610000012"],
+    ["993+61/000001", "tel:99361000001"],
+  ])("strips dial-control and formatting characters from %s", async (phone, uri) => {
+    const view = renderMobile(<ContactCtaBar {...props} contactPhone={phone} />);
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Linking.openURL).toHaveBeenCalledWith(uri);
+  });
+  it("shows the number when the dialer fails", async () => {
+    vi.mocked(Linking.openURL).mockRejectedValueOnce(new Error("No dialer"));
+    const view = renderMobile(<ContactCtaBar {...props} />);
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Alert.alert).toHaveBeenCalledWith("Call", "Could not open the dialer. Call +99361000001 manually.");
   });
 });

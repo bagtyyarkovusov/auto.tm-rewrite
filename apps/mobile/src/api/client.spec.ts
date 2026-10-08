@@ -6,9 +6,9 @@ import {
   storeAuthSession,
   clearAuthSession,
 } from "../auth/session";
+import { publishFailureOf } from "../listings/wizard/publishFailure";
 
 import { apiClient, ApiError } from "./client";
-import { publishFailureOf } from "../listings/wizard/publishFailure";
 
 vi.mock("../auth/session", () => ({
   loadAuthSession: vi.fn(),
