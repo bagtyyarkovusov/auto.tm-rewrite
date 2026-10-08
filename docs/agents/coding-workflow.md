@@ -26,7 +26,7 @@ For UI work, read [UI-MODE.md](../../.claude/skills/run-issue/UI-MODE.md) after 
 
 ## Push documentation separately
 
-Push documentation, evidence and Execution-state commits separately from code, after the code head's required `pr` check is green. The next synchronize run takes the short docs lane when it can prove that only documentation changed by hand since that green head. A merge from `main` may also take that lane when its only hand changes and conflict resolutions are documentation. Missing or ambiguous checks or history take the full lane. [ADR-0091](../adr/0091-docs-lane-after-a-green-pull-request-head.md) records the decision and its accepted cost.
+Push documentation, evidence and Execution-state commits separately from code, after the code head's required `pr` check is green. Wait for each docs run to finish successfully before pushing the next docs commit. A cancelled previous run makes the next run take the full lane. The next synchronize run takes the short docs lane when it can prove that only documentation changed by hand since that green head. A merge from `main` may also take that lane when its only hand changes and conflict resolutions are documentation. Missing or ambiguous checks or history take the full lane. [ADR-0091](../adr/0091-docs-lane-after-a-green-pull-request-head.md) records the decision and its accepted cost.
 
 ## Sliced issues (ADR-0082)
 
