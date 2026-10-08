@@ -104,6 +104,14 @@ function getStepAtIndex(index: number): WizardMachineStep {
   return WIZARD_STEPS[clamped] ?? "vehicle";
 }
 
+/** VIN is locked after publication; legacy values must not block unrelated edits. */
+function validationPayload(
+  payload: WizardSchemas.WizardDraftPayload,
+  mode: WizardMachineState["mode"],
+): WizardSchemas.WizardDraftPayload {
+  return mode === "edit" ? { ...payload, vin: undefined } : payload;
+}
+
 function isStepValid(
   step: WizardSchemas.WizardStep,
   payload: WizardSchemas.WizardDraftPayload,
@@ -119,8 +127,9 @@ const DATA_STEPS: WizardSchemas.WizardStep[] = WIZARD_STEPS.filter(
 function computeValidatedSteps(
   payload: WizardSchemas.WizardDraftPayload,
   previouslyValidated: WizardSchemas.WizardStep[],
+  mode: WizardMachineState["mode"] = "create",
 ): WizardSchemas.WizardStep[] {
-  return previouslyValidated.filter((step) => isStepValid(step, payload));
+  return previouslyValidated.filter((step) => isStepValid(step, validationPayload(payload, mode)));
 }
 
 /**
@@ -130,8 +139,9 @@ function computeValidatedSteps(
  */
 export function completedSteps(
   payload: WizardSchemas.WizardDraftPayload,
+  mode: WizardMachineState["mode"] = "create",
 ): WizardSchemas.WizardStep[] {
-  return DATA_STEPS.filter((step) => isStepValid(step, payload));
+  return DATA_STEPS.filter((step) => isStepValid(step, validationPayload(payload, mode)));
 }
 
 /**
@@ -204,7 +214,7 @@ function backToReview(state: WizardMachineState): WizardMachineState {
     ...state,
     ...moveTo(state, "review"),
     changingFromReview: false,
-    validatedSteps: completedSteps(state.payload),
+    validatedSteps: completedSteps(state.payload, state.mode),
     saveError: null,
   };
 }
@@ -248,7 +258,7 @@ export function wizardMachineReducer(
                 }),
             }
           : action.payload;
-      const validatedSteps = completedSteps(payload);
+      const validatedSteps = completedSteps(payload, mode);
 
       if (mode === "edit" && action.entryStep === "review") {
         // ADR-0080: a New Listing is not asked Damaged, so it needs no answer here.
@@ -315,7 +325,7 @@ export function wizardMachineReducer(
       // which is handled by handlePublish, not NEXT.
       if (state.currentStep === "review") return state;
 
-      const validation = validateStep(state.currentStep, state.payload);
+      const validation = validateStep(state.currentStep, validationPayload(state.payload, state.mode));
       if (!validation.valid) {
         return { ...state, status: "step" };
       }
@@ -372,7 +382,7 @@ export function wizardMachineReducer(
 
       const newValidatedSteps =
         state.mode === "edit"
-          ? computeValidatedSteps(newPayload, DATA_STEPS)
+          ? computeValidatedSteps(newPayload, DATA_STEPS, state.mode)
           : action.keepValidSteps
             ? computeValidatedSteps(newPayload, state.validatedSteps)
             : state.validatedSteps.filter((s) => !invalidated.includes(s));
@@ -421,7 +431,7 @@ export function wizardMachineReducer(
 
     case "RETURN_TO_REVIEW": {
       if (state.status !== "step" || !state.changingFromReview) return state;
-      if (!isStepValid(state.currentStep, state.payload)) return state;
+      if (!isStepValid(state.currentStep, validationPayload(state.payload, state.mode))) return state;
       return backToReview(state);
     }
 
@@ -471,7 +481,7 @@ export function buildMachineContext(
   const editDetourActive =
     (state.mode === "edit" && !isLastStep) || (state.changingFromReview && !isLastStep);
 
-  const validation = validateStep(state.currentStep, state.payload);
+  const validation = validateStep(state.currentStep, validationPayload(state.payload, state.mode));
 
   // Continue is enabled when the current step's fields are valid.
   // On review, Continue is irrelevant — Publish is the action.
