@@ -1321,9 +1321,13 @@ describe("VerifyOtp", () => {
         constantTimeComparator,
       });
 
-      await expect(
-        uc.execute({ phone: account1.phone, code: account1.code }),
-      ).rejects.toThrow("No Sign-in Code request found");
+      for (const code of ["000000", account1.code]) {
+        await expect(
+          makeAuthController(uc).otpVerify({ phone: account1.phone, code }, VERIFY_REQUEST),
+        ).rejects.toMatchObject({
+          response: { code: "INVALID_OTP" }, status: 400,
+        });
+      }
       expect(userRepo.users).toHaveLength(0);
       expect(sessionRepo.sessions).toHaveLength(0);
     });
@@ -1340,9 +1344,13 @@ describe("VerifyOtp", () => {
         constantTimeComparator,
       });
 
-      await expect(
-        uc.execute({ phone: account1.phone, code: account1.code }),
-      ).rejects.toThrow("No Sign-in Code request found");
+      for (const code of ["000000", account1.code]) {
+        await expect(
+          makeAuthController(uc).otpVerify({ phone: account1.phone, code }, VERIFY_REQUEST),
+        ).rejects.toMatchObject({
+          response: { code: "INVALID_OTP" }, status: 400,
+        });
+      }
       expect(sessionRepo.sessions).toHaveLength(0);
     });
 
@@ -1358,9 +1366,13 @@ describe("VerifyOtp", () => {
         constantTimeComparator,
       });
 
-      await expect(
-        uc.execute({ phone: account1.phone, code: account1.code }),
-      ).rejects.toThrow("No Sign-in Code request found");
+      for (const code of ["000000", account1.code]) {
+        await expect(
+          makeAuthController(uc).otpVerify({ phone: account1.phone, code }, VERIFY_REQUEST),
+        ).rejects.toMatchObject({
+          response: { code: "INVALID_OTP" }, status: 400,
+        });
+      }
       expect(sessionRepo.sessions).toHaveLength(0);
     });
   });
@@ -1421,7 +1433,17 @@ describe("VerifyOtp", () => {
           if (role !== "absent") userRepo.users.push(makeUser({ phone: tester.phone, email: tester.email, role }));
           if (channel === "email") otpRepo.addRecord(makeOtpRequest({ channel, destination: tester.email, codeHash: hashCode(tester.code), expiresAt: new Date(NOW.getTime() + 10 * 60_000) }));
           const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, eventBus, reviewerBypassConfig: testerConfig, constantTimeComparator });
-          await expect(uc.execute(channel === "phone" ? { phone: tester.phone, code: tester.code } : { email: tester.email, code: tester.code })).rejects.toThrow();
+          if (channel === "phone") {
+            for (const code of ["000000", tester.code]) {
+              await expect(
+                makeAuthController(uc).otpVerify({ phone: tester.phone, code }, VERIFY_REQUEST),
+              ).rejects.toMatchObject({
+                response: { code: "INVALID_OTP" }, status: 400,
+              });
+            }
+          } else {
+            await expect(uc.execute({ email: tester.email, code: tester.code })).rejects.toThrow();
+          }
           expect(sessionRepo.sessions).toHaveLength(0);
           expect(eventBus.emit).not.toHaveBeenCalledWith("ReviewerOtpBypassAuthenticated", expect.anything());
         });
