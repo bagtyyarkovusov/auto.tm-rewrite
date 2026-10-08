@@ -65,6 +65,8 @@ module.exports = {
   ScrollView: host("RCTScrollView"), ActivityIndicator: host("ActivityIndicator"),
   Switch: host("RCTSwitch", { accessible: true }),
   KeyboardAvoidingView: host("KeyboardAvoidingView"),
+  // No keyboard opens in a host test; listeners are accepted and never called.
+  Keyboard: { addListener: () => ({ remove() {} }), dismiss() {} },
   Modal: ({ visible = true, children, ...props }) => visible
     ? React.createElement("Modal", props, children) : null,
   RefreshControl: host("RefreshControl"),
