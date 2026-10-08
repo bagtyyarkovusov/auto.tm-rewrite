@@ -540,6 +540,27 @@ describe("Profile photo", () => {
     expect(picker.sent).toHaveLength(ending === "cancel" ? 1 : 2);
   });
 
+  it.each(["library", "camera", "permission"])("ignores a late %s rejection after the next User signs in", async (boundary) => {
+    picker.cameraGranted = true;
+    let reject!: (error: Error) => void;
+    const nativeCall = boundary === "library" ? picker.library : boundary === "camera" ? picker.camera : picker.permission;
+    nativeCall.mockImplementationOnce(() => new Promise<never>((_resolve, fail) => { reject = fail; }));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: boundary === "library" ? "Choose from library" : "Take photo" }));
+    await vi.waitFor(() => expect(reject).toBeDefined());
+    await act(async () => { await clearAuthSession(); view.queryClient.clear(); });
+    currentMe = { ...me, id: "00000000-0000-4000-8000-00000000000b", displayName: "Merdan" };
+    await act(async () => { await storeAuthSession({ accessToken: "merdan", refreshToken: "refresh-merdan", user: { id: currentMe.id, phone: me.phone, email: null, displayName: "Merdan", role: "buyer" } }); });
+    await view.findByText("Merdan");
+    await act(async () => { reject(new Error("Native picker unavailable")); });
+    expect(view.queryByRole("alert")).toBeNull();
+    expect(view.queryByText("Camera access is off")).toBeNull();
+    expect(view.getByRole("button", { name: "Change profile photo" }).props.disabled).not.toBe(true);
+    expect(requests.presigns).toHaveLength(0);
+  });
+
   it("announces upload progress and failures on iOS, where live regions do not speak", async () => {
     const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
     choosePhoto();
