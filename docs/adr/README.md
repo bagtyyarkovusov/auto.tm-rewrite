@@ -101,7 +101,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0089](0089-transient-publish-failure-releases-photos.md) | A transient publish failure releases the draft's photos (supersedes ADR-0088's terminal-failure rule for publish only) | Accepted | 2026-10-08 |
 | [0090](0090-single-process-admin-session-renewal-for-the-first-release.md) | Single-process admin session renewal for the first release | Accepted | 2026-10-08 |
 | [0091](0091-docs-lane-after-a-green-pull-request-head.md) | Docs lane after a green pull request head | Accepted | 2026-10-08 |
-| [0092](0092-temporary-failure-limits-for-fixed-code-phone-sign-in.md) | Temporary failure limits for fixed-code phone sign-in, supersedes ADR-0030 verification exemption and amends ADR-0086 | Proposed | 2026-10-08 |
+| [0092](0092-temporary-failure-limits-for-fixed-code-phone-sign-in.md) | Temporary failure limits for fixed-code phone sign-in, overrides ADR-0030's never-locked-out guarantee and amends ADR-0086 | Proposed | 2026-10-08 |
 
 ## Per-app ADRs
 
