@@ -3,7 +3,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { create } from "zustand";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import { IdentitySchemas, UploadsSchemas } from "@auto-tm/contracts";
+import { AdminSchemas, IdentitySchemas, UploadsSchemas } from "@auto-tm/contracts";
 
 import { ApiError, apiClient } from "../api/client";
 import { useRemoveProfilePhoto } from "../api/identity/useRemoveProfilePhoto";
@@ -221,6 +221,6 @@ function conflictReason(error: unknown): IdentitySchemas.ProfilePhotoConflictRea
 function refusalReason(error: unknown): "listing" | "suspended" | undefined {
   if (conflictReason(error) === IdentitySchemas.ProfilePhotoConflictReason.UploadAttachedToListing) return "listing";
   if (error instanceof ApiError && error.status === 403 &&
-    (error.code === "USER_SUSPENDED" || (typeof error.details === "object" && error.details !== null && "reason" in error.details && error.details.reason === "USER_SUSPENDED"))) return "suspended";
+    (error.code === AdminSchemas.AdminErrorReason.UserSuspended || AdminSchemas.UserSuspendedDetailsSchema.safeParse(error.details).success)) return "suspended";
   return undefined;
 }
