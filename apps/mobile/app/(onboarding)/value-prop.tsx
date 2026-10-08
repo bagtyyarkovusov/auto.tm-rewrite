@@ -1,98 +1,243 @@
-import { router } from "expo-router";
-import { ShieldCheck } from "lucide-react-native";
+import { router, useIsFocused } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
-import { Pressable, View } from "react-native";
+import {
+  AccessibilityInfo,
+  BackHandler,
+  ScrollView,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type Text as NativeText,
+} from "react-native";
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
 
-import { setOnboardingCompleted } from "../../src/onboarding/onboardingFlag";
 import { HOME_HREF } from "../../src/navigation/homeHref";
+import { setOnboardingCompleted } from "../../src/onboarding/onboardingFlag";
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Icon } from "@/components/ui/icon";
+import { IllustrationPanel } from "@/components/onboarding/IllustrationPanel";
+import { PagerDots } from "@/components/onboarding/PagerDots";
+import { useOnboardingLayout } from "@/components/onboarding/useOnboardingLayout";
 import { SafeScreen } from "@/components/navigation/SafeScreen";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Enter } from "@/components/ui/motion";
+import { PressableScale } from "@/components/ui/pressable-scale";
 import { Text } from "@/components/ui/text";
+import { duration, useReduceMotion } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 
-const SLIDES = ["valueProp1", "valueProp2", "valueProp3"] as const;
+/** What the app does today, one page each. The last page carries the button into Home. */
+const PAGES = [
+  { illustration: "find", title: "findTitle", body: "findBody" },
+  { illustration: "chat", title: "chatTitle", body: "chatBody" },
+] as const;
+const LAST = PAGES.length - 1;
 
-function useSlides() {
-  const [index, setIndex] = useState(0);
-
-  const next = () => setIndex((i) => Math.min(i + 1, SLIDES.length - 1));
-  const isLast = index === SLIDES.length - 1;
-
-  return { index, slideKey: SLIDES[index], isLast, next };
-}
-
-async function finishOnboarding() {
-  await setOnboardingCompleted();
-  router.replace(HOME_HREF);
-}
-
+/**
+ * The onboarding pages after Language: Find, then Chat
+ * (docs/prd/ui/hifi/mobile-onboarding.md). One route, a horizontal pager.
+ * The top bar and the footer stay put while the pages move.
+ */
 export default function ValuePropScreen() {
   const { t } = useTranslation("onboarding");
-  const { index, slideKey, isLast, next } = useSlides();
+  const reduceMotion = useReduceMotion();
+  const focused = useIsFocused();
+  const { compact, columnWidth } = useOnboardingLayout();
+  const [pageWidth, setPageWidth] = useState(columnWidth);
+  const [index, setIndex] = useState(0);
+  const pager = useRef<Animated.ScrollView>(null);
+  const titles = useRef<(NativeText | null)[]>([]);
+  const offset = useSharedValue(0);
+  // A second tap while the pages are still sliding must not act on the next page's button.
+  const settlesAt = useRef(0);
+  const leaving = useRef(false);
 
-  const title = t(`${slideKey}Title`);
-  const body = t(`${slideKey}Body`);
-  const buttonLabel = isLast
-    ? t("getStarted")
-    : t("common:next", { defaultValue: "Next" });
+  const onScroll = useAnimatedScrollHandler((event) => {
+    offset.value = event.contentOffset.x;
+  });
+
+  const goTo = useCallback(
+    (next: number) => {
+      setIndex(next);
+      pager.current?.scrollTo({ x: next * pageWidth, animated: !reduceMotion });
+      if (reduceMotion) offset.value = next * pageWidth;
+      settlesAt.current = reduceMotion ? 0 : Date.now() + duration.slow;
+      // A page changed by a button moves the screen reader to its title.
+      const title = titles.current[next];
+      if (title) AccessibilityInfo.sendAccessibilityEvent?.(title, "focus");
+    },
+    [offset, pageWidth, reduceMotion],
+  );
+
+  // Skip and the last button end onboarding the same way. Home is already
+  // underneath, so this takes the onboarding screens off the stack: nothing
+  // can go Back to them. A failed write only means onboarding may show once more.
+  const leave = useCallback(() => {
+    if (leaving.current) return;
+    leaving.current = true;
+    void setOnboardingCompleted().catch((error: unknown) => {
+      console.warn("[onboarding] could not store the onboarding flag", error);
+    });
+    router.dismissTo(HOME_HREF);
+  }, []);
+
+  const back = useCallback(() => {
+    if (index > 0) goTo(index - 1);
+    else router.back();
+  }, [goTo, index]);
+
+  const onMainPress = () => {
+    if (Date.now() < settlesAt.current) return;
+    if (index === LAST) leave();
+    else goTo(index + 1);
+  };
+
+  const onSwipeEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (pageWidth <= 0) return;
+    const page = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
+    setIndex(Math.max(0, Math.min(LAST, page)));
+  };
+
+  useEffect(() => {
+    if (!focused) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      back();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [back, focused]);
+
+  // Keep the current page in view when the window changes width (rotation, split screen).
+  const laidOutWidth = useRef(pageWidth);
+  useEffect(() => {
+    if (laidOutWidth.current === pageWidth) return;
+    laidOutWidth.current = pageWidth;
+    pager.current?.scrollTo({ x: index * pageWidth, animated: false });
+    offset.value = index * pageWidth;
+  }, [index, offset, pageWidth]);
+
+  const backLabel = t("common:back");
+  const skipLabel = t("common:skip");
+  const mainLabel = index === LAST ? t("finish") : t("common:next");
 
   return (
     <SafeScreen>
-      <View className="flex-1 px-6 py-8">
-        <View className="flex-1 justify-center gap-6">
-          <View className="gap-3">
-            {slideKey === "valueProp3" && (
-              <View className="mb-2 h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                <Icon as={ShieldCheck} className="size-7 text-primary" />
-              </View>
-            )}
-            <Text className="text-title font-heading text-foreground">{title}</Text>
-            <Text className="text-body leading-relaxed text-muted-foreground">
-              {body}
-            </Text>
-          </View>
+      <View className="w-full max-w-[480px] flex-1 self-center">
+        <View className="h-12 flex-row items-center justify-between px-4">
+          <Button
+            variant="secondary"
+            size="icon"
+            hitSlop={2}
+            onPress={back}
+            accessibilityLabel={backLabel}
+          >
+            <Icon as={ChevronLeft} className="size-[22px] text-foreground" />
+          </Button>
+          {/* Skip is only on the first page. Its space stays, so the bar does not jump. */}
+          {index === 0 ? (
+            <PressableScale
+              onPress={leave}
+              accessibilityRole="button"
+              accessibilityLabel={skipLabel}
+              className="min-h-12 min-w-12 items-center justify-center px-2"
+            >
+              <Text
+                maxFontSizeMultiplier={1.3}
+                className="text-callout font-medium text-muted-foreground"
+              >
+                {skipLabel}
+              </Text>
+            </PressableScale>
+          ) : (
+            <View className="min-h-12 min-w-12" />
+          )}
         </View>
 
-        <View className="gap-4">
-          <View className="flex-row justify-center gap-2">
-            {SLIDES.map((key, i) => (
-              <View
-                key={key}
-                className={cn(
-                  "h-1.5 rounded-full",
-                  i === index
-                    ? "w-6 bg-foreground"
-                    : "w-1.5 bg-muted-foreground/40",
-                )}
-                accessibilityRole="progressbar"
-                accessibilityState={{ selected: i === index }}
-                accessibilityLabel={`${i + 1} of ${SLIDES.length}`}
-              />
-            ))}
-          </View>
+        <Animated.ScrollView
+          ref={pager}
+          horizontal
+          pagingEnabled
+          bounces={false}
+          overScrollMode="never"
+          showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          onScroll={onScroll}
+          onMomentumScrollEnd={onSwipeEnd}
+          onLayout={(event) => setPageWidth(event.nativeEvent.layout.width)}
+          testID="onboarding-pager"
+          className="flex-1"
+        >
+          {PAGES.map((page, pageIndex) => {
+            const current = pageIndex === index;
+            const wordsClassName = cn("px-6", !compact && "min-h-[146px]");
+            const words = (
+              <>
+                <Text
+                  ref={(node) => {
+                    // The app's Text types its ref as the component class; the node is the instance.
+                    titles.current[pageIndex] = node as unknown as NativeText | null;
+                  }}
+                  accessibilityRole="header"
+                  className="font-heading text-title font-bold text-foreground"
+                >
+                  {t(page.title)}
+                </Text>
+                <Text className="mt-3 text-body text-muted-foreground">{t(page.body)}</Text>
+              </>
+            );
 
+            return (
+              <View
+                key={page.illustration}
+                // Only the page in view is read out.
+                accessibilityElementsHidden={!current}
+                importantForAccessibility={current ? "auto" : "no-hide-descendants"}
+                style={{ width: pageWidth }}
+              >
+                {!compact && (
+                  <IllustrationPanel name={page.illustration} enter={pageIndex === 0} />
+                )}
+                {/* Sized by its content; it scrolls only when large text or a short window leaves no room. */}
+                <ScrollView
+                  alwaysBounceVertical={false}
+                  showsVerticalScrollIndicator={false}
+                  className={cn(compact ? "flex-1" : "shrink grow-0")}
+                >
+                  {/* The first page arrives with the screen; the next one slides in with the pager. */}
+                  {pageIndex === 0 ? (
+                    <Enter order={1} className={wordsClassName}>
+                      {words}
+                    </Enter>
+                  ) : (
+                    <View className={wordsClassName}>{words}</View>
+                  )}
+                </ScrollView>
+              </View>
+            );
+          })}
+        </Animated.ScrollView>
+
+        <View className="px-6 pb-4 pt-6">
+          <PagerDots
+            count={PAGES.length}
+            offset={offset}
+            pageWidth={pageWidth}
+            label={t("pageOf", { current: index + 1, total: PAGES.length })}
+          />
           <Button
             variant="brand"
             size="pill"
-            onPress={isLast ? finishOnboarding : next}
-            accessibilityLabel={buttonLabel}
+            onPress={onMainPress}
+            accessibilityLabel={mainLabel}
+            className="mt-5"
           >
-            <Text>{buttonLabel}</Text>
+            <Text maxFontSizeMultiplier={1.3}>{mainLabel}</Text>
           </Button>
-
-          <Pressable
-            onPress={finishOnboarding}
-            accessibilityRole="button"
-            accessibilityLabel={t("common:skip", { defaultValue: "Skip" })}
-            className="min-h-12 items-center justify-center active:opacity-70"
-          >
-            <Text className="text-callout text-muted-foreground">
-              {t("common:skip", { defaultValue: "Skip" })}
-            </Text>
-          </Pressable>
         </View>
       </View>
     </SafeScreen>

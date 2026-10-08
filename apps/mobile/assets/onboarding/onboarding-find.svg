@@ -1,8 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 304 248" fill="none" role="img" aria-labelledby="t">
-  <title id="t">A search field above a listing card with a car, under a red magnifier</title>
-  <!-- AutoTM onboarding illustration. Original artwork.
-       Ink is currentColor (set `color` to the foreground token); tonal plates are
-       currentColor at low opacity; the single accent is brand red #E60000. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 304 248" fill="none">
   <rect x="30" y="14" width="236" height="46" rx="23" fill="currentColor" fill-opacity="0.1"/>
   <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="58" cy="35" r="7" stroke-width="2.5"/>

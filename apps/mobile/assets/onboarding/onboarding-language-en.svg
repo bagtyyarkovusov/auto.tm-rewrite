@@ -1,8 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 304 248" fill="none" role="img" aria-labelledby="t">
-  <title id="t">Three number plates reading TK, RU and EN above a car; EN is selected</title>
-  <!-- AutoTM onboarding illustration. Original artwork.
-       Ink is currentColor (set `color` to the foreground token); tonal plates are
-       currentColor at low opacity; the single accent is brand red #E60000. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 304 248" fill="none">
   <g transform="translate(90 40) rotate(-8)">
     <rect x="-62" y="-25" width="124" height="50" rx="12" fill="currentColor" fill-opacity="0.1" stroke="currentColor" stroke-width="2.5"/>
     <circle cx="-51" cy="0" r="2.5" fill="currentColor" fill-opacity="0.35"/>

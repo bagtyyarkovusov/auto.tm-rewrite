@@ -1,15 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 304 248" fill="none" role="img" aria-labelledby="t">
-  <title id="t">Three number plates reading TK, RU and EN above a car; RU is selected</title>
-  <!-- AutoTM onboarding illustration. Original artwork.
-       Ink is currentColor (set `color` to the foreground token); tonal plates are
-       currentColor at low opacity; the single accent is brand red #E60000. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 6 304 248" fill="none">
   <g transform="translate(90 40) rotate(-8)">
     <rect x="-62" y="-25" width="124" height="50" rx="12" fill="currentColor" fill-opacity="0.1" stroke="currentColor" stroke-width="2.5"/>
     <circle cx="-51" cy="0" r="2.5" fill="currentColor" fill-opacity="0.35"/>
     <circle cx="51" cy="0" r="2.5" fill="currentColor" fill-opacity="0.35"/>
-    <g transform="translate(-19.95 11) scale(0.0310 -0.0310)" fill="currentColor">
-      <path transform="translate(0 0)" d="M223 0V582H11V710H589V582H376V0Z"/>
-      <path transform="translate(599 0)" d="M74 0V710H226V400L484 710H661L400 397L677 0H504L300 295L226 209V0Z"/>
+    <g transform="translate(-21.69 11) scale(0.0310 -0.0310)" fill="currentColor">
+      <path transform="translate(0 0)" d="M74 0V710H385Q463 710 520.0 684.0Q577 658 608.5 610.5Q640 563 640 498Q640 433 605.5 388.0Q571 343 515 326Q620 311 629 204L647 0H492L479 180Q476 221 453.5 240.5Q431 260 377 260H226V0ZM226 387H368Q423 387 453.5 412.5Q484 438 484 485Q484 533 453.0 557.5Q422 582 363 582H226Z"/>
+      <path transform="translate(697 0)" d="M352 -16Q262 -16 196.5 17.5Q131 51 95.0 112.0Q59 173 59 256V710H211V256Q211 187 247.5 149.5Q284 112 352 112Q419 112 455.5 149.5Q492 187 492 256V710H644V256Q644 173 608.5 112.0Q573 51 507.0 17.5Q441 -16 352 -16Z"/>
     </g>
   </g>
   <g transform="translate(232 44) rotate(7)">
@@ -25,9 +21,9 @@
     <rect x="-62" y="-25" width="124" height="50" rx="12" fill="#E60000"/>
     <circle cx="-51" cy="0" r="2.5" fill="#FFFFFF" fill-opacity="0.8"/>
     <circle cx="51" cy="0" r="2.5" fill="#FFFFFF" fill-opacity="0.8"/>
-    <g transform="translate(-21.69 11) scale(0.0310 -0.0310)" fill="#FFFFFF">
-      <path transform="translate(0 0)" d="M74 0V710H385Q463 710 520.0 684.0Q577 658 608.5 610.5Q640 563 640 498Q640 433 605.5 388.0Q571 343 515 326Q620 311 629 204L647 0H492L479 180Q476 221 453.5 240.5Q431 260 377 260H226V0ZM226 387H368Q423 387 453.5 412.5Q484 438 484 485Q484 533 453.0 557.5Q422 582 363 582H226Z"/>
-      <path transform="translate(697 0)" d="M352 -16Q262 -16 196.5 17.5Q131 51 95.0 112.0Q59 173 59 256V710H211V256Q211 187 247.5 149.5Q284 112 352 112Q419 112 455.5 149.5Q492 187 492 256V710H644V256Q644 173 608.5 112.0Q573 51 507.0 17.5Q441 -16 352 -16Z"/>
+    <g transform="translate(-19.95 11) scale(0.0310 -0.0310)" fill="#FFFFFF">
+      <path transform="translate(0 0)" d="M223 0V582H11V710H589V582H376V0Z"/>
+      <path transform="translate(599 0)" d="M74 0V710H226V400L484 710H661L400 397L677 0H504L300 295L226 209V0Z"/>
     </g>
   </g>
   <g transform="translate(40 136) scale(1.2)" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
