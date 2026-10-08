@@ -1,6 +1,6 @@
 # ADR-0092: Temporary failure limits for fixed-code phone sign-in
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-10-08
 - **Deciders**: AutoTM founder, with implementation direction in [issue #765's PR](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/766)
 - **Supersedes**: [ADR-0030](0030-reviewer-demo-account-otp-bypass.md)'s guarantee that a reviewer is never locked out mid-review. The fixed-code verifier now applies a bounded temporary lock instead; the phone code-request exemption remains.
