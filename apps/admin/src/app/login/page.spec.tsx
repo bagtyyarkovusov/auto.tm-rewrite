@@ -60,6 +60,17 @@ describe("operator login errors", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("renders Russian feedback for a wrong TOTP code through the real action", async () => {
+    navigation.params.set("mode", "totp");
+    vi.mocked(fetch).mockResolvedValue(Response.json({ code: "INVALID_TOTP", message: "Invalid TOTP code" }, { status: 400 }));
+    await render();
+    element<HTMLInputElement>('input[name="code"]').value = "654321";
+    await submit();
+    expect(container.textContent).toContain("Неверный код. Попробуйте ещё раз.");
+    expect(container.textContent).not.toContain("Invalid TOTP code");
+    expect(navigation.push).not.toHaveBeenCalled();
+  });
+
   it("submits a wrong code through the real action and renders Russian API400 feedback", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(Response.json({ resendInSeconds: 60 }))
       .mockResolvedValueOnce(Response.json({ code: "INVALID_OTP", message: "Invalid OTP code" }, { status: 400 }));

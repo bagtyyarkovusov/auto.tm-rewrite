@@ -30,7 +30,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   redirect: mockState.redirect,
 }));
 
-import { enrollTotp, requireAuthWithReturnTo, verifyOtp } from "./actions";
+import { enrollTotp, requireAuthWithReturnTo, verifyOtp, verifyTotp } from "./actions";
 
 function mockFetchQueue(responses: Array<{ status: number; body: unknown }>) {
   const queue = [...responses];
@@ -79,6 +79,13 @@ describe("admin auth server actions", () => {
   it("layout gate adds the expiry reason only after API401", async () => {
     mockFetchQueue([{ status: 401, body: {} }]);
     await expect(requireAuthWithReturnTo("/reports")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired&returnTo=%2Freports");
+  });
+
+  it("shows Russian feedback for API400 INVALID_TOTP", async () => {
+    mockFetchQueue([{ status: 400, body: { code: "INVALID_TOTP", message: "Invalid TOTP code" } }]);
+    const formData = new FormData();
+    formData.set("code", "654321");
+    await expect(verifyTotp(null, formData)).resolves.toEqual({ ok: false, error: "Неверный код. Попробуйте ещё раз." });
   });
 
   it("verifyOtp reports when the admin already has TOTP enrolled", async () => {
