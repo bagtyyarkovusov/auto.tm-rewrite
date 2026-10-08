@@ -4,7 +4,7 @@ import { JwtService } from "@nestjs/jwt";
 import { Enums } from "@auto-tm/contracts";
 import type { User } from "../domain/User";
 import { UserSuspendedError } from "../domain/UserSuspendedError";
-import { matchesReviewerCredential } from "../domain/ReviewerSignIn";
+import { findReviewerAccount, matchesReviewerCredential } from "../domain/ReviewerSignIn";
 import { SIGN_IN_CODE_CHANNELS, type SignInCodeChannel } from "../domain/types";
 import { signInCodeDestination } from "../domain/SignInCodeDestination";
 import type { OtpRequestRepository } from "../domain/ports/OtpRequestRepository";
@@ -201,6 +201,16 @@ export class VerifyOtp {
         input.code,
       )
     ) {
+      // Reserved phones have no issued OTP row. Falling through would report
+      // OTP_NOT_FOUND (shown as expired) instead of a wrong fixed code.
+      if (findReviewerAccount(
+        this.reviewerBypassConfig,
+        this.constantTimeComparator,
+        SIGN_IN_CODE_CHANNELS.PHONE,
+        input.destination,
+      ) !== null) {
+        throw new Error("Invalid OTP code");
+      }
       return null;
     }
 
