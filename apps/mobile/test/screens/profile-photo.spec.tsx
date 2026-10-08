@@ -470,6 +470,35 @@ describe("Profile photo", () => {
     expect(view.getByText("Merdan")).toBeTruthy();
   });
 
+  it("ignores a late preparing conflict after sign-out without locking the next User", async () => {
+    choosePhoto();
+    let complete!: (response: Response) => void;
+    let started = false;
+    let attempts = 0;
+    server.use(http.put("*/me/photo", () => {
+      attempts += 1;
+      started = true;
+      return new Promise<Response>((resolve) => { complete = resolve; });
+    }));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    await act(async () => { picker.finish(); });
+    await vi.waitFor(() => expect(started).toBe(true));
+    await act(async () => { await clearAuthSession(); view.queryClient.clear(); });
+    currentMe = { ...me, id: "00000000-0000-4000-8000-00000000000b", displayName: "Merdan" };
+    await act(async () => { await storeAuthSession({ accessToken: "merdan", refreshToken: "refresh-merdan", user: { id: currentMe.id, phone: me.phone, email: null, displayName: "Merdan", role: "buyer" } }); });
+    await view.findByText("Merdan");
+    await act(async () => { complete(HttpResponse.json({ code: "UPLOAD_ALREADY_ATTACHED", details: { reason: "UPLOAD_PREPARING" } }, { status: 409 })); });
+    expect(view.queryByText("Preparing photo...")).toBeNull();
+    expect(view.queryByRole("progressbar")).toBeNull();
+    expect(view.getByRole("button", { name: "Change profile photo" }).props.disabled).not.toBe(true);
+    expect(view.queryByRole("alert")).toBeNull();
+    expect(attempts).toBe(1);
+  });
+
   it("announces upload progress and failures on iOS, where live regions do not speak", async () => {
     const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
     choosePhoto();
