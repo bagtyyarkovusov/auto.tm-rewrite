@@ -129,7 +129,7 @@ Coordinator: use the reserved Android 16 edge-to-edge emulator in the second pas
 4. Fresh ordinary request: enter five wrong codes, then the correct one. Expect locked copy and no sign-in. Separate fresh request: wait more than five minutes, then enter the correct code. Expect expired copy and no sign-in.
 5. Keep destinations, codes and tokens out of screenshots and logs. Record backend commit and device result on PR #764.
 
-No review was requested, the PR stays draft and auto-merge is disabled as instructed. No independent finalization review or merge was performed. Evidence documentation is the only file outside the assigned auth/identity area.
+At the original verification checkpoint, no review was requested, the PR stayed draft and auto-merge was disabled as instructed. No independent finalization review or merge had been performed then. Evidence documentation is the only file outside the assigned auth/identity area.
 
 
 ## Verified execution checkpoint
@@ -137,3 +137,28 @@ No review was requested, the PR stays draft and auto-merge is disabled as instru
 Recorded after the evidence documentation head `2cda745c0a20c1ac5eebbfb2293a8c291e937420` passed required `pr` [37737574089](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/37737574089) through the docs lane. Its hosted log is `/tmp/issue-759-hosted-docs.log`. The source remains the fully verified code head `13ccc08a59b852ee813e1328d021c3ddb47e6ac9`; no production or test changes followed that full gate.
 
 All code-testable criteria have evidence. Confidence in the reserved-phone response fix and unchanged ordinary OTP security is high. Native/device presentation, real-number delivery, independent finalization review and merge are not claimed. PR #764 is the authoritative mutable Execution state; it stays draft with auto-merge off. Implementer attribution remains Codex, OpenAI, Codex CLI, gpt-6.1-sol, high effort. The coordinator's next action is the second device pass using the steps above.
+
+
+## Single accepted review fix round
+
+The [independent review at `5e1c5c05`](https://github.com/bagtyyarkovusov/auto.tm-rewrite/pull/764#issuecomment-6053931981) used separate read-only Claude Opus Standards and Spec reviewers. Provider: Anthropic; client was not specified in the posted review. Spec verdict: merge. Standards verdict: fix first. Both FIX items were accepted and handled in this one round under ADR-0085; no re-review.
+
+FIX 1: correct fixed codes for reserved phones with an absent, admin or moderator User previously fell through to ordinary verification and answered `OTP_NOT_FOUND`, while wrong fixed codes answered `INVALID_OTP`. The ineligible-User branch now throws the same invalid-code error. All six existing reviewer/tester absent/admin/moderator tests assert HTTP 400 `INVALID_OTP` for both correct and wrong codes and continue to assert refusal of Session creation. Ordinary Users, enabled eligible reviewer/tester Users, email verification and attempt/request policy are unchanged.
+
+Red checkpoint: `269515356adc1c7be9fe92867530215807243b0a`, committed and pushed before the production fix. The exact command below failed with six intended response-code assertions, 57 passed. Each failure expected `INVALID_OTP` but received `OTP_NOT_FOUND`. The same command at fix code head `fa07a1239ac74de9212566b38ff08c7d0f72ce3e` passed all 63 tests.
+
+```sh
+pnpm --filter @auto-tm/api exec vitest run src/modules/identity/application/VerifyOtp.spec.ts
+pnpm --filter @auto-tm/api typecheck
+pnpm --filter @auto-tm/api exec eslint src/modules/identity/application/VerifyOtp.ts src/modules/identity/application/VerifyOtp.spec.ts
+```
+
+All three local gates passed; `git diff --check` also passed. Logs: `/tmp/issue-759-fix-red.log`, `/tmp/issue-759-fix-green.log`, `/tmp/issue-759-fix-typecheck.log`, `/tmp/issue-759-fix-lint.log`. No build, emulator, simulator or Docker command was used in the fix round. No external API changed; the fix is internal control flow using the existing controller mapping, with no new Context7 lookup required.
+
+FIX 2: the identity overview now records that enabled reserved phone verification has no stored OTP request, and wrong fixed codes or codes for absent/admin/moderator Users answer `INVALID_OTP` without ordinary lookup. This is documentation-only, exempt from artificial red tests; local agent-documentation and glossary checks passed.
+
+FIX 1 is fixed in `fa07a1239ac74de9212566b38ff08c7d0f72ce3e`. Its full hosted `pr` passed in [run 37738546036](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/37738546036), including repository lint/typecheck/tests and admin runtime verification. Log: `/tmp/issue-759-fix-hosted-code.log`.
+
+FIX 2 is fixed in `2dde8d8e977af5bdcc235cb559d9dbd76de2ec41`, pushed after the green code check. Its required `pr` passed through the docs lane in [run 37739652071](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/37739652071). Log: `/tmp/issue-759-fix-hosted-context.log`. This execution-record commit is pushed separately after that green documentation check. Both accepted FIX items are resolved; no production or test changes followed the full green code head.
+
+Deferred work remains deferred: attempt counting belongs to #765; plain Error/message matching and second-pass device screenshots were not changed. Response timing and throttler-store sharing were not verified. PR #764 remains draft with auto-merge off; no merge or re-review was performed. Its one mutable Execution state is authoritative. Implementer attribution remains Codex, OpenAI, Codex CLI, gpt-6.1-sol, high effort.
