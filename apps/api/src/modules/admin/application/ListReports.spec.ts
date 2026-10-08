@@ -330,6 +330,11 @@ describe("ListReports", () => {
 
     expect(result.items[0]!.targetSummary.available).toBe(true);
     expect(result.items[0]!.targetSummary.targetType).toBe("message");
+    expect(result.items[0]!.targetSummary.label).toBe("Сообщение");
+    expect(result.items[0]!.targetSummary.label).not.toContain("conv-1");
+    repo.reports = repo.reports.map(report => ContentReport.reconstruct({ ...report, messageContext: report.messageContext ? { ...report.messageContext, deletedAt: new Date() } : null }));
+    const deleted = await uc.execute({});
+    expect(deleted.items[0]?.targetSummary.label).toBe("Сообщение удалено");
     expect(result.items[0]!.targetSummary.label).toContain("conv-1");
   });
 
@@ -344,5 +349,6 @@ describe("ListReports", () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0]!.targetType).toBe("message");
+    expect(result.items[0]!.targetSummary.label).toBe("Сообщение удалено или недоступно");
   });
 });
