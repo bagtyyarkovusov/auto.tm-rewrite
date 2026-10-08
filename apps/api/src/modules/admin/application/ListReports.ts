@@ -184,9 +184,9 @@ export class ListReports {
         const ctx = r.messageContext;
         const label = ctx
           ? ctx.deletedAt
-            ? `Deleted message in conversation ${ctx.conversationId.slice(0, 8)}`
-            : `Message in conversation ${ctx.conversationId.slice(0, 8)}`
-          : "Unavailable target";
+            ? "Сообщение удалено"
+            : "Сообщение"
+          : "Сообщение удалено или недоступно";
         map.set(this.targetKey("message", r.targetId), {
           available: ctx != null,
           label,
