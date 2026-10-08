@@ -3,7 +3,7 @@ import { onlineManager } from "@tanstack/react-query";
 import type { AuthSchemas } from "@auto-tm/contracts";
 import * as Linking from "expo-linking";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { profilePhotoUploadStore } from "../../src/identity/useProfilePhotoUpload";
 import { profileNoticeStore } from "../../src/identity/profileNotice";
@@ -81,6 +81,8 @@ beforeEach(async () => {
     user: { id: me.id, phone: me.phone, email: null, displayName: me.displayName, role: "buyer" },
   });
 });
+
+afterEach(async () => { await clearAuthSession(); vi.useRealTimers(); });
 
 describe("Profile photo", () => {
   it.each(["upload", "remove"])("retries %s with refreshed credentials without reopening the picker", async (operation) => {
@@ -497,6 +499,45 @@ describe("Profile photo", () => {
     expect(view.getByRole("button", { name: "Change profile photo" }).props.disabled).not.toBe(true);
     expect(view.queryByRole("alert")).toBeNull();
     expect(attempts).toBe(1);
+  });
+
+  it.each(["exhaust", "cancel"])("can %s a preparing wait without another storage upload", async (ending) => {
+    choosePhoto();
+    let attempts = 0;
+    server.use(http.put("*/me/photo", () => {
+      attempts += 1;
+      return HttpResponse.json({ code: "UPLOAD_ALREADY_ATTACHED", details: { reason: "UPLOAD_PREPARING" } }, { status: 409 });
+    }));
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    await act(async () => { picker.finish(); });
+    await vi.waitFor(() => expect(view.getByText("Preparing photo...")).toBeTruthy());
+    if (ending === "cancel") {
+      fireEvent.press(view.getByRole("button", { name: "Cancel" }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+      expect(attempts).toBe(1);
+      expect(view.queryByRole("progressbar")).toBeNull();
+      expect(view.queryByRole("alert")).toBeNull();
+    } else {
+      for (let i = 0; i < 30; i += 1) {
+        await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+      }
+      expect(view.getByText("Couldn't upload the photo.")).toBeTruthy();
+      expect(attempts).toBe(30);
+      expect(view.getByRole("button", { name: "Retry" })).toBeTruthy();
+      fireEvent.press(view.getByRole("button", { name: "Retry" }));
+      await vi.waitFor(() => expect(picker.sent).toHaveLength(2));
+      expect(picker.sent[0]?.uri).toBe(picker.sent[1]?.uri);
+      expect(picker.library).toHaveBeenCalledOnce();
+      server.use(http.put("*/me/photo", () => HttpResponse.json({ ...me, avatarKey: "pending/new2/original.jpg" })));
+      await act(async () => { picker.finish(); });
+      await vi.waitFor(() => expect(view.getByText("Photo updated")).toBeTruthy());
+    }
+    expect(picker.sent).toHaveLength(ending === "cancel" ? 1 : 2);
   });
 
   it("announces upload progress and failures on iOS, where live regions do not speak", async () => {
