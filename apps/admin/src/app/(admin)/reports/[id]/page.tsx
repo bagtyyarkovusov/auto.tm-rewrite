@@ -82,8 +82,14 @@ export default async function ReportDetailPage({ params }: PageProps) {
   const isPending = report.status === AdminSchemas.ContentReportStatus.Pending;
   const moderationEnabled = configResult.ok ? configResult.data.adminModerationActionsEnabled : true;
 
+  // Read per request in this server component; never pass the environment to the browser.
+  const mediaOrigin = (process.env["NEXT_PUBLIC_MINIO_PUBLIC_URL"] ?? "").trim().replace(/\/$/, "");
+  const photoUrl = mediaOrigin && report.target.avatarKey
+    ? `${mediaOrigin}/listing-photos/${report.target.avatarKey}`
+    : undefined;
+
   const canRemovePhoto = configResult.ok && moderationEnabled &&
-    report.target.available && report.target.role !== Enums.UserRole.Admin;
+    report.target.available && report.target.role !== Enums.UserRole.Admin && Boolean(photoUrl);
 
   // Determine actionable state
   const isListing = report.target.targetType === "listing";
@@ -183,11 +189,11 @@ export default async function ReportDetailPage({ params }: PageProps) {
               </div>
             )}
             {isUser && report.target.available && report.target.avatarKey && (
-              <img
-                src={`${(process.env["NEXT_PUBLIC_MINIO_PUBLIC_URL"] ?? "").replace(/\/$/, "")}/listing-photos/${report.target.avatarKey}`}
-                alt="Фото профиля"
-                className="h-32 w-32 rounded-full object-cover"
-              />
+              photoUrl ? (
+                <img src={photoUrl} alt="Фото профиля" className="h-32 w-32 rounded-full object-cover" />
+              ) : (
+                <p className="text-neutral-500">Фото профиля недоступно.</p>
+              )
             )}
             {isUser && report.target.available && !report.target.avatarKey &&
               report.status === AdminSchemas.ContentReportStatus.Actioned &&

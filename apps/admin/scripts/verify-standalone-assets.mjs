@@ -2,13 +2,12 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Exercise the runtime image's actual COPY layout, without building Docker.
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const layout = await mkdtemp(path.join(tmpdir(), "issue-739-admin-layout-"));
+const layout = await mkdtemp("/tmp/issue-739-admin-layout-");
 const dockerfile = await readFile(path.join(repo, "infra/docker/admin.Dockerfile"), "utf8");
 const runtime = dockerfile.split("FROM base AS runtime")[1];
 assert.ok(runtime, "Admin runtime stage missing");
