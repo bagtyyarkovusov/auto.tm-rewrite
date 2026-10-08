@@ -1,3 +1,4 @@
+import { Alert } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as Linking from "expo-linking";
 import { Enums } from "@auto-tm/contracts";
@@ -124,5 +125,25 @@ describe("ContactCtaBar", () => {
     fireEvent.press(screen.getByRole("button", { name: "Message" }));
     expect(state.mutate).not.toHaveBeenCalled();
     expect(state.requireSignIn).not.toHaveBeenCalled();
+  });
+});
+
+vi.mock("react-native", async (original) => ({
+  ...await original<typeof import("react-native")>(),
+  Alert: { alert: vi.fn() },
+}));
+
+describe("Android dialer", () => {
+  it("dials despite a false package-visibility check", async () => {
+    vi.mocked(Linking.canOpenURL).mockResolvedValueOnce(false);
+    const view = renderMobile(<ContactCtaBar {...props} />);
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Linking.openURL).toHaveBeenCalledWith("tel:+99361000001");
+  });
+  it("shows the number when the dialer fails", async () => {
+    vi.mocked(Linking.openURL).mockRejectedValueOnce(new Error("No dialer"));
+    const view = renderMobile(<ContactCtaBar {...props} />);
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Alert.alert).toHaveBeenCalledWith("Call", "Could not open the dialer. Call +99361000001 manually.");
   });
 });

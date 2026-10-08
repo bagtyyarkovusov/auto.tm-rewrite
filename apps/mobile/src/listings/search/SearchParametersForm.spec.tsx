@@ -7,7 +7,7 @@ import { renderMobile, act, fireEvent, routerMock, within } from "../../../test/
 import { SearchParametersForm } from "./SearchParametersForm";
 import type { ListingFilter } from "./useListingFilters";
 
-const state = vi.hoisted(() => ({ count: vi.fn(), record: vi.fn(), mode: "ok" as "ok" | "loading" | "error" }));
+const state = vi.hoisted(() => ({ count: vi.fn(), record: vi.fn(), total: undefined as number | undefined, mode: "ok" as "ok" | "loading" | "error" }));
 
 vi.mock("react-native-safe-area-context", async () => ({
   SafeAreaView: (await import("react-native")).View,
@@ -35,7 +35,7 @@ vi.mock("../../api/listings/useListingCount", () => ({ useListingCount: (options
   if (state.mode === "loading") return { data: undefined, isPending: true, isError: false, refetch: vi.fn() };
   if (state.mode === "error") return { data: undefined, isPending: false, isError: true, refetch: vi.fn() };
   const { filters } = options;
-  let total = 100;
+  let total = state.total ?? 100;
   if (filters.condition === "used") total = 40;
   if (filters.condition === "new") total = 60;
   if (filters.cityId) total = Math.floor(total / 5);
@@ -44,7 +44,7 @@ vi.mock("../../api/listings/useListingCount", () => ({ useListingCount: (options
   return { data: { totalMatching: total }, isPending: false, isError: false, refetch: vi.fn() };
 } }));
 
-beforeEach(() => { state.count.mockClear(); state.record.mockClear(); state.mode = "ok"; });
+beforeEach(() => { state.total = undefined; state.count.mockClear(); state.record.mockClear(); state.mode = "ok"; });
 
 const lastFilters = () => state.count.mock.lastCall?.[0].filters as ListingFilter;
 const filled: ListingFilter = { condition: "used", brandId: "toyota", modelIds: ["camry"], yearMin: 2018, yearMax: 2020, priceMin: 70000, priceMax: 120000, sort: "price_asc" };
@@ -382,5 +382,13 @@ describe("Search parameters: Back", () => {
     expect(routerMock.push).not.toHaveBeenCalled();
     expect(routerMock.setParams).not.toHaveBeenCalled();
     expect(state.record).not.toHaveBeenCalled();
+  });
+});
+
+describe("Russian filter result count", () => {
+  it.each([[1, "Показать 1 объявление"], [2, "Показать 2 объявления"], [3, "Показать 3 объявления"], [4, "Показать 4 объявления"], [5, "Показать 5 объявлений"], [11, "Показать 11 объявлений"], [12, "Показать 12 объявлений"], [13, "Показать 13 объявлений"], [14, "Показать 14 объявлений"], [21, "Показать 21 объявление"], [22, "Показать 22 объявления"], [25, "Показать 25 объявлений"]])("shows the correct filter button for %i matches", (count, label) => {
+    state.total = count as number;
+    const screen = renderMobile(<SearchParametersForm initial={{}} returnToResults={false} onBack={vi.fn()} />, { locale: "ru" });
+    expect(screen.getByRole("button", { name: label })).toBeTruthy();
   });
 });

@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
+import { translateWizardFieldErrors } from "./wizardErrors";
 import { describe, expect, it, vi } from "vitest";
 
 import { fireEvent, renderMobile } from "../../../test/render";
@@ -64,4 +68,26 @@ describe("VIN field", () => {
       expect(onChange).toHaveBeenNthCalledWith(2, { vin: undefined });
     },
   );
+});
+
+function ValidatedVin() {
+  const [payload, setPayload] = useState<WizardSchemas.WizardDraftPayload>({ brandId: "00000000-0000-4000-8000-000000000001", modelId: "00000000-0000-4000-8000-000000000002", year: 2018 });
+  const { t } = useTranslation();
+  const errors = translateWizardFieldErrors(t, WizardSchemas.validateStep("vehicle", payload).fieldErrors);
+  return <VinField payload={payload} onChange={(updates) => setPayload({ ...payload, ...updates })} error={errors.vin} />;
+}
+describe("Sell VIN validation", () => {
+  it.each([
+    ["en", "Enter a 17-character VIN using letters and digits, without I, O or Q."],
+    ["ru", "Введите VIN из 17 латинских букв и цифр, без I, O и Q."],
+    ["tk", "I, O we Q harplary bolmadyk, 17 harpdan we sandan ybarat VIN giriziň."],
+  ])("rejects a short VIN visibly in %s and allows clearing it", (locale, message) => {
+    const screen = renderMobile(<ValidatedVin />, { locale });
+    fireEvent.changeText(screen.getByLabelText("VIN"), "Corolla");
+    expect(screen.getByText(message)).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText("VIN"), "WBA1234567890ABCD");
+    expect(screen.queryByText(message)).toBeNull();
+    fireEvent.changeText(screen.getByLabelText("VIN"), "");
+    expect(screen.queryByText(message)).toBeNull();
+  });
 });
