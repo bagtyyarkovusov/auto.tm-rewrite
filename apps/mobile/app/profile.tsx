@@ -150,9 +150,12 @@ function ProfileNoticeLine() {
 
   useEffect(() => {
     if (!notice) return;
+    if (Platform.OS === "ios" && (notice.kind === "photoSaved" || notice.kind === "photoRemoved")) {
+      AccessibilityInfo.announceForAccessibility(t(notice.kind));
+    }
     const timer = setTimeout(() => profileNoticeStore.getState().clear(), NOTICE_MS);
     return () => clearTimeout(timer);
-  }, [notice]);
+  }, [notice, t]);
 
   // The line keeps its height when empty, so the rows below never jump. It
   // also spaces the Sign-in methods card from the account actions below.
@@ -249,7 +252,7 @@ function SignedInProfile() {
     : photo.state.status === "offline" ? t("common:offline")
     : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail");
   const photoStatusText = photo.state.status === "uploading" ?
-    t(photo.state.preparing ? "photoPreparing" : "uploading", { p: photo.state.percent })
+    t(photo.state.preparing ? "photoPreparing" : "uploading", { p: 0 })
     : photo.state.status === "removing" ? t("photoRemoving") : null;
   useEffect(() => {
     const announcement = photoErrorText ?? photoStatusText;
