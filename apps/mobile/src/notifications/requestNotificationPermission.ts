@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 
 import type { NotificationPermissionState } from "./types";
+import { getPlatform } from "./getPlatform";
 
 export async function getNotificationPermissionState(): Promise<NotificationPermissionState> {
   try {
@@ -11,6 +12,10 @@ export async function getNotificationPermissionState(): Promise<NotificationPerm
     }
 
     if (settings.status === Notifications.PermissionStatus.DENIED) {
+      // Android 13+ also reports DENIED before the first system prompt.
+      // The registration hook's persisted ask record prevents re-prompting
+      // an actual refusal; iOS keeps its native denial semantics.
+      if (getPlatform() === "android" && settings.canAskAgain) return "undetermined";
       return "denied";
     }
 
