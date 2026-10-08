@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 const state = vi.hoisted(() => ({ listReports: vi.fn() }));
 vi.mock("../actions", () => ({ listReports: state.listReports }));
 vi.mock("next/navigation", () => ({ redirect: () => { throw new Error("Unexpected redirect"); } }));

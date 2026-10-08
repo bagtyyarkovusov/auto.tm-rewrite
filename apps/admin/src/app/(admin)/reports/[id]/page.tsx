@@ -327,12 +327,12 @@ export default async function ReportDetailPage({ params }: PageProps) {
               <p className="text-xs text-neutral-500 mb-3">
                 Пользователь не сможет создавать объявления, отправлять сообщения или совершать другие действия.
               </p>
-              {canSuspend ? (
+              {canSuspend && suspensionTarget ? (
                 <ReportActionForm
                   actionType="suspend"
                   reportId={id}
                   targetType="user"
-                  targetId={suspensionTarget!}
+                  targetId={suspensionTarget}
                 />
               ) : suspensionRole === Enums.UserRole.Admin ? (
                 <p className="text-sm text-neutral-400 italic">

@@ -276,7 +276,8 @@ describe("Reported Message detail", () => {
     mockState.suspendUser.mockResolvedValue({ ok: true, data: { reportStatus: "actioned" } });
     await renderPage();
     const button = screen.getByRole("button", { name: "Заблокировать пользователя" });
-    const form = button.closest("form")!;
+    const form = button.closest("form");
+    if (!form) throw new Error("Suspension form missing");
     fireEvent.change(within(form).getByRole("textbox"), { target: { value: "Спам" } });
     fireEvent.click(button);
     await waitFor(() => expect(mockState.suspendUser).toHaveBeenCalledWith("sender-1", "Спам", "r1"));
@@ -288,7 +289,9 @@ describe("Reported Message detail", () => {
     mockState.dismissReport.mockResolvedValue({ ok: true, data: { status: "dismissed" } });
     await renderPage();
     const button = screen.getByRole("button", { name: "Отклонить" });
-    fireEvent.change(within(button.closest("form")!).getByRole("textbox"), { target: { value: "Нарушений нет" } });
+    const form = button.closest("form");
+    if (!form) throw new Error("Action form missing");
+    fireEvent.change(within(form).getByRole("textbox"), { target: { value: "Нарушений нет" } });
     fireEvent.click(button);
     await waitFor(() => expect(mockState.dismissReport).toHaveBeenCalledWith("r1", "Нарушений нет"));
   });
@@ -306,7 +309,9 @@ describe("Reported Message detail", () => {
     mockState.suspendUser.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
     await renderPage();
     const button = screen.getByRole("button", { name: "Заблокировать пользователя" });
-    fireEvent.change(within(button.closest("form")!).getByRole("textbox"), { target: { value: "Спам" } });
+    const form = button.closest("form");
+    if (!form) throw new Error("Action form missing");
+    fireEvent.change(within(form).getByRole("textbox"), { target: { value: "Спам" } });
     fireEvent.click(button);
     await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(true));
     finish({ ok: false, error: "Не удалось заблокировать", code: "FORBIDDEN" });

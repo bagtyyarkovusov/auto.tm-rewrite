@@ -3,13 +3,12 @@ import { Inject, Injectable, NotFoundException, ForbiddenException } from "@nest
 import { AdminSchemas } from "@auto-tm/contracts";
 import { MESSAGE_MODERATION_READ_PORT, type MessageModerationReadPort, type ReportedMessage } from "../../conversations/domain/ports/MessageModerationReadPort";
 import { AUDIT_LOG_REPOSITORY, type AuditLogRepository } from "../domain/ports/AuditLogRepository";
-import type { IdentityUserSummary } from "../../identity/identity.public";
 
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
 import { CONTENT_REPORT_REPOSITORY } from "../domain/ports/ContentReportRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
-import { IDENTITY_READ_PORT, type IdentityReadPort } from "../../identity/identity.public";
+import { IDENTITY_READ_PORT, type IdentityReadPort, type IdentityUserSummary } from "../../identity/identity.public";
 
 export interface GetReportDetailInput {
   reportId: string;
@@ -138,6 +137,7 @@ export class GetReportDetail {
       ? this.buildMessageTarget(report.targetId, message, sender, report.messageContext?.createdAt)
       : this.buildTarget(report, listings[0], users[0]);
 
+    const moderationUser = report.targetType === "user" ? users[0] : sender?.deleted ? null : sender;
     let targetModerationState: GetReportDetailResult["targetModerationState"];
     if (report.targetType === "listing" && listings[0]) {
       targetModerationState = {
@@ -146,8 +146,7 @@ export class GetReportDetail {
         suspendedById: null,
         suspensionReason: null,
       };
-    } else if ((report.targetType === "user" && users[0]) || (sender && !sender.deleted)) {
-      const moderationUser = sender ?? users[0]!;
+    } else if (moderationUser) {
       targetModerationState = {
         suspendedAt: moderationUser.suspendedAt,
         suspendedById: moderationUser.suspendedById,
