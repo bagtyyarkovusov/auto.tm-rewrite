@@ -67,7 +67,7 @@ describe("apiFetch", () => {
     expect(result).toEqual({ id: "1" });
   });
 
-  it("refreshes on 401 and retries once", async () => {
+  it("redirects rejected sessions without rotating from a Server Component", async () => {
     mockCookieStore.get.mockImplementation((name: string) => {
       if (name === "auto_tm_admin_access") return { value: "old_acc" };
       if (name === "auto_tm_admin_refresh") return { value: "ref_tok" };
@@ -95,24 +95,12 @@ describe("apiFetch", () => {
       );
     }) as Mock;
 
-    const result = await apiFetch("/test");
-    expect(result).toEqual({ ok: true });
-    expect(callCount).toBe(3);
-
-    // Cookies rotated
-    expect(mockCookieStore.set).toHaveBeenCalledWith(
-      expect.any(String),
-      "new_acc",
-      expect.any(Object),
-    );
-    expect(mockCookieStore.set).toHaveBeenCalledWith(
-      expect.any(String),
-      "new_ref",
-      expect.any(Object),
-    );
+    await expect(apiFetch("/test")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(callCount).toBe(1);
+    expect(mockCookieStore.set).not.toHaveBeenCalled();
   });
 
-  it("clears cookies and redirects to login when refresh fails", async () => {
+  it("sends an API-rejected session to cookie-clearing login without render-time writes", async () => {
     mockCookieStore.get.mockImplementation((name: string) => {
       if (name === "auto_tm_admin_access") return { value: "old_acc" };
       if (name === "auto_tm_admin_refresh") return { value: "ref_tok" };
@@ -123,14 +111,9 @@ describe("apiFetch", () => {
       Promise.resolve(new Response(null, { status: 401 })),
     ) as Mock;
 
-    await expect(apiFetch("/test")).rejects.toThrow("NEXT_REDIRECT:/login");
-
-    // Cookies cleared
-    expect(mockCookieStore.set).toHaveBeenCalledWith(
-      expect.any(String),
-      "",
-      expect.objectContaining({ maxAge: 0 }),
-    );
+    await expect(apiFetch("/test")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(mockCookieStore.set).not.toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("throws ApiError on non-401, non-200 responses", async () => {
@@ -192,7 +175,7 @@ describe("apiFetchOptional", () => {
     mockCookieStore.get.mockReturnValue(undefined);
   });
 
-  it("returns null when the request returns 401 and refresh fails", async () => {
+  it("returns null on optional API401 without a second rotation", async () => {
     mockCookieStore.get.mockImplementation((name: string) => {
       if (name === "auto_tm_admin_access") return { value: "old_acc" };
       if (name === "auto_tm_admin_refresh") return { value: "ref_tok" };
@@ -205,6 +188,8 @@ describe("apiFetchOptional", () => {
 
     const result = await apiFetchOptional("/test");
     expect(result).toBeNull();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(mockCookieStore.set).not.toHaveBeenCalled();
   });
 
   it("returns parsed data on success", async () => {
