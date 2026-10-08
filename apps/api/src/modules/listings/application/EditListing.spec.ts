@@ -157,6 +157,15 @@ describe("EditListing", () => {
     clock = { now: () => new Date() };
   });
 
+  it("edits a published Listing's price without validating or changing its legacy VIN", async () => {
+    seedActiveListing(repo, { vin: "Corolla" });
+    const { listing } = await makeUseCase(repo, prisma, events, exchangeRates).execute({
+      listingId: "listing-1", userId: "user-1", patch: { priceAmount: 120000 },
+    });
+    expect(listing.priceAmount).toBe(120000);
+    expect(listing.vin).toBe("Corolla");
+  });
+
   it("refuses two photos without changing the stored Listing", async () => {
     seedActiveListing(repo);
     prisma.photoCount = 2;
