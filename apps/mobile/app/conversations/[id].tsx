@@ -49,6 +49,7 @@ import { useConversationCatalogMaps } from "../../src/conversations/components/u
 import { showQuickReplies } from "../../src/conversations/showQuickReplies";
 import type { MessageStatus } from "../../src/conversations/components/MessageBubble";
 import { outgoingStatus } from "../../src/conversations/outgoingStatus";
+import { useChatPushTokenRegistration } from "../../src/notifications/useChatPushTokenRegistration";
 import { MessageReportSheet } from "../../src/admin/components/MessageReportSheet";
 import { ReportSheet } from "../../src/admin/components/ReportSheet";
 import {
@@ -117,6 +118,9 @@ export default function ConversationDetailScreen() {
   // sign-in and returns here (see src/conversations/CONTEXT.md).
   const signedOut = viewer === null;
   const readId = viewer?.userId ? conversationId : "";
+
+  const [hasChatAction, setHasChatAction] = useState(false);
+  useChatPushTokenRegistration(hasChatAction && !!viewer?.userId);
 
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
   const readMarkedRef = useRef(false);
@@ -512,6 +516,7 @@ export default function ConversationDetailScreen() {
     async (text: string) => {
       if (!viewer?.userId || !conversationId || cannotSend) return;
 
+      setHasChatAction(true);
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
       const pendingMessage: LocalMessage = {
@@ -558,6 +563,7 @@ export default function ConversationDetailScreen() {
     async (attachment: ComposerAttachment) => {
       if (!viewer?.userId || !conversationId || cannotSend) return;
 
+      setHasChatAction(true);
       const clientMessageId = generateClientMessageId();
       const tempId = `pending-${clientMessageId}`;
       const pendingMessage: LocalMessage = {
