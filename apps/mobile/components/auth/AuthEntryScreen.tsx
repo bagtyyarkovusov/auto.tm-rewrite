@@ -129,7 +129,7 @@ export function AuthEntryScreen({
               </Button>
             </View>
 
-            <Text className="mt-auto pb-6 text-caption leading-normal text-muted-foreground">
+            <Text className="mt-auto pb-6 pt-6 text-caption leading-normal text-muted-foreground">
               {t("legalPrefix")} {" "}
               <Text
                 className="font-medium text-info-500 underline"
