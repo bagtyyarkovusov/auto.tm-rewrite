@@ -11,3 +11,8 @@ describe("Optional VIN", () => {
     expect(StepVehicleSchema.safeParse({ ...vehicle, vin }).success).toBe(true);
   });
 });
+
+it("returns only the established length error for an overlength VIN", () => {
+  expect(validateStep("vehicle", { ...vehicle, vin: "A".repeat(18) }).errors)
+    .toEqual(["wizardErrors.vinTooLong"]);
+});
