@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
-import { Modal } from "react-native";
+import { Modal, Platform } from "react-native";
+import * as Notifications from "expo-notifications";
 import type { ConversationsSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import { waitFor } from "@testing-library/react-native";
 
@@ -1181,5 +1182,32 @@ describe("Own Message acknowledgement", () => {
     screen.rerender(<ConversationDetailScreen />);
     expect(screen.getAllByText("Visible immediately")).toHaveLength(1);
     expect(state.socket.sendTextMessage).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("First chat action notifications", () => {
+  it("requests Android permission on send even when the Messages tab was never opened", async () => {
+    const previousOS = Platform.OS;
+    Platform.OS = "android";
+    vi.mocked(Notifications.getPermissionsAsync).mockResolvedValue({ status: Notifications.PermissionStatus.DENIED, granted: false, canAskAgain: true, expires: "never" });
+    vi.mocked(Notifications.requestPermissionsAsync).mockResolvedValue({ status: Notifications.PermissionStatus.GRANTED, granted: true, canAskAgain: true, expires: "never" });
+    vi.mocked(Notifications.getDevicePushTokenAsync).mockResolvedValue({ data: "first-chat-token", type: "android" });
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    state.socket.sendTextMessage.mockResolvedValue({ ok: true, message: { id: "server-first" } });
+    state.post.mockResolvedValue({});
+    try {
+      const screen = renderMobile(<ConversationDetailScreen />);
+      const field = await screen.findByPlaceholderText("Message");
+      expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+      fireEvent.changeText(field, "First action");
+      await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+      await waitFor(() => expect(state.post).toHaveBeenCalledWith("/notifications/tokens", { token: "first-chat-token", platform: "android" }, expect.anything()));
+      expect(Notifications.requestPermissionsAsync).toHaveBeenCalledOnce();
+    } finally {
+      Platform.OS = previousOS;
+      vi.mocked(Notifications.getPermissionsAsync).mockReset();
+      vi.mocked(Notifications.requestPermissionsAsync).mockReset();
+      vi.mocked(Notifications.getDevicePushTokenAsync).mockReset();
+    }
   });
 });

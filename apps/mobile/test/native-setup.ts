@@ -278,3 +278,18 @@ vi.mock("react-native-svg", async () => {
     Rect: host("Rect"),
   };
 });
+
+// Native push boundaries: specs can override these to exercise permissions and
+// token registration. No notification is sent by the host adapter.
+vi.mock("expo-notifications", () => ({
+  getPermissionsAsync: vi.fn(async () => ({ status: "denied", granted: false, canAskAgain: false })),
+  requestPermissionsAsync: vi.fn(async () => ({ status: "denied", granted: false })),
+  getDevicePushTokenAsync: vi.fn(async () => ({ data: null })),
+  setNotificationChannelAsync: vi.fn(async () => null),
+  PermissionStatus: { GRANTED: "granted", DENIED: "denied", UNDETERMINED: "undetermined" },
+  AndroidImportance: { HIGH: 5 },
+  AndroidNotificationVisibility: { PUBLIC: 1 },
+}));
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => {}) },
+}));
