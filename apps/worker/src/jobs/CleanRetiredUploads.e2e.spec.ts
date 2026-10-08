@@ -206,6 +206,8 @@ describe.skipIf(!hosted)("retired upload cleanup on Postgres and MinIO (#721)", 
 
   it("generation versus retirement: a delayed generator cannot recreate bytes once cleanup is complete", async () => {
     const upload = await retiredUpload({ preparing: true });
+    // Attach owns an existing Listing; publish owns one that does not exist yet.
+    await prisma.mediaUpload.update({ where: { id: upload.id }, data: { claimTargetId: (await listing()).id } });
     const thumbnail = `${upload.directory}thumbnail.jpg`;
     // The generator read what it is about to replace, then stalled past its deadline.
     const read = await s3.send(new HeadObjectCommand({ Bucket: RETIRED_UPLOAD_BUCKET, Key: thumbnail }));
@@ -226,6 +228,34 @@ describe.skipIf(!hosted)("retired upload cleanup on Postgres and MinIO (#721)", 
     // The stalled attempt cannot finalize either: its reservation is gone for good.
     expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } }))
       .toMatchObject({ claimToken: null, claimDeadline: null });
+  });
+
+  it("releases an expired publish claim to AVAILABLE without deleting any bytes or recording cleanup", async () => {
+    const upload = await retiredUpload({ preparing: true });
+    expect(await job.execute({ now: SWEEP, limit: 10 })).toEqual({ cancelledPreparations: 1, deleted: 0, waiting: 0 });
+    expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } })).toMatchObject({
+      state: "AVAILABLE", claimToken: null, claimDeadline: null, claimTargetType: null, claimTargetId: null, retiredAt: null,
+    });
+    expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: upload.id } })).toBe(0);
+    expect(await present(upload.keys)).toBe(9);
+  });
+
+  it.each(["listing", "profile", "legacy-key"] as const)("touches nothing a live %s owner references when a publish deadline expires", async (owner) => {
+    const upload = await retiredUpload({ preparing: true });
+    if (owner === "profile") {
+      await prisma.user.update({ where: { id: userId }, data: { avatarUploadId: upload.id, avatarKey: upload.key } });
+    } else {
+      await prisma.listingMedia.create({ data: {
+        listingId: (await listing()).id, kind: "image", sortOrder: 0,
+        key: owner === "legacy-key" ? `${upload.directory}list.jpg` : upload.key,
+        ...(owner === "listing" ? { uploadId: upload.id } : {}),
+      } });
+    }
+    const before = await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } });
+    expect(await job.execute({ now: SWEEP, limit: 10 })).toEqual({ cancelledPreparations: 0, deleted: 0, waiting: 0 });
+    expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { id: upload.id } })).toEqual(before);
+    expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: upload.id } })).toBe(0);
+    expect(await present(upload.keys)).toBe(9);
   });
 
   it("leaves a preparation that is still inside its deadline alone", async () => {
