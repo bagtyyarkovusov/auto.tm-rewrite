@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
-import { Modal, Platform } from "react-native";
+import { Modal, Platform, KeyboardAvoidingView } from "react-native";
 import * as Notifications from "expo-notifications";
 import type { ConversationsSchemas, ListingsSchemas } from "@auto-tm/contracts";
 import { waitFor } from "@testing-library/react-native";
@@ -1209,5 +1209,30 @@ describe("First chat action notifications", () => {
       vi.mocked(Notifications.requestPermissionsAsync).mockReset();
       vi.mocked(Notifications.getDevicePushTokenAsync).mockReset();
     }
+  });
+});
+
+describe("Conversation keyboard ownership", () => {
+  it.each(["android", "ios"] as const)("keeps the message and Send controls inside the active %s avoidance region", async (os) => {
+    const previousOS = Platform.OS;
+    Platform.OS = os;
+    state.messages.data = { pages: [{ items: [serverMessage("Read while typing", SELLER_ID)] }] };
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    try {
+      const screen = renderMobile(<ConversationDetailScreen />);
+      const field = await screen.findByPlaceholderText("Message");
+      fireEvent.changeText(field, "Above the keyboard");
+      const active = screen.UNSAFE_getAllByType(KeyboardAvoidingView).filter((view) => view.props.enabled !== false);
+      expect(active).toHaveLength(1);
+      expect(within(active[0]).getByDisplayValue("Above the keyboard")).toBeTruthy();
+      expect(within(active[0]).getByRole("button", { name: "Send message", disabled: false })).toBeTruthy();
+      if (os === "android") {
+        expect(within(active[0]).getByText("Read while typing")).toBeTruthy();
+        expect(active[0].props.behavior).toBe("height");
+        expect(active[0].props.style).toEqual({ flex: 1 });
+      } else {
+        expect(active[0].props.behavior).toBe("padding");
+      }
+    } finally { Platform.OS = previousOS; }
   });
 });
