@@ -86,6 +86,26 @@ beforeEach(async () => {
 afterEach(async () => { await resetProfilePhotoUpload(); await clearAuthSession(); vi.useRealTimers(); });
 
 describe("Profile photo", () => {
+  it.each([
+    ["en", "Uploading photo", "Uploading photo... 25%"],
+    ["ru", "Загрузка фото", "Загрузка фото... 25%"],
+    ["tk", "Surat ýüklenýär", "Surat ýüklenýär... 25%"],
+  ])("uses photo-specific indeterminate text and measured percentages in %s", async (locale, indeterminate, measured) => {
+    const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>, { locale });
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: profilePhotoCopy[locale as keyof typeof profilePhotoCopy].changePhoto }));
+    fireEvent.press(view.getByRole("button", { name: profilePhotoCopy[locale as keyof typeof profilePhotoCopy].chooseLib }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    expect(view.getByRole("progressbar").props.children).toBe(indeterminate);
+    expect(announce.mock.calls.map(([message]) => message)).toEqual([indeterminate]);
+    act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
+    expect(view.getByText(measured)).toBeTruthy();
+    expect(announce.mock.calls.map(([message]) => message)).toEqual([indeterminate]);
+    await act(async () => { picker.finish(); });
+  });
+
   it.each(["no events", "unknown total"])("shows an indeterminate ring when upload byte progress has %s", async (progress) => {
     choosePhoto();
     const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
@@ -699,6 +719,8 @@ describe("Profile photo", () => {
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     act(() => { picker.progress({ totalBytesSent: 1536, totalBytesExpectedToSend: 2048 }); });
     act(() => { picker.progress({ totalBytesSent: 1536, totalBytesExpectedToSend: 0 }); });
+    expect(view.getByRole("progressbar").props.accessibilityValue?.now).toBe(75);
+    expect(view.getByText("Uploading photo... 75%")).toBeTruthy();
     act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
     expect(view.getByRole("progressbar").props.accessibilityValue.now).toBe(75);
     await act(async () => { picker.finish(); });
