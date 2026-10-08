@@ -156,7 +156,9 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
             autoComplete={isPhone ? "tel" : "email"}
             keyboardType={isPhone ? "phone-pad" : "email-address"}
             textContentType={isPhone ? "telephoneNumber" : "emailAddress"}
-            returnKeyType="send"
+            // The number pad has no Return key; asking for one makes iOS float a
+            // "Send" button in the system language over the form.
+            returnKeyType={isPhone ? undefined : "send"}
             aria-invalid={showError}
             value={isPhone ? phone.display : email}
             onBlur={() => { if (isPhone) phone.touch(); else setEmailTouched(true); }}

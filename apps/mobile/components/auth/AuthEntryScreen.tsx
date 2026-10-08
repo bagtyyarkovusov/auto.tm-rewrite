@@ -1,9 +1,9 @@
 import * as Linking from "expo-linking";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import {
   ActivityIndicator,
-  Keyboard,
   KeyboardAvoidingView,
+  type LayoutChangeEvent,
   Platform,
   ScrollView,
   View,
@@ -54,12 +54,14 @@ export function AuthEntryScreen({
 
   const largeText = useLargeText();
   const scroll = useRef<ScrollView>(null);
-  // With large text the field sits low enough for the keyboard to cover it.
-  useEffect(() => {
-    if (!largeText) return;
-    const shown = Keyboard.addListener("keyboardDidShow", () => scroll.current?.scrollToEnd({ animated: true }));
-    return () => shown.remove();
-  }, [largeText]);
+  // When the keyboard opens the form's frame gets shorter: bring the field and
+  // the submit button above the keyboard.
+  const frameHeight = useRef(0);
+  const onFrameLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    if (height < frameHeight.current) scroll.current?.scrollToEnd({ animated: true });
+    frameHeight.current = height;
+  };
 
   function openLegalPage(kind: "terms" | "privacy") {
     void Linking.openURL(legalPageUrl(i18n.language, kind));
@@ -89,6 +91,7 @@ export function AuthEntryScreen({
               fits and does not move. */}
           <ScrollView
             ref={scroll}
+            onLayout={onFrameLayout}
             className="flex-1"
             contentContainerClassName="flex-grow"
             keyboardShouldPersistTaps="handled"
