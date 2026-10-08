@@ -9,10 +9,11 @@ import { AdminSchemas, IdentitySchemas, UploadsSchemas } from "@auto-tm/contract
 import { ApiError, apiClient } from "../api/client";
 import { useRemoveProfilePhoto } from "../api/identity/useRemoveProfilePhoto";
 import { useSetProfilePhoto } from "../api/identity/useSetProfilePhoto";
-import { compressPhoto, CompressionError, type CompressionResult } from "../listings/uploadStaging/compressor";
+import { CompressionError, type CompressionResult } from "../listings/uploadStaging/compressor";
 
 import { capturePhotoSession, PhotoSessionEnded, type ProfilePhotoSession } from "./profilePhotoSession";
 import { profileNoticeStore } from "./profileNotice";
+import { compressProfilePhoto } from "./compressProfilePhoto";
 
 type PhotoUploadState =
   | { status: "idle" }
@@ -73,11 +74,11 @@ export function useProfilePhotoUpload() {
     try {
       await photo.session.current();
       const { asset } = photo;
-      if ((asset.mimeType && !["image/jpeg", "image/png", "image/webp"].includes(asset.mimeType)) || asset.width <= 0 || asset.height <= 0) {
+      if (asset.width <= 0 || asset.height <= 0) {
         profilePhotoUploadStore.setState({ state: { status: "unsupported" } });
         return;
       }
-      photo.compressed ??= await compressPhoto(asset.uri, `${FileSystem.cacheDirectory}profile-photo-${Date.now()}.jpg`, { maxDimension: 512, width: asset.width, height: asset.height });
+      photo.compressed ??= await compressProfilePhoto(asset.uri, `${FileSystem.cacheDirectory}profile-photo-${Date.now()}.jpg`);
       await photo.session.current();
       const compressed = photo.compressed;
       if (compressed.fileSize > MAX_BYTES) {
@@ -106,7 +107,7 @@ export function useProfilePhotoUpload() {
         httpMethod: "PUT", uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT, headers: presign.headers,
       }, ({ totalBytesSent, totalBytesExpectedToSend }) => {
         const known = Number.isFinite(totalBytesExpectedToSend) && totalBytesExpectedToSend > 0 && Number.isFinite(totalBytesSent) && totalBytesSent >= 0;
-        const percent = known ? Math.max(lastPercent ?? 0, Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend))) : null;
+        const percent = known ? Math.max(lastPercent ?? 0, Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend))) : lastPercent;
         if (percent !== null) lastPercent = percent;
         if (selected === photo && transferring) profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent } });
       });
@@ -210,8 +211,8 @@ export function useProfilePhotoUpload() {
     } catch { return; }
     const options: ImagePicker.ImagePickerOptions = {
       // Android's crop result can throw on the native main thread for an
-      // unreadable library file. Pick original bytes and validate them below.
-      mediaTypes: ["images"], allowsEditing: source === "camera" || Platform.OS !== "android", aspect: [1, 1], quality: 1,
+      // unreadable file. Both Android sources use the app's centre crop instead.
+      mediaTypes: ["images"], allowsEditing: Platform.OS !== "android", aspect: [1, 1], quality: 1,
     };
     try {
       if (source === "camera") {

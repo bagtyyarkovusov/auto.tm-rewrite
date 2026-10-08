@@ -252,7 +252,7 @@ function SignedInProfile() {
     : photo.state.status === "offline" ? t("common:offline")
     : t(photo.state.status === "too_large" ? "photoBig" : photo.state.status === "unsupported" ? "photoType" : photo.state.operation === "remove" ? "photoRmFail" : "photoFail");
   const photoStatusText = photo.state.status === "uploading" ?
-    t(photo.state.preparing ? "photoPreparing" : "common:loadingEllipsis")
+    t(photo.state.preparing ? "photoPreparing" : "uploadingIndeterminate")
     : photo.state.status === "removing" ? t("photoRemoving") : null;
   useEffect(() => {
     const announcement = photoErrorText ?? photoStatusText;
@@ -334,7 +334,7 @@ function SignedInProfile() {
         accessibilityLiveRegion="polite"
         accessibilityValue={photo.state.percent === null ? undefined : { min: 0, max: 100, now: photo.state.percent }}
         className="px-4 pb-3 text-center text-footnote text-muted-foreground"
-      >{photo.state.percent === null ? t("common:loadingEllipsis") : t("uploading", { p: photo.state.percent })}</Text> : null}
+      >{photo.state.percent === null ? t("uploadingIndeterminate") : t("uploading", { p: photo.state.percent })}</Text> : null}
 
       {photo.state.status === "uploading" && photo.state.preparing ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoPreparing")}</Text> : null}
       {photo.state.status === "uploading" && photo.state.preparing ? <Button variant="ghost" className="mx-4 mb-3 min-h-11" onPress={photo.cancel}><Text>{t("common:cancel")}</Text></Button> : null}
