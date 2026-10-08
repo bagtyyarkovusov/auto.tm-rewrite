@@ -84,8 +84,9 @@ export default async function ReportDetailPage({ params }: PageProps) {
 
   // Read per request in this server component; never pass the environment to the browser.
   const mediaOrigin = (process.env["NEXT_PUBLIC_MINIO_PUBLIC_URL"] ?? "").trim().replace(/\/$/, "");
-  const photoUrl = mediaOrigin && report.target.avatarKey
-    ? `${mediaOrigin}/listing-photos/${report.target.avatarKey}`
+  const photoBaseKey = report.target.avatarKey?.replace(/\/original\.(jpg|webp|jpeg)$/, "");
+  const photoUrl = mediaOrigin && photoBaseKey
+    ? `${mediaOrigin}/listing-photos/${photoBaseKey}/thumbnail.jpg`
     : undefined;
 
   const canRemovePhoto = configResult.ok && moderationEnabled &&
