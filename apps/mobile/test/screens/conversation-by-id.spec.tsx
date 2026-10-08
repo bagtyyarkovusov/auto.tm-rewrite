@@ -1163,3 +1163,23 @@ describe("Conversation about a closed Listing", () => {
     expect(screen.queryByRole("button", { name: "See other Toyota Camry" })).toBeNull();
   });
 });
+
+describe("Own Message acknowledgement", () => {
+  it.each([false, true])("keeps a sent Message visible before HTTP/socket echo, existing=%s", async (existing) => {
+    state.messages.data = { pages: [{ items: existing ? [serverMessage("older", SELLER_ID)] : [] }] };
+    state.socket.sendTextMessage.mockResolvedValue({ ok: true, message: { id: "server-new" } });
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Visible immediately");
+    await act(async () => {
+      fireEvent.press(screen.getByRole("button", { name: "Send message" }));
+    });
+    expect(screen.getAllByText("Visible immediately")).toHaveLength(1);
+    expect(screen.queryByText("Failed to send")).toBeNull();
+    const clientMessageId = state.socket.sendTextMessage.mock.calls[0][0].clientMessageId;
+    state.messages.data = { pages: [{ items: [{ ...serverMessage("server-new", BUYER_ID, new Date().toISOString(), "Visible immediately"), clientMessageId }] }] };
+    screen.rerender(<ConversationDetailScreen />);
+    expect(screen.getAllByText("Visible immediately")).toHaveLength(1);
+    expect(state.socket.sendTextMessage).toHaveBeenCalledTimes(1);
+  });
+});
