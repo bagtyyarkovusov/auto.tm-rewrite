@@ -1,11 +1,12 @@
 import * as RN from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { Profiler } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { waitFor } from "@testing-library/react-native";
 
 import EditListingScreen from "../../app/listings/[id]/edit";
+import { getDraftDir } from "../../src/listings/uploadStaging/stagingDir";
 import { server } from "../msw";
 import { act, fireEvent, renderMobile, routeParams, routerMock, screenFocus, screenOptions } from "../render";
 
@@ -153,18 +154,22 @@ function answerNotDamaged(screen: Screen, locale: keyof typeof localized) {
 beforeEach(() => {
   routeParams.id = id;
   routerMock.canGoBack.mockReturnValue(true);
+});
+
+afterEach(() => {
   vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) => ({ exists: false, uri, isDirectory: false }));
 });
 
 describe("the section list of a published Listing (#589)", () => {
   it("never asks to fill in existing photos while loading or on the first ready render (#736)", async () => {
     createListingApi();
+    const photoDir = getDraftDir(`edit-${id}`);
     let finishReadingPhotos = () => {};
     const photoRead = new Promise<FileSystem.FileInfo>((resolve) => {
-      finishReadingPhotos = () => resolve({ exists: false, uri: `file:///doc/listing-staging/edit-${id}/`, isDirectory: false });
+      finishReadingPhotos = () => resolve({ exists: false, uri: photoDir, isDirectory: false });
     });
     vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) =>
-      uri === `file:///doc/listing-staging/edit-${id}/` ? photoRead : { exists: false, uri, isDirectory: false },
+      uri === photoDir ? photoRead : { exists: false, uri, isDirectory: false },
     );
 
     const photoRows: string[] = [];
@@ -314,6 +319,52 @@ describe("changing a section (#589)", () => {
 });
 
 describe("Save changes (#589)", () => {
+  it("cannot save an edited field before existing photos finish loading (#736)", async () => {
+    const api = createListingApi();
+    const photoDir = getDraftDir(`edit-${id}`);
+    let finishReadingPhotos = () => {};
+    const photoRead = new Promise<FileSystem.FileInfo>((resolve) => {
+      finishReadingPhotos = () => resolve({ exists: false, uri: photoDir, isDirectory: false });
+    });
+    vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (uri) =>
+      uri === photoDir ? photoRead : { exists: false, uri, isDirectory: false },
+    );
+    const screen = renderMobile(<ToastProvider><EditListingScreen /></ToastProvider>);
+    await screen.findByRole("header", { name: "Edit listing" });
+    changePrice(screen, "100000", "179000");
+    expect(screen.queryByText("Photos: 4")).toBeNull();
+    expect(isDisabled(saveButton(screen))).toBe(true);
+
+    try {
+      // Exercise the rendered callback too: a disabled Pressable alone must
+      // not be the guard against planning removals from an unloaded queue.
+      await act(async () => { await saveButton(screen).props.onPress(); });
+      expect(api.patches).toEqual([]);
+      expect(api.removed).toEqual([]);
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => { finishReadingPhotos(); });
+    }
+
+    await screen.findByText("Photos: 4");
+    expect(isDisabled(saveButton(screen))).toBe(false);
+    await act(async () => { fireEvent.press(saveButton(screen)); });
+    await waitFor(() => expect(api.patches).toEqual([expect.objectContaining({ priceAmount: 179000 })]));
+    expect(api.removed).toEqual([]);
+  });
+
+  it("asks to fill in a ready photo set when fewer than three photos remain (#736)", async () => {
+    createListingApi();
+    const screen = await openEdit();
+    openStep(screen, /^Photos, .*Change$/, "Photos");
+    fireEvent.press(screen.getByRole("button", { name: "Remove: Photo 4 of 4" }));
+    fireEvent.press(screen.getByRole("button", { name: "Remove: Photo 3 of 3" }));
+    fireEvent.press(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.getByRole("button", { name: "Photos, Photos: 2, Fill in" })).toBeTruthy();
+    expect(isDisabled(saveButton(screen))).toBe(true);
+  });
+
   it("is disabled until a field differs from the published Listing, and again once the change is undone", async () => {
     createListingApi();
     const screen = await openEdit();
