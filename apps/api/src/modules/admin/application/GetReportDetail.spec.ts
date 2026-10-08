@@ -313,8 +313,6 @@ describe("GetReportDetail", () => {
     expect(result).not.toHaveProperty("messageContext");
     expect(audit.rows).toMatchObject([{ actorId: "admin-1", action: "REPORTED_MESSAGE_READ", targetType: "message", targetId: "msg-1", details: { reportId: "r1", messageId: "msg-1" } }]);
     expect(JSON.stringify(audit.rows)).not.toContain("Reported text");
-    audit.fail = true;
-    await expect(makeUseCase(repo, listings, identity, messages, audit).execute({ reportId: "r1", adminUserId: "admin-1" })).rejects.toThrow("Audit unavailable");
   });
 
   it("fails the sensitive read closed when the audit cannot be stored", async () => {

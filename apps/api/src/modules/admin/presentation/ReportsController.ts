@@ -156,8 +156,8 @@ export class ReportsController {
 
   @Get("admin/reports/:id")
   @UseGuards(AdminGuard)
-  async getReportDetail(@Param("id") reportId: string, @Req() req: FastifyRequest, @Res({ passthrough: true }) res?: FastifyReply) {
-    res?.header("Cache-Control", "no-store");
+  async getReportDetail(@Param("id") reportId: string, @Req() req: FastifyRequest, @Res({ passthrough: true }) res: FastifyReply) {
+    res.header("Cache-Control", "no-store");
     const result = await this.getReportDetailUC.execute({ reportId, adminUserId: this.userId(req) });
 
     return {

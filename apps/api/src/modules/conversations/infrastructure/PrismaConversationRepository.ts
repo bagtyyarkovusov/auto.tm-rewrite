@@ -418,7 +418,7 @@ export class PrismaConversationRepository
       body: message.deletedAt ? null : message.body,
       createdAt: message.createdAt,
       deletedAt: message.deletedAt,
-      hasAttachment: message.kind === "image" || message.kind === "post_ref",
+      hasAttachment: message.kind === "image",
     };
   }
 

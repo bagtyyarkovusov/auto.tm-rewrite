@@ -6916,7 +6916,13 @@
                     "format": "uuid"
                   },
                   "role": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "buyer",
+                      "seller",
+                      "moderator",
+                      "admin"
+                    ]
                   }
                 },
                 "required": [
@@ -6971,79 +6977,6 @@
           "reporter",
           "target",
           "pendingReportsOnTargetCount"
-        ]
-      },
-      "MessageReportContext": {
-        "type": "object",
-        "properties": {
-          "conversationId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "messageId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "listingId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "messageCreatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "messageBody": {
-            "type": "string"
-          },
-          "messageDeletedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "surroundingMessages": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "senderId": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "createdAt": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "body": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "deletedAt": {
-                  "type": "string",
-                  "format": "date-time"
-                }
-              },
-              "required": [
-                "id",
-                "senderId",
-                "createdAt"
-              ]
-            }
-          }
-        },
-        "required": [
-          "conversationId",
-          "messageId",
-          "listingId",
-          "senderId",
-          "messageCreatedAt",
-          "surroundingMessages"
         ]
       },
       "DismissReportRequest": {

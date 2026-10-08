@@ -14,7 +14,7 @@ import {
 import supertest from "supertest";
 import { hash } from "bcryptjs";
 import { AdminSchemas } from "@auto-tm/contracts";
-import { PrismaService } from "@auto-tm/db";
+import { PrismaService, Prisma } from "@auto-tm/db";
 
 import { AdminModule } from "../admin.module";
 import { IdentityModule } from "../../identity/identity.module";
@@ -174,7 +174,7 @@ describe("AdminModerationController e2e smoke", () => {
         participants: { create: [{ userId: reporterOneId }, { userId: sellerOneId }] },
       } });
       const message = await prisma.message.create({ data: {
-        conversationId: conversation.id, senderId: sellerOneId, kind: "text", body: "Reported synthetic text",
+        conversationId: conversation.id, senderId: sellerOneId, kind: "text", body: "Reported synthetic text", createdAt: new Date("2026-01-01T12:00:00Z"),
       } });
       await prisma.message.create({ data: { conversationId: conversation.id, senderId: reporterOneId, kind: "text", body: "Unreported private neighbour" } });
       const created = await request.post(`/api/v1/conversations/${conversation.id}/messages/${message.id}/report`)
@@ -186,6 +186,7 @@ describe("AdminModerationController e2e smoke", () => {
       expect(await prisma.auditLog.count({ where: { action: "REPORTED_MESSAGE_READ", targetId: message.id } })).toBe(0);
       const detail = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);
       expect(detail.headers["cache-control"]).toBe("no-store");
+      expect(detail.body.target.messageCreatedAt).toBe("2026-01-01T12:00:00.000Z");
       const parsed = AdminSchemas.GetReportDetailResponseSchema.parse(detail.body);
       expect(parsed.target).toMatchObject({ messageBody: "Reported synthetic text", messageHasAttachment: false, sender: { available: true, userId: sellerOneId } });
       expect(detail.body.messageContext).toBeUndefined();
@@ -197,6 +198,12 @@ describe("AdminModerationController e2e smoke", () => {
       const attachment = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);
       expect(attachment.body.target.messageHasAttachment).toBe(true);
       expect(attachment.body.target.metadata).toBeUndefined();
+      expect(JSON.stringify(attachment.body)).not.toContain("synthetic/image.jpg");
+      await prisma.message.update({ where: { id: message.id }, data: { kind: "post_ref", metadata: { listingId: listing.id } } });
+      const reference = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);
+      expect(reference.body.target.messageHasAttachment).toBe(false);
+      const savedContext = (await prisma.contentReport.findUniqueOrThrow({ where: { id: reportId } })).messageContext;
+      await prisma.contentReport.update({ where: { id: reportId }, data: { messageContext: Prisma.DbNull } });
       const suspended = await request.post(`/api/v1/admin/users/${sellerOneId}/suspend`).set("Authorization", `Bearer ${adminToken}`).send({ reason: "Reported spam", reportId }).expect(200);
       expect(suspended.body.reportStatus).toBe("actioned");
       expect(await prisma.session.count({ where: { userId: sellerOneId } })).toBe(0);
@@ -216,6 +223,7 @@ describe("AdminModerationController e2e smoke", () => {
       await request.post(`/api/v1/admin/users/${sellerOneId}/unsuspend`).set("Authorization", `Bearer ${adminToken}`).send({ reason: "Appeal accepted" }).expect(200);
       await request.post("/api/v1/auth/otp/verify").send({ phone: suite.phone("seller-one"), code: "123456" }).expect(201);
       await request.post("/api/v1/auth/refresh").send({ refreshToken: oldRefresh }).expect(401);
+      await prisma.contentReport.update({ where: { id: reportId }, data: { messageContext: savedContext as Prisma.InputJsonValue } });
       await prisma.message.delete({ where: { id: message.id } });
       await prisma.user.update({ where: { id: sellerOneId }, data: { phone: null, phoneVerifiedAt: null, email: null, emailVerifiedAt: null, displayName: null } });
       const deleted = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);

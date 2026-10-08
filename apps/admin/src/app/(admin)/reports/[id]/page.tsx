@@ -142,7 +142,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           </h2>
           <div className="space-y-2 text-sm">
             <div>
-              <span className="text-neutral-500">Отправитель:</span>{" "}
+              <span className="text-neutral-500">Автор жалобы:</span>{" "}
               {report.reporter.available ? (
                 <span>{report.reporter.label}</span>
               ) : (
@@ -324,7 +324,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           {/* Suspend a User or reported Message sender */}
           {(isUser || isMessage) && (
             <div className="rounded-md border bg-surface p-4">
-              <h3 className="text-sm font-medium mb-2">{isMessage ? "Заблокировать отправителя" : "Заблокировать пользователя"}</h3>
+              <h3 className="text-sm font-medium mb-2">{isMessage ? "Заблокировать автора сообщения" : "Заблокировать пользователя"}</h3>
               <p className="text-xs text-neutral-500 mb-3">
                 Пользователь не сможет создавать объявления, отправлять сообщения или совершать другие действия.
               </p>

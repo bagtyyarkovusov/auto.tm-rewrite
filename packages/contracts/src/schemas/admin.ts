@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UserRole } from "../enums";
 
 // ── Constants ──
 
@@ -194,31 +195,10 @@ export const ReportDetailTargetSchema = z.object({
     available: z.boolean(),
     label: z.string(),
     userId: z.string().uuid().optional(),
-    role: z.string().optional(),
+    role: z.nativeEnum(UserRole).optional(),
   }).optional(),
 });
 export type ReportDetailTarget = z.infer<typeof ReportDetailTargetSchema>;
-
-export const SurroundingMessageSchema = z.object({
-  id: z.string().uuid(),
-  senderId: z.string().uuid(),
-  createdAt: z.string().datetime(),
-  body: z.string().nullish(),
-  deletedAt: z.string().datetime().optional(),
-});
-export type SurroundingMessage = z.infer<typeof SurroundingMessageSchema>;
-
-export const MessageReportContextSchema = z.object({
-  conversationId: z.string().uuid(),
-  messageId: z.string().uuid(),
-  listingId: z.string().uuid(),
-  senderId: z.string().uuid(),
-  messageCreatedAt: z.string().datetime(),
-  messageBody: z.string().optional(),
-  messageDeletedAt: z.string().datetime().optional(),
-  surroundingMessages: z.array(SurroundingMessageSchema),
-});
-export type MessageReportContext = z.infer<typeof MessageReportContextSchema>;
 
 export const GetReportDetailResponseSchema = z.object({
   id: z.string().uuid(),

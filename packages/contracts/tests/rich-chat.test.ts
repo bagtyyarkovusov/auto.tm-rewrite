@@ -27,7 +27,6 @@ import {
 import {
   ReportTargetType,
   CreateMessageReportRequestSchema,
-  MessageReportContextSchema,
   ReportDetailTargetSchema,
 } from "../src/schemas/admin";
 import { generateOpenApiDocument } from "../src/openapi";
@@ -385,26 +384,6 @@ describe("Message-report schemas", () => {
       reason: "other",
     });
     expect(result.success).toBe(false);
-  });
-
-  it("accepts message report context", () => {
-    const result = MessageReportContextSchema.safeParse({
-      conversationId: validUuid,
-      messageId: validUuid,
-      listingId: validUuid,
-      senderId: validUuid,
-      messageCreatedAt: iso,
-      messageBody: "Offensive text",
-      surroundingMessages: [
-        {
-          id: validUuid,
-          senderId: validUuid,
-          createdAt: iso,
-          body: "Earlier message",
-        },
-      ],
-    });
-    expect(result.success).toBe(true);
   });
 
   it.each(["buyer", "seller", "moderator", "admin"])("accepts the Message sender's marketplace role %s", (role) => {

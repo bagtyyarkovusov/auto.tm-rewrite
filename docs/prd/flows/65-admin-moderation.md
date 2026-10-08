@@ -144,9 +144,9 @@ For obvious spam waves (one bad actor posting 30 fake listings):
 ## Special case: reported chat message
 
 - User reports a Message inside a Conversation. The admin queue labels and filters it as "Сообщение".
-- The elevated admin detail shows only that Message: escaped plain text, an attachment marker, sent time, and its sender with a link to the sender's admin User page. Deleted Messages and senders are explicit. It does not show surrounding Messages or the whole Conversation.
+- The elevated admin detail shows only that Message: escaped plain text, an image-attachment marker, sent time, and its sender with a link to the sender's admin User page. Deleted Messages and senders are explicit. It does not show surrounding Messages or the whole Conversation.
 - The read goes through Conversations' port and writes `REPORTED_MESSAGE_READ` with the admin, report and Message IDs before releasing content. Audit failure refuses the read; Message text never enters the audit.
-- Admin can suspend the sender or dismiss the report with the existing required reason form. Suspension validates the recorded sender, resolves the supplied pending report in the same transaction, and writes `USER_SUSPEND` naming the report and Message. Sign-in and messaging refuse the suspended User. Dismissal writes `CONTENT_REPORT_RESOLVE`.
+- Admin can suspend the sender or dismiss the report with the existing required reason form. Suspension resolves the same current sender as the read (using the matching saved snapshot only for a missing Message), revokes that User's Sessions and resolves the supplied pending report in the same transaction, and writes `USER_SUSPEND` naming the report and Message. Sign-in, refresh and messaging refuse the suspended User. A refused sign-in leaves its code unused; unsuspension permits new sign-in without restoring old Sessions. Dismissal writes `CONTENT_REPORT_RESOLVE`.
 - Message deletion, warning, and Conversation browsing remain out of scope for #744.
 
 ## SLAs

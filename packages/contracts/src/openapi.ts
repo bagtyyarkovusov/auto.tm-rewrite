@@ -115,7 +115,6 @@ import {
   ReportListItemSchema,
   ListReportsResponseSchema,
   GetReportDetailResponseSchema,
-  MessageReportContextSchema,
   DismissReportRequestSchema,
   DismissReportResponseSchema,
   BanListingRequestSchema,
@@ -329,7 +328,6 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   registry.register("ReportListItem", ReportListItemSchema);
   registry.register("ListReportsResponse", ListReportsResponseSchema);
   registry.register("GetReportDetailResponse", GetReportDetailResponseSchema);
-  registry.register("MessageReportContext", MessageReportContextSchema);
 
   // Admin moderation schemas
   registry.register("DismissReportRequest", DismissReportRequestSchema);
