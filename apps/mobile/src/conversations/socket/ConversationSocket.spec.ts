@@ -602,3 +602,59 @@ describe("Concurrent room joins", () => {
     expect((await screenJoin).ok).toBe(true);
   });
 });
+
+describe("Shared room lifecycle while acknowledgements are delayed", () => {
+  async function connectedSocket() {
+    mockSocket.connected = false;
+    mockSocket.emit.mockReset();
+    const handlers = new Map<string, () => void>();
+    mockSocket.on.mockImplementation((event, handler) => { handlers.set(event, handler); });
+    const socket = new ConversationSocket({ token: "test-token" });
+    await socket.connect();
+    mockSocket.connected = true;
+    handlers.get("connect")?.();
+    return { socket, handlers };
+  }
+  it("does not automatically rejoin a room left while disconnected", async () => {
+    const { socket, handlers } = await connectedSocket();
+    mockSocket.emit.mockImplementation((event, _payload, callback) => { if (event === "conversation:join") callback({ ok: true, conversationId: CONV_ID, room: `conversation:${CONV_ID}` }); });
+    await socket.joinConversation(CONV_ID);
+    mockSocket.connected = false;
+    handlers.get("disconnect")?.();
+    await socket.leaveConversation(CONV_ID);
+    mockSocket.emit.mockClear();
+    mockSocket.connected = true;
+    handlers.get("connect")?.();
+    expect(mockSocket.emit).not.toHaveBeenCalled();
+  });
+  it("creates a fresh join after leaving a room whose acknowledgement is still pending", async () => {
+    const { socket } = await connectedSocket();
+    const callbacks: ((ack: unknown) => void)[] = [];
+    mockSocket.emit.mockImplementation((event, _payload, callback) => { if (event === "conversation:join") callbacks.push(callback); });
+    const first = socket.joinConversation(CONV_ID);
+    await socket.leaveConversation(CONV_ID);
+    const reopened = socket.joinConversation(CONV_ID);
+    expect(callbacks).toHaveLength(2);
+    const ack = { ok: true, conversationId: CONV_ID, room: `conversation:${CONV_ID}` };
+    callbacks.forEach((callback) => callback(ack));
+    await Promise.all([first, reopened]);
+  });
+  it("a late A acknowledgement cannot replace B as the reconnect room", async () => {
+    const { socket, handlers } = await connectedSocket();
+    const callbacks = new Map<string, (ack: unknown) => void>();
+    mockSocket.emit.mockImplementation((event, payload, callback) => { if (event === "conversation:join") callbacks.set(payload.conversationId, callback); });
+    const first = socket.joinConversation(CONV_ID);
+    await socket.leaveConversation(CONV_ID);
+    const second = socket.joinConversation(MSG_ID_2);
+    callbacks.get(MSG_ID_2)?.({ ok: true, conversationId: MSG_ID_2, room: `conversation:${MSG_ID_2}` });
+    await second;
+    callbacks.get(CONV_ID)?.({ ok: true, conversationId: CONV_ID, room: `conversation:${CONV_ID}` });
+    await first;
+    mockSocket.connected = false;
+    handlers.get("disconnect")?.();
+    mockSocket.emit.mockClear();
+    mockSocket.connected = true;
+    handlers.get("connect")?.();
+    expect(mockSocket.emit).toHaveBeenCalledWith("conversation:join", { conversationId: MSG_ID_2 }, expect.any(Function));
+  });
+});

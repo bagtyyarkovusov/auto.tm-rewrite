@@ -1351,3 +1351,23 @@ describe("Authoritative acknowledgement cache", () => {
     expect(screen.getAllByText("Canonical server text")).toHaveLength(1);
   });
 });
+
+describe("Acknowledgement cannot undo a newer deletion", () => {
+  it("keeps the authoritative redaction when a send acknowledgement arrives late", async () => {
+    state.cachedMessages = true;
+    state.messages.data = { pages: [{ items: [], nextCursor: null }], pageParams: [null] };
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    let acknowledge: ((value: unknown) => void) | undefined;
+    state.socket.sendTextMessage.mockImplementation(() => new Promise((resolve) => { acknowledge = resolve; }));
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Before deletion");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    const send = state.socket.sendTextMessage.mock.calls[0];
+    if (!send) throw new Error("Send missing");
+    const message = { ...serverMessage("deleted-before-ack", BUYER_ID, new Date().toISOString(), "Before deletion"), clientMessageId: send[0].clientMessageId };
+    act(() => screen.queryClient.setQueryData(queryKeys.conversations.messages(CONVERSATION_ID), { pages: [{ items: [{ ...message, text: null, deletedAt: "2026-10-08T14:00:00.000Z" }], nextCursor: null }], pageParams: [null] }));
+    await act(async () => { acknowledge?.({ ok: true, message }); });
+    expect(screen.queryByText("Before deletion")).toBeNull();
+    expect(screen.getByText("Message deleted")).toBeTruthy();
+  });
+});
