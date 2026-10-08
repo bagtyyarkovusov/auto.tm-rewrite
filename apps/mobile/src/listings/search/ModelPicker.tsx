@@ -1,3 +1,4 @@
+import { showResultsCount } from "./showResultsCount";
 import { useMemo, type ReactNode } from "react";
 import { Pressable, SectionList, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -56,7 +57,7 @@ export function ModelPicker({
   leading,
   barContainer = "inset",
 }: ModelPickerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const picker = useModelPicker({ brandId, brandName, initialModelIds, filters });
   const { content, selected } = picker;
   const ready = content.kind === "ready";
@@ -81,7 +82,7 @@ export function ModelPicker({
       ? t("loadingEllipsis")
       : actions.mode === "done"
         ? t("doneWithCount", { count: picker.count })
-        : t("showResultsCount", { count: picker.count });
+        : showResultsCount(t, i18n.resolvedLanguage ?? i18n.language, picker.count);
 
   let body: ReactNode;
   if (content.kind === "loading") {

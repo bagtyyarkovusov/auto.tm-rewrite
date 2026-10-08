@@ -1,3 +1,4 @@
+import { showResultsCount } from "./showResultsCount";
 import { useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -50,7 +51,7 @@ interface SearchParametersFormProps {
  * mode, which hand the choice back to the form.
  */
 export function SearchParametersForm({ initial, returnToResults, onBack }: SearchParametersFormProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { height: screenHeight } = useWindowDimensions();
   const { draft, setField, reset, isValid } = useListingFilters(initial);
   const [priceRangeValid, setPriceRangeValid] = useState(true);
@@ -65,7 +66,7 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
 
   let showLabel = t("showResults");
   if (countEnabled && count.data !== undefined) {
-    showLabel = t("showResultsCount", { count: count.data.totalMatching });
+    showLabel = showResultsCount(t, i18n.resolvedLanguage ?? i18n.language, count.data.totalMatching);
   } else if (countEnabled && !showCountError) {
     showLabel = t("loadingEllipsis");
   }
