@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, ScrollView, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
@@ -33,6 +33,7 @@ import { Text } from "@/components/ui/text";
 import { BackButton, HeaderTextAction, StackHeader } from "@/components/navigation/StackHeader";
 import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { TabScreen } from "@/components/navigation/TabScreen";
+import { useKeepFocusedInputVisible } from "@/components/navigation/useKeepFocusedInputVisible";
 
 interface SearchParametersFormProps {
   /** The filters the form opens with: what Results is showing, the Model picker's choice, or none from Search's All filters. */
@@ -59,6 +60,9 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
   const [step, setStep] = useState<DonePickerStep | null>(null);
   const record = useRecentChoicesStore((s) => s.record);
   const bar = useStickyActionBar();
+  // The Show bar floats over the form; a field typed in must stay above it.
+  const scrollRef = useRef<ScrollView>(null);
+  const keepFieldVisible = useKeepFocusedInputVisible(scrollRef, bar.space);
 
   const countEnabled = isValid && priceRangeValid;
   const count = useListingCount({ filters: draft, enabled: countEnabled });
@@ -134,6 +138,8 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
         {/* The form runs under the bar; the bar rides up with the keyboard. */}
         <View className="min-h-0 flex-1">
         <ScrollView
+          ref={scrollRef}
+          {...keepFieldVisible}
           className="min-h-0 flex-1"
           contentContainerClassName="gap-6 px-4 pt-2"
           contentContainerStyle={{ paddingBottom: bar.space + 8 }}
