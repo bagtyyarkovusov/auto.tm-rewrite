@@ -698,6 +698,7 @@ describe("Profile photo", () => {
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     act(() => { picker.progress({ totalBytesSent: 1536, totalBytesExpectedToSend: 2048 }); });
+    act(() => { picker.progress({ totalBytesSent: 1536, totalBytesExpectedToSend: 0 }); });
     act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
     expect(view.getByRole("progressbar").props.accessibilityValue.now).toBe(75);
     await act(async () => { picker.finish(); });
