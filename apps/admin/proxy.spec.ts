@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 
 import { proxy } from "./proxy";
 
-describe("admin middleware", () => {
+describe("admin proxy", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
   });
@@ -44,7 +44,7 @@ function jwt(exp: number): string {
 }
 function expiredRequest(method = "GET", token = refresh) {
   return new NextRequest("http://admin.auto.tm/reports?page=2", {
-    method, headers: { cookie: `auto_tm_admin_access=${jwt(1)}; auto_tm_admin_refresh=${token}` },
+    method, headers: { origin: "http://admin.auto.tm", cookie: `auto_tm_admin_access=${jwt(1)}; auto_tm_admin_refresh=${token}` },
   });
 }
 
@@ -80,7 +80,7 @@ describe("admin session renewal before request dispatch", () => {
     const { proxy } = await import("./proxy");
     const request = new NextRequest("http://admin.auto.tm/reports", {
       method: "POST", body: "original-action-payload",
-      headers: { "next-action": "action-id", cookie: `auto_tm_admin_refresh=${refresh}` },
+      headers: { origin: "http://admin.auto.tm", "next-action": "action-id", cookie: `auto_tm_admin_refresh=${refresh}` },
     });
     const response = await proxy(request);
     expect(response.headers.get("x-middleware-next")).toBe("1");
@@ -138,4 +138,24 @@ describe("admin session renewal before request dispatch", () => {
     expect(late.headers.get("location")).toContain("/login?reason=session-expired");
     expect(fetch).toHaveBeenCalledTimes(2);
   });
+  it("does not bypass expired POST renewal on the session-expired login URL", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ code: "INVALID_REFRESH_TOKEN" }, { status: 401 }));
+    const { proxy } = await import("./proxy");
+    const request = new NextRequest("http://admin.auto.tm/login?reason=session-expired", {
+      method: "POST", headers: { origin: "http://admin.auto.tm", cookie: `auto_tm_admin_refresh=${refresh}` },
+    });
+    const response = await proxy(request);
+    expect(response.status).toBe(303);
+    expect(response.headers.get("x-middleware-next")).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a cross-origin action before spending its refresh token", async () => {
+    const { proxy } = await import("./proxy");
+    const request = expiredRequest("POST");
+    request.headers.set("origin", "https://evil.example");
+    expect((await proxy(request)).status).toBe(403);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
 });

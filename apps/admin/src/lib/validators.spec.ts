@@ -12,6 +12,7 @@ describe("validateReturnTo", () => {
   });
 
   it("accepts a nested path", () => {
+    expect(validateReturnTo("/catalog/brands")).toBe("/catalog/brands");
     expect(validateReturnTo("/reports/123")).toBe("/reports/123");
   });
 

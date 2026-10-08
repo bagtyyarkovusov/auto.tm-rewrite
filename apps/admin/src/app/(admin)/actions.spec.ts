@@ -52,6 +52,11 @@ function mockFetchError(status: number, body: unknown) {
 }
 
 describe("moderation server actions", () => {
+  it("propagates the session-expired redirect after an API rejection", async () => {
+    mockFetchError(401, { code: "UNAUTHORIZED" });
+    await expect(dismissReport("r1", "Spam")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(mockCookieStore.set).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mockCookieStore.get.mockReturnValue({ value: "acc_tok" });
