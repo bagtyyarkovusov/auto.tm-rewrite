@@ -71,9 +71,11 @@ export const ListingGridCard = memo(function ListingGridCard({
 
   return (
     <EnterOnce order={enterOrder} className="min-w-0 flex-1">
-      <MotionView style={press.style} className="flex-1">
+      {/* No `flex-1` below the root: these two size to their content. A view
+          that flexes down the card measures 0 tall when the list re-measures
+          its row, and the row collapses into the one above it. */}
+      <MotionView style={press.style}>
         <Pressable
-          className="flex-1"
           onPress={() => onPress(listing.id)}
           {...press.handlers}
           accessibilityRole="button"
