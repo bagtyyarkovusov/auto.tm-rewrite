@@ -49,4 +49,18 @@ describe("OwnerListingCard", () => {
     fireEvent.press(view.getByText("Toyota Camry, 2018"));
     expect(onOpen).not.toHaveBeenCalled();
   });
+
+  it("draws an active Listing's price in the normal text colour, at the same size and weight (#775 F)", () => {
+    const { view } = renderCard("active");
+    const className = String(view.getByText("100,000 TMT").props.className);
+    expect(className).toContain("text-foreground");
+    expect(className).not.toMatch(/text-primary(?!-)/);
+    expect(className).toContain("text-subhead");
+    expect(className).toContain("font-heading");
+  });
+
+  it.each(["sold", "archived"] as const)("keeps the muted price of a %s Listing (#775 F)", (status) => {
+    const { view } = renderCard(status);
+    expect(String(view.getByText("100,000 TMT").props.className)).toContain("text-muted-foreground");
+  });
 });
