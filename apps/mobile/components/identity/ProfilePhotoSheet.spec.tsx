@@ -19,9 +19,7 @@ vi.mock("@rn-primitives/dialog", async () => {
     open ? <Open.Provider value={onOpenChange}>{children}</Open.Provider> : null;
   return { Root, Close, Portal: Box, Overlay: Box, Content: Box, Trigger: Box, Title: Text, Description: Text };
 });
-vi.mock("react-native-reanimated", () => ({ SlideInDown: { duration: () => ({}) }, SlideOutDown: { duration: () => ({}) } }));
 vi.mock("react-native-screens", async () => ({ FullWindowOverlay: (await import("react-native")).View }));
-vi.mock("@/components/ui/native-only-animated-view", async () => ({ NativeOnlyAnimatedView: (await import("react-native")).View }));
 
 function setup(hasPhoto = false, locale = "en") {
   const callbacks = { onOpenChange: vi.fn(), onTakePhoto: vi.fn(), onChoosePhoto: vi.fn(), onRemovePhoto: vi.fn() };

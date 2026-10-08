@@ -1,13 +1,13 @@
 import { act } from "@testing-library/react-native";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { server } from "../../test/msw";
 import { PHOTO_ME, photoApiStorage, setupPhotoHook, signInPhotoUser } from "../../test/profile-photo-api";
 import { choosePhoto, photoDevice, resetPhotoDevice } from "../../test/profile-photo-device";
 import { clearAuthSession, loadAuthSession, storeAuthSession } from "../auth/session";
 import { capturePhotoSession } from "../identity/profilePhotoSession";
-import { useProfilePhotoUpload } from "../identity/useProfilePhotoUpload";
+import { resetProfilePhotoUpload, useProfilePhotoUpload } from "../identity/useProfilePhotoUpload";
 
 import { useRemoveProfilePhoto } from "./identity/useRemoveProfilePhoto";
 import { useSetProfilePhoto } from "./identity/useSetProfilePhoto";
@@ -26,7 +26,9 @@ vi.mock("expo-file-system/legacy", async () => (await import("../../test/profile
 vi.mock("expo-image-manipulator", async () => (await import("../../test/profile-photo-device")).imageManipulatorFake);
 
 const expired = `header.${btoa(JSON.stringify({ iat: 1000, exp: 1900 }))}.signature`;
-beforeEach(async () => { resetPhotoDevice(); await clearAuthSession(); await signInPhotoUser(); });
+beforeEach(async () => { await resetProfilePhotoUpload(); resetPhotoDevice(); await clearAuthSession(); await signInPhotoUser(); });
+
+afterEach(resetProfilePhotoUpload);
 
 async function expireToken() {
   const session = await loadAuthSession();

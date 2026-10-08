@@ -278,6 +278,3 @@ vi.mock("react-native-svg", async () => {
     Rect: host("Rect"),
   };
 });
-
-vi.mock("expo-file-system/legacy", async () => (await import("./profile-photo-device")).fileSystemFake);
-vi.mock("expo-image-manipulator", async () => (await import("./profile-photo-device")).imageManipulatorFake);

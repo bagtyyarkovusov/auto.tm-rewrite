@@ -312,3 +312,7 @@ describe("Accessibility", () => {
     expect(classOf(save(view))).toMatch(/\bh-control-(md|lg)\b/);
   });
 });
+
+// Profile loads these native modules; only this spec supplies its stand-ins.
+vi.mock("expo-file-system/legacy", async () => (await import("../profile-photo-device")).fileSystemFake);
+vi.mock("expo-image-manipulator", async () => (await import("../profile-photo-device")).imageManipulatorFake);

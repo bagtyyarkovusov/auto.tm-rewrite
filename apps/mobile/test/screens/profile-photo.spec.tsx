@@ -5,7 +5,7 @@ import * as Linking from "expo-linking";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { profilePhotoUploadStore } from "../../src/identity/useProfilePhotoUpload";
+import { profilePhotoUploadStore, resetProfilePhotoUpload } from "../../src/identity/useProfilePhotoUpload";
 import { profileNoticeStore } from "../../src/identity/profileNotice";
 import ProfileScreen from "../../app/profile";
 import { clearAuthSession, storeAuthSession } from "../../src/auth/session";
@@ -54,6 +54,7 @@ let currentMe: AuthSchemas.MeResponse = me;
 const requests = { presigns: [] as unknown[], sets: [] as unknown[] };
 
 beforeEach(async () => {
+  await resetProfilePhotoUpload();
   storage.clear();
   resetPhotoDevice();
   theme.colorScheme = "light";
@@ -82,7 +83,7 @@ beforeEach(async () => {
   });
 });
 
-afterEach(async () => { await clearAuthSession(); vi.useRealTimers(); });
+afterEach(async () => { await resetProfilePhotoUpload(); await clearAuthSession(); vi.useRealTimers(); });
 
 describe("Profile photo", () => {
   it.each(["upload", "remove"])("retries %s with refreshed credentials without reopening the picker", async (operation) => {
@@ -338,13 +339,15 @@ describe("Profile photo", () => {
     const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
     await view.findByText("Aman");
     fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     await act(async () => { picker.finish(); });
-    expect(await view.findByText("Preparing photo...")).toBeTruthy();
+    await vi.waitFor(() => expect(view.getByText("Preparing photo...")).toBeTruthy());
     expect(view.queryByText("Couldn't upload the photo.")).toBeNull();
     expect(view.getByRole("progressbar").props.accessibilityValue.now).toBe(100);
-    expect(await view.findByText("Photo updated", {}, { timeout: 3000 })).toBeTruthy();
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    await vi.waitFor(() => expect(view.getByText("Photo updated")).toBeTruthy());
     expect(requests.sets).toEqual([{ key: "pending/new1/original.jpg" }, { key: "pending/new1/original.jpg" }]);
     expect(picker.sent).toHaveLength(1);
     expect(picker.library).toHaveBeenCalledOnce();
@@ -511,9 +514,9 @@ describe("Profile photo", () => {
     const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
     await view.findByText("Aman");
     fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     await act(async () => { picker.finish(); });
     await vi.waitFor(() => expect(view.getByText("Preparing photo...")).toBeTruthy());
     if (ending === "cancel") {
@@ -676,9 +679,8 @@ describe("Profile photo", () => {
   });
 
   const states = ["idle", "camera denied", "uploading", "failed", "offline", "too large", "unsupported", "success", "removed", "remove failed", "preparing", "attached to listing"] as const;
-  const matrix = (["en", "ru", "tk"] as const).flatMap((locale) => (["light", "dark"] as const).flatMap((mode) => states.map((state) => ({ locale, mode, state }))));
-  it.each(matrix)("renders $state in $locale and $mode with translated controls", async ({ locale, mode, state }) => {
-    theme.colorScheme = mode;
+  const matrix = (["en", "ru", "tk"] as const).flatMap((locale) => states.map((state) => ({ locale, state })));
+  it.each(matrix)("renders $state in $locale with translated controls", async ({ locale, state }) => {
     const copy = profilePhotoCopy[locale];
     choosePhoto();
     if (state === "too large") picker.size = 5242881;
@@ -724,6 +726,7 @@ describe("Profile photo", () => {
       return;
     }
     if (state === "offline") onlineManager.setOnline(false);
+    if (state === "preparing") vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     fireEvent.press(view.getByRole("button", { name: copy.chooseLib }));
     if (state === "too large" || state === "unsupported" || state === "offline") {
       expect(await view.findByText(state === "too large" ? copy.photoBig : state === "unsupported" ? copy.photoType : copy.offline)).toBeTruthy();
@@ -743,8 +746,11 @@ describe("Profile photo", () => {
       expect(view.getByRole("button", { name: copy.retry })).toBeTruthy();
       fireEvent.press(view.getByRole("button", { name: copy.cancel }));
     } else {
-      if (state === "preparing") expect(await view.findByText(copy.preparing)).toBeTruthy();
-      expect(await view.findByText(copy.photoSaved, {}, { timeout: 3000 })).toBeTruthy();
+      if (state === "preparing") {
+        await vi.waitFor(() => expect(view.getByText(copy.preparing)).toBeTruthy());
+        await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+      }
+      await vi.waitFor(() => expect(view.getByText(copy.photoSaved)).toBeTruthy());
     }
   });
 

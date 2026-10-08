@@ -26,6 +26,23 @@ const MAX_BYTES = 5 * 1024 * 1024;
 // Route dismissal removes observers, not the job or its result.
 export const profilePhotoUploadStore = create<{ state: PhotoUploadState }>()(() => ({ state: { status: "idle" } }));
 
+async function discardPhoto() {
+  const uri = selected?.compressed?.uri;
+  selected?.stopWaiting?.();
+  selected?.session.dispose();
+  selected = null;
+  if (uri) await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+}
+
+/** Ends the current photo operation and releases its retained selection. */
+export async function resetProfilePhotoUpload() {
+  removalSession?.dispose();
+  removalSession = null;
+  lastSource = null;
+  profilePhotoUploadStore.setState({ state: { status: "idle" } });
+  await discardPhoto();
+}
+
 /** Picks, shrinks and uploads one Profile Photo independently of Listing drafts. */
 export function useProfilePhotoUpload() {
   const state = profilePhotoUploadStore((store) => store.state);
@@ -110,7 +127,7 @@ export function useProfilePhotoUpload() {
       if (selected !== photo) return;
       profilePhotoUploadStore.setState({ state: { status: "idle" } });
       profileNoticeStore.getState().show({ kind: "photoSaved" });
-      await discard();
+      await discardPhoto();
     } catch (error) {
       if (error instanceof PhotoSessionEnded || selected !== photo) {
         if (!selected || selected === photo) profilePhotoUploadStore.setState({ state: { status: "idle" } });
@@ -149,20 +166,7 @@ export function useProfilePhotoUpload() {
     }
   }
 
-  async function discard() {
-    const uri = selected?.compressed?.uri;
-    selected?.stopWaiting?.();
-    selected?.session.dispose();
-    selected = null;
-    if (uri) await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
-  }
-
-  function cancel() {
-    removalSession?.dispose();
-    removalSession = null;
-    profilePhotoUploadStore.setState({ state: { status: "idle" } });
-    void discard();
-  }
+  function cancel() { void resetProfilePhotoUpload(); }
 
   async function pick(source: "camera" | "library") {
     lastSource = source;
@@ -191,7 +195,7 @@ export function useProfilePhotoUpload() {
       const result = source === "camera" ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       await owner.current();
       if (!result.canceled && result.assets[0]) {
-        await discard();
+        await discardPhoto();
         selected = { asset: result.assets[0], session: owner };
         lastSource = null;
         await upload();

@@ -1,10 +1,12 @@
 import { act } from "@testing-library/react-native";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { server } from "../../test/msw";
 import { setupPhotoHook, signInPhotoUser } from "../../test/profile-photo-api";
-import { photoDevice, resetPhotoDevice } from "../../test/profile-photo-device";
+import { choosePhoto, photoDevice, resetPhotoDevice } from "../../test/profile-photo-device";
 
-import { profilePhotoUploadStore, useProfilePhotoUpload } from "./useProfilePhotoUpload";
+import { profilePhotoUploadStore, resetProfilePhotoUpload, useProfilePhotoUpload } from "./useProfilePhotoUpload";
 
 vi.mock("expo-secure-store", async () => {
   const { photoApiStorage } = await import("../../test/profile-photo-storage");
@@ -20,12 +22,45 @@ vi.mock("expo-file-system/legacy", async () => (await import("../../test/profile
 vi.mock("expo-image-manipulator", async () => (await import("../../test/profile-photo-device")).imageManipulatorFake);
 
 beforeEach(async () => {
+  await resetProfilePhotoUpload();
   resetPhotoDevice();
   profilePhotoUploadStore.setState({ state: { status: "idle" } });
   await signInPhotoUser();
 });
 
+afterEach(resetProfilePhotoUpload);
+
 describe("useProfilePhotoUpload", () => {
+  it.each(["picker", "upload", "removal"])("forgets the retained %s operation when the fixture resets", async (operation) => {
+    let presigns = 0;
+    let removals = 0;
+    server.use(
+      http.post("*/uploads/presign", () => {
+        presigns += 1;
+        return HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"' } });
+      }),
+      http.delete("*/me/photo", () => { removals += 1; return HttpResponse.json({ code: "INTERNAL" }, { status: 500 }); }),
+    );
+    const { result } = setupPhotoHook(useProfilePhotoUpload);
+    if (operation === "picker") {
+      photoDevice.permission.mockRejectedValueOnce(new Error("Camera unavailable"));
+      await act(() => result.current.pick("camera"));
+    } else if (operation === "upload") {
+      choosePhoto();
+      act(() => { void result.current.pick("library"); });
+      await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(1));
+      await act(async () => { photoDevice.finish(500); });
+    } else await act(() => result.current.remove());
+    expect(result.current.state.status).toBe("failed");
+    const previousCalls = { presigns, removals, picks: photoDevice.library.mock.calls.length, permissions: photoDevice.permission.mock.calls.length };
+    await act(resetProfilePhotoUpload);
+    const next = setupPhotoHook(useProfilePhotoUpload);
+    await act(() => next.result.current.retry());
+    expect(next.result.current.state.status).toBe("idle");
+    expect({ presigns, removals, picks: photoDevice.library.mock.calls.length, permissions: photoDevice.permission.mock.calls.length }).toEqual(previousCalls);
+    if (operation === "upload") expect(photoDevice.deletes).toContainEqual(expect.stringMatching(/^file:\/\/\/cache\/profile-photo-\d+\.jpg$/));
+  });
+
   it("requests camera access and opens a square crop when permission is granted", async () => {
     photoDevice.cameraGranted = true;
     const { result } = setupPhotoHook(useProfilePhotoUpload);
