@@ -1,4 +1,5 @@
 export interface IdentityAdminPort {
+  /** Suspends the User and revokes their Sessions on the supplied transaction. */
   suspendUser(
     userId: string,
     adminUserId: string,

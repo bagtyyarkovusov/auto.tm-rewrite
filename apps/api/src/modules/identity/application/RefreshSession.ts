@@ -8,6 +8,10 @@ import { PrismaSessionRepository } from "../infrastructure/PrismaSessionReposito
 import { BcryptHasherAdapter } from "../infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
 
+import { UserSuspendedError } from "../domain/UserSuspendedError";
+import type { IdentityCheckPort } from "../domain/ports/IdentityCheckPort";
+import { IDENTITY_TOKENS } from "../identity.tokens";
+
 const REFRESH_TTL_DAYS = 30;
 
 export interface RefreshSessionInput {
@@ -30,6 +34,8 @@ export class RefreshSession {
     private readonly clock: ClockPort,
     @Inject(JwtService)
     private readonly jwtService: JwtService,
+    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    private readonly identityCheck: IdentityCheckPort,
   ) {}
 
   async execute(input: RefreshSessionInput): Promise<RefreshSessionResult> {
@@ -41,6 +47,10 @@ export class RefreshSession {
     const now = this.clock.now();
     if (lookup.session.expiresAt < now) {
       throw new Error("Session expired");
+    }
+
+    if (await this.identityCheck.isSuspended(lookup.userId)) {
+      throw new UserSuspendedError();
     }
 
     const newRefreshToken = randomBytes(32).toString("hex");

@@ -1,8 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { Inject, Injectable, ForbiddenException } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Enums } from "@auto-tm/contracts";
 import type { User } from "../domain/User";
+import { UserSuspendedError } from "../domain/UserSuspendedError";
 import { matchesReviewerCredential } from "../domain/ReviewerSignIn";
 import { SIGN_IN_CODE_CHANNELS, type SignInCodeChannel } from "../domain/types";
 import { signInCodeDestination } from "../domain/SignInCodeDestination";
@@ -128,6 +129,10 @@ export class VerifyOtp {
       throw err;
     }
 
+    if (existingUser && await this.identityCheck.isSuspended(existingUser.id)) {
+      throw new UserSuspendedError();
+    }
+
     // Claim the code before any side effect, so two concurrent sign-ins with
     // the same code create one session.
     if (!(await this.otpRequestRepo.consumeIfUnused(otpRequest.id))) {
@@ -236,11 +241,7 @@ export class VerifyOtp {
   }): Promise<VerifyOtpResult> {
     const { user, now } = input;
     if (await this.identityCheck.isSuspended(user.id)) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "User is suspended",
-        details: { reason: "USER_SUSPENDED" },
-      });
+      throw new UserSuspendedError();
     }
 
     const sessionCount = await this.sessionRepo.countByUserId(user.id);
