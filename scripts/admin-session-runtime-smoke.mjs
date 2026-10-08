@@ -66,7 +66,7 @@ function start(listenPort, address) {
   const env = { ...process.env, NODE_ENV: "production", HOSTNAME: "127.0.0.1", PORT: String(listenPort) };
   delete env.NEXT_PHASE;
   delete env.API_BASE_URL;
-  delete env.ADMIN_ORIGIN;
+  env.ADMIN_ORIGIN = `http://127.0.0.1:${listenPort}`;
   if (address !== undefined) env.API_BASE_URL = address;
   const child = spawn(process.execPath, [entry], { cwd: root, env, stdio: ["ignore", "pipe", "pipe"] });
   let logs = "";

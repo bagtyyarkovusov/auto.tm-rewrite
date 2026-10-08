@@ -35,7 +35,7 @@ export async function proxy(request: NextRequest) {
   if (!hasCurrentAccessToken(request.cookies.get(settings.accessName)?.value)) {
     if (refreshToken) tokens = await renewSession(refreshToken);
     if (!tokens) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/login", process.env["ADMIN_ORIGIN"] || request.url);
       loginUrl.searchParams.set("reason", "session-expired");
       if (safeReturnTo) loginUrl.searchParams.set("returnTo", safeReturnTo);
       if (request.method === "POST" && request.headers.has("next-action")) {
