@@ -210,7 +210,6 @@ export function MessageList({
       }
       ListEmptyComponent={
         <View
-          style={{ transform: [{ scaleY: -1 }] }}
           className="flex-1 items-center justify-center px-6 py-12"
         >
           <Text className="text-callout text-muted-foreground">
