@@ -125,6 +125,7 @@ vi.mock("expo-image-picker", () => ({
 // A spec that exercises one of them mocks it itself and wins over these stubs.
 vi.mock("expo-linking", () => ({ canOpenURL: vi.fn(async () => false), openURL: vi.fn(async () => {}) }));
 vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn(async () => true) }));
+vi.mock("expo-splash-screen", () => ({ preventAutoHideAsync: vi.fn(async () => true), hide: vi.fn() }));
 vi.mock("expo-haptics", () => ({
   selectionAsync: vi.fn(async () => {}),
   impactAsync: vi.fn(async () => {}),
@@ -153,17 +154,28 @@ vi.mock("react-native-gesture-handler", async () => {
   };
 });
 vi.mock("react-native-reanimated", async () => {
-  const { View } = await import("react-native");
+  const React = await import("react");
+  const native = await import("react-native");
+  const { View } = native;
   // An animated component is its plain host here: `createAnimatedComponent(Pressable)`
   // stays a Pressable a spec can press, and nothing animates.
   const createAnimatedComponent = <T,>(component: T) => component;
+  // `Animated.ScrollView` is the host scroll view. Its ref records `scrollTo`
+  // calls in `scrollRequests`, as a FlatList ref does; nothing scrolls.
+  const requests = (native as unknown as { scrollRequests: unknown[] }).scrollRequests;
+  const ScrollView = ({ ref, ...props }: Record<string, unknown> & { ref?: React.Ref<unknown> }) => {
+    React.useImperativeHandle(ref, () => ({
+      scrollTo: (args: Record<string, unknown>) => requests.push({ method: "scrollTo", ...args }),
+    }));
+    return React.createElement(native.ScrollView, props as never);
+  };
   // Entering and exiting layout animations, chainable like `FadeInUp.duration(200).delay(40)`.
   const layoutAnimation = (): unknown => {
     const animation: unknown = new Proxy({}, { get: () => () => animation });
     return animation;
   };
   return {
-    default: { View, createAnimatedComponent },
+    default: { View, ScrollView, createAnimatedComponent },
     createAnimatedComponent,
     useSharedValue: <T,>(value: T) => ({ value }),
     useDerivedValue: <T,>(derive: () => T) => ({ value: derive() }),
@@ -291,5 +303,10 @@ vi.mock("expo-notifications", () => ({
   AndroidNotificationVisibility: { PUBLIC: 1 },
 }));
 vi.mock("@react-native-async-storage/async-storage", () => ({
-  default: { getItem: vi.fn(async () => null), setItem: vi.fn(async () => {}) },
+  default: {
+    getItem: vi.fn(async () => null),
+    setItem: vi.fn(async () => {}),
+    removeItem: vi.fn(async () => {}),
+    getAllKeys: vi.fn(async () => []),
+  },
 }));

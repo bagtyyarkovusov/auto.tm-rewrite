@@ -10,7 +10,10 @@ import { resources } from "../src/i18n/resources";
 const clients = new Set<QueryClient>();
 afterEach(() => { clients.forEach((client) => client.clear()); clients.clear(); });
 
-export function renderMobile(element: ReactElement, { locale = "en" } = {}) {
+export function renderMobile(
+  element: ReactElement,
+  { locale = "en", createNodeMock }: { locale?: string; createNodeMock?: (element: unknown) => unknown } = {},
+) {
   const i18n = createInstance();
   void i18n.init({ lng: locale, resources, defaultNS: "common", initImmediate: false });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } } });
@@ -20,7 +23,7 @@ export function renderMobile(element: ReactElement, { locale = "en" } = {}) {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </I18nextProvider>;
   }
-  return { ...render(element, { wrapper: Wrapper }), queryClient, i18n };
+  return { ...render(element, { wrapper: Wrapper, createNodeMock }), queryClient, i18n };
 }
 
 export { fireEvent, act, within } from "@testing-library/react-native";

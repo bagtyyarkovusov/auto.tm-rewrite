@@ -17,6 +17,7 @@ import { formatDeletionDate } from "../../src/auth/formatDeletionDate";
 import { maskTmPhone, normalizeTmPhone } from "../../src/auth/phone";
 import { storeAuthSession } from "../../src/auth/session";
 import { useOtpAuthNavigation } from "../../src/auth/useOtpAuthNavigation";
+import { setOnboardingCompleted } from "../../src/onboarding/onboardingFlag";
 import { HELP_HREF } from "../../src/navigation/helpHref";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
@@ -34,6 +35,18 @@ import {
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+/**
+ * Signing in settles onboarding at once, so an established user never sees it
+ * after a sign-out and a cold start; waiting for the next launch's gate run
+ * could leave the flag `pending` in between. A failed write only means the
+ * gate does it on the next launch instead.
+ */
+function markOnboardingCompleted() {
+  void setOnboardingCompleted().catch((error: unknown) => {
+    console.warn("[onboarding] could not store the onboarding flag", error);
+  });
 }
 
 function parseInitialSeconds(value: string | undefined): number {
@@ -128,6 +141,7 @@ export default function OtpScreen() {
     }
 
     await storeAuthSession(result);
+    markOnboardingCompleted();
     authNavigation.complete();
   }
 
@@ -160,6 +174,7 @@ export default function OtpScreen() {
     }
     setPendingSession(null);
     setIsRestoring(false);
+    markOnboardingCompleted();
     authNavigation.complete();
   }
 

@@ -72,3 +72,39 @@ describe("Photos step copy", () => {
     expect(withMaximum).toEqual(["photosUnder5MB"]);
   });
 });
+
+describe("Onboarding copy", () => {
+  const LOCALES = ["ru", "tk", "en"] as const;
+  const onboarding = (locale: (typeof LOCALES)[number]) =>
+    resources[locale]?.["onboarding"] as Record<string, string>;
+
+  it("has exactly the same keys in Russian, Turkmen and English", () => {
+    const keys = Object.keys(onboarding("ru")).sort();
+
+    expect(keys).toEqual([
+      "chatBody", "chatTitle", "chooseLanguage", "findBody", "findTitle",
+      "finish", "languageGroup", "languageSubtitle", "pageOf",
+    ]);
+    expect(Object.keys(onboarding("tk")).sort()).toEqual(keys);
+    expect(Object.keys(onboarding("en")).sort()).toEqual(keys);
+  });
+
+  it.each(LOCALES)("has no empty string and keeps the page numbers in %s", (locale) => {
+    const copy = onboarding(locale);
+
+    expect(Object.values(copy).filter((value) => value.trim() === "")).toEqual([]);
+    expect(copy["pageOf"]).toContain("{{current}}");
+    expect(copy["pageOf"]).toContain("{{total}}");
+  });
+
+  // The old slides promised VIN history, inspections, verified sellers, honest
+  // condition disclosures, warranties and safe contact, and a third slide sold
+  // a free Listing. None of it ships.
+  it.each(LOCALES)("makes no claim the app cannot back in %s", (locale) => {
+    const text = Object.values(onboarding(locale)).join(" ");
+
+    expect(text).not.toMatch(
+      /VIN|inspect|verif|safe|confiden|free|histor|honest|warrant|провер|подтвержд|безопасн|уверен|бесплатн|истори|честн|гарант|barla|tassykl|howpsuz|ynam|mugt|taryh|çyn|wada/i,
+    );
+  });
+});

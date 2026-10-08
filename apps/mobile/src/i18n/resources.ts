@@ -834,16 +834,15 @@ export const resources: Resource = {
     onboarding: {
       chooseLanguage: "Выберите язык",
       languageSubtitle: "Вы можете изменить язык позже в Кабинете",
-      valueProp1Title: "Найдите настоящие машины",
-      valueProp1Body:
-        "Смотрите объявления продавцов из Туркменистана и фильтруйте по марке, модели, цене и году.",
-      valueProp2Title: "Свяжитесь с продавцом безопасно",
-      valueProp2Body:
-        "Пишите и звоните продавцам прямо в приложении.",
-      valueProp3Title: "Покупайте увереннее",
-      valueProp3Body:
-        "Продавцы с подтверждёнными телефонами, честные данные о состоянии и VIN — а проверки AutoTM уже в пилоте.",
-      getStarted: "Начать",
+      findTitle: "Найдите машину по марке и модели",
+      findBody:
+        "Смотрите объявления и уточняйте поиск по цене, году и городу. Аккаунт для просмотра не нужен.",
+      chatTitle: "Пишите продавцу напрямую",
+      chatBody:
+        "Задавайте вопросы о машине в чате приложения. Войти нужно, только когда решите написать.",
+      finish: "Смотреть объявления",
+      pageOf: "Страница {{current}} из {{total}}",
+      languageGroup: "Язык",
     },
     support: {
       help: "Помощь",
@@ -1664,16 +1663,15 @@ export const resources: Resource = {
     onboarding: {
       chooseLanguage: "Dil saýlaň",
       languageSubtitle: "Soňrak Kabinetde üýtgedip bilersiňiz",
-      valueProp1Title: "Hakyky awtomobiller tapyň",
-      valueProp1Body:
-        "Türkmenistandaky satyjylaryň bildirişlerini görüň we marka, model, baha we ýyl boýunça süzüň.",
-      valueProp2Title: "Satyjy bilen howpsuz habarlaşyň",
-      valueProp2Body:
-        "Satyjylara programma arkaly ýazyň we jaň ediň.",
-      valueProp3Title: "Has ynam bilen satyn alyň",
-      valueProp3Body:
-        "Tassyklanan telefon satyjylar, çynsy ýagdaý maglumatlary we VIN — AutoTM barlaglary bolsa pilotda.",
-      getStarted: "Başla",
+      findTitle: "Awtoulagy marka we model boýunça tapyň",
+      findBody:
+        "Bildirişlere serediň, baha, ýyl we şäher boýunça süzüň. Görmek üçin akkaunt gerek däl.",
+      chatTitle: "Satyja göni ýazyň",
+      chatBody:
+        "Awtoulag barada soraglaryňyzy programmadaky çatda beriň. Diňe ýazmak isläniňizde girmeli bolar.",
+      finish: "Bildirişlere seret",
+      pageOf: "Sahypa {{current}} / {{total}}",
+      languageGroup: "Dil",
     },
     support: {
       help: "Kömek",
@@ -2492,16 +2490,15 @@ export const resources: Resource = {
     onboarding: {
       chooseLanguage: "Choose language",
       languageSubtitle: "You can change the language later in Account",
-      valueProp1Title: "Find real cars",
-      valueProp1Body:
-        "Browse listings from sellers in Turkmenistan and filter by make, model, price, and year.",
-      valueProp2Title: "Contact sellers safely",
-      valueProp2Body:
-        "Message and call sellers right inside the app.",
-      valueProp3Title: "Buy with more confidence",
-      valueProp3Body:
-        "Verified-phone sellers, honest condition disclosures, and VIN history — with AutoTM inspections coming in pilot.",
-      getStarted: "Get started",
+      findTitle: "Find a car by make and model",
+      findBody:
+        "Browse listings and narrow them by price, year and city. You don't need an account to look.",
+      chatTitle: "Write to the seller directly",
+      chatBody:
+        "Ask about the car in the in-app chat. You sign in only when you decide to write.",
+      finish: "Browse listings",
+      pageOf: "Page {{current}} of {{total}}",
+      languageGroup: "Language",
     },
     support: {
       help: "Help",

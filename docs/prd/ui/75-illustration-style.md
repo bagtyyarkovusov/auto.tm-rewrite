@@ -5,7 +5,7 @@
 Limited to:
 
 - **Empty states** — "Add your first car", "No conversations yet", "All caught up"
-- **Onboarding helper screens** (if added in Phase 1.5)
+- **Onboarding screens** (see [Onboarding illustrations](#onboarding-illustrations))
 - **Error / 404 pages**
 - **Marketing landing page hero**
 
@@ -39,6 +39,16 @@ If we draw our own:
 - 1-2 colors max per illustration (foreground + accent)
 - 400×400 viewbox typically
 - Subject is car-related where possible (steering wheel, dashboard, key, road, etc.)
+
+## Onboarding illustrations
+
+The first-run onboarding pictures ([hi-fi spec](hifi/mobile-onboarding.md), files in `apps/mobile/assets/onboarding/`) follow the style above with three allowed differences. They apply to onboarding only; empty states keep the rules as written.
+
+- **Size.** They fill a panel that takes the height the text leaves, well above 200×200. The size limit under Don'ts was written for empty states.
+- **Tonal fills.** Shapes may be filled with `currentColor` at 7–20% opacity beside the strokes, so a car or a card reads at this size. Strokes are 3 dp (2.5 on small parts), not 2.
+- **Location and view box.** They live with the app, not in `packages/ui/illustrations/`, and use the view box `8 6 304 248`.
+
+What does not change: flat, no gradients, shadows, 3D or characters; ink is `currentColor`, so one file serves light and dark; one solid brand-red element per picture, plus the car's red headlight; white only on red; the same car in every picture. Letters are outlines, never text set in a font.
 
 ## Empty states matrix
 

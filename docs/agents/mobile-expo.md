@@ -97,6 +97,19 @@ cd apps/mobile/android
 
   Once the artifact is cached, `expo run:android` succeeds normally. Do not "fix" this by pinning React Native versions or clearing `node_modules`; the artifact coordinates are correct.
 
+## Android Activity recreation
+
+Android recreates the Activity in place for any configuration change the manifest does not claim, and React Native then mounts the whole React tree again in the same JavaScript runtime. `apps/mobile/plugins/withAndroidActivityRecreation.js` claims `density`, `fontScale`, `locale` and `layoutDirection`, and adds an `onDestroy` override to `MainActivity` so Expo modules register their activity-result launchers again after a recreation the manifest cannot claim (navigation mode or wallpaper colour overlays). Without the override, `expo-image-picker` rejects every launch with `Attempting to launch an unregistered ActivityResultLauncher` until the app is force-stopped. Keep both when changing the plugin list or upgrading Expo, and re-test on a release build:
+
+```bash
+adb shell wm density 400 && adb shell wm density reset            # claimed: no relaunch
+adb shell cmd overlay enable com.android.internal.systemui.navbar.threebutton   # not claimed: relaunch
+adb shell cmd overlay enable com.android.internal.systemui.navbar.gestural
+adb logcat -d | grep -c "finishDrawing of relaunch.*tm.auto.app"
+```
+
+After each, the app must stay on the same screen, signed in, and Profile > Choose from library must open the picker. Module state survives a recreation and component state does not, so a screen that must not flash a loading state reads what the app already knows (`src/auth/sessionSnapshot.ts`).
+
 ## Railway PR backend sessions
 
 [ADR-0075](../adr/0075-railway-pr-backends-for-agent-native-sessions.md) uses staging-based Railway PR environments with demo data and mock SMS. The hosted required `pr` check runs container-backed tests. Locally run `pnpm test:unit`, typecheck, affected lint and applicable exports. Keep Docker stopped for native proof. The coordinator assigns explicit simulator UUIDs and distinct Metro ports, with up to two sessions when capacity permits (simultaneous two-app capacity is unproven), and one heavy local phase at a time.

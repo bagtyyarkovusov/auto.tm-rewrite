@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 import OtpScreen from "../../app/(auth)/otp";
 import { ApiError } from "../../src/api/client";
+
+const ONBOARDING_FLAG = "@auto-tm/onboarding-completed";
 
 const pendingSession = {
   accessToken: "pending-access",
@@ -129,6 +132,9 @@ describe("Sign-in code screen for a User whose deletion is scheduled", () => {
       ...pendingSession,
       user: { ...pendingSession.user, deletionScheduledAt: null },
     });
+    // Signing in settles onboarding at once: after a later sign-out and cold
+    // start the gate must never show onboarding to an established user.
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(ONBOARDING_FLAG, "true");
     expect(mocks.navigation.complete).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("Account restoration")).toBeNull();
   });
@@ -250,6 +256,8 @@ describe("Sign-in code screen for a User with no scheduled deletion", () => {
 
     expect(screen.queryByText("Account restoration")).toBeNull();
     expect(mocks.storeAuthSession).toHaveBeenCalledWith(session);
+    // Signing in settles onboarding at once, before the next launch's gate runs.
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(ONBOARDING_FLAG, "true");
     expect(mocks.navigation.complete).toHaveBeenCalledTimes(1);
     expect(mocks.restore).not.toHaveBeenCalled();
   });

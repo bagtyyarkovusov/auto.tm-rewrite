@@ -67,6 +67,9 @@ const config = {
     },
     plugins: [
       "expo-router",
+      // Display size, font size and system language changes no longer recreate
+      // the Activity, and a recreation that still happens keeps the photo picker.
+      "./plugins/withAndroidActivityRecreation",
       [
         "expo-image-picker",
         {

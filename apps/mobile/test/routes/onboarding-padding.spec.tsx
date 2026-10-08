@@ -5,20 +5,12 @@ import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderMobile } from "../render";
-import OnboardingSplashScreen from "../../app/(onboarding)/index";
 import LanguagePickerScreen from "../../app/(onboarding)/language";
 import ValuePropScreen from "../../app/(onboarding)/value-prop";
 
 const INSETS = { top: 24, right: 0, bottom: 16, left: 0 };
 
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => INSETS }));
-vi.mock("expo-status-bar", () => ({ StatusBar: () => null }));
-vi.mock("../../assets/launch-mark.svg", () => ({ default: () => null }));
-// The splash stays up while the onboarding flag is still being read.
-vi.mock("../../src/onboarding/onboardingFlag", () => ({
-  getOnboardingCompleted: () => new Promise<boolean>(() => {}),
-  setOnboardingCompleted: async () => {},
-}));
 
 type Node = {
   type: unknown;
@@ -50,44 +42,49 @@ function render(screen: ReactElement) {
 }
 
 describe("Onboarding screen padding", () => {
-  it("keeps the language title, switcher and Continue button off the screen edges", () => {
+  it("keeps the language wordmark, title, rows and Continue button off the screen edges", () => {
     const screen = render(<LanguagePickerScreen />);
 
     const content = [
+      screen.getByLabelText("AutoTM"),
       screen.getByText("Choose language"),
       screen.getByLabelText("Language"),
       screen.getByRole("button", { name: "Continue" }),
     ];
 
     for (const node of content) {
-      expect(paddingInsideSafeArea(node)).toEqual(expect.arrayContaining(["px-6", "py-8"]));
+      expect(paddingInsideSafeArea(node)).toContain("px-6");
     }
+    // The button clears the system navigation bar by the inset plus its own padding.
+    expect(paddingInsideSafeArea(screen.getByRole("button", { name: "Continue" }))).toContain("pb-4");
   });
 
-  it("keeps the value slide text, Next button and Skip off the screen edges", () => {
+  it("keeps the page text, page dots and main button off the screen edges", () => {
     const screen = render(<ValuePropScreen />);
 
     const content = [
-      screen.getByText("Find real cars"),
+      screen.getByText("Find a car by make and model"),
+      screen.getByLabelText("Page 1 of 2"),
       screen.getByRole("button", { name: "Next" }),
-      screen.getByRole("button", { name: "Skip" }),
     ];
 
     for (const node of content) {
-      expect(paddingInsideSafeArea(node)).toEqual(expect.arrayContaining(["px-6", "py-8"]));
+      expect(paddingInsideSafeArea(node)).toContain("px-6");
     }
+    expect(paddingInsideSafeArea(screen.getByRole("button", { name: "Next" }))).toContain("pb-4");
   });
 
-  it("keeps the splash mark off the screen edges", () => {
-    const screen = render(<OnboardingSplashScreen />);
+  it("keeps Back and Skip off the screen edges in the top bar", () => {
+    const screen = render(<ValuePropScreen />);
 
-    expect(paddingInsideSafeArea(screen.getByLabelText("AutoTM"))).toContain("px-6");
+    for (const name of ["Back", "Skip"]) {
+      expect(paddingInsideSafeArea(screen.getByRole("button", { name }))).toContain("px-4");
+    }
   });
 
   it.each([
     ["language", <LanguagePickerScreen key="language" />],
     ["value prop", <ValuePropScreen key="value-prop" />],
-    ["splash", <OnboardingSplashScreen key="splash" />],
   ])("adds the %s padding to the safe-area inset instead of replacing it", (_name, element) => {
     const { insetView } = render(element);
 
