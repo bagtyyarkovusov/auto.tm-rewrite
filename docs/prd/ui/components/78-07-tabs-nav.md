@@ -186,7 +186,8 @@ A tab screen keeps `useTabBarSpace()` clear at its bottom: either its root is pa
 - The primary action of a screen floats on a glass slab: radius 28, 8 dp padding, 12 dp from the side edges. Buttons inside are 56 dp high with a 20 dp radius, concentric with the slab. A hint, an error or a quiet second action sits in the same slab.
 - Content scrolls under the bar. The hook measures the bar and returns the padding the scrolling content must end with, so the last row can always be scrolled clear, also when the bar grows.
 - Position: where the bar's parent reaches the screen's bottom edge (Listing detail, a sheet) it sits at the tab bar's level from the table above. Where the parent already ends above the system inset, the tab bar or the keyboard, it sits 8 dp above the parent's edge. Inside a keyboard-avoiding view it rides up with the keyboard.
-- Used by: Model picker, Search parameters, Search (All filters), Listing detail (contact bar and owner bar), the Listing preview, and the Sell wizard and edit footer.
+- Used by: Model picker, Search parameters, Search (All filters), Listing detail (contact bar and owner bar), and the Listing preview.
+- Not used by the Sell wizard and Listing edit. Their one action (Continue, Done, Publish or Save changes) is a full-width 56 dp button on the page itself, below the scrolling step and above the system inset, with no slab behind it; the step ends above the button instead of scrolling under it. Back is the header's chevron.
 
 ### Glass renderings
 

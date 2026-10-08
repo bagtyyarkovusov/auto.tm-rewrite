@@ -5,6 +5,8 @@
 > Derived from wireframe: `docs/prd/ui/wireframes/mobile-listings-id-edit.md`  
 > Design archive source: `screens/01-vin.html`, `screens/02-photos.html`, `screens/03-vehicle.html`, `screens/04-specs.html`, `screens/05-price.html`, `screens/06-location.html`, `screens/07-description.html`, `screens/08-review.html`, `screens/09-discard.html`
 
+> **2026-10-08 chrome note (founder-approved).** The footer below is superseded. Back is only the header's chevron on a step opened from the section list. The bottom holds one full-width action (Done on a step, Save changes on the section list) on the page background, below the scrolling content and above the system inset, with no bar, border or panel behind it. The footer `Back` button and footer border in this document no longer apply.
+
 ==============================================
 HIGH-FIDELITY DESIGN — Mobile Edit Listing
 Platform: mobile

@@ -12,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { BackButton } from "@/components/navigation/StackHeader";
-import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Progress } from "@/components/ui/progress";
@@ -352,8 +351,6 @@ function WizardFooter({
   isLastStep,
   canContinue,
   canPublish,
-  canGoBack,
-  onBack,
   onContinue,
   onPublish,
   onReturnToReview,
@@ -372,8 +369,6 @@ function WizardFooter({
   isLastStep: boolean;
   canContinue: boolean;
   canPublish: boolean;
-  canGoBack: boolean;
-  onBack: () => void;
   onContinue: () => void;
   onPublish: () => void;
   onReturnToReview?: () => void;
@@ -392,7 +387,7 @@ function WizardFooter({
     return (
       <>
         {showDisabledReason && (
-          <Text className="px-2 pt-1 text-caption text-muted-foreground">
+          <Text className="px-1 text-caption text-muted-foreground">
             {disabledReason}
           </Text>
         )}
@@ -413,7 +408,7 @@ function WizardFooter({
     return (
       <>
         {showDisabledReason && (
-          <Text className="px-2 pt-1 text-caption text-muted-foreground">
+          <Text className="px-1 text-caption text-muted-foreground">
             {disabledReason}
           </Text>
         )}
@@ -433,13 +428,13 @@ function WizardFooter({
   return (
     <>
       {showDisabledReason && (
-        <Text className="px-2 pt-1 text-caption text-muted-foreground">
+        <Text className="px-1 text-caption text-muted-foreground">
           {disabledReason}
         </Text>
       )}
       {isLastStep && publishBlockers && publishBlockers.length > 0 ? (
         // One line each, so a screen reader reads them in this order before Publish.
-        <View testID="publish-blockers" className="gap-0.5 px-2 pt-1">
+        <View testID="publish-blockers" className="gap-0.5 px-1">
           {publishBlockers.map((line) => (
             <Text key={line} className="text-caption text-destructive">
               {line}
@@ -448,59 +443,35 @@ function WizardFooter({
         </View>
       ) : null}
       {isLastStep && publishError && !isPublishing ? <PublishErrorAlert message={publishError} /> : null}
-      <View className="flex-row gap-2">
-        {canGoBack ? (
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1"
-            onPress={onBack}
-          >
-            <Text>{t("back")}</Text>
-          </Button>
-        ) : secondaryAction ? (
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1"
-            onPress={secondaryAction.onPress}
-            disabled={secondaryAction.disabled}
-          >
-            <Text>{secondaryAction.label}</Text>
-          </Button>
-        ) : (
-          <View className="flex-1" />
-        )}
+      {/* Back is in the header, so the step's one action has the full width. */}
+      {isLastStep ? (
+        <Button
+          variant="brand"
+          size="lg"
+          className="w-full"
+          onPress={onPublish}
+          // Disabled while publishing, so a second tap cannot publish twice.
+          disabled={!canPublish || isPublishing}
+          accessibilityState={{ busy: isPublishing }}
+        >
+          <Text>{isPublishing ? t("publishingEllipsis") : (publishLabel ?? t("publish"))}</Text>
+        </Button>
+      ) : (
+        <Button
+          variant="default"
+          size="lg"
+          className="w-full"
+          onPress={onContinue}
+          disabled={!canContinue}
+        >
+          <Text>{t("continue")}</Text>
+        </Button>
+      )}
 
-        {isLastStep ? (
-          <Button
-            variant="brand"
-            size="lg"
-            className="flex-1"
-            onPress={onPublish}
-            // Disabled while publishing, so a second tap cannot publish twice.
-            disabled={!canPublish || isPublishing}
-            accessibilityState={{ busy: isPublishing }}
-          >
-            <Text>{isPublishing ? t("publishingEllipsis") : (publishLabel ?? t("publish"))}</Text>
-          </Button>
-        ) : (
-          <Button
-            variant="default"
-            size="lg"
-            className="flex-1"
-            onPress={onContinue}
-            disabled={!canContinue}
-          >
-            <Text>{t("continue")}</Text>
-          </Button>
-        )}
-      </View>
-
-      {canGoBack && secondaryAction && (
+      {secondaryAction && (
         <Button
           variant="link"
-          className="self-start"
+          className="self-center"
           onPress={secondaryAction.onPress}
           disabled={secondaryAction.disabled}
         >
@@ -546,7 +517,6 @@ export function WizardLayout({
   uploadStatus,
   onUploadStatusPress,
 }: WizardLayoutProps) {
-  const bar = useStickyActionBar();
   return (
     <SafeAreaView className="flex-1 bg-background">
       <WizardHeader
@@ -574,32 +544,29 @@ export function WizardLayout({
         onRetrySave={onRetrySave}
       />
 
-      {/* The step scrolls under the floating action bar and ends clear of it. */}
-      <View className="flex-1">
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: bar.space }}>
-          <View className="w-full px-5">{children}</View>
-        </ScrollView>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 16 }}>
+        <View className="w-full px-5">{children}</View>
+      </ScrollView>
 
-        <StickyActionBar {...bar.barProps}>
-          <WizardFooter
-            isLastStep={isLastStep}
-            canContinue={canContinue}
-            canPublish={canPublish}
-            canGoBack={canGoBack}
-            onBack={onBack}
-            onContinue={onContinue}
-            onPublish={onPublish}
-            onReturnToReview={onReturnToReview}
-            mode={mode}
-            editDetourActive={editDetourActive}
-            disabledReason={disabledReason}
-            publishBlockers={publishBlockers}
-            isPublishing={isPublishing}
-            publishError={publishError}
-            secondaryAction={secondaryAction}
-            publishLabel={publishLabel}
-          />
-        </StickyActionBar>
+      {/* The action sits on the page below the step, never over it: the step ends
+          above the button, and the safe area keeps the button off the system inset. */}
+      <View testID="wizard-footer" className="gap-2 px-5 py-2">
+        <WizardFooter
+          isLastStep={isLastStep}
+          canContinue={canContinue}
+          canPublish={canPublish}
+          onContinue={onContinue}
+          onPublish={onPublish}
+          onReturnToReview={onReturnToReview}
+          mode={mode}
+          editDetourActive={editDetourActive}
+          disabledReason={disabledReason}
+          publishBlockers={publishBlockers}
+          isPublishing={isPublishing}
+          publishError={publishError}
+          secondaryAction={secondaryAction}
+          publishLabel={publishLabel}
+        />
       </View>
 
     </SafeAreaView>
