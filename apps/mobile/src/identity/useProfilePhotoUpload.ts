@@ -186,6 +186,12 @@ export function useProfilePhotoUpload() {
         await upload();
       } else owner.dispose();
     } catch (error) {
+      try { await owner.current(); }
+      catch {
+        owner.dispose();
+        if (!selected) profilePhotoUploadStore.setState({ state: { status: "idle" } });
+        return;
+      }
       owner.dispose();
       if (error instanceof PhotoSessionEnded) return;
       profilePhotoUploadStore.setState({ state: { status: "failed" } });
