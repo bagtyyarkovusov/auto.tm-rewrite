@@ -40,7 +40,7 @@ const state = vi.hoisted(() => ({
     fetchNextPage: vi.fn(),
   },
   mutation: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false },
-  socket: { sendTextMessage: vi.fn(), sendImageMessage: vi.fn() },
+  socket: { sendTextMessage: vi.fn(), sendImageMessage: vi.fn(), deleteMessage: vi.fn() },
   toast: vi.fn(),
   clipboard: vi.fn(async (_text: string) => true),
   reportSheet: { current: null as null | { messageId: string; open: boolean; onReported: (id: string) => void } },
@@ -83,7 +83,7 @@ vi.mock("../../src/conversations/socket/useConversationSocket", () => ({
     sendTextMessage: state.socket.sendTextMessage,
     sendImageMessage: state.socket.sendImageMessage,
     markRead: vi.fn(async () => ({ ok: true })),
-    deleteMessage: vi.fn(),
+    deleteMessage: state.socket.deleteMessage,
   }),
 }));
 vi.mock("../../src/conversations/components/useConversationCatalogMaps", () => ({
@@ -186,6 +186,7 @@ beforeEach(() => {
   state.messages.fetchNextPage.mockReset();
   state.socket.sendTextMessage.mockReset();
   state.socket.sendImageMessage.mockReset();
+  state.socket.deleteMessage.mockReset();
   state.mutation.mutateAsync.mockReset();
   state.toast.mockReset();
   state.clipboard.mockClear();
@@ -1235,7 +1236,7 @@ describe("Conversation keyboard ownership", () => {
       if (os === "android") {
         expect(within(active[0]).getByText("Read while typing")).toBeTruthy();
         expect(active[0].props.behavior).toBe("height");
-        expect(active[0].props.style).toEqual({ flex: 1 });
+        expect(active[0].props.className).toBe("flex-1");
       } else {
         expect(active[0].props.behavior).toBe("padding");
       }
@@ -1268,5 +1269,26 @@ describe("Acknowledged Message transport coverage", () => {
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
     expect(screen.getAllByRole("imagebutton", { name: "Photo" })).toHaveLength(1);
     expect(within(screen.getByRole("imagebutton", { name: "Photo" })).UNSAFE_getByType(Image).props.source.uri).toContain("chat-attachments/ack.jpg");
+  });
+});
+
+describe("Acknowledged own Message actions", () => {
+  it.each([false, true])("offers Delete and redacts its acknowledged local row without echo, HTTP=%s", async (http) => {
+    const deletedAt = new Date().toISOString();
+    state.socket.sendTextMessage.mockResolvedValue({ ok: true, message: { id: "ack-to-delete" } });
+    state.socket.deleteMessage.mockResolvedValue(http ? { ok: false, code: "NOT_CONNECTED" } : { ok: true, messageId: "ack-to-delete", conversationId: CONVERSATION_ID, deletedAt });
+    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.({ messageId: "ack-to-delete", conversationId: CONVERSATION_ID, deletedAt }));
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Acknowledged and deletable");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    fireEvent(screen.getByText("Acknowledged and deletable"), "longPress");
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+    fireEvent.press(screen.getByRole("button", { name: "Delete" }));
+    expect(screen.getByText("Delete message?")).toBeTruthy();
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Delete" })); });
+    expect(screen.queryByText("Acknowledged and deletable")).toBeNull();
+    expect(screen.getByText("Message deleted")).toBeTruthy();
+    expect(state.socket.deleteMessage).toHaveBeenCalledWith({ conversationId: CONVERSATION_ID, messageId: "ack-to-delete" });
   });
 });

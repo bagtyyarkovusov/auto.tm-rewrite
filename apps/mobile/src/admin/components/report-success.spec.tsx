@@ -102,6 +102,7 @@ describe.each(["android", "ios"] as const)("report keyboard layout on %s", (os) 
       fireEvent.press(view.getByRole("radio", { name: "Other" }));
       fireEvent.changeText(view.getByPlaceholderText("Describe the issue..."), "Report while typing");
       const avoidance = view.UNSAFE_getByType(KeyboardAvoidingView);
+      expect(avoidance.props.enabled).toBe(true);
       expect(avoidance.props.behavior).toBe("padding");
       expect(within(avoidance).getByDisplayValue("Report while typing")).toBeTruthy();
       expect(within(avoidance).getByRole("button", { name: "Submit report", disabled: false })).toBeTruthy();
