@@ -266,6 +266,7 @@ describe("Reported Message detail", () => {
     expect(screen.getByText("Текст жалобы <script>bad()</script>")).toBeDefined();
     expect(document.querySelector("script")).toBeNull();
     expect(screen.getByText("Есть вложение")).toBeDefined();
+    expect(screen.getByText("Тип:").parentElement?.textContent).toBe("Тип: Сообщение");
     expect(screen.getByText("Отправлено:")).toBeDefined();
     expect(screen.getByRole("link", { name: "Борис" }).getAttribute("href")).toBe("/users/sender-1");
     expect(document.querySelector('a[href="/users/m1"]')).toBeNull();
@@ -299,6 +300,20 @@ describe("Reported Message detail", () => {
     mockDetail(messageReport({ available: false, label: "Сообщение удалено или недоступно", messageBody: undefined, sender: { available: false, label: "Пользователь удалён" } }));
     await renderPage();
     expect(screen.getByText("Сообщение удалено или недоступно")).toBeDefined();
+    expect(screen.getByText("Пользователь удалён")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Заблокировать пользователя" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Отклонить" })).toBeDefined();
+  });
+  it("keeps a missing Message with a live sender readable and links to that sender", async () => {
+    mockDetail(messageReport({ available: false, label: "Сообщение удалено или недоступно", messageBody: undefined }));
+    await renderPage();
+    expect(screen.getByText("Сообщение удалено или недоступно")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Борис" }).getAttribute("href")).toBe("/users/sender-1");
+  });
+  it("keeps the reported Message readable after its sender is deleted and offers only dismissal", async () => {
+    mockDetail(messageReport({ sender: { available: false, label: "Пользователь удалён" } }));
+    await renderPage();
+    expect(screen.getByText("Текст жалобы <script>bad()</script>")).toBeDefined();
     expect(screen.getByText("Пользователь удалён")).toBeDefined();
     expect(screen.queryByRole("button", { name: "Заблокировать пользователя" })).toBeNull();
     expect(screen.getByRole("button", { name: "Отклонить" })).toBeDefined();
