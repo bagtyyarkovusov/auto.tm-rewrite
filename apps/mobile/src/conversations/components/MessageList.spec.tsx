@@ -1,3 +1,4 @@
+import * as RN from "react-native";
 import { StyleSheet } from "react-native";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -516,3 +517,15 @@ describe("MessageList empty", () => {
    if (!container) throw new Error("Empty-state container missing");
    expect(StyleSheet.flatten(container.props.style)?.transform).toBeUndefined();
  });
+
+it("returns to the newest Message after sending while reading older history", () => {
+  const requests = (RN as unknown as { scrollRequests: unknown[] }).scrollRequests;
+  const screen = renderMobile(<MessageList currentUserId={ME} messages={[message("old", at(1, 10), { senderId: PEER })]} />);
+  requests.length = 0;
+  screen.rerender(<MessageList currentUserId={ME} messages={[
+    message("new-send", at(2, 10), { status: "pending" }),
+    message("old", at(1, 10), { senderId: PEER }),
+  ]} />);
+  expect(screen.getByText("new-send")).toBeTruthy();
+  expect(requests).toContainEqual({ method: "scrollToOffset", offset: 0, animated: false });
+});
