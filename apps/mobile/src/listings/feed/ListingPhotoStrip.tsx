@@ -14,9 +14,9 @@ export const CARD_INSET = 0;
 /** The gap between the card's top and left edges and the first photo, in dp. */
 export const STRIP_INSET = 8;
 /** The share of the card width one photo takes: a little over half, so close to half of the next photo shows at rest. */
-export const STRIP_PHOTO_SHARE = 0.73;
-/** The strip height as a share of the card width: a 4:3 photo at 73% of the width, about 220 dp on a 402 dp screen. */
-export const STRIP_HEIGHT_SHARE = 0.5475;
+export const STRIP_PHOTO_SHARE = 0.61;
+/** The strip height as a share of the card width: a 4:3 photo at 61% of the width, about 184 dp on a 402 dp screen. */
+export const STRIP_HEIGHT_SHARE = 0.4575;
 /** The seam between two photos (`w-1`), in dp. */
 export const STRIP_GAP = 4;
 
@@ -44,7 +44,7 @@ interface ListingPhotoStripProps {
  * The photos at the top of a Results card, set in from the card's top and
  * left edges by `STRIP_INSET`, each with its own rounded corners (the card's
  * 28 dp radius less the inset). One photo fills the frame between the
- * insets. Two or more scroll sideways: each is 73% of the card wide so close
+ * insets. Two or more scroll sideways: each is 61% of the card wide so close
  * to half of the next one shows, they snap one photo per swipe, and a
  * "+N photos" tile ends the strip when the Listing has more photos than the
  * feed sent. The tile, like any photo, opens the Listing through its own tap
