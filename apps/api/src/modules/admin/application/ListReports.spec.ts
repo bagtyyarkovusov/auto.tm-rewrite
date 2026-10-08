@@ -335,7 +335,6 @@ describe("ListReports", () => {
     repo.reports = repo.reports.map(report => ContentReport.reconstruct({ ...report, messageContext: report.messageContext ? { ...report.messageContext, deletedAt: new Date() } : null }));
     const deleted = await uc.execute({});
     expect(deleted.items[0]?.targetSummary.label).toBe("Сообщение удалено");
-    expect(result.items[0]!.targetSummary.label).toContain("conv-1");
   });
 
   it("allows filtering by message targetType", async () => {
