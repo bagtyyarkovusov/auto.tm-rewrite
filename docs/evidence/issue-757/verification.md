@@ -89,4 +89,20 @@ The mobile overview records the protected onboarding boundary; Listings' overvie
 
 The native-host test adapter proves React state, localized content, callbacks, guarded route eligibility and native style objects. It does not execute a real navigation tree, native Back dispatch, a dialer, camera permissions, NativeWind rendering, portals or animation. After-fix screenshots and those native outcomes remain unverified. The PR contains exact steps for Android 16 edge-to-edge and Android 11+ Call, completed/skipped/cold-start Back, invalid/empty/valid VIN in RU/TK/EN, permanent camera denial/settings/regrant, Russian counts and Home light/dark/Reduce Motion.
 
-No independent review or merge was performed. Keep the PR draft; the integration owner runs the device pass and independent review. The live worktree and branch remain available at .claude/worktrees/codex-issue-757 and agent/issue-757; do not retire them before integration.
+## Fix round (review at 622c586e)
+
+The independent review (Standards and Spec, Claude Opus, pinned to 622c586e) returned "fix first" on both axes and listed FIX 1–7. This is the single authorised fix round under ADR-0085; no re-review runs. Codex implemented FIX 1–6 and exhausted its provider quota mid-item-6; Kimi K2.8 (Kimi Code CLI) verified the pushed checkpoint, repaired lint, and completed FIX 7.
+
+| FIX | Evidence |
+|---|---|
+| 1. Stored invalid VIN must not block editing a Listing | Red `bea83acd` (edit price of a Listing with stored VIN "Corolla" could not save). Green `2a19471b`: the wizard skips the VIN format check for a stored VIN in edit mode. |
+| 2. Enforce the VIN rule at first publish only | Red `f035fe7d` (API use-case regressions for publish/edit/republish). Green `5b0cd94f`: `PublishListing` applies the shared `VinSchema` from contracts; republish and edits of published Listings stay unaffected. `openapi:generate` produced no tracked change. |
+| 3. Russian plural without `Intl.PluralRules` | Red `43aaed06`. Green `bbaa3632`: `showResultsCount` selects one/few/many/other by count ranges; the test deletes `Intl.PluralRules` and covers 1, 2, 5, 11, 21, 22, 25. |
+| 4. Remove dead onboarding guard | Red `8e46a4a9`. Green `958696db`: `Stack.Protected`, the completion subscription and the readiness gate are removed; `initialRouteName: "(tabs)"` remains the Back anchor. |
+| 5. Back after publish lands on tabs | Red `521dbcd3`. Green `9147ca4e`: publish pushes the detail over the tabs instead of replacing them; `sell-toast.spec.tsx` drives a real `useNavigationBuilder`/`StackRouter` stack. |
+| 6. ASCII-only VIN uppercasing; dial-string sanitising | Red `ac46a41f`. Green `1b02f37c` plus non-ASCII regression `14be3e4b` and refinement in checkpoint `74403c23`: only ASCII letters normalise, so Unicode lookalikes stay invalid; the dialer strips the dial string to digits and a leading `+`. |
+| 7. Device steps in the PR body | Updated in the PR body with this docs commit: Back step replaced by the report's exact sequence, stored-invalid-VIN edit/save added, RU counts 5 and 11 marked mandatory. |
+
+Checkpoint `74403c23` failed the hosted `pr` check on lint (3 errors, 7 import/order warnings in apps/mobile). Repair commit `9166843a` cleared them without behavior change. Local gates on `9166843a`: affected lint (mobile, contracts, api), typecheck, 214 focused mobile tests across the nine touched specs, 454 contracts tests, 126 API listing-application tests, `check:runtime-imports`, and `openapi:generate` (no change) all passed. Hosted [pr run 37775906289](https://github.com/bagtyyarkovusov/auto.tm-rewrite/actions/runs/37775906289) passed on code head 9166843a.
+
+No independent review or merge was performed. Keep the PR draft; the integration owner runs the device pass. The live worktree and branch remain available at .claude/worktrees/codex-issue-757 and agent/issue-757; do not retire them before integration.
