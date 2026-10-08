@@ -37,7 +37,7 @@ describe("useProfilePhotoUpload", () => {
     server.use(
       http.post("*/uploads/presign", () => {
         presigns += 1;
-        return HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"' } });
+        return HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"' } });
       }),
       http.delete("*/me/photo", () => { removals += 1; return HttpResponse.json({ code: "INTERNAL" }, { status: 500 }); }),
     );

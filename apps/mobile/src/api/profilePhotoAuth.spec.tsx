@@ -50,7 +50,7 @@ describe("Profile photo uses the shared authentication lifecycle", () => {
         const auth = request.headers.get("authorization");
         events.push(`presign:${auth}`);
         if (operation === "presign" && auth !== "Bearer fresh") return HttpResponse.json({ code: "UNAUTHORIZED" }, { status: 401 });
-        return HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"' } });
+        return HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '"etag"' } });
       }),
       http.put("*/me/photo", ({ request }) => {
         const auth = request.headers.get("authorization"); events.push(`set:${auth}`);

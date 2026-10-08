@@ -111,7 +111,6 @@ async function refreshOnce(assertSession?: ClientOptions["assertSession"]): Prom
       throw new ApiError("UNAUTHENTICATED", 401, "No session to refresh");
     }
 
-
     const res = await fetchWithTimeout(
       `${BASE_URL}/auth/refresh`,
       {
