@@ -67,6 +67,10 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // The fill of a Message the user sent: a soft tint of the brand colour.
+        message: {
+          own: "hsl(var(--message-own))",
+        },
         // Floating navigation and controls above scrolling content.
         glass: {
           DEFAULT: themed("glass"),

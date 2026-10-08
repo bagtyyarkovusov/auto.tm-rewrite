@@ -48,7 +48,9 @@ interface MessageBubbleProps {
 const BUBBLE_MAX_WIDTH = 256;
 const DEFAULT_IMAGE_HEIGHT = 192;
 
-const TICK_CLASS = "size-3.5 text-primary-foreground/80";
+/** The time, ticks and state labels of an own Message: quiet, and 4.5:1 or better on the tint in both themes. */
+const OWN_META_CLASS = "text-foreground/70";
+const TICK_CLASS = `size-3.5 ${OWN_META_CLASS}`;
 
 /** ✓ sent, ✓✓ delivered or read, in one style (D6); read adds the label under the bubble. */
 function StatusTick({ status }: { status: MessageStatus }) {
@@ -124,7 +126,6 @@ interface BubbleContentProps {
   imageUri?: string;
   text: string;
   metadata?: ImageMessageMetadata | PostRefMessageMetadata;
-  isMine: boolean;
   onImagePress?: () => void;
   onLongPress?: () => void;
   postRefBrandName?: string;
@@ -145,7 +146,6 @@ function BubbleContent({
   imageUri,
   text,
   metadata,
-  isMine,
   onImagePress,
   onLongPress,
   postRefBrandName,
@@ -200,13 +200,7 @@ function BubbleContent({
   }
 
   return (
-    <Text
-      className={`text-body leading-5 ${
-        isMine ? "text-primary-foreground" : "text-foreground"
-      }`}
-    >
-      {text}
-    </Text>
+    <Text className="text-body leading-5 text-foreground">{text}</Text>
   );
 }
 
@@ -280,7 +274,7 @@ export function MessageBubble({
     : [time, stateLabel].filter(Boolean).join(", ");
 
   const metaColorClass =
-    isMine && !isDeleted ? "text-primary-foreground/80" : "text-muted-foreground";
+    isMine && !isDeleted ? OWN_META_CLASS : "text-muted-foreground";
 
   return (
     <View className={`px-4 py-1 ${isMine ? "items-end" : "items-start"}`}>
@@ -289,7 +283,7 @@ export function MessageBubble({
           isDeleted
             ? "bg-muted/60 rounded-md"
             : isMine
-              ? "bg-primary rounded-br-md"
+              ? "bg-message-own rounded-br-md"
               : "bg-muted rounded-bl-md"
         } ${isPending ? "opacity-70" : isReported && !isDeleted ? "opacity-60" : ""}`}
       >
@@ -307,7 +301,6 @@ export function MessageBubble({
             imageUri={imageUri}
             text={text}
             metadata={metadata}
-            isMine={isMine}
             onImagePress={onImagePress}
             onLongPress={longPressAction}
             postRefBrandName={postRefBrandName}
@@ -348,11 +341,7 @@ export function MessageBubble({
 
         {isFailed && (
           <View className="flex-row items-center justify-end gap-1 mt-1">
-            <Text
-              className={`text-caption ${isMine ? "text-primary-foreground" : "text-destructive"}`}
-            >
-              {t("failedToSend")}
-            </Text>
+            <Text className="text-caption text-destructive">{t("failedToSend")}</Text>
             {onRetry && (
               <Pressable
                 onPress={onRetry}
@@ -361,15 +350,8 @@ export function MessageBubble({
                 style={{ minHeight: 44, minWidth: 44 }}
                 className="flex-row items-center justify-center gap-1 -my-3 px-1"
               >
-                <Icon
-                  as={RotateCcw}
-                  className={`size-3.5 ${isMine ? "text-primary-foreground" : "text-destructive"}`}
-                />
-                <Text
-                  className={`text-caption font-semibold underline ${
-                    isMine ? "text-primary-foreground" : "text-destructive"
-                  }`}
-                >
+                <Icon as={RotateCcw} className="size-3.5 text-destructive" />
+                <Text className="text-caption font-semibold underline text-destructive">
                   {t("retry")}
                 </Text>
               </Pressable>
