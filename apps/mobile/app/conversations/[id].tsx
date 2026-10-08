@@ -3,14 +3,14 @@ import { KeyboardAvoidingView, Platform, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { ConversationsSchemas } from "@auto-tm/contracts";
 
 import { useViewer } from "../../src/auth/useViewer";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { ApiError } from "../../src/api/client";
-import { useConversationMessages } from "../../src/api/conversations/useConversationMessages";
+import { cacheAcknowledgedMessage, useConversationMessages } from "../../src/api/conversations/useConversationMessages";
 import {
   patchConversationDetail,
   useConversation,
@@ -435,31 +435,17 @@ export default function ConversationDetailScreen() {
 
   const markConfirmed = useCallback((
     clientMessageId: string,
-    serverId: string,
-    kind: "text" | "image" = "text",
-    metadata?: { key: string; width?: number; height?: number },
+    message: ConversationsSchemas.MessageSummary,
   ) => {
-    setLocalMessages((prev) =>
-      prev.map((m) => {
-        if (m.clientMessageId !== clientMessageId) return m;
-        if (m.localImageUri) {
-          FileSystem.deleteAsync(m.localImageUri, { idempotent: true }).catch(
-            () => {},
-          );
-        }
-        return {
-          ...m,
-          id: serverId,
-          status: "sent",
-          canDelete: !m.deletedAt && Date.now() - new Date(m.createdAt).getTime() <= 5 * 60 * 1000,
-          kind,
-          metadata,
-          localImageUri: undefined,
-          imageFileSize: undefined,
-        };
-      }),
-    );
-  }, []);
+    cacheAcknowledgedMessage(queryClient, message);
+    setLocalMessages((previous) => previous.filter((local) => {
+      if (local.clientMessageId !== clientMessageId) return true;
+      if (local.localImageUri) {
+        FileSystem.deleteAsync(local.localImageUri, { idempotent: true }).catch(() => {});
+      }
+      return false;
+    }));
+  }, [queryClient]);
 
   const markFailed = useCallback((clientMessageId: string) => {
     setLocalMessages((prev) =>
@@ -475,7 +461,7 @@ export default function ConversationDetailScreen() {
         { conversationId, text },
         {
           onSuccess: (data) => {
-            markConfirmed(clientMessageId, data.id);
+            markConfirmed(clientMessageId, data);
           },
           onError: (error) => {
             markFailed(clientMessageId);
@@ -499,7 +485,7 @@ export default function ConversationDetailScreen() {
         { conversationId, metadata, clientMessageId },
         {
           onSuccess: (data) => {
-            markConfirmed(clientMessageId, data.id, "image", metadata);
+            markConfirmed(clientMessageId, data);
             FileSystem.deleteAsync(localUri, { idempotent: true }).catch(
               () => {},
             );
@@ -543,7 +529,7 @@ export default function ConversationDetailScreen() {
       });
 
       if (result.ok) {
-        markConfirmed(clientMessageId, result.message.id);
+        markConfirmed(clientMessageId, result.message);
       } else if (result.code === "NOT_CONNECTED") {
         sendViaHttp(clientMessageId, text);
       } else {
@@ -614,7 +600,7 @@ export default function ConversationDetailScreen() {
         });
 
         if (result.ok) {
-          markConfirmed(clientMessageId, result.message.id, "image", metadata);
+          markConfirmed(clientMessageId, result.message);
           FileSystem.deleteAsync(attachment.uri, { idempotent: true }).catch(
             () => {},
           );
@@ -701,7 +687,7 @@ export default function ConversationDetailScreen() {
           });
 
           if (result.ok) {
-            markConfirmed(msg.clientMessageId, result.message.id, "image", metadata);
+            markConfirmed(msg.clientMessageId, result.message);
             FileSystem.deleteAsync(msg.localImageUri, { idempotent: true }).catch(
               () => {},
             );
@@ -727,7 +713,7 @@ export default function ConversationDetailScreen() {
       });
 
       if (result.ok) {
-        markConfirmed(msg.clientMessageId, result.message.id);
+        markConfirmed(msg.clientMessageId, result.message);
       } else if (result.code === "NOT_CONNECTED") {
         sendViaHttp(msg.clientMessageId, msg.text);
       } else {
@@ -750,6 +736,13 @@ export default function ConversationDetailScreen() {
   );
 
   const markLocalDeleted = useCallback((messageId: string, deletedAt: string) => {
+    queryClient.setQueryData<InfiniteData<ConversationsSchemas.ListMessagesResponse>>(
+      queryKeys.conversations.messages(conversationId),
+      (previous) => previous && { ...previous, pages: previous.pages.map((page) => ({
+        ...page,
+        items: page.items.map((message) => message.id === messageId ? { ...message, text: null, metadata: undefined, deletedAt } : message),
+      })) },
+    );
     // An acknowledged row may still be local while its server echo is delayed.
     setLocalMessages((previous) => previous.map((message) => message.id === messageId ? {
       ...message,
@@ -759,7 +752,7 @@ export default function ConversationDetailScreen() {
       deletedAt,
       canDelete: false,
     } : message));
-  }, []);
+  }, [conversationId, queryClient]);
 
   const deleteViaHttp = useCallback(
     (messageId: string) => {

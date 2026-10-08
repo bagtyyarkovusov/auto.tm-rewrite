@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+import { cacheAcknowledgedMessage } from "../../api/conversations/useConversationMessages";
 import { queryKeys } from "../../api/queryKeys";
 
 const CONV_ID = "550e8400-e29b-41d4-a716-446655440001";
@@ -811,6 +812,24 @@ describe("Shared connected socket room membership", () => {
     expect(rooms.has(secondId)).toBe(true);
     second.unmount();
     expect(rooms.has(secondId)).toBe(false);
+    client.clear();
+  });
+});
+
+describe("Acknowledgement followed by room echo", () => {
+  it("keeps one authoritative Message when message:new arrives after the acknowledgement", async () => {
+    const client = new QueryClient();
+    const message = { id: MSG_ID, conversationId: CONV_ID, senderId: USER_ID, kind: "text" as const, text: "Durable once", createdAt: "2026-10-08T12:00:00.000Z", clientMessageId: "client-ack" };
+    client.setQueryData(queryKeys.conversations.messages(CONV_ID), { pages: [{ items: [], nextCursor: null }], pageParams: [null] });
+    cacheAcknowledgedMessage(client, message);
+    let receive: ((event: unknown) => void) | undefined;
+    mockSocket.subscribeMessage.mockImplementation((handler) => { receive = handler; return () => {}; });
+    mockSocket.getStatus.mockReturnValue("idle");
+    const customWrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const hook = renderHook(() => useConversationSocket(CONV_ID, USER_ID), { wrapper: customWrapper });
+    act(() => receive?.({ message }));
+    expect(client.getQueryData<{ pages: { items: unknown[] }[] }>(queryKeys.conversations.messages(CONV_ID))?.pages.flatMap((page) => page.items)).toEqual([message]);
+    hook.unmount();
     client.clear();
   });
 });

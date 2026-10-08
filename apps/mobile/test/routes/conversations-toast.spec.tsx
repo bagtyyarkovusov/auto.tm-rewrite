@@ -25,7 +25,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/auth/useViewer", () => ({ useViewer: () => ({ userId: "buyer" }) }));
-vi.mock("../../src/api/conversations/useConversationMessages", () => ({
+vi.mock("../../src/api/conversations/useConversationMessages", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useConversationMessages: () => ({
     data: { pages: [{ items: [] }] },
     isPending: false,

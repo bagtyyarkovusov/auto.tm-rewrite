@@ -66,7 +66,7 @@ vi.mock("../../src/api/conversations/useConversationMessages", async (importOrig
       initialData: state.cachedMessages ? state.messages.data : undefined,
       staleTime: 30_000,
     });
-    return state.cachedMessages ? { ...state.messages, ...cached } : state.messages;
+    return state.cachedMessages ? { ...state.messages, ...cached } : { ...state.messages, data: cached.data ?? state.messages.data };
   },
 }));
 vi.mock("../../src/api/conversations/useSendTextMessage", () => ({ useSendTextMessage: () => state.mutation }));
@@ -1326,8 +1326,15 @@ describe("Authoritative acknowledgement cache", () => {
     const firstSend = state.socket.sendTextMessage.mock.calls[0];
     if (!firstSend) throw new Error("Send missing");
     const message = { ...serverMessage("canonical-id", BUYER_ID, "2026-10-08T12:34:56.000Z", "Canonical server text"), clientMessageId: firstSend[0].clientMessageId };
+    let finishOldRead: ((value: unknown) => void) | undefined;
+    const oldRead = !echoFirst ? screen.queryClient.fetchQuery({
+      queryKey: queryKeys.conversations.messages(CONVERSATION_ID),
+      queryFn: () => new Promise((resolve) => { finishOldRead = resolve; }),
+      staleTime: 0,
+    }).catch(() => undefined) : undefined;
     if (echoFirst) act(() => screen.queryClient.setQueryData(queryKeys.conversations.messages(CONVERSATION_ID), { pages: [{ items: [message, older], nextCursor: "older-page" }, { items: [], nextCursor: null }], pageParams: [null, "older-page"] }));
     await act(async () => { acknowledge?.({ ok: true, message }); });
+    await act(async () => { finishOldRead?.(state.messages.data); await oldRead; });
     const cached = screen.queryClient.getQueryData<{ pages: { items: ConversationsSchemas.MessageSummary[]; nextCursor: string | null }[]; pageParams: unknown[] }>(queryKeys.conversations.messages(CONVERSATION_ID));
     expect(cached?.pages.flatMap((page) => page.items).filter((row) => row.id === "canonical-id")).toEqual([message]);
     expect(cached?.pageParams).toEqual([null, "older-page"]);
@@ -1337,7 +1344,6 @@ describe("Authoritative acknowledgement cache", () => {
     screen.rerender(<RN.View />);
     screen.rerender(<ConversationDetailScreen />);
     expect(await screen.findByText("Canonical server text")).toBeTruthy();
-    act(() => screen.queryClient.setQueryData(queryKeys.conversations.messages(CONVERSATION_ID), cached));
     expect(screen.getAllByText("Canonical server text")).toHaveLength(1);
   });
 });
