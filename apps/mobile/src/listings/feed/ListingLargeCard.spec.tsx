@@ -143,13 +143,13 @@ describe("Results photo strip", () => {
     const interval = strip.props.snapToInterval as number;
     expect(strip.props.getItemLayout(null, 2).offset).toBe(STRIP_INSET + interval * 2);
   });
-  it("shows a little over half of the first photo, so close to half of the second shows at rest", () => {
+  it("shows about three quarters of the first photo, so a clear slice of the second shows at rest", () => {
     const { view } = renderCard({ ...feedItem, galleryKeys: ["a.jpg", "b.jpg", "c.jpg"], photoCount: 3 });
     const cardWidth = 390; // The window the test host reports (test/native-host.cjs); the card spans it.
     const photo = StyleSheet.flatten(view.getAllByTestId("listing-photo")[0]?.props.style) as { width: number; height: number };
     const secondShown = cardWidth - STRIP_INSET - photo.width - STRIP_GAP;
-    expect(photo.width / cardWidth).toBeGreaterThan(0.5); expect(photo.width / cardWidth).toBeLessThan(0.6);
-    expect(secondShown / cardWidth).toBeGreaterThan(0.38);
+    expect(photo.width / cardWidth).toBeGreaterThan(0.7); expect(photo.width / cardWidth).toBeLessThan(0.76);
+    expect(secondShown / cardWidth).toBeGreaterThan(0.2);
     // The frame stays 4:3, as before, so a car is cropped no harder than it was.
     expect(photo.width / photo.height).toBeCloseTo(4 / 3, 1);
   });
