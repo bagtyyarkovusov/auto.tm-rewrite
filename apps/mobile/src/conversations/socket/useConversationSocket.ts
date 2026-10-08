@@ -120,19 +120,29 @@ export function useConversationSocket(
   useEffect(() => {
     const socket = socketRef.current;
 
-    void socket.connect();
+    let active = true;
+    let joining = false;
+    let connectionVersion = 0;
+    joinedRef.current = false;
+    const join = () => {
+      if (!active || joining || joinedRef.current || !conversationId) return;
+      joining = true;
+      const version = connectionVersion;
+      void socket.joinConversation(conversationId).then((result) => {
+        if (!active || version !== connectionVersion) return;
+        joining = false;
+        joinedRef.current = result.ok;
+      });
+    };
 
     let previousStatus = socket.getStatus();
     const unsubscribeStatus = socket.subscribeStatus((next) => {
       setStatus(next);
-      if (next === "connected" && !joinedRef.current) {
-        void socket.joinConversation(conversationId).then((result) => {
-          if (result.ok) {
-            joinedRef.current = true;
-          }
-        });
-      }
-      if (next === "disconnected") {
+      if (next === "connected") {
+        join();
+      } else {
+        connectionVersion += 1;
+        joining = false;
         joinedRef.current = false;
         // Best-effort cleanup of any in-flight typing state.
         if (typingStartSentRef.current) {
@@ -204,7 +214,17 @@ export function useConversationSocket(
       });
     });
 
+    // connect() is a no-op when the authenticated shared socket is connected.
+    // Subscribe to room events first, then join even when no status is emitted.
+    void socket.connect().then(() => {
+      if (!active) return;
+      const current = socket.getStatus();
+      setStatus(current);
+      if (current === "connected") join();
+    });
+
     return () => {
+      active = false;
       unsubscribeStatus();
       unsubscribeMessage();
       unsubscribeWatermark();

@@ -73,6 +73,7 @@ export class ConversationSocket {
   private typingListeners = new Set<(event: TypingEvent) => void>();
   private presenceListeners = new Set<(event: PresenceEvent) => void>();
   private currentRoom: string | null = null;
+  private readonly pendingJoins = new Map<string, Promise<JoinConversationAck | SocketErrorAck>>();
 
   constructor(private readonly options: ConversationSocketOptions = {}) {}
 
@@ -164,6 +165,7 @@ export class ConversationSocket {
     });
 
     this.socket.on("disconnect", () => {
+      this.pendingJoins.clear();
       this.setStatus("disconnected");
     });
 
@@ -211,6 +213,7 @@ export class ConversationSocket {
   }
 
   disconnect(): void {
+    this.pendingJoins.clear();
     this.currentRoom = null;
     this.socket?.disconnect();
     this.socket = null;
@@ -229,9 +232,11 @@ export class ConversationSocket {
       };
     }
 
+    const pending = this.pendingJoins.get(conversationId);
+    if (pending) return pending;
     const socket = this.socket;
 
-    return new Promise((resolve) => {
+    const request = new Promise<JoinConversationAck | SocketErrorAck>((resolve) => {
       socket.emit(
         "conversation:join",
         { conversationId },
@@ -263,6 +268,13 @@ export class ConversationSocket {
         },
       );
     });
+    // The wrapper's reconnect and the mounted screen can request the same
+    // room in one connect turn. The gateway counts joins, so emit only once.
+    this.pendingJoins.set(conversationId, request);
+    void request.then(() => {
+      if (this.pendingJoins.get(conversationId) === request) this.pendingJoins.delete(conversationId);
+    });
+    return request;
   }
 
   async leaveConversation(conversationId: string): Promise<void> {
