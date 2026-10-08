@@ -14,6 +14,7 @@ import { PrismaService } from "@auto-tm/db";
 
 import { ListingsModule } from "../listings.module";
 import { IdentityModule } from "../../identity/identity.module";
+import { DomainError, LISTING_ERROR_CODES } from "../domain/types";
 import { EnvSchema } from "../../../env.schema";
 import { GlobalErrorFilter } from "../../../common/error.filter";
 import { JwtAuthGuard } from "../../../common/jwt-auth.guard";
@@ -550,6 +551,140 @@ describe("Listing media upload ownership e2e (#536)", () => {
 
       expect(rejected.body.code).toBe("UPLOAD_NOT_AVAILABLE");
       expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(3);
+    });
+  });
+
+  describe("publish retry after a transient failure (#735)", () => {
+    const publishPayload = (keys: string[]) => ({
+      brandId: suite.catalog.brandId,
+      modelId: suite.catalog.modelId,
+      cityId: suite.catalog.cityId,
+      regionId: suite.catalog.regionId,
+      priceAmount: 100000,
+      priceCurrency: "TMT",
+      year: 2020,
+      condition: "used",
+      mileageKm: 50000,
+      description: "Retry evidence car",
+      // The seller's own sign-in phone needs no code (ADR-0081).
+      contactPhone: suite.phone("user-a"),
+      allowCalls: true,
+      allowChat: true,
+      conditionDisclosure: { damaged: false },
+      photos: keys.map((key, i) => ({ photoId: suite.id(`retry-photo-${i}`), key, sortOrder: i })),
+    });
+
+    async function draftWithPhotos(keys: string[]) {
+      return prisma.listingDraft.create({ data: { userId: suite.id("user-a"), payload: publishPayload(keys) } });
+    }
+
+    function publish(draftId: string) {
+      return request
+        .post(`/api/v1/listings/drafts/${draftId}/publish`)
+        .set("Authorization", `Bearer ${tokens["user-a"]}`)
+        .send({});
+    }
+
+    it("releases the photos when generation fails transiently and republishes with the same photos on retry", async () => {
+      const keys = [await presignAndPut("user-a"), await presignAndPut("user-a"), await presignAndPut("user-a")] as [string, string, string];
+      const draft = await draftWithPhotos(keys);
+      let failed = false;
+      generationHook = async () => {
+        if (failed) return;
+        failed = true;
+        generationHook = undefined;
+        throw new Error("storage timeout");
+      };
+
+      const rejected = await publish(draft.id);
+
+      // A transient storage failure is a plain 500; the draft is untouched.
+      expect(rejected.status).toBe(500);
+      expect(await prisma.listingDraft.findUnique({ where: { id: draft.id } })).not.toBeNull();
+      expect(await prisma.listing.count({ where: { sellerId: suite.id("user-a") } })).toBe(0);
+      // #735 / ADR-0089: the failure released the reservation. No upload is
+      // retired and nothing is recorded for deletion, so the same photos can
+      // be adopted by a retry of the same draft.
+      const uploads = await prisma.mediaUpload.findMany({ where: { key: { in: keys } } });
+      expect(uploads.map((u) => u.state).sort()).toEqual(["AVAILABLE", "AVAILABLE", "AVAILABLE"]);
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: { in: uploads.map((u) => u.id) } } })).toBe(0);
+
+      const published = await publish(draft.id).expect(201);
+
+      const media = await prisma.listingMedia.findMany({ where: { listingId: published.body.id } });
+      expect(media.map((m) => m.key).sort()).toEqual([...keys].sort());
+      expect((await prisma.mediaUpload.findMany({ where: { key: { in: keys } } })).map((u) => u.state).sort())
+        .toEqual(["ADOPTED", "ADOPTED", "ADOPTED"]);
+    });
+
+    it("names the photo, retires only that upload and leaves the others adoptable when a photo is permanently unusable", async () => {
+      const keys = [await presignAndPut("user-a"), await presignAndPut("user-a"), await presignAndPut("user-a")] as [string, string, string];
+      const draft = await draftWithPhotos(keys);
+      generationHook = async (originalKey) => {
+        if (originalKey !== keys[1]) return;
+        generationHook = undefined;
+        // What SharpImageVariantGenerator raises for bytes that can never be an image.
+        throw new DomainError(LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID, "Uploaded file is not a usable image");
+      };
+
+      const rejected = await publish(draft.id);
+
+      expect(rejected.status).toBe(400);
+      expect(rejected.body).toMatchObject({
+        code: "UPLOAD_OBJECT_INVALID",
+        details: { key: keys[1], photoId: suite.id("retry-photo-1") },
+      });
+      const bad = await prisma.mediaUpload.findUniqueOrThrow({ where: { key: keys[1] } });
+      expect(bad.state).toBe("RETIRED");
+      expect(await prisma.mediaUploadCleanup.count({ where: { uploadId: bad.id } })).toBe(1);
+      expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { key: keys[0] } })).toMatchObject({ state: "AVAILABLE" });
+      expect(await prisma.mediaUpload.findUniqueOrThrow({ where: { key: keys[2] } })).toMatchObject({ state: "AVAILABLE" });
+      expect(await prisma.listing.count({ where: { sellerId: suite.id("user-a") } })).toBe(0);
+      expect(await prisma.listingDraft.findUnique({ where: { id: draft.id } })).not.toBeNull();
+    });
+
+    it("refuses an overlapping attachment while a retry of the released photos is in flight", async () => {
+      const listing = await createListing("user-a", "listing-a");
+      const keys = [await presignAndPut("user-a"), await presignAndPut("user-a"), await presignAndPut("user-a")] as [string, string, string];
+      const draft = await draftWithPhotos(keys);
+      let failed = false;
+      let signalInFlight!: () => void;
+      let releaseGeneration!: () => void;
+      const inFlight = new Promise<void>((resolve) => {
+        signalInFlight = resolve;
+      });
+      const hold = new Promise<void>((resolve) => {
+        releaseGeneration = resolve;
+      });
+      generationHook = async (originalKey) => {
+        if (!failed) {
+          failed = true;
+          generationHook = async (retryKey) => {
+            if (retryKey === keys[0]) {
+              signalInFlight();
+              await hold;
+            }
+          };
+          throw new Error("storage timeout");
+        }
+      };
+
+      await publish(draft.id).expect(500);
+      const retrying = publish(draft.id).then((response) => response);
+      await inFlight;
+      try {
+        // The retry re-reserved the photos, so the overlapping attachment
+        // loses exactly as it did against the first attempt (#721).
+        const loser = await attach("user-a", listing.id, keys[0]);
+        expect(loser.status).toBe(409);
+        expect(loser.body.code).toBe("UPLOAD_ALREADY_ATTACHED");
+        expect(await prisma.listingMedia.count({ where: { listingId: listing.id } })).toBe(3);
+      } finally {
+        releaseGeneration();
+      }
+      const published = await retrying;
+      expect(published.status).toBe(201);
+      expect(await prisma.listingMedia.findMany({ where: { listingId: published.body.id } })).toHaveLength(3);
     });
   });
 });

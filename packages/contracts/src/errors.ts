@@ -56,3 +56,16 @@ export const ErrorResponseSchema = z.object({
   requestId: z.string().uuid(),
 });
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
+
+/** UPLOAD_OBJECT_INVALID identifies a client-known key, and the draft photo when publishing. */
+export const UploadObjectInvalidDetailsSchema = z.object({
+  key: z.string().min(1),
+  photoId: z.string().uuid().optional(),
+}).strict();
+export type UploadObjectInvalidDetails = z.infer<typeof UploadObjectInvalidDetailsSchema>;
+
+export const UploadObjectInvalidResponseSchema = ErrorResponseSchema.extend({
+  code: z.literal("UPLOAD_OBJECT_INVALID"),
+  details: UploadObjectInvalidDetailsSchema,
+});
+export type UploadObjectInvalidResponse = z.infer<typeof UploadObjectInvalidResponseSchema>;

@@ -181,6 +181,9 @@ export class AttachMedia {
       // must not retire a claim another attempt is still preparing. If this
       // cannot be recorded now, the storage scanner retires it later.
       await abandon().catch(() => undefined);
+      if (err instanceof DomainError && err.code === LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID) {
+        throw new BadRequestException({ code: err.code, message: err.message, details: { key: upload.key } });
+      }
       throw this.rejection(err);
     }
   }

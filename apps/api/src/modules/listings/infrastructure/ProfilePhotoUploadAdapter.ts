@@ -86,6 +86,7 @@ export class ProfilePhotoUploadAdapter implements ProfilePhotoPort {
         throw new BadRequestException({
           code: LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID,
           message: "Uploaded file cannot be used as a profile photo",
+          details: { key: upload.key },
         });
       }
       await this.variantGenerator.generate(upload.key, { writeProtocol: upload.writeProtocol });
@@ -101,6 +102,9 @@ export class ProfilePhotoUploadAdapter implements ProfilePhotoPort {
       // presigns again. If that cannot be recorded now, the storage scanner
       // retires the stranded preparation after its deadline.
       await this.claims.abandon(reservation.token).catch(() => undefined);
+      if (err instanceof DomainError && err.code === LISTING_ERROR_CODES.UPLOAD_OBJECT_INVALID) {
+        throw new BadRequestException({ code: err.code, message: err.message, details: { key: upload.key } });
+      }
       throw this.rejection(err);
     }
   }

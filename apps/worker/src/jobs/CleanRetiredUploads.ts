@@ -11,7 +11,7 @@ import {
 
 export interface CleanRetiredUploadsInput {
   now: Date;
-  /** Upper bound on preparations cancelled and on pieces of work taken in this run. */
+  /** Upper bound on preparations recovered and on pieces of work taken in this run. */
   limit: number;
 }
 
@@ -22,8 +22,8 @@ export interface CleanRetiredUploadsResult {
 }
 
 /**
- * One bounded sweep of retired upload storage (ADR-0088). It first retires
- * preparations stranded past their deadline, then takes due work and, for each
+ * One bounded sweep of retired upload storage (ADR-0088/0089). It first releases
+ * stranded publish claims or retires other expired preparations, then takes due work and, for each
  * piece, deletes the recorded objects and marks it done only once storage has
  * proven every one of them absent. Anything else leaves the work waiting for
  * its next attempt with the reason recorded.
