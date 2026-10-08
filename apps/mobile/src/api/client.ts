@@ -48,6 +48,7 @@ interface RequestOptions<TResponse> {
 type ClientOptions = Pick<RequestOptions<unknown>, "auth" | "accessToken" | "timeout" | "assertSession">;
 
 let refreshInFlight: Promise<void> | null = null;
+const refreshSessionChecks = new Set<NonNullable<ClientOptions["assertSession"]>>();
 
 async function fetchWithTimeout(
   url: string,
@@ -93,22 +94,23 @@ function refreshUnavailable(message: string): ApiError {
   return new ApiError("REFRESH_UNAVAILABLE", 503, message);
 }
 
-async function refreshOnce(): Promise<void> {
+async function refreshOnce(assertSession?: ClientOptions["assertSession"]): Promise<void> {
+  if (assertSession) refreshSessionChecks.add(assertSession);
   if (refreshInFlight) {
-    return refreshInFlight;
+    try { await refreshInFlight; }
+    finally { if (assertSession) refreshSessionChecks.delete(assertSession); }
+    return;
   }
+  // A scoped caller may join a refresh that another request started. Its
+  // session must still own the result before refresh can store or clear auth.
+  const assertRefreshOwners = () => Promise.all([...refreshSessionChecks].map((check) => check()));
 
   refreshInFlight = (async () => {
     const session = await loadAuthSession();
     if (!session) {
       throw new ApiError("UNAUTHENTICATED", 401, "No session to refresh");
     }
-    const assertRefreshOwner = async () => {
-      const current = await loadAuthSession();
-      if (!current || current.user.id !== session.user.id || current.refreshToken !== session.refreshToken) {
-        throw new ApiError("UNAUTHENTICATED", 401, "Session ended during refresh");
-      }
-    };
+
 
     const res = await fetchWithTimeout(
       `${BASE_URL}/auth/refresh`,
@@ -123,7 +125,7 @@ async function refreshOnce(): Promise<void> {
       REFRESH_TIMEOUT_MS,
     );
 
-    await assertRefreshOwner();
+    await assertRefreshOwners();
     // Only a 401 is the API rejecting the refresh token (the one rejection the
     // contract defines). Any other answer says nothing about the token, so the
     // session stays and the next request retries (ADR-0077).
@@ -142,7 +144,7 @@ async function refreshOnce(): Promise<void> {
       throw refreshUnavailable("Refresh answer was not readable");
     }
     const parsed = AuthSchemas.RefreshResponseSchema.safeParse(json);
-    await assertRefreshOwner();
+    await assertRefreshOwners();
     if (!parsed.success) {
       await clearAuthSession();
       throw new ApiError("CONTRACT_VIOLATION", 502, "Bad refresh response");
@@ -158,6 +160,7 @@ async function refreshOnce(): Promise<void> {
     await refreshInFlight;
   } finally {
     refreshInFlight = null;
+    refreshSessionChecks.clear();
   }
 }
 
@@ -187,7 +190,7 @@ async function rawRequest<TResponse>(
     // below would never run for them. Refresh an expired token up front.
     if (session && !isRetry && isAccessTokenExpired(session)) {
       try {
-        await refreshOnce();
+        await refreshOnce(opts.assertSession);
       } catch {
         // A refresh the API rejected with 401, or whose 2xx JSON answer broke
         // the contract, has cleared the session, so the request goes out
@@ -221,7 +224,7 @@ async function rawRequest<TResponse>(
     !isRetry
   ) {
     await opts.assertSession?.();
-    await refreshOnce();
+    await refreshOnce(opts.assertSession);
     return rawRequest(path, opts, true);
   }
 
