@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
+import { ForbiddenException } from "@nestjs/common";
+import { InMemoryIdentityCheck } from "./testing/InMemoryIdentityCheck";
 import { JwtService } from "@nestjs/jwt";
 import type {
   OtpRequest,
@@ -360,6 +362,7 @@ interface MakeUseCaseOpts {
   reviewerBypassConfig?: ReviewerOtpBypassConfig;
   constantTimeComparator?: ConstantTimeComparatorPort;
   random?: RandomSourcePort;
+  identityCheck?: InMemoryIdentityCheck;
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
@@ -378,6 +381,7 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     opts.constantTimeComparator ?? new FakeConstantTimeComparator(),
     new VerifySignInCode(otpRepo, clock),
     opts.random ?? new FixedRandomSource([0.5]),
+    opts.identityCheck ?? new InMemoryIdentityCheck(),
   );
 }
 
@@ -399,6 +403,29 @@ describe("VerifyOtp", () => {
     eventBus = { emit: vi.fn() };
     constantTimeComparator = new FakeConstantTimeComparator();
     delete process.env["SIGNUPS_ENABLED"];
+  });
+
+  it.each(["phone", "email"] as const)("refuses sign-in by %s for a suspended User without issuing a session", async (channel) => {
+    const user = makeUser({ email: "buyer@example.com", emailVerifiedAt: NOW });
+    userRepo.users.push(user);
+    const destination = channel === "phone" ? user.phone! : user.email!;
+    otpRepo.addRecord(makeOtpRequest({ channel, destination }));
+    const identityCheck = new InMemoryIdentityCheck();
+    identityCheck.suspend(user.id);
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, identityCheck });
+    await expect(uc.execute({ [channel]: destination, code: "123456" } as Parameters<VerifyOtp["execute"]>[0])).rejects.toThrow(ForbiddenException);
+    expect(sessionRepo.sessions).toHaveLength(0);
+  });
+
+  it("refuses reviewer phone sign-in for a suspended User without issuing a session", async () => {
+    const account = reviewerDemoAccount(1);
+    const user = makeUser({ phone: account.phone, email: account.email, emailVerifiedAt: NOW });
+    userRepo.users.push(user);
+    const identityCheck = new InMemoryIdentityCheck();
+    identityCheck.suspend(user.id);
+    const uc = makeUseCase({ userRepo, sessionRepo, identityCheck, reviewerBypassConfig: { enabled: true, accounts: [account] } });
+    await expect(uc.execute({ phone: account.phone, code: account.code })).rejects.toThrow(ForbiddenException);
+    expect(sessionRepo.sessions).toHaveLength(0);
   });
 
   // --- Happy path ---
