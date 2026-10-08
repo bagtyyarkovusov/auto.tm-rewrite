@@ -61,6 +61,9 @@ export function ContactCtaBar({
   const canCall =
     !pending && allowCalls && !!contactPhone && !isSold && !isArchived;
   const canMessage = !pending && allowChat && !isSold && !isArchived;
+  // A loaded, open Listing that takes no calls has no Call button at all, as on
+  // the Results and Favorites cards. Loading, sold and archived keep it, disabled.
+  const showCall = pending || isSold || isArchived || (allowCalls && !!contactPhone);
   const onDark = variant === "viewer";
   // Inside the sticky action bar the bar supplies the padding.
   const floating = variant === "floating";
@@ -100,6 +103,7 @@ export function ContactCtaBar({
   return (
     <View>
       <View className={cn("flex-row items-center gap-2", floating ? "" : "px-4 py-3")}>
+        {showCall ? (
         <Button
           variant={canCall ? "brand" : "secondary"}
           size="lg"
@@ -115,6 +119,7 @@ export function ContactCtaBar({
             {t("call")}
           </Text>
         </Button>
+        ) : null}
 
         <Button
           variant={canMessage ? "default" : "secondary"}

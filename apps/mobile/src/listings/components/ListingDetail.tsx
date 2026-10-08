@@ -183,14 +183,10 @@ export function ListingDetailView({
             <Text className="text-body font-semibold">
               {t("yourListing")} · {t(listing.status)}
             </Text>
-            <View className="flex-row gap-4">
-              <Text className="text-callout text-muted-foreground">
-                {t("listingViews", { count: listing.viewCount })}
-              </Text>
-              <Text className="text-callout text-muted-foreground">
-                {t("listingSaves", { count: listing.favoriteCount })}
-              </Text>
-            </View>
+            {/* Saves are counted by the API. Views are not counted yet, so no view figure is shown. */}
+            <Text className="text-callout text-muted-foreground">
+              {t("listingSaves", { count: listing.favoriteCount })}
+            </Text>
           </View>
         )}
         <Text
