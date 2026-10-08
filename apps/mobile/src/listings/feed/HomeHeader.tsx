@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { useState } from "react";
 import { Car, ChevronRight, Search } from "lucide-react-native";
 import { View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -27,6 +28,7 @@ import { localeTag } from "@/src/i18n/resources";
 export function HomeHeader() {
   const { t, i18n } = useTranslation();
   const count = useListingCount({});
+  const [seeAllPressed, setSeeAllPressed] = useState(false);
 
   return (
     <View className="gap-5 pb-1">
@@ -85,8 +87,13 @@ export function HomeHeader() {
             variant="ghost"
             className="h-11 px-3 active:bg-transparent"
             feedback="none"
-            style={({ pressed }) => ({ backgroundColor: "transparent", opacity: pressed ? 0.6 : 1 })}
-            onPress={() => router.push("/(tabs)/(search)/results")}
+            style={{ backgroundColor: "transparent", opacity: seeAllPressed ? 0.6 : 1 }}
+            onPressIn={() => setSeeAllPressed(true)}
+            onPressOut={() => setSeeAllPressed(false)}
+            onPress={() => {
+              setSeeAllPressed(false);
+              router.push("/(tabs)/(search)/results");
+            }}
           >
             <Text className="text-body font-medium text-foreground">{t("seeAll")}</Text>
           </Button>
