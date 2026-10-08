@@ -595,6 +595,10 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         description: "Validation error",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
+      403: {
+        description: "Suspended User: FORBIDDEN with details.reason USER_SUSPENDED; no code consumption or Session issuance",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
     },
   });
 
@@ -614,7 +618,11 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         },
       },
       401: {
-        description: "Invalid or expired refresh token",
+        description: "Invalid, expired or revoked refresh token",
+        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+      },
+      403: {
+        description: "Suspended User: FORBIDDEN with details.reason USER_SUSPENDED; no Session rotation",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
     },
