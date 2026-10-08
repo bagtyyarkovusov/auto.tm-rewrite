@@ -93,7 +93,8 @@ function pullRequest(t) {
     finish() {
       const head = r.git("rev-parse", "HEAD");
       const main = r.git("rev-parse", "main");
-      const merge = r.git("commit-tree", `${head}^{tree}`, "-p", main, "-p", head, "-m", "synthetic merge");
+      const tree = r.git("merge-tree", "--write-tree", main, head);
+      const merge = r.git("commit-tree", tree, "-p", main, "-p", head, "-m", "synthetic merge");
       r.git("reset", "--hard", merge);
       return {
         action: "synchronize", number: 753, before, after: head,
@@ -320,4 +321,21 @@ test("leading whitespace paths do not disguise hand code edits as docs", async (
   const r = pullRequest(t);
   r.commit({ " docs/hidden-code": "code\n", "docs/a.md": "evidence\n" });
   assert.equal((await select(r, r.finish())).lane, "full");
+});
+
+test("a stale event base SHA still uses the synthetic merge's current main parent", async (t) => {
+  const r = pullRequest(t);
+  r.git("switch", "main");
+  r.commit({ "src/main.ts": "new main code\n" });
+  r.git("switch", "-");
+  r.commit({ "docs/a.md": "docs evidence\n" });
+  const event = r.finish();
+  // Observed on GitHub: PR base.sha still named the old base while the
+  // synchronize checkout's HEAD^1 named the updated main commit.
+  event.pull_request.base.sha = r.base;
+  const result = await select(r, event);
+  assert.equal(result.lane, "docs", result.reason);
+  const shallow = shallowCheckout(t, r);
+  const fetched = await select(shallow, event, async () => green(event), { fetchHistory: true });
+  assert.equal(fetched.lane, "docs", fetched.reason);
 });
