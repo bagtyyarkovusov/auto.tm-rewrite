@@ -108,9 +108,16 @@ describe("ReportsController", () => {
 
     it("still allows GET /admin/reports/:id", async () => {
       const { controller } = makeController({ reportEntryEnabled: false });
-      const result = await controller.getReportDetail("report-1");
+      const result = await controller.getReportDetail("report-1", { user: { sub: "admin-1" } } as unknown as FastifyRequest);
       expect(result.id).toBe("report-1");
     });
+  });
+
+  it("requires the actor identity on report detail and passes it to the audited read", async () => {
+    const { controller, getReportDetailUC } = makeController();
+    await expect(controller.getReportDetail("r1", {} as FastifyRequest)).rejects.toThrow(ForbiddenException);
+    await controller.getReportDetail("r1", { user: { sub: "admin-1" } } as unknown as FastifyRequest);
+    expect(getReportDetailUC.execute).toHaveBeenLastCalledWith({ reportId: "r1", adminUserId: "admin-1" });
   });
 
   describe("REPORT_ENTRY_ENABLED=true", () => {

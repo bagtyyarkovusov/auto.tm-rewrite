@@ -208,3 +208,77 @@ describe("ReportDetailPage profile photo", () => {
   });
 
 });
+
+function messageReport(targetOverrides: Record<string, unknown> = {}) {
+  return userReport({ target: {
+    targetType: "message", targetId: "m1", available: true, label: "Сообщение",
+    messageBody: "Текст жалобы <script>bad()</script>", messageCreatedAt: "2026-01-01T12:00:00Z", messageHasAttachment: true,
+    sender: { available: true, label: "Борис", userId: "sender-1", role: "buyer" },
+    ...targetOverrides,
+  } });
+}
+
+describe("Reported Message detail", () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(cleanup);
+  it("shows only the reported Message, attachment marker, sent time and sender link", async () => {
+    mockDetail(messageReport());
+    await renderPage();
+    expect(screen.getByText("Текст жалобы <script>bad()</script>")).toBeDefined();
+    expect(document.querySelector("script")).toBeNull();
+    expect(screen.getByText("Есть вложение")).toBeDefined();
+    expect(screen.getByText("Отправлено:")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Борис" }).getAttribute("href")).toBe("/users/sender-1");
+    expect(document.querySelector('a[href="/users/m1"]')).toBeNull();
+    expect(screen.getByText("Заблокировать отправителя")).toBeDefined();
+  });
+  it("submits suspension with the sender ID and Message report ID and refreshes on success", async () => {
+    mockDetail(messageReport());
+    mockState.suspendUser.mockResolvedValue({ ok: true, data: { reportStatus: "actioned" } });
+    await renderPage();
+    const button = screen.getByRole("button", { name: "Заблокировать пользователя" });
+    const form = button.closest("form")!;
+    fireEvent.change(within(form).getByRole("textbox"), { target: { value: "Спам" } });
+    fireEvent.click(button);
+    await waitFor(() => expect(mockState.suspendUser).toHaveBeenCalledWith("sender-1", "Спам", "r1"));
+    await waitFor(() => expect(mockState.refresh).toHaveBeenCalled());
+    expect(screen.getByText("Действие выполнено успешно.")).toBeDefined();
+  });
+  it("dismisses a Message report through the existing audited action", async () => {
+    mockDetail(messageReport());
+    mockState.dismissReport.mockResolvedValue({ ok: true, data: { status: "dismissed" } });
+    await renderPage();
+    const button = screen.getByRole("button", { name: "Отклонить" });
+    fireEvent.change(within(button.closest("form")!).getByRole("textbox"), { target: { value: "Нарушений нет" } });
+    fireEvent.click(button);
+    await waitFor(() => expect(mockState.dismissReport).toHaveBeenCalledWith("r1", "Нарушений нет"));
+  });
+  it("renders a deleted Message and a deleted sender with no broken link or suspension", async () => {
+    mockDetail(messageReport({ available: false, label: "Сообщение удалено или недоступно", messageBody: undefined, sender: { available: false, label: "Пользователь удалён" } }));
+    await renderPage();
+    expect(screen.getByText("Сообщение удалено или недоступно")).toBeDefined();
+    expect(screen.getByText("Пользователь удалён")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Заблокировать пользователя" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Отклонить" })).toBeDefined();
+  });
+  it("shows suspension failure and disables action during the request", async () => {
+    mockDetail(messageReport());
+    let finish!: (value: unknown) => void;
+    mockState.suspendUser.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    await renderPage();
+    const button = screen.getByRole("button", { name: "Заблокировать пользователя" });
+    fireEvent.change(within(button.closest("form")!).getByRole("textbox"), { target: { value: "Спам" } });
+    fireEvent.click(button);
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(true));
+    finish({ ok: false, error: "Не удалось заблокировать", code: "FORBIDDEN" });
+    await waitFor(() => expect(screen.getByText("Не удалось заблокировать")).toBeDefined());
+    expect(mockState.refresh).toHaveBeenCalled();
+  });
+  it("keeps Message content readable with moderation disabled and hides mutation controls", async () => {
+    mockDetail(messageReport(), false);
+    await renderPage();
+    expect(screen.getByText("Текст жалобы <script>bad()</script>")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Заблокировать пользователя" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Отклонить" })).toBeNull();
+  });
+});

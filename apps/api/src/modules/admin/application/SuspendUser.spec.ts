@@ -185,7 +185,7 @@ class FakePrismaService {
 
 function makeReport(
   id: string,
-  targetType: "listing" | "user",
+  targetType: "listing" | "user" | "message",
   targetId: string,
   status = "pending",
 ) {
@@ -287,6 +287,30 @@ describe("SuspendUser", () => {
       before: { suspendedAt: null, suspendedById: null, suspensionReason: null, reportStatus: "pending" },
       after: { reportStatus: "actioned" },
     });
+  });
+
+  it("suspends the reported Message sender, resolves only that report and audits both IDs without text", async () => {
+    identityRead.seed("u1", { role: "buyer" });
+    identityAdmin.seed("u1", { suspendedAt: null });
+    const report = makeReport("r1", "message", "m1");
+    reportRepo.reports = [ContentReport.reconstruct({ ...report, messageContext: {
+      messageId: "m1", conversationId: "c1", listingId: "l1", buyerId: "u2", sellerId: "u1", senderId: "u1", createdAt: new Date(), body: "Sensitive text", deletedAt: null, surroundingMessages: [],
+    } }), makeReport("r2", "user", "u1")];
+    const result = await makeUseCase(prisma, identityRead, identityAdmin, reportRepo, auditRepo).execute({ userId: "u1", adminUserId: "admin-1", reason: "Spam", reportId: "r1" });
+    expect(result.reportStatus).toBe("actioned");
+    expect(identityAdmin.states["u1"]?.suspendedAt).toBeInstanceOf(Date);
+    expect(reportRepo.reports.find(r => r.id === "r2")?.status).toBe("pending");
+    expect(auditRepo.rows[0]?.details).toMatchObject({ reportId: "r1", messageId: "m1" });
+    expect(JSON.stringify(auditRepo.rows)).not.toContain("Sensitive text");
+    identityRead.seed("u2", { role: "buyer" });
+    await expect(makeUseCase(prisma, identityRead, identityAdmin, reportRepo, auditRepo).execute({ userId: "u2", adminUserId: "admin-1", reason: "Spam", reportId: "r1" })).rejects.toThrow(BadRequestException);
+  });
+
+  it("refuses to suspend a deleted sender", async () => {
+    identityRead.seed("u1", { role: "buyer" });
+    identityRead.users["u1"]!.deleted = true;
+    await expect(makeUseCase(prisma, identityRead, identityAdmin, reportRepo, auditRepo).execute({ userId: "u1", adminUserId: "admin-1", reason: "Spam" })).rejects.toThrow(NotFoundException);
+    expect(auditRepo.rows).toHaveLength(0);
   });
 
   it("returns NOT_FOUND for missing user", async () => {
