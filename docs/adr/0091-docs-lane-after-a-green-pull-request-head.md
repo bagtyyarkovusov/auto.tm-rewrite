@@ -18,7 +18,11 @@ For ordinary commits, inspect each commit's changes. For a two-parent merge, req
 
 The workflow reads the previous head from the synchronize payload's top-level `before` field. It adds only `checks: read` to its existing `contents: read` permission. It checks the GitHub API result for the exact previous head and pull request. A failed, cancelled, running, missing, unreadable or ambiguous check requires the full lane.
 
-The checkout remains GitHub's synthetic merge commit at depth 2. That depth includes the PR head but leaves its own parents shallow. The script fetches the exact event SHAs and deepens history only until it can prove ancestry and reconstruct merges. It stops after at most 255 extra history levels. Missing history, a fetch failure, a force-push, an unsupported event, a merge from outside `main`, or an octopus merge requires the full lane. Fork inputs use the full lane unless the existing all-docs rule applies.
+The checkout remains GitHub's synthetic merge commit at depth 2. That depth includes the PR head but leaves its own parents shallow.
+
+The first parent is the main snapshot used by this run. GitHub can keep an older SHA in the PR event's `base.sha` after `main` advances. Require that older base to be an ancestor of the synthetic merge's first parent, rather than requiring the two SHAs to be equal.
+
+The script fetches the exact event SHAs and deepens history only until it can prove ancestry and reconstruct merges. It stops after at most 255 extra history levels. Missing history, a fetch failure, a force-push, an unsupported event, a merge from outside `main`, or an octopus merge requires the full lane. Fork inputs use the full lane unless the existing all-docs rule applies.
 
 A green docs run can support the next docs update in the same way. Each update proves its hand changes against a previous head that was itself green.
 
