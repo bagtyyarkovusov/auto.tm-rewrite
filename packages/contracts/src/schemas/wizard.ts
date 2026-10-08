@@ -116,14 +116,16 @@ export const StepPhotosSchema = z.object({
 export type StepPhotosInput = z.infer<typeof StepPhotosSchema>;
 
 export const VinSchema = z.string()
-    .toUpperCase()
+  // Only ASCII letters normalise; Unicode lookalikes must remain invalid.
+  .transform((vin) => vin.replace(/[a-z]/g, (letter) => letter.toUpperCase()))
+  .pipe(z.string()
     .max(WIZARD_LIMITS.vinMaxLength, KEY.vinTooLong)
     // Keep the existing length error alone when max() already rejects the value.
     .refine(
-      (vin) => vin.length > WIZARD_LIMITS.vinMaxLength || /^(?:[A-HJ-NPR-Z0-9]{17})?$/i.test(vin),
+      (vin) => vin.length > WIZARD_LIMITS.vinMaxLength || /^(?:[A-HJ-NPR-Z0-9]{17})?$/.test(vin),
       KEY.vinInvalid,
-    )
-    .optional();
+    ))
+  .optional();
 
 export const StepVehicleSchema = z.object({
   brandId: z.string({ required_error: KEY.brandRequired }).uuid({ message: KEY.brandRequired }),

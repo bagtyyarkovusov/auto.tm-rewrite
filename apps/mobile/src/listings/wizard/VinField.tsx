@@ -31,7 +31,7 @@ export function VinField({ payload, onChange, error, disabled }: VinFieldProps) 
         <Input
           value={payload.vin ?? ""}
           onChangeText={(text) =>
-            onChange({ vin: text.trim() === "" ? undefined : text.toUpperCase() })
+            onChange({ vin: text.trim() === "" ? undefined : text.replace(/[a-z]/g, (letter) => letter.toUpperCase()) })
           }
           placeholder="WBA1234567890ABCD"
           editable={!disabled}
