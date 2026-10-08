@@ -8,6 +8,8 @@ Founder-authorized FIX1–9 from [the independent review](https://github.com/bag
 
 - FIX2 red: optional-auth 403/429/500/503 errors were null; layout 429/500/503 redirected to session-expired login; Russian retry error page absent. `pnpm --filter @auto-tm/admin exec vitest run src/lib/api-client.spec.ts src/app/actions.spec.ts src/app/error.spec.tsx`. Green: only 401 returns null and triggers the reason; other failures surface through the rendered Russian retry boundary without cookie writes.
 
+- FIX3 red: four failures/22 passes, expiry login URL erases current, renewable and temporarily unavailable sessions without consulting the API. Command: `pnpm --filter @auto-tm/admin exec vitest run src/proxy.spec.ts`. Green: query-only expiry no longer clears a current session, healthy TOTP mode survives, refresh-only sessions renew, outages preserve cookies, and only missing/API-rejected refresh clears before rendering login without a loop.
+
 ## Live staging checklist, not performed
 
 Owner: orchestrator with the founder, after deployment. This fix round does not deploy, change Railway variables or touch production.

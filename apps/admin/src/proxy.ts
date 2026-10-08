@@ -13,18 +13,13 @@ export async function proxy(request: NextRequest) {
   const settings = authCookieSettings();
   const refreshToken = request.cookies.get(settings.refreshName)?.value;
 
-  // Login GET never renews: rejected sessions must end here without a loop.
-  if (request.method === "GET" && pathname === "/login" && request.nextUrl.searchParams.get("reason") === "session-expired") {
-    const response = NextResponse.next({ request: { headers: request.headers } });
-    clearCookies(response);
-    return response;
-  }
+  const loginExpiry = request.method === "GET" && pathname === "/login" && request.nextUrl.searchParams.get("reason") === "session-expired";
 
   const protectedRoute = PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   // TOTP/logout Server Actions run on /login too. Ordinary sign-in without
   // a refresh cookie stays public and can request/verify a Sign-in Code.
   const loginAction = pathname === "/login" && request.method === "POST" && Boolean(refreshToken || request.cookies.get(settings.accessName)?.value);
-  if (!protectedRoute && !loginAction) return NextResponse.next({ request: { headers: request.headers } });
+  if (!protectedRoute && !loginAction && !loginExpiry) return NextResponse.next({ request: { headers: request.headers } });
 
   if (request.method === "POST" && !validateOrigin(request)) {
     return new NextResponse(null, { status: 403 });
@@ -42,6 +37,11 @@ export async function proxy(request: NextRequest) {
     }
     if (renewal.kind === "tokens") tokens = renewal.tokens;
     if (!tokens) {
+      if (loginExpiry) {
+        const response = NextResponse.next({ request: { headers: request.headers } });
+        clearCookies(response);
+        return response;
+      }
       const loginUrl = new URL("/login", process.env["ADMIN_ORIGIN"] || request.url);
       loginUrl.searchParams.set("reason", "session-expired");
       if (safeReturnTo) loginUrl.searchParams.set("returnTo", safeReturnTo);
@@ -70,7 +70,13 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete(ADMIN_RETURN_TO_HEADER);
   if (safeReturnTo) requestHeaders.set(ADMIN_RETURN_TO_HEADER, safeReturnTo);
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  // A healthy session must not render the expiry form because of a URL flag.
+  const destination = request.nextUrl.searchParams.get("mode") === "totp"
+    ? new URL("/login?mode=totp", process.env["ADMIN_ORIGIN"] || request.url)
+    : new URL(validateReturnTo(request.nextUrl.searchParams.get("returnTo")) || "/reports", process.env["ADMIN_ORIGIN"] || request.url);
+  const response = loginExpiry
+    ? NextResponse.redirect(destination, 303)
+    : NextResponse.next({ request: { headers: requestHeaders } });
   if (tokens) {
     response.cookies.set(settings.accessName, tokens.accessToken, { ...settings.common, maxAge: settings.accessMaxAge });
     response.cookies.set(settings.refreshName, tokens.refreshToken, { ...settings.common, maxAge: settings.refreshMaxAge });
