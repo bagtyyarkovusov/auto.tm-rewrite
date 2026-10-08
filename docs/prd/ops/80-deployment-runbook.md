@@ -33,8 +33,11 @@ the report actioned, and records `USER_PHOTO_REMOVE` in the audit log.
 Record the flag's value in each environment during the deployment checklist.
 Enable it through the existing environment deployment process; documenting the
 required value does not change staging or production configuration. The admin
-build also needs `NEXT_PUBLIC_MINIO_PUBLIC_URL` set to that environment's public
-media origin to display the reported photo from `listing-photos`.
+service needs `NEXT_PUBLIC_MINIO_PUBLIC_URL` set at runtime to that environment's
+public media origin to display the reported photo from `listing-photos`. The
+report page reads it in its dynamic server component on each request; it is not
+a build argument. If unset, the page shows «Фото профиля недоступно.» and hides
+photo removal until the preview can be displayed.
 
 ## Railway era — staging and reviewer-only production
 

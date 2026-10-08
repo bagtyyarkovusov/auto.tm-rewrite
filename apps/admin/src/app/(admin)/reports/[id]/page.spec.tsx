@@ -79,10 +79,12 @@ function removalReasonInput() {
 describe("ReportDetailPage profile photo", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("NEXT_PUBLIC_MINIO_PUBLIC_URL", "https://media.example.test");
   });
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
   });
 
   it("shows the reported user's Profile Photo and the remove action when a photo is set", async () => {
@@ -91,7 +93,7 @@ describe("ReportDetailPage profile photo", () => {
     await renderPage();
 
     const photo = screen.getByRole("img", { name: "Фото профиля" });
-    expect(photo.getAttribute("src")).toContain(PHOTO_KEY);
+    expect(photo.getAttribute("src")).toBe("https://media.example.test/listing-photos/pending/u1-photo/thumbnail.jpg");
     expect(screen.getByText("Удалить фото профиля")).toBeDefined();
     expect(screen.getByRole("button", { name: "Удалить фото" })).toBeDefined();
   });
@@ -204,6 +206,30 @@ describe("ReportDetailPage profile photo", () => {
   ])("hides removal for ineligible targets %j", async (overrides) => {
     mockDetail(userReport({ target: { ...userReport().target, ...overrides } }));
     await renderPage();
+    expect(screen.queryByRole("button", { name: "Удалить фото" })).toBeNull();
+  });
+
+  it.each([undefined, "", "   "])("shows a Russian unavailable note without a relative photo URL when media origin is %j", async (origin) => {
+    vi.stubEnv("NEXT_PUBLIC_MINIO_PUBLIC_URL", origin);
+    mockDetail(userReport());
+    await renderPage();
+    expect(screen.getByText("Фото профиля недоступно.")).toBeDefined();
+    expect(screen.queryByRole("img", { name: "Фото профиля" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Удалить фото" })).toBeNull();
+  });
+
+  it.each(["jpg", "webp", "jpeg"])("loads the mobile thumbnail variant for an original %s photo", async (extension) => {
+    mockDetail(userReport({ target: { ...userReport().target, avatarKey: `pending/u1-photo/original.${extension}` } }));
+    await renderPage();
+    expect(screen.getByRole("img", { name: "Фото профиля" }).getAttribute("src"))
+      .toBe("https://media.example.test/listing-photos/pending/u1-photo/thumbnail.jpg");
+  });
+
+  it("shows no extra avatar on an actioned report that had only an Assigned Avatar", async () => {
+    mockDetail(userReport({ status: "actioned", target: { ...userReport().target, avatarKey: null }, targetModerationState: { suspendedAt: "2026-01-02T00:00:00Z" } }));
+    await renderPage();
+    expect(screen.queryByRole("img", { name: "Назначенный аватар" })).toBeNull();
+    expect(screen.queryByRole("img", { name: "Фото профиля" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Удалить фото" })).toBeNull();
   });
 
