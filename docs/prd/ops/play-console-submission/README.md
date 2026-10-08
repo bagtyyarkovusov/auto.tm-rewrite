@@ -9,12 +9,13 @@ Assets and text to enter in Play Console for `com.auto_tm.ynamly`. The answers f
 | `graphics/app-icon-512.png` | Store listing → App icon | 512 × 512 PNG, up to 1 MB | Ready |
 | `graphics/feature-graphic-1024x500-en.png` (also `-ru`) | Store listing → Feature graphic | 1024 × 500 PNG or JPEG, up to 15 MB | Draft for the founder to approve |
 | `text/en.txt` (default, ends with a short Turkmen paragraph), `text/ru.txt` | App name, short and full description | 30 / 80 / 4,000 characters | EN ready; RU needs a native read |
-| `screenshots/phone/` | Store listing → Phone screenshots | 2 to 8 per language, PNG or JPEG, 9:16, each side 320 to 3,840 px (1080 × 1920 or larger is best) | Not in the repository yet: captured after the final release build, in English and Russian |
+| `screenshots/phone/en/`, `screenshots/phone/ru/` | Store listing → Phone screenshots | 2 to 8 per language, PNG or JPEG, 9:16, each side 320 to 3,840 px (1080 × 1920 or larger is best) | Six per language, 1080 × 2400, from the release build of `55666324` on staging data (2026-10-09). Awaiting the founder's approval |
 
 ## Screenshot rules
 
 - No car brand logos or badges, no Share control, no real phone numbers, no tester or reviewer values.
-- Suggested set of six: Home, Results, Listing detail, photo viewer, Messages, Sell wizard.
+- The set of six: Home, Results, Listing detail, Search parameters, a Conversation, Sell wizard.
+- The emulator's status bar shield icon was painted out of each image; nothing in the app area was edited.
 - Same set in each language the listing uses.
 
 ## Not needed
