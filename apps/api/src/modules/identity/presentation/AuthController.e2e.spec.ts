@@ -586,6 +586,11 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
     await prisma.$transaction((tx) => identity.suspendUser(user.id, user.id, "Synthetic suspension", tx));
     expect(await prisma.session.count({ where: { userId: user.id } })).toBe(0);
     await request.post("/api/v1/auth/refresh").send({ refreshToken: signedIn.body.refreshToken }).expect(401);
+    // The second email request must be outside the existing resend backoff.
+    if (channel === "email") await prisma.otpRequest.updateMany({
+      where: { channel: "email", destination: account1.email },
+      data: { createdAt: new Date(Date.now() - 60_000) },
+    });
     await request.post("/api/v1/auth/otp/request").send({ [channel]: account1[channel] }).expect(201);
     const refused = await request.post("/api/v1/auth/otp/verify").send(input).expect(403);
     expect(refused.body.details).toEqual({ reason: "USER_SUSPENDED" });
