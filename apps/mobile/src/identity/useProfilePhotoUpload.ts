@@ -68,14 +68,25 @@ export function useProfilePhotoUpload() {
         throw new ApiError("CONTRACT_VIOLATION", 502, "Conditional upload headers are missing");
       }
       let lastPercent = 0;
+      let transferring = true;
       const task = FileSystem.createUploadTask(presign.uploadUrl, compressed.uri, {
         httpMethod: "PUT", uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT, headers: presign.headers,
       }, ({ totalBytesSent, totalBytesExpectedToSend }) => {
         const percent = Math.max(lastPercent, totalBytesExpectedToSend > 0 ? Math.min(100, Math.floor(100 * totalBytesSent / totalBytesExpectedToSend)) : 0);
         lastPercent = percent;
-        if (selected === photo) profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent } });
+        if (selected === photo && transferring) profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent } });
       });
-      const result = await task.uploadAsync();
+      let uploadTimer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_resolve, reject) => {
+        uploadTimer = setTimeout(() => {
+          transferring = false;
+          void task.cancelAsync().catch(() => {});
+          reject(new Error("Photo upload timed out"));
+        }, 60_000);
+      });
+      let result: FileSystem.FileSystemUploadResult | null | undefined;
+      try { result = await Promise.race([task.uploadAsync(), timeout]); }
+      finally { transferring = false; clearTimeout(uploadTimer); }
       if (!result || result.status < 200 || result.status >= 300) throw new Error("Photo upload failed");
       let preparingAttempts = 0;
       for (;;) {
