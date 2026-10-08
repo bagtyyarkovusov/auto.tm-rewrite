@@ -1254,7 +1254,7 @@ describe("Conversation keyboard ownership", () => {
       expect(within(active[0]).getByRole("button", { name: "Send message", disabled: false })).toBeTruthy();
       if (os === "android") {
         expect(within(active[0]).getByText("Read while typing")).toBeTruthy();
-        expect(active[0].props.behavior).toBe("height");
+        expect(active[0].props.behavior).toBe("padding");
         expect(active[0].props.className).toBe("flex-1");
       } else {
         expect(active[0].props.behavior).toBe("padding");
