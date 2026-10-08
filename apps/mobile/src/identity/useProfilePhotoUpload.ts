@@ -18,7 +18,7 @@ type PhotoUploadState =
   | { status: "uploading"; uri: string; percent: number; preparing?: boolean }
   | { status: "removing" }
   | { status: "failed" | "offline" | "too_large" | "unsupported"; operation?: "remove"; reason?: "listing" | "suspended" };
-let selected: { asset: ImagePicker.ImagePickerAsset; compressed?: CompressionResult; session: ProfilePhotoSession } | null = null;
+let selected: { asset: ImagePicker.ImagePickerAsset; compressed?: CompressionResult; session: ProfilePhotoSession; stopWaiting?: () => void } | null = null;
 let lastSource: "camera" | "library" | null = null;
 let removalSession: ProfilePhotoSession | null = null;
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -77,6 +77,7 @@ export function useProfilePhotoUpload() {
       });
       const result = await task.uploadAsync();
       if (!result || result.status < 200 || result.status >= 300) throw new Error("Photo upload failed");
+      let preparingAttempts = 0;
       for (;;) {
         try {
           await setPhoto.mutateAsync({ request: { key: presign.key }, session: photo.session });
@@ -84,10 +85,14 @@ export function useProfilePhotoUpload() {
         } catch (error) {
           if (conflictReason(error) !== IdentitySchemas.ProfilePhotoConflictReason.UploadPreparing) throw error;
           await photo.session.current();
+          if (++preparingAttempts >= 30) throw error;
           profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent: 100, preparing: true } });
-          // This is still the same adoption, not another upload. The server's
-          // claim expires after ten minutes if the original request died.
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          // Keep the same adoption, but stop waiting on Cancel or session end.
+          await new Promise<void>((resolve) => {
+            const finish = () => { photo.stopWaiting = undefined; resolve(); };
+            const timer = setTimeout(finish, 2000);
+            photo.stopWaiting = () => { clearTimeout(timer); finish(); };
+          });
         }
       }
       await photo.session.current();
@@ -135,6 +140,7 @@ export function useProfilePhotoUpload() {
 
   async function discard() {
     const uri = selected?.compressed?.uri;
+    selected?.stopWaiting?.();
     selected?.session.dispose();
     selected = null;
     if (uri) await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
@@ -153,6 +159,7 @@ export function useProfilePhotoUpload() {
     try {
       owner = await capturePhotoSession(() => {
         if (selected?.session !== owner) return;
+        selected.stopWaiting?.();
         selected = null;
         owner.dispose();
         profilePhotoUploadStore.setState({ state: { status: "idle" } });

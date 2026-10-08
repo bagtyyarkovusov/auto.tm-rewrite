@@ -334,6 +334,7 @@ function SignedInProfile() {
       >{t("uploading", { p: photo.state.percent })}</Text> : null}
 
       {photo.state.status === "uploading" && photo.state.preparing ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoPreparing")}</Text> : null}
+      {photo.state.status === "uploading" && photo.state.preparing ? <Button variant="ghost" className="mx-4 mb-3 min-h-11" onPress={photo.cancel}><Text>{t("common:cancel")}</Text></Button> : null}
       {photo.state.status === "removing" ? <Text accessibilityLiveRegion="polite" className="px-4 pb-3 text-center text-footnote text-muted-foreground">{t("photoRemoving")}</Text> : null}
       {photo.state.status !== "idle" && photo.state.status !== "uploading" && photo.state.status !== "removing" ? <View className="mx-4 mb-4 gap-2 rounded-2xl bg-destructive/10 px-4 py-3">
         <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" className="text-body text-destructive">
