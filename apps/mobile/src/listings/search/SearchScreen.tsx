@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TextInput} from "react-native";
 import {
-  Keyboard, KeyboardAvoidingView, Platform, Pressable,
+  Keyboard, KeyboardAvoidingView, Pressable,
   ScrollView, View,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
@@ -92,7 +92,8 @@ export function SearchScreen() {
   const retryBrowse = () => { void brands.refetch(); void counts.refetch(); };
 
   return (
-    <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    // Android is edge to edge, so the window no longer resizes for the keyboard: both platforms pad.
+    <KeyboardAvoidingView className="flex-1" behavior="padding">
       <StackHeader
         leading={<BackButton accessibilityLabel={t("back")} onPress={() => { Keyboard.dismiss(); goBack(); }} />}
         trailing={query ? <HeaderButton icon={X}
@@ -111,7 +112,7 @@ export function SearchScreen() {
           {recent.length > 0 ? <>
             <View className="flex-row items-center justify-between px-5 pb-2 pt-3">
               <Text className="font-heading text-subhead font-semibold text-foreground">{t("recentChoices")}</Text>
-              <Button variant="ghost" size="sm" className="-mr-2 h-6 px-2" hitSlop={10} accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
+              <Button variant="ghost" size="sm" className="-mr-2 min-h-6 px-2 py-0" hitSlop={10} accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
                 <Text className="text-callout font-medium text-foreground">{t("clear")}</Text>
               </Button>
             </View>

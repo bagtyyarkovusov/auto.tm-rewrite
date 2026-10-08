@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { onlineManager } from "@tanstack/react-query";
-import { Keyboard } from "react-native";
+import { Keyboard, KeyboardAvoidingView, Platform } from "react-native";
 import type * as Native from "react-native";
 import { waitFor } from "@testing-library/react-native";
 
 import SearchRoute from "../../../app/(tabs)/(search)/search";
-import { act, fireEvent, renderMobile, routerMock } from "../../../test/render";
+import { act, fireEvent, renderMobile, routerMock, within } from "../../../test/render";
 
 import { useRecentChoicesStore } from "./recentSearches";
 import { readResultsRouteState } from "./resultsRouteState";
@@ -14,7 +14,7 @@ const get = vi.fn();
 vi.mock("../../api/client", () => ({ apiClient: { get: (...args: unknown[]) => get(...args) }, ApiError: class extends Error { constructor(public code: string, public status: number) { super(code); } } }));
 vi.mock("react-native", async (importOriginal) => {
   const native = await importOriginal<typeof Native>();
-  return { ...native, KeyboardAvoidingView: native.View, Keyboard: { dismiss: vi.fn() } };
+  return { ...native, Keyboard: { dismiss: vi.fn() } };
 });
 vi.mock("react-native-safe-area-context", async () => ({
   SafeAreaView: (await import("react-native")).View,
@@ -233,5 +233,19 @@ describe("Search route", () => {
     expect(Keyboard.dismiss).toHaveBeenCalled();
     expect(routerMock.back).not.toHaveBeenCalled();
     expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/(search)");
+  });
+
+  it.each(["android", "ios"] as const)("keeps the search field and All filters inside the padding avoidance region on %s", async (os) => {
+    const previousOS = Platform.OS;
+    Platform.OS = os;
+    try {
+      const screen = setup();
+      await screen.findByText("Toyota");
+      const avoidance = screen.UNSAFE_getByType(KeyboardAvoidingView);
+      expect(avoidance.props.enabled).not.toBe(false);
+      expect(avoidance.props.behavior).toBe("padding");
+      expect(within(avoidance).getByLabelText("Search brand or model")).toBeTruthy();
+      expect(within(avoidance).getByRole("button", { name: "All filters" })).toBeTruthy();
+    } finally { Platform.OS = previousOS; }
   });
 });

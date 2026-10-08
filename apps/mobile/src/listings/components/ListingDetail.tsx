@@ -19,6 +19,7 @@ import { PriceDisplay } from "./PriceDisplay";
 import { SellerBlock } from "./SellerBlock";
 
 import { localeTag } from "@/src/i18n/resources";
+import { useLargeText } from "@/lib/font-scale";
 import { cn } from "@/lib/utils";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
@@ -42,9 +43,12 @@ interface SpecItemProps {
   value: string | undefined;
 }
 function SpecItem({ label, value }: SpecItemProps) {
+  // Three columns break a value such as "120 000 km" across lines at a large
+  // font size; two columns keep it whole.
+  const largeText = useLargeText();
   if (!value) return null;
   return (
-    <View className="w-1/3 gap-1 py-3 pr-2">
+    <View className={cn(largeText ? "w-1/2" : "w-1/3", "gap-1 py-3 pr-2")}>
       <Text className="text-caption text-muted-foreground">{label}</Text>
       <Text className="text-callout font-semibold text-foreground">{value}</Text>
     </View>
@@ -183,14 +187,10 @@ export function ListingDetailView({
             <Text className="text-body font-semibold">
               {t("yourListing")} · {t(listing.status)}
             </Text>
-            <View className="flex-row gap-4">
-              <Text className="text-callout text-muted-foreground">
-                {t("listingViews", { count: listing.viewCount })}
-              </Text>
-              <Text className="text-callout text-muted-foreground">
-                {t("listingSaves", { count: listing.favoriteCount })}
-              </Text>
-            </View>
+            {/* Saves are counted by the API. Views are not counted yet, so no view figure is shown. */}
+            <Text className="text-callout text-muted-foreground">
+              {t("listingSaves", { count: listing.favoriteCount })}
+            </Text>
           </View>
         )}
         <Text

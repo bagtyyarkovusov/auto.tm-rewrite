@@ -26,7 +26,7 @@ describe("Search parameters route", () => {
     expect(view.getByLabelText("Brand: Toyota")).toBeTruthy();
     expect(view.getByLabelText("Model: 2 selected")).toBeTruthy();
     expect(view.getByDisplayValue("2019")).toBeTruthy();
-    expect(view.getByDisplayValue("250000")).toBeTruthy();
+    expect(view.getByDisplayValue("250,000")).toBeTruthy();
   });
 
   it("Show N returns to the Results below with the form's filters and the carried sort", () => {

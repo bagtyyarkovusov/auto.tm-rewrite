@@ -19,13 +19,8 @@ describe("PriceRangeFilterControl structure", () => {
     expect(source).toContain("TMT");
   });
 
-  it("strips non-digits from input", () => {
-    expect(source).toContain("replace(/\\D/g");
-  });
-
-  it("writes undefined when input is cleared", () => {
-    expect(source).toContain('=== "" ? undefined');
-  });
+  // Parsing and grouping are behaviour: formatPrice.spec.ts covers the parser and
+  // SearchParametersForm.spec.tsx covers the rendered fields.
 });
 
 describe("PriceRangeFilterControl validation", () => {

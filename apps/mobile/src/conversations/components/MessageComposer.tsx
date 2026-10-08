@@ -253,9 +253,14 @@ export function MessageComposer({
           )}
         </Button>
 
-        <View className="flex-1 rounded-2xl bg-muted px-4 py-2.5">
+        {/* One line: 22 dp of text and 20 dp of padding, held at the buttons' 44 dp with the text
+            centred, so the row shares one centre. More lines: the field grows and `items-end`
+            keeps both buttons at its bottom. The input's own vertical padding is zeroed because
+            the native default differs by platform and made the one-line field taller than 44 dp. */}
+        <View className="flex-1 min-h-11 justify-center rounded-2xl bg-muted px-4 py-2.5">
           <TextInput
-            className="text-body text-foreground max-h-[120px]"
+            className="text-body text-foreground max-h-[120px] py-0"
+            style={{ textAlignVertical: "center" }}
             placeholder={t("messageComposerPlaceholder")}
             placeholderTextColor={placeholderColor}
             value={text}

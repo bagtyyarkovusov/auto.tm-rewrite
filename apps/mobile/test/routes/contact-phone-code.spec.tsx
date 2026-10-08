@@ -88,7 +88,7 @@ describe("contact-phone-code screen", () => {
     expect(screen.getByText("The code expires in 5 minutes.")).toBeTruthy();
     expect(
       screen.getByText(
-        "This code lets the number be shown on a car Listing. It cannot sign anyone in.",
+        "This code lets the number be shown on a car listing. It cannot sign anyone in.",
       ),
     ).toBeTruthy();
   });

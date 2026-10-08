@@ -8,6 +8,7 @@ import { formatPriceRange } from "../formatPrice";
 import { BackButton, HeaderButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Text } from "@/components/ui/text";
 import { tabularFigures } from "@/lib/font";
+import { useLargeText } from "@/lib/font-scale";
 
 /**
  * The Results header: the circular back button, the matching count as the
@@ -20,6 +21,8 @@ export function ResultsHeader({ count, sort, onSort, onBack }: {
   count?: ListingsSchemas.ListingCountResponse; sort: ListingsSchemas.FeedSort; onSort: () => void; onBack: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  // One line at the default font size; at a large one the range wraps, not cuts.
+  const largeText = useLargeText();
   const range = count?.priceMinTmt != null && count.priceMaxTmt != null
     ? formatPriceRange(count.priceMinTmt, count.priceMaxTmt, i18n.language) : null;
   return (
@@ -31,7 +34,7 @@ export function ResultsHeader({ count, sort, onSort, onBack }: {
         <Text className="font-heading text-subhead font-semibold text-foreground" style={tabularFigures} numberOfLines={1}>
           {count ? t("listingsCount", { total: count.totalMatching }) : t("carsBrowseTitle")}
         </Text>
-        {range ? <Text className="text-caption text-muted-foreground" style={tabularFigures} numberOfLines={1}>{range}</Text> : null}
+        {range ? <Text className="text-caption text-muted-foreground" style={tabularFigures} numberOfLines={largeText ? 2 : 1}>{t("resultsPriceRange", { range })}</Text> : null}
         <Text className="text-caption text-muted-foreground" numberOfLines={1}>{t(`resultsSort_${sort}`)}</Text>
       </View>
     </StackHeader>

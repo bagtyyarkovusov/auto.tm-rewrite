@@ -89,7 +89,7 @@ describe("ConversationListItem", () => {
     const row = renderRow(summary());
 
     expect(row.getByText("Merdan")).toBeTruthy();
-    expect(row.getByText(/^2018 Toyota Camry · 285,000 TMT$/)).toBeTruthy();
+    expect(row.getByText(/^Toyota Camry, 2018 · 285,000 TMT$/)).toBeTruthy();
     expect(row.getByText("Yes, it is still for sale")).toBeTruthy();
     expect(row.getByTestId("conversation-row-thumbnail").props.className).not.toContain("opacity");
     expect(row.queryByText("You are buyer")).toBeNull();
@@ -98,7 +98,7 @@ describe("ConversationListItem", () => {
 
   it("keeps the Listing line to one line", () => {
     const row = renderRow(summary());
-    expect(row.getByText(/^2018 Toyota Camry/).props.numberOfLines).toBe(1);
+    expect(row.getByText(/^Toyota Camry, 2018/).props.numberOfLines).toBe(1);
   });
 
   it("shows a bold preview and the unread count when there are unread Messages", () => {
@@ -237,14 +237,14 @@ describe("ConversationListItem", () => {
   it("reads the name, the Listing, the preview and the unread count as one label", () => {
     const row = renderRow(summary({ unreadCount: 3 }));
     expect(row.getByRole("button").props.accessibilityLabel).toBe(
-      "Merdan, 2018 Toyota Camry · 285,000 TMT, Yes, it is still for sale, Unread: 3",
+      "Merdan, Toyota Camry, 2018 · 285,000 TMT, Yes, it is still for sale, Unread: 3",
     );
   });
 
   it("leaves the unread count out of the label when everything is read", () => {
     const row = renderRow(summary({ blockedByMe: true }));
     expect(row.getByRole("button").props.accessibilityLabel).toBe(
-      "Merdan, 2018 Toyota Camry · 285,000 TMT, User blocked",
+      "Merdan, Toyota Camry, 2018 · 285,000 TMT, User blocked",
     );
   });
 
@@ -314,7 +314,7 @@ describe("ConversationListItem avatar badge", () => {
       accessible: false, accessibilityElementsHidden: true, importantForAccessibility: "no-hide-descendants",
     });
     expect(row.getByRole("button").props.accessibilityLabel).toBe(
-      "Merdan, 2018 Toyota Camry · 285,000 TMT, Yes, it is still for sale",
+      "Merdan, Toyota Camry, 2018 · 285,000 TMT, Yes, it is still for sale",
     );
   });
 });

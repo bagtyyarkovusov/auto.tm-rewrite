@@ -466,7 +466,7 @@ describe("Profile photo", () => {
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     view.rerender(<ToastProvider><CabinetScreen /></ToastProvider>);
-    await view.findByText("Cabinet");
+    await view.findByText("Account");
     await act(async () => { picker.finish(); });
     await vi.waitFor(() => expect(requests.sets).toHaveLength(1));
     view.rerender(<ToastProvider><ProfileScreen /></ToastProvider>);

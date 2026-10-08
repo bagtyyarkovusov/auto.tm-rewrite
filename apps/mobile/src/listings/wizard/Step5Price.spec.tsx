@@ -86,15 +86,43 @@ describe("Price step currency", () => {
     const screen = renderMobile(
       <PriceStep initial={{ priceAmount: 185000, priceCurrency: Enums.Currency.TMT }} onChange={onChange} />,
     );
-    expect(screen.getByDisplayValue("185000")).toBeTruthy();
+    expect(screen.getByDisplayValue("185,000")).toBeTruthy();
 
     fireEvent.press(screen.getByRole("radio", { name: "USD" }));
 
     expect(onChange).toHaveBeenLastCalledWith({ priceCurrency: Enums.Currency.USD, priceAmount: undefined });
     expect(screen.getByRole("radio", { name: "USD", checked: true })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "TMT", checked: false })).toBeTruthy();
-    expect(screen.queryByDisplayValue("185000")).toBeNull();
+    expect(screen.queryByDisplayValue("185,000")).toBeNull();
     expect(focusRequests.count).toBe(1);
+  });
+
+  it("groups the amount while the seller types and keeps the stored value a plain number", () => {
+    const onChange = vi.fn();
+    const screen = renderMobile(<PriceStep onChange={onChange} />);
+    const amount = screen.getByPlaceholderText("Enter amount");
+
+    fireEvent.changeText(amount, "185000");
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ priceAmount: 185000 }));
+    expect(screen.getByDisplayValue("185,000")).toBeTruthy();
+
+    // The next keystroke arrives with the grouping already in the field.
+    fireEvent.changeText(amount, "185,0005");
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ priceAmount: 1850005 }));
+    expect(screen.getByDisplayValue("1,850,005")).toBeTruthy();
+  });
+
+  it.each(["2 329 600", "2,329,600", "2\u00a0329\u00a0600 TMT"])("parses a pasted %j", (pasted) => {
+    const onChange = vi.fn();
+    const screen = renderMobile(<PriceStep onChange={onChange} />);
+    fireEvent.changeText(screen.getByPlaceholderText("Enter amount"), pasted);
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ priceAmount: 2329600 }));
+    expect(screen.getByDisplayValue("2,329,600")).toBeTruthy();
+  });
+
+  it("groups as a displayed price does in Russian", () => {
+    const screen = renderMobile(<PriceStep initial={{ priceAmount: 185000 }} />, { locale: "ru" });
+    expect(screen.getByDisplayValue((185000).toLocaleString("ru-RU"))).toBeTruthy();
   });
 
   it("keeps the amount when the seller taps the currency already selected", () => {
@@ -104,7 +132,7 @@ describe("Price step currency", () => {
     fireEvent.press(screen.getByRole("radio", { name: "TMT" }));
 
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByDisplayValue("9000")).toBeTruthy();
+    expect(screen.getByDisplayValue("9,000")).toBeTruthy();
   });
 
   it("shows the TMT equivalent for a foreign currency when the rate is known", async () => {

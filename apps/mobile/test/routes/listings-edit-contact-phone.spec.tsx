@@ -114,7 +114,7 @@ describe("Listing edit Contact step", () => {
     expect(
       screen.getByLabelText("+99361234567", { exact: false }).props.accessibilityState,
     ).toMatchObject({ checked: true });
-    expect(screen.getByText("Current number of this Listing")).toBeTruthy();
+    expect(screen.getByText("Current number of this listing")).toBeTruthy();
     expect(screen.getByText("Your sign-in phone. No code needed.")).toBeTruthy();
     expect(screen.getByLabelText("Another number")).toBeTruthy();
 

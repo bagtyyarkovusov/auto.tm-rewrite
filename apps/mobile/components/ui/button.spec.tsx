@@ -10,8 +10,13 @@ const textVariantsStart = source.indexOf("const buttonTextVariants");
 const textVariantsSource = source.slice(textVariantsStart);
 
 describe("buttonVariants", () => {
-  it("has pill size with h-control-lg rounded-full px-6", () => {
-    expect(source).toContain("pill: 'h-control-lg rounded-full px-6'");
+  it("has a pill size that is at least control-lg tall and fully rounded", () => {
+    expect(source).toContain("pill: 'min-h-control-lg rounded-full px-6 py-1.5'");
+  });
+
+  it("sets minimum heights, so a label at a large font size is never cut", () => {
+    const sizes = source.slice(source.indexOf("size: {"), source.indexOf("defaultVariants"));
+    expect(sizes).not.toMatch(/['\s]h-control-/);
   });
 
   it.each([

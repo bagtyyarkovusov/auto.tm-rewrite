@@ -242,7 +242,7 @@ describe("Sell wizard Contact step", () => {
 
     expect(
       screen.getByText(
-        "You signed in with email. Confirm a phone for this Listing. It will not become a way to sign in.",
+        "You signed in with email. Confirm a phone for this listing. It will not become a way to sign in.",
       ),
     ).toBeTruthy();
     expect(screen.queryByLabelText("+99365000000")).toBeNull();

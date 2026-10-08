@@ -638,7 +638,7 @@ function ColorPicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start h-[52px]"
+          className="justify-start min-h-[52px]"
         >
           {selectedColor?.hex && (
             <View
@@ -678,7 +678,7 @@ function BodyTypePicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start h-[52px]"
+          className="justify-start min-h-[52px]"
         >
           <Text
             className={
@@ -714,7 +714,7 @@ function TransmissionPicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start h-[52px]"
+          className="justify-start min-h-[52px]"
         >
           <Text
             className={
@@ -750,7 +750,7 @@ function DriveTypePicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start h-[52px]"
+          className="justify-start min-h-[52px]"
         >
           <Text
             className={
@@ -784,7 +784,7 @@ function EngineTypePicker({
           variant="outline"
           onPress={onPress}
           disabled={disabled}
-          className="justify-start h-[52px]"
+          className="justify-start min-h-[52px]"
         >
           <Text
             className={

@@ -13,7 +13,7 @@ describe("ListingClosedBanner", () => {
     const screen = renderMobile(<ListingClosedBanner listing={sold} brandName="Toyota" modelName="Camry" />);
 
     expect(
-      screen.getByText("This car is sold. You can keep talking, but the Listing is no longer available."),
+      screen.getByText("This car is sold. You can keep talking, but the listing is no longer available."),
     ).toBeTruthy();
     const link = screen.getByRole("button", { name: "See other Toyota Camry" });
     expect(link.props.className).toMatch(/\bh-11\b/);
@@ -29,7 +29,7 @@ describe("ListingClosedBanner", () => {
       <ListingClosedBanner listing={{ ...sold, status: "archived" }} brandName="Toyota" modelName="Camry" />,
     );
     expect(
-      screen.getByText("This car was removed from sale. You can keep talking, but the Listing is no longer available."),
+      screen.getByText("This car was removed from sale. You can keep talking, but the listing is no longer available."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "See other Toyota Camry" })).toBeTruthy();
   });

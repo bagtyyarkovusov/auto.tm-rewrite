@@ -1,9 +1,11 @@
 import * as Linking from "expo-linking";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  type LayoutChangeEvent,
   Platform,
+  ScrollView,
   View,
 } from "react-native";
 import { useColorScheme } from "nativewind";
@@ -20,7 +22,9 @@ import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { useLargeText } from "@/lib/font-scale";
 import { THEME } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 interface AuthEntryScreenProps {
   method: SignInMethod;
@@ -49,6 +53,21 @@ export function AuthEntryScreen({
   const isDark = colorScheme === "dark";
   const { t, i18n } = useTranslation("auth");
 
+  const largeText = useLargeText();
+  const scroll = useRef<ScrollView>(null);
+  // When the keyboard opens the form's frame gets shorter: bring the field and
+  // the submit button above the keyboard. The extra space under the legal
+  // line carries the method switch fully under the header, not half of it.
+  const tallestFrame = useRef(0);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const onFrameLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    tallestFrame.current = Math.max(tallestFrame.current, height);
+    const open = height < tallestFrame.current;
+    setKeyboardOpen(open);
+    if (open) scroll.current?.scrollToEnd({ animated: true });
+  };
+
   function openLegalPage(kind: "terms" | "privacy") {
     void Linking.openURL(legalPageUrl(i18n.language, kind));
   }
@@ -72,9 +91,21 @@ export function AuthEntryScreen({
             trailing={<LocaleSwitcher />}
           />
 
-          <View className="flex-1">
-            <View className="mt-8 gap-8">
-              <BrandLogo />
+          {/* The form scrolls, so at a large font size the field and the
+              button can be brought above the keyboard. At the default size it
+              fits and does not move. */}
+          <ScrollView
+            ref={scroll}
+            onLayout={onFrameLayout}
+            onContentSizeChange={() => { if (keyboardOpen) scroll.current?.scrollToEnd({ animated: true }); }}
+            className="flex-1"
+            contentContainerClassName="flex-grow"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <View className={largeText ? "mt-4 gap-5" : "mt-8 gap-8"}>
+              {largeText ? null : <BrandLogo />}
 
               <SignInMethodTabs
                 value={method}
@@ -104,7 +135,7 @@ export function AuthEntryScreen({
               </Button>
             </View>
 
-            <Text className="mt-auto pb-6 text-caption leading-normal text-muted-foreground">
+            <Text className={cn("mt-auto pt-6 text-caption leading-normal text-muted-foreground", keyboardOpen ? "pb-14" : "pb-6")}>
               {t("legalPrefix")} {" "}
               <Text
                 className="font-medium text-info-500 underline"
@@ -121,7 +152,7 @@ export function AuthEntryScreen({
               </Text>
               .
             </Text>
-          </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </SafeScreen>

@@ -144,7 +144,8 @@ describe("ListingDetailView", () => {
     expect(screen.getByText(/Sold|sold/)).toBeTruthy();
     expect(screen.getByText("10,000 USD")).toBeTruthy();
     expect(screen.queryByText("Private seller")).toBeNull();
-    expect(screen.getByText("1 views")).toBeTruthy();
+    expect(screen.queryByText(/views/)).toBeNull();
+    expect(screen.getByText("0 saves")).toBeTruthy();
   });
 });
 

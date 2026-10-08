@@ -121,7 +121,7 @@ describe("Contact step", () => {
 
     expect(
       screen.getByRole("radio", {
-        name: "+99362000002, Current number of this Listing",
+        name: "+99362000002, Current number of this listing",
       }).props.accessibilityState,
     ).toMatchObject({ checked: true });
   });
@@ -236,7 +236,7 @@ describe("Contact step", () => {
 
     expect(
       screen.getByText(
-        "You signed in with email. Confirm a phone for this Listing. It will not become a way to sign in.",
+        "You signed in with email. Confirm a phone for this listing. It will not become a way to sign in.",
       ),
     ).toBeTruthy();
     expect(onChange).not.toHaveBeenCalled();
@@ -272,7 +272,7 @@ describe("Contact step", () => {
       confirmedPhones: [],
     });
 
-    expect(screen.getByText("Current number of this Listing")).toBeTruthy();
+    expect(screen.getByText("Current number of this listing")).toBeTruthy();
     expect(
       screen.queryByText("Confirmation expired. Tap to confirm again."),
     ).toBeNull();
@@ -288,6 +288,13 @@ describe("Contact step", () => {
     expect(screen.getByText("In-app chat")).toBeTruthy();
     fireEvent.press(screen.getAllByRole("switch", { checked: true })[0]);
     expect(onChange).toHaveBeenCalledWith({ allowCalls: false });
+  });
+
+  it("draws Another number in the link colour the other text links use", () => {
+    const { screen } = renderStep({ accountPhone: "+99365000000", confirmedPhones: [] });
+    const className = screen.getByText("Another number").props.className as string;
+    expect(className).toContain("text-info-500");
+    expect(className).not.toContain("text-primary");
   });
 
   it("opens the number screen from Another number", () => {

@@ -21,11 +21,11 @@ describe("ConversationListingCard", () => {
       <ConversationListingCard listing={listing} brandName="Toyota" modelName="Camry" />,
     );
 
-    expect(screen.getByText("2018 Toyota Camry")).toBeTruthy();
+    expect(screen.getByText("Toyota Camry, 2018")).toBeTruthy();
     expect(screen.getByText("285,000 TMT")).toBeTruthy();
     expect(screen.getByTestId("conversation-listing-thumbnail").props.className).toContain("h-14 w-14");
     expect(screen.getByTestId("conversation-listing-chevron")).toBeTruthy();
-    fireEvent.press(screen.getByRole("button", { name: "Open: 2018 Toyota Camry, 285,000 TMT" }));
+    fireEvent.press(screen.getByRole("button", { name: "Open: Toyota Camry, 2018, 285,000 TMT" }));
     expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${listing.id}`);
   });
 
@@ -45,7 +45,7 @@ describe("ConversationListingCard", () => {
     expect(screen.getByTestId("conversation-listing-thumbnail").props.className).toContain("opacity-60");
     expect(screen.getByText("285,000 TMT").props.className).toContain("text-muted-foreground");
     // The label replaces the children for screen readers, so it carries the badge.
-    fireEvent.press(screen.getByRole("button", { name: "Open: 2018 Toyota Camry, 285,000 TMT, Sold" }));
+    fireEvent.press(screen.getByRole("button", { name: "Open: Toyota Camry, 2018, 285,000 TMT, Sold" }));
     expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${listing.id}`);
   });
 
@@ -54,7 +54,7 @@ describe("ConversationListingCard", () => {
       <ConversationListingCard listing={{ ...listing, status: "archived" }} brandName="Toyota" modelName="Camry" />,
     );
     expect(screen.getByText("Removed from sale")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Open: 2018 Toyota Camry, 285,000 TMT, Removed from sale" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open: Toyota Camry, 2018, 285,000 TMT, Removed from sale" })).toBeTruthy();
     expect(screen.getByTestId("conversation-listing-thumbnail").props.className).toContain("opacity-60");
   });
 
@@ -68,7 +68,7 @@ describe("ConversationListingCard", () => {
     const screen = renderMobile(
       <ConversationListingCard listing={listing} unavailable brandName="Toyota" modelName="Camry" />,
     );
-    expect(screen.getByText("2018 Toyota Camry")).toBeTruthy();
+    expect(screen.getByText("Toyota Camry, 2018")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 

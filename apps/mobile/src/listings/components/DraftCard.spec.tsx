@@ -18,11 +18,11 @@ describe("DraftCard", () => {
     const onMore = vi.fn();
     const item = draft({ brandId: "lexus", modelId: "rx", year: 2012, currentStep: 3, contactPhone: "+99361234567", allowCalls: true, allowChat: true });
     const view = renderMobile(<DraftCard draft={item} brandName="Lexus" modelName="RX" onResume={onResume} onMore={onMore} />);
-    expect(view.getByText("1 of 6 steps filled")).toBeTruthy();
-    fireEvent.press(view.getByRole("button", { name: "Continue listing 2012 Lexus RX" }));
+    expect(view.getByText("1 of 7 steps filled")).toBeTruthy();
+    fireEvent.press(view.getByRole("button", { name: "Continue listing Lexus RX, 2012" }));
     expect(onResume).toHaveBeenCalledWith(item);
-    fireEvent.press(view.getByRole("button", { name: "Actions for 2012 Lexus RX" }));
-    expect(onMore).toHaveBeenCalledWith(item, "2012 Lexus RX");
+    fireEvent.press(view.getByRole("button", { name: "Actions for Lexus RX, 2012" }));
+    expect(onMore).toHaveBeenCalledWith(item, "Lexus RX, 2012");
   });
 
   it("names a draft with no car yet", () => {

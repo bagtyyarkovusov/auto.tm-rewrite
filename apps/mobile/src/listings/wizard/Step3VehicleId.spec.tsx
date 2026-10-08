@@ -78,7 +78,7 @@ const nextYear = WizardSchemas.WIZARD_LIMITS.yearMax;
 const filled: Payload = { brandId: "toyota", modelId: "camry", generationId: "xv70", year: 2018 };
 
 const vinHelper = {
-  en: "Optional. 17 characters. Shown in the Listing's specifications.",
+  en: "Optional. 17 characters. Shown in the listing's specifications.",
   ru: "Необязательно. 17 символов. Показывается в характеристиках объявления.",
   tk: "Hökman däl. 17 belgi. Bildirişiň aýratynlyklarynda görkezilýär.",
 } as const;

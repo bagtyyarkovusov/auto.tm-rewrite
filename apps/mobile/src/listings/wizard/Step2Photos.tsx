@@ -181,7 +181,7 @@ function PhotoActions({
     <View className="flex-row gap-3">
       <Button
         variant="outline"
-        className="flex-1 h-[52px] rounded-full"
+        className="flex-1 min-h-[52px] rounded-full"
         onPress={onTakePhoto}
         disabled={disabled || maxReached}
         accessibilityLabel={t("camera")}
@@ -191,7 +191,7 @@ function PhotoActions({
       </Button>
       <Button
         variant="outline"
-        className="flex-1 h-[52px] rounded-full"
+        className="flex-1 min-h-[52px] rounded-full"
         onPress={onPickFromLibrary}
         disabled={disabled || maxReached}
         accessibilityLabel={t("library")}
@@ -434,7 +434,7 @@ export default function Step2Photos({
       </Text>
 
       <Text className="text-callout font-medium text-foreground">
-        {t("photosGoalCounter", { count: photos.length, goal: ListingsSchemas.RECOMMENDED_LISTING_PHOTOS })}
+        {t("photosCounter", { count: photos.length })}
       </Text>
       <Text className="text-callout text-muted-foreground">
         {photos.length < ListingsSchemas.MIN_LISTING_PHOTOS

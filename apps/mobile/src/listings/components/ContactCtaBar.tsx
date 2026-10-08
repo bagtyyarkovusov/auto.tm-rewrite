@@ -16,6 +16,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { LARGE_TEXT_FONT_SCALE, useLargeText } from "@/lib/font-scale";
 import { cn } from "@/lib/utils";
 
 interface ContactCtaBarProps {
@@ -61,9 +62,14 @@ export function ContactCtaBar({
   const canCall =
     !pending && allowCalls && !!contactPhone && !isSold && !isArchived;
   const canMessage = !pending && allowChat && !isSold && !isArchived;
+  // A loaded, open Listing that takes no calls has no Call button at all, as on
+  // the Results and Favorites cards. Loading, sold and archived keep it, disabled.
+  const showCall = pending || isSold || isArchived || (allowCalls && !!contactPhone);
   const onDark = variant === "viewer";
   // Inside the sticky action bar the bar supplies the padding.
   const floating = variant === "floating";
+  // Side by side, a large label is cut; stacked, each button has the full width.
+  const largeText = useLargeText();
 
   const handleCall = async () => {
     if (!canCall || !contactPhone) return;
@@ -99,28 +105,30 @@ export function ContactCtaBar({
 
   return (
     <View>
-      <View className={cn("flex-row items-center gap-2", floating ? "" : "px-4 py-3")}>
+      <View className={cn(largeText ? "gap-2" : "flex-row items-center gap-2", floating ? "" : "px-4 py-3")}>
+        {showCall ? (
         <Button
           variant={canCall ? "brand" : "secondary"}
           size="lg"
           className={cn(
-            "flex-1",
+            !largeText && "flex-1",
             onDark && !canCall && "border-transparent bg-white/15 disabled:border-transparent disabled:bg-white/15",
           )}
           onPress={handleCall}
           disabled={!canCall}
         >
           <Icon as={Phone} className="size-5" />
-          <Text numberOfLines={1} className={cn(onDark && !canCall && "text-white/60")}>
+          <Text className={cn(onDark && !canCall && "text-white/60")}>
             {t("call")}
           </Text>
         </Button>
+        ) : null}
 
         <Button
           variant={canMessage ? "default" : "secondary"}
           size="lg"
           className={cn(
-            "flex-1",
+            !largeText && "flex-1",
             onDark && "border-transparent bg-white/15 disabled:border-transparent disabled:bg-white/15",
           )}
           disabled={!canMessage || conversation.isPending}
@@ -140,13 +148,17 @@ export function ContactCtaBar({
                   : "size-5 text-muted-foreground"
             }
           />
-          <Text numberOfLines={1} className={cn(onDark && "text-white")}>
+          <Text className={cn(onDark && "text-white")}>
             {t("message")}
           </Text>
         </Button>
       </View>
       {canCall && !onDark && (
-        <Text className={cn("text-center text-caption text-muted-foreground", floating ? "px-2 pb-1 pt-2" : "px-4 pb-2")}>
+        <Text
+          className={cn("text-center text-caption text-muted-foreground", floating ? "px-2 pb-1 pt-2" : "px-4 pb-2")}
+          // The bar floats over the Listing; a note at full size would cover it.
+          maxFontSizeMultiplier={LARGE_TEXT_FONT_SCALE}
+        >
           {t("contactSmsCaption")}
         </Text>
       )}

@@ -54,7 +54,7 @@ export function ListingClosedBanner({
         <Button
           variant="link"
           onPress={() => router.navigate(similarListingsHref(listing))}
-          className="h-11 self-start px-0"
+          className="min-h-11 self-start px-0"
           accessibilityLabel={linkLabel}
         >
           <Text>{linkLabel}</Text>

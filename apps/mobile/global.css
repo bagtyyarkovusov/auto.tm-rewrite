@@ -18,9 +18,22 @@
  * shared @auto-tm/ui preset via tailwind.config.js. Do not reintroduce
  * --success/--success-foreground; nothing consumes them and they are not
  * registered in tailwind.config.js, so they read as tokens that do not exist.
- * KNOWN DIVERGENCE: --destructive-foreground disagrees with
+ * Destructive pair (77 Accessibility, 4.5:1): light --destructive is
+ * 15 85% 38%, which reads as text on the page (5.4:1), on a card (6.0:1) and
+ * on its own 10% tint, and carries white text as a fill (6.0:1). Dark text on
+ * that fill would fall to 3.0:1, so the two light values change together.
+ * test/destructive-contrast.spec.ts computes these from this file.
+ * KNOWN DIVERGENCE: dark --destructive-foreground disagrees with
  * lib/theme.ts (0 0% 9% here vs 0 0% 100% there). Unresolved — see the
- * mobile UI stabilization notes before changing either value.
+ * mobile UI stabilization notes before changing either value. White on the
+ * dark fill is 3.2:1, so the dark value here must stay dark.
+ * Own Message bubble (#775 F): --message-own is the brand colour mixed into
+ * the page, about 10% in light and 22% in dark, kept as an opaque value so a
+ * photo and the dimmed pending bubble sit on a known fill. Normal text, the
+ * quiet footer (text-foreground/70) and destructive text all read on it at
+ * 4.5:1 or better. Light stops at 10% because light --destructive falls under
+ * 4.5:1 on a 12% tint. MessageBubble.tint.spec.tsx computes these from this
+ * file; lib/theme.ts holds the same two values.
  * DO NOT copy from apps/web/src/app/[locale]/globals.css or packages/ui/theme/theme.css
  * — those use Tailwind v4 @theme syntax which breaks Metro on mobile.
  * Rules: docs/agents/nativewind-v4.md §0.5, §2, §4.
@@ -45,8 +58,9 @@
     --muted-foreground: 0 0% 40%;
     --accent: 60 5% 85%;
     --accent-foreground: 0 0% 9%;
-    --destructive: 15 85% 55%;
-    --destructive-foreground: 0 0% 9%;
+    --destructive: 15 85% 38%;
+    --destructive-foreground: 0 0% 100%;
+    --message-own: 4 50% 90%;
     --border: 60 5% 88%;
     --input: 60 5% 88%;
     --ring: 0 100% 45%;
@@ -74,6 +88,7 @@
     --accent-foreground: 60 10% 98%;
     --destructive: 15 80% 58%;
     --destructive-foreground: 0 0% 9%;
+    --message-own: 0 59% 16%;
     --border: 240 3% 19%;
     --input: 240 3% 19%;
     --ring: 0 90% 52%;

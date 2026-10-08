@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { View } from "react-native";
 
 import { Text } from "@/components/ui/text";
+import { useLargeText } from "@/lib/font-scale";
 import { cn } from "@/lib/utils";
 
 /**
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils";
 export function FilterLabel({ children, trailing }: { children: string; trailing?: ReactNode }) {
   return (
     <View className="min-h-6 flex-row items-center justify-between gap-3 px-1">
-      <Text className="min-w-0 flex-1 text-callout font-semibold text-foreground" numberOfLines={1}>
+      <Text className="min-w-0 flex-1 text-callout font-semibold text-foreground" numberOfLines={2}>
         {children}
       </Text>
       {trailing}
@@ -32,6 +33,17 @@ export function FilterLabel({ children, trailing }: { children: string; trailing
  * concentric with its 24 dp.
  */
 export function FilterRange({ children, className }: { children: [ReactNode, ReactNode]; className?: string }) {
+  const largeText = useLargeText();
+  // Side by side, each field is too narrow for an amount at a large font
+  // size, so the two stack and each takes the full width.
+  if (largeText) {
+    return (
+      <View className={cn("gap-2 rounded-2xl bg-card p-2", className)}>
+        <View className="flex-row">{children[0]}</View>
+        <View className="flex-row">{children[1]}</View>
+      </View>
+    );
+  }
   return (
     <View className={cn("flex-row items-center gap-2 rounded-2xl bg-card p-2", className)}>
       {children[0]}

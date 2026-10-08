@@ -25,7 +25,7 @@ function SearchField({ className, onFocus, onBlur, ...props }: SearchFieldProps)
   return (
     <View
       className={cn(
-        "h-control-md flex-row items-center gap-2.5 rounded-lg border border-transparent bg-secondary pl-4 pr-3",
+        "min-h-control-md flex-row items-center gap-2.5 rounded-lg border border-transparent bg-secondary pl-4 pr-3",
         focused && "border-foreground",
         className,
       )}
@@ -33,7 +33,7 @@ function SearchField({ className, onFocus, onBlur, ...props }: SearchFieldProps)
       <Icon as={Search} className="size-5 text-muted-foreground" strokeWidth={2.2} />
       <TextInput
         className={withFontFace(
-          "h-full min-w-0 flex-1 py-0 font-sans text-body leading-5 text-foreground placeholder:text-muted-foreground",
+          "min-w-0 flex-1 self-stretch py-0 font-sans text-body leading-5 text-foreground placeholder:text-muted-foreground",
         )}
         onFocus={(event) => {
           setFocused(true);

@@ -1,4 +1,5 @@
 import type * as Native from "react-native";
+import { KeyboardAvoidingView, Platform } from "react-native";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -72,8 +73,8 @@ describe("Search parameters: opening", () => {
     expect(view.getByLabelText("Model: Camry")).toBeTruthy();
     expect(view.getByDisplayValue("2018")).toBeTruthy();
     expect(view.getByDisplayValue("2020")).toBeTruthy();
-    expect(view.getByDisplayValue("70000")).toBeTruthy();
-    expect(view.getByDisplayValue("120000")).toBeTruthy();
+    expect(view.getByDisplayValue("70,000")).toBeTruthy();
+    expect(view.getByDisplayValue("120,000")).toBeTruthy();
     expect(lastFilters()).toEqual(expect.objectContaining({ condition: "used", brandId: "toyota", modelIds: ["camry"], yearMin: 2018, yearMax: 2020, priceMin: 70000, priceMax: 120000 }));
   });
 });
@@ -168,8 +169,8 @@ describe("Search parameters: Reset", () => {
     expect(view.getByLabelText("Model: Select model")).toBeTruthy();
     expect(view.queryByDisplayValue("2018")).toBeNull();
     expect(view.queryByDisplayValue("2020")).toBeNull();
-    expect(view.queryByDisplayValue("70000")).toBeNull();
-    expect(view.queryByDisplayValue("120000")).toBeNull();
+    expect(view.queryByDisplayValue("70,000")).toBeNull();
+    expect(view.queryByDisplayValue("120,000")).toBeNull();
     expect(lastFilters()).toEqual({ sort: "price_asc" });
     expect(view.getByRole("button", { name: "Show 100 listings" })).toBeTruthy();
     expect(routerMock.dismissTo).not.toHaveBeenCalled();
@@ -285,7 +286,7 @@ describe("Search parameters: price inputs keep every digit typed or pasted", () 
     it("keeps 7000000 when the digits arrive one at a time with a render between each", () => {
       const view = open();
       for (const text of prefixes("7000000")) fireEvent.changeText(view.getByPlaceholderText(placeholder), text);
-      expect(view.getByDisplayValue("7000000")).toBeTruthy();
+      expect(view.getByDisplayValue("7,000,000")).toBeTruthy();
       expect(lastFilters()[key]).toBe(7000000);
     });
 
@@ -296,34 +297,34 @@ describe("Search parameters: price inputs keep every digit typed or pasted", () 
         // One act batches the events, so React does not re-render between them, as in a native burst.
         for (const text of prefixes("7000000")) fireEvent.changeText(field, text);
       });
-      expect(view.getByDisplayValue("7000000")).toBeTruthy();
+      expect(view.getByDisplayValue("7,000,000")).toBeTruthy();
       expect(lastFilters()[key]).toBe(7000000);
     });
 
     it.each(["7000000", "7,000,000", "7 000 000", "7 000 000 TMT"])("keeps 7000000 when %j is pasted whole", (pasted) => {
       const view = open();
       fireEvent.changeText(view.getByPlaceholderText(placeholder), pasted);
-      expect(view.getByDisplayValue("7000000")).toBeTruthy();
+      expect(view.getByDisplayValue("7,000,000")).toBeTruthy();
       expect(lastFilters()[key]).toBe(7000000);
     });
 
     it("replaces an existing value with a whole pasted value", () => {
       const view = open({ [key]: 70000, sort: "newest" });
-      fireEvent.changeText(view.getByDisplayValue("70000"), "7000000");
-      expect(view.queryByDisplayValue("70000")).toBeNull();
-      expect(view.getByDisplayValue("7000000")).toBeTruthy();
+      fireEvent.changeText(view.getByDisplayValue("70,000"), "7000000");
+      expect(view.queryByDisplayValue("70,000")).toBeNull();
+      expect(view.getByDisplayValue("7,000,000")).toBeTruthy();
       expect(lastFilters()[key]).toBe(7000000);
     });
 
     it("keeps the digits typed after a delete in the same burst", () => {
       // Opens at 7000000 and ends on a different value, so a handler that drops every event fails.
       const view = open({ [key]: 7000000, sort: "newest" });
-      const field = view.getByDisplayValue("7000000");
+      const field = view.getByDisplayValue("7,000,000");
       act(() => {
         for (const text of ["700000", "70000", "7000", "70005", "700055", "7000555"]) fireEvent.changeText(field, text);
       });
-      expect(view.queryByDisplayValue("7000000")).toBeNull();
-      expect(view.getByDisplayValue("7000555")).toBeTruthy();
+      expect(view.queryByDisplayValue("7,000,000")).toBeNull();
+      expect(view.getByDisplayValue("7,000,555")).toBeTruthy();
       expect(lastFilters()[key]).toBe(7000555);
     });
   });
@@ -339,8 +340,8 @@ describe("Search parameters: price inputs keep every digit typed or pasted", () 
         fireEvent.changeText(max, maxTexts[index] as string);
       }
     });
-    expect(view.getByDisplayValue("1500000")).toBeTruthy();
-    expect(view.getByDisplayValue("7000000")).toBeTruthy();
+    expect(view.getByDisplayValue("1,500,000")).toBeTruthy();
+    expect(view.getByDisplayValue("7,000,000")).toBeTruthy();
     expect(lastFilters()).toEqual(expect.objectContaining({ priceMin: 1500000, priceMax: 7000000 }));
   });
 
@@ -366,7 +367,7 @@ describe("Search parameters: price inputs keep every digit typed or pasted", () 
     expect(view.getByDisplayValue("7")).toBeTruthy();
     for (const text of prefixes("7000000").slice(1)) fireEvent.changeText(view.getByPlaceholderText("Max"), text);
     expect(view.queryByText("Minimum price cannot exceed maximum price")).toBeNull();
-    expect(view.getByDisplayValue("7000000")).toBeTruthy();
+    expect(view.getByDisplayValue("7,000,000")).toBeTruthy();
     expect(lastFilters()).toEqual(expect.objectContaining({ priceMin: 500000, priceMax: 7000000 }));
   });
 });
@@ -413,5 +414,46 @@ describe("Filter count without Intl.PluralRules", () => {
     } finally {
       if (descriptor) Object.defineProperty(Intl, "PluralRules", descriptor);
     }
+  });
+});
+
+describe("Search parameters: keyboard", () => {
+  it.each(["android", "ios"] as const)("keeps the year and price fields and Show N inside the padding avoidance region on %s", (os) => {
+    const previousOS = Platform.OS;
+    Platform.OS = os;
+    try {
+      const view = open(filled);
+      const avoidance = view.UNSAFE_getByType(KeyboardAvoidingView);
+      expect(avoidance.props.enabled).not.toBe(false);
+      expect(avoidance.props.behavior).toBe("padding");
+      expect(within(avoidance).getByDisplayValue("2018")).toBeTruthy();
+      expect(within(avoidance).getByDisplayValue("70,000")).toBeTruthy();
+      expect(within(avoidance).getByRole("button", { name: /^Show \d+ listings?$/ })).toBeTruthy();
+    } finally { Platform.OS = previousOS; }
+  });
+});
+
+describe("Search parameters: price entry", () => {
+  it("groups minimum and maximum price while typing and sends plain numbers", () => {
+    const view = open();
+    fireEvent.changeText(view.getByPlaceholderText("Min"), "420000");
+    fireEvent.changeText(view.getByPlaceholderText("Max"), "2329600");
+    expect(view.getByDisplayValue("420,000")).toBeTruthy();
+    expect(view.getByDisplayValue("2,329,600")).toBeTruthy();
+    expect(lastFilters()).toEqual(expect.objectContaining({ priceMin: 420000, priceMax: 2329600 }));
+  });
+
+  it.each(["2 329 600", "2,329,600", "2\u00a0329\u00a0600 TMT"])("parses a pasted %j", (pasted) => {
+    const view = open();
+    fireEvent.changeText(view.getByPlaceholderText("Max"), pasted);
+    expect(view.getByDisplayValue("2,329,600")).toBeTruthy();
+    expect(lastFilters()).toEqual(expect.objectContaining({ priceMax: 2329600 }));
+  });
+
+  it("leaves the year fields ungrouped", () => {
+    const view = open(filled);
+    expect(view.getByDisplayValue("2018")).toBeTruthy();
+    expect(view.getByDisplayValue("2020")).toBeTruthy();
+    expect(view.queryByDisplayValue("2,018")).toBeNull();
   });
 });

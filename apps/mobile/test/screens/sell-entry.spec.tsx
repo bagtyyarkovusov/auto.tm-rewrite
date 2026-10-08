@@ -65,7 +65,8 @@ vi.mock("@/components/ui/progress", async () => ({ Progress: (await import("reac
 vi.mock("../../src/api/catalog/useBrands", () => ({ useBrands: () => ({ data: { items: [{ id: "550e8400-e29b-41d4-a716-446655440001", name: "Toyota" }] } }) }));
 vi.mock("../../src/api/catalog/useModels", () => ({ useModels: () => ({ data: { items: [{ id: "550e8400-e29b-41d4-a716-446655440002", name: "Camry" }] } }) }));
 
-const DATA_STEPS = WizardSchemas.WIZARD_STEPS.filter((s) => s !== "review").length;
+// The draft row counts out of every step the wizard header counts, Check and publish included.
+const DATA_STEPS = WizardSchemas.WIZARD_STEPS.length;
 
 // Saved fields that complete Car and Contact only.
 const CAR_AND_CONTACT = {
@@ -236,7 +237,7 @@ describe("five-draft limit", () => {
 
     expect(fx.post).not.toHaveBeenCalled();
     expect(screen.getByText("You have 5 drafts")).toBeTruthy();
-    expect(screen.getByText("Finish or delete one to start a new Listing.")).toBeTruthy();
+    expect(screen.getByText("Finish or delete one to start a new listing.")).toBeTruthy();
   });
 
   it("reads the sheet title before its buttons", async () => {

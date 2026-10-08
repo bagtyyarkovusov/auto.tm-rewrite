@@ -224,7 +224,7 @@ describe("Conversation opened with only its ID", () => {
     expect(await screen.findByText("Merdan")).toBeTruthy();
     expect(screen.queryByText("M", { includeHiddenElements: true })).toBeNull();
     expect(screen.getByText("online")).toBeTruthy();
-    expect(screen.getByText("2018 Toyota Camry")).toBeTruthy();
+    expect(screen.getByText("Toyota Camry, 2018")).toBeTruthy();
     expect(screen.getByText("285,000 TMT")).toBeTruthy();
     expect(screen.getByText("No messages yet. Start the conversation.")).toBeTruthy();
     expect(screen.queryByText("Messages")).toBeNull();
@@ -235,7 +235,7 @@ describe("Conversation opened with only its ID", () => {
     routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
     const screen = renderMobile(<ConversationDetailScreen />);
 
-    fireEvent.press(await screen.findByRole("button", { name: "Open: 2018 Toyota Camry, 285,000 TMT" }));
+    fireEvent.press(await screen.findByRole("button", { name: "Open: Toyota Camry, 2018, 285,000 TMT" }));
     expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${LISTING_ID}`);
   });
 
@@ -296,7 +296,7 @@ describe("Conversation opened from cached data", () => {
     const screen = renderMobile(<Seeded><ConversationDetailScreen /></Seeded>);
 
     expect(screen.getByText("Cached")).toBeTruthy();
-    expect(screen.getByText("2018 Toyota Camry")).toBeTruthy();
+    expect(screen.getByText("Toyota Camry, 2018")).toBeTruthy();
     expect(screen.queryByTestId("conversation-header-skeleton")).toBeNull();
     expect(state.get).toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
 
@@ -854,7 +854,7 @@ describe("Conversation not available", () => {
 
     expect(await screen.findByText("Conversation not found")).toBeTruthy();
     expect(screen.queryByText("Merdan")).toBeNull();
-    expect(screen.queryByText("2018 Toyota Camry")).toBeNull();
+    expect(screen.queryByText("Toyota Camry, 2018")).toBeNull();
     expect(screen.queryByRole("button", { name: "Conversation actions" })).toBeNull();
   });
 
@@ -957,7 +957,7 @@ describe("Conversation about a closed Listing", () => {
     expect(await screen.findByText("Sold")).toBeTruthy();
     expect(screen.getByText("Thanks, already sold")).toBeTruthy();
     expect(
-      screen.getByText("This car is sold. You can keep talking, but the Listing is no longer available."),
+      screen.getByText("This car is sold. You can keep talking, but the listing is no longer available."),
     ).toBeTruthy();
     fireEvent.press(screen.getByRole("button", { name: "See other Toyota Camry" }));
     expect(routerMock.navigate).toHaveBeenCalledWith({
@@ -996,15 +996,15 @@ describe("Conversation about a closed Listing", () => {
 
     expect(await screen.findByText("Removed from sale")).toBeTruthy();
     expect(
-      screen.getByText("This car was removed from sale. You can keep talking, but the Listing is no longer available."),
+      screen.getByText("This car was removed from sale. You can keep talking, but the listing is no longer available."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "See other Toyota Camry" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Send message" })).toBeTruthy();
   });
 
   it.each([
-    ["listing_unavailable", "This Listing is no longer available"],
-    ["chat_disabled", "The seller has turned off messages for this Listing"],
+    ["listing_unavailable", "This listing is no longer available"],
+    ["chat_disabled", "The seller has turned off messages for this listing"],
     ["participant_unavailable", "You can't send messages in this Conversation"],
   ] as const)("replaces the composer with one line for %s and keeps History readable", async (restriction, line) => {
     routeGet({
@@ -1030,7 +1030,7 @@ describe("Conversation about a closed Listing", () => {
     });
     const screen = renderMobile(<ConversationDetailScreen />);
 
-    expect(await screen.findByText("This Listing is no longer available")).toBeTruthy();
+    expect(await screen.findByText("This listing is no longer available")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Open:/ })).toBeNull();
   });
 
@@ -1043,7 +1043,7 @@ describe("Conversation about a closed Listing", () => {
 
     expect(await screen.findByRole("button", { name: "Unblock" })).toBeTruthy();
     expect(screen.getByText("User blocked")).toBeTruthy();
-    expect(screen.queryByText("This Listing is no longer available")).toBeNull();
+    expect(screen.queryByText("This listing is no longer available")).toBeNull();
     expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
   });
 
@@ -1065,7 +1065,7 @@ describe("Conversation about a closed Listing", () => {
       fireEvent.press(screen.getByRole("button", { name: "Send message" }));
     });
 
-    expect(await screen.findByText("The seller has turned off messages for this Listing")).toBeTruthy();
+    expect(await screen.findByText("The seller has turned off messages for this listing")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
   });
 

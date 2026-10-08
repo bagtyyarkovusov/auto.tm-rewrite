@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Platform, Text as RNText, type Role } from 'react-native';
 
 import { fontFaceClass } from '@/lib/font';
+import { maxFontScaleFor, TextScaleContext } from '@/lib/font-scale';
 import { cn } from '@/lib/utils';
 
 const textVariants = cva(
@@ -79,6 +80,7 @@ function Text({
     asChild?: boolean;
   }) {
   const textClass = React.useContext(TextClassContext);
+  const controlScale = React.useContext(TextScaleContext);
   const Component = asChild ? Slot : RNText;
   const merged = cn(textVariants({ variant }), textClass, className);
   // One font file per weight: map the family and weight classes to a face.
@@ -88,6 +90,9 @@ function Text({
       className={face ? cn(merged, face) : merged}
       role={variant ? ROLE[variant] : undefined}
       aria-level={variant ? ARIA_LEVEL[variant] : undefined}
+      // Large roles and labels inside a control grow less with the system
+      // font size than reading text does; a caller's own cap wins.
+      maxFontSizeMultiplier={controlScale ?? maxFontScaleFor(merged)}
       {...props}
     />
   );

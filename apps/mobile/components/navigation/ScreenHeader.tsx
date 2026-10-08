@@ -62,7 +62,8 @@ export function SectionHeader({
     >
       <Text
         className="min-w-0 flex-1 font-heading text-headline font-semibold text-foreground"
-        numberOfLines={1}
+        // Two lines, so a long title at a large font size is not cut.
+        numberOfLines={2}
       >
         {title}
       </Text>

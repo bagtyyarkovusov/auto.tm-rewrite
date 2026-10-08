@@ -58,7 +58,7 @@ export function ConversationFooter({
           </View>
           <Button
             variant="outline"
-            className="h-11"
+            className="min-h-11"
             onPress={onUnblock}
             disabled={unblockPending}
           >

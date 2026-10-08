@@ -5,6 +5,7 @@ import { ImageOff, MoreHorizontal } from "lucide-react-native";
 import type { ListingsSchemas } from "@auto-tm/contracts";
 import { useTranslation } from "react-i18next";
 
+import { carTitle } from "../carTitle";
 import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { draftProgress } from "../wizard/draftProgress";
 
@@ -57,14 +58,10 @@ export function DraftCard({
       : buildVariantUrl(coverKey, "list")
     : null;
 
-  const titleParts = [
-    payload.year ? String(payload.year) : null,
-    brandName,
-    modelName,
-  ].filter(Boolean);
+  const title = carTitle(brandName, modelName, payload.year);
 
-  const identity = titleParts.length > 0
-    ? titleParts.join(" ")
+  const identity = title
+    ? title
     : payload.brandId && payload.modelId
       ? t("unnamedDraft")
       : t("untitledDraft");

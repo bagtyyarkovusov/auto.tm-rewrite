@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View, useWindowDimensions } from "react-native";
+import { KeyboardAvoidingView, ScrollView, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { useBrands } from "../../api/catalog/useBrands";
@@ -114,7 +114,8 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
 
   return (
     <TabScreen edgeFade={false}>
-      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      {/* Android is edge to edge, so the window no longer resizes for the keyboard: both platforms pad. */}
+      <KeyboardAvoidingView className="flex-1" behavior="padding">
         <StackHeader
           title={t("searchParameters")}
           leading={<BackButton onPress={onBack} accessibilityLabel={t("back")} />}

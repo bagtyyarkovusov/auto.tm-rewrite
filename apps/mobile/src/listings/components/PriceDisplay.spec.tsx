@@ -3,6 +3,10 @@ import { resolve } from "path";
 
 import { describe, it, expect } from "vitest";
 
+import { renderMobile } from "../../../test/render";
+
+import { PriceDisplay } from "./PriceDisplay";
+
 const source = readFileSync(
   resolve(__dirname, "./PriceDisplay.tsx"),
   "utf-8",
@@ -42,5 +46,35 @@ describe("PriceDisplay owner mode", () => {
 
   it("keeps the primary price on a single line to avoid layout breaks", () => {
     expect(source).toContain('numberOfLines={1}');
+  });
+});
+
+describe("PriceDisplay price colour (#775 F)", () => {
+  function priceClass(muted: boolean): string {
+    const screen = renderMobile(
+      <PriceDisplay
+        displayPriceTmt={100000}
+        priceAmount={100000}
+        priceCurrency="TMT"
+        acceptsExchange={false}
+        installmentAvailable={false}
+        muted={muted}
+      />,
+    );
+    return String(screen.getByText("100,000 TMT").props.className);
+  }
+
+  it("draws an active Listing's price in the normal text colour, at the same size and weight", () => {
+    const className = priceClass(false);
+    expect(className).toContain("text-foreground");
+    expect(className).not.toMatch(/text-primary(?!-)/);
+    expect(className).toContain("text-title");
+    expect(className).toContain("font-heading");
+  });
+
+  it("keeps the muted price of a sold or removed Listing", () => {
+    const className = priceClass(true);
+    expect(className).toContain("text-muted-foreground");
+    expect(className).not.toMatch(/text-foreground/);
   });
 });

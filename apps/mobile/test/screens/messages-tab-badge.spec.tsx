@@ -103,7 +103,7 @@ describe("Messages tab unread badge", () => {
     const view = await renderBar(3);
 
     expect(view.getAllByTestId("messages-tab-badge")).toHaveLength(1);
-    for (const name of ["Search", "Favorites", "Sell", "Cabinet"]) {
+    for (const name of ["Search", "Favorites", "Sell", "Account"]) {
       expect(view.getByRole("tab", { name })).toBeTruthy();
     }
   });

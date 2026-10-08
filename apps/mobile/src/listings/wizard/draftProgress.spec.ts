@@ -16,11 +16,11 @@ const completePayload = {
 };
 
 describe("draftProgress", () => {
-  it("counts filled fields saved without Continue, using the seven-step schema", () => {
+  it("counts filled fields saved without Continue, out of the seven steps the wizard header counts", () => {
     expect(WizardSchemas.WIZARD_STEPS).toEqual([
       "vehicle", "specs", "photos", "price", "location", "contact", "review",
     ]);
-    expect(draftProgress(completePayload)).toEqual({ filled: 6, total: 6, percent: 100 });
+    expect(draftProgress(completePayload)).toEqual({ filled: 6, total: 7, percent: 86 });
     const resumed = wizardMachineReducer(createInitialState(), {
       type: "INIT", draftId: id, payload: completePayload,
     });
@@ -30,20 +30,20 @@ describe("draftProgress", () => {
 
   it.each([1, 7, 8])("ignores legacy currentStep %s and incorrect stored steps", (currentStep) => {
     expect(draftProgress({ ...completePayload, currentStep, validatedSteps: [] })).toEqual({
-      filled: 6, total: 6, percent: 100,
+      filled: 6, total: 7, percent: 86,
     });
     expect(draftProgress({ currentStep, validatedSteps: ["vin", "review", "vehicle", "gone"] }))
-      .toEqual({ filled: 0, total: 6, percent: 0 });
+      .toEqual({ filled: 0, total: 7, percent: 0 });
   });
 
   it.each([{}, { brandId: id }, { priceCurrency: "TMT" as const }])(
     "counts no complete step for an empty or partial payload %j", (payload) => {
-      expect(draftProgress(payload)).toEqual({ filled: 0, total: 6, percent: 0 });
+      expect(draftProgress(payload)).toEqual({ filled: 0, total: 7, percent: 0 });
     },
   );
 
   it("counts valid default Contact even without seller input or a stored step", () => {
-    expect(draftProgress(contact)).toEqual({ filled: 1, total: 6, percent: 17 });
+    expect(draftProgress(contact)).toEqual({ filled: 1, total: 7, percent: 14 });
   });
 
   it.each([
@@ -59,6 +59,6 @@ describe("draftProgress", () => {
     expect(draftProgress({
       ...completePayload, ...updates, currentStep: 7,
       validatedSteps: WizardSchemas.WIZARD_STEPS,
-    })).toEqual({ filled: 5, total: 6, percent: 83 });
+    })).toEqual({ filled: 5, total: 7, percent: 71 });
   });
 });

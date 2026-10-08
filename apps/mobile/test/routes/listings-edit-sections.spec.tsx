@@ -132,7 +132,8 @@ function openStep(screen: Screen, row: RegExp, header: string) {
 /** Types a new amount on the Price step and returns to the list with Done. */
 function changePrice(screen: Screen, from: string, to: string) {
   openStep(screen, /^Price, .*Change$/, "Price");
-  fireEvent.changeText(screen.getByDisplayValue(from), to);
+  // The price field shows grouped digits; the typed text and the saved value are plain.
+  fireEvent.changeText(screen.getByDisplayValue(Number(from).toLocaleString("en-US")), to);
   fireEvent.press(screen.getByRole("button", { name: "Done" }));
   expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
 }
@@ -289,7 +290,7 @@ describe("changing a section (#589)", () => {
     expect(screen.queryByText(/Step \d of 7/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
-    fireEvent.changeText(screen.getByDisplayValue("100000"), "179000");
+    fireEvent.changeText(screen.getByDisplayValue("100,000"), "179000");
     fireEvent.press(screen.getByRole("button", { name: "Done" }));
 
     expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
@@ -301,7 +302,7 @@ describe("changing a section (#589)", () => {
     const screen = await openEdit();
 
     openStep(screen, /^Price, .*Change$/, "Price");
-    fireEvent.changeText(screen.getByDisplayValue("100000"), "");
+    fireEvent.changeText(screen.getByDisplayValue("100,000"), "");
     const done = screen.getByRole("button", { name: "Done" });
     expect(isDisabled(done)).toBe(true);
     fireEvent.press(done);
@@ -314,7 +315,7 @@ describe("changing a section (#589)", () => {
     const screen = await openEdit();
 
     openStep(screen, /^Price, .*Change$/, "Price");
-    fireEvent.changeText(screen.getByDisplayValue("100000"), "179000");
+    fireEvent.changeText(screen.getByDisplayValue("100,000"), "179000");
     fireEvent.press(screen.getByRole("button", { name: "Back" }));
 
     expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
@@ -322,7 +323,7 @@ describe("changing a section (#589)", () => {
 
     // Left invalid, the step is asked for again and nothing can be saved.
     openStep(screen, /^Price, .*Change$/, "Price");
-    fireEvent.changeText(screen.getByDisplayValue("179000"), "");
+    fireEvent.changeText(screen.getByDisplayValue("179,000"), "");
     fireEvent.press(screen.getByRole("button", { name: "Back" }));
 
     expect(screen.getByRole("header", { name: "Edit listing" })).toBeTruthy();
