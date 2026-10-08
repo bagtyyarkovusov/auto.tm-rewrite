@@ -374,9 +374,6 @@ export default function ConversationDetailScreen() {
     );
     const pendingOrFailed = localMessages.filter(
       (lm) =>
-        lm.status !== "sent" &&
-        lm.status !== "delivered" &&
-        lm.status !== "read" &&
         !serverIds.has(lm.id) &&
         !serverClientIds.has(lm.clientMessageId),
     );
