@@ -27,6 +27,7 @@ vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => inse
 const native = RN as unknown as {
   pressHardwareBack: () => boolean;
   scrollRequests: { method: string; x?: number; animated?: boolean }[];
+  AccessibilityInfo: { announcements: string[]; sendAccessibilityEvent?: (node: unknown, event: string) => void };
 };
 const announcements = (RN.AccessibilityInfo as unknown as { announcements: string[] }).announcements;
 
@@ -108,6 +109,43 @@ describe("Onboarding pager", () => {
 
     expect(screen.queryByText(COPY.en.find)).toBeNull();
     expect(screen.getByText(COPY.en.chat)).toBeTruthy();
+  });
+
+  it("moves accessibility focus to the new page's title only after the page is unhidden", () => {
+    // Recorded at call time: with the focus request in the same tick as the
+    // page change, the new page is still hidden from the accessibility tree.
+    const targetVisibleAtCall: boolean[] = [];
+    const holder: { current: ReturnType<typeof renderMobile> | null } = { current: null };
+    const focus = vi.fn((_node: unknown, _event: string) => {
+      targetVisibleAtCall.push(holder.current?.queryByText(COPY.en.chat) !== null);
+    });
+    native.AccessibilityInfo.sendAccessibilityEvent = focus;
+    vi.mocked(useReduceMotion).mockReturnValue(true);
+    // Host refs are null in the test renderer unless it gets a node mock.
+    holder.current = renderMobile(<ValuePropScreen />, {
+      createNodeMock: (element) => {
+        const { type, props } = element as { type: unknown; props: Record<string, unknown> };
+        return type === "Text" ? { props } : {};
+      },
+    });
+    const screen = holder.current;
+
+    // Mounting the first page announces nothing; the screen reader lands there itself.
+    expect(focus).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByRole("button", { name: "Next" }));
+
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(focus.mock.calls[0]?.[1]).toBe("focus");
+    expect((focus.mock.calls[0]?.[0] as { props: Record<string, unknown> }).props.children)
+      .toBe(COPY.en.chat);
+    expect(targetVisibleAtCall).toEqual([true]);
+
+    fireEvent.press(screen.getByRole("button", { name: "Back" }));
+
+    expect(focus).toHaveBeenCalledTimes(2);
+    expect((focus.mock.calls[1]?.[0] as { props: Record<string, unknown> }).props.children)
+      .toBe(COPY.en.find);
   });
 
   it("follows a swipe to Chat and back to Find", () => {
@@ -295,13 +333,26 @@ describe("Language choice", () => {
     unsubscribe();
   });
 
-  it("Continue opens the pager and does not end onboarding", () => {
+  it("Continue stores the preselected language when nothing was tapped, then opens the pager", () => {
     const screen = renderMobile(<LanguagePickerScreen />);
 
     fireEvent.press(screen.getByRole("button", { name: "Continue" }));
 
     expect(routerMock.push).toHaveBeenCalledWith("/(onboarding)/value-prop");
+    expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith("@auto-tm/locale", "ru");
+    // Continue moves on; it does not end onboarding.
+    expect(AsyncStorage.setItem).not.toHaveBeenCalledWith("@auto-tm/onboarding-completed", "true");
+  });
+
+  it("Continue does not rewrite a language that was already stored", () => {
+    localeStore.setState({ locale: "tk" });
+    const screen = renderMobile(<LanguagePickerScreen />);
+
+    fireEvent.press(screen.getByRole("button", { name: "Continue" }));
+
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect(routerMock.push).toHaveBeenCalledWith("/(onboarding)/value-prop");
   });
 
   it("lets the launch screen go when it mounts", () => {

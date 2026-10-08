@@ -88,10 +88,11 @@ describe("the onboarding launch gate", () => {
     expect(stored[FLAG]).toBe("true");
   });
 
-  it("treats an unreadable session as no session", async () => {
+  it("skips onboarding when the session cannot be read, without storing a flag", async () => {
     vi.mocked(loadAuthSession).mockRejectedValue(new Error("keychain locked"));
 
-    expect(await resolveOnboardingGate()).toBe("show");
+    expect(await resolveOnboardingGate()).toBe("skip");
+    expect(stored[FLAG]).toBeUndefined();
   });
 
   it("reads storage in the same tick as the call, before anything in the launch can write to it", () => {

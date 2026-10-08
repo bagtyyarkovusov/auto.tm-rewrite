@@ -26,9 +26,18 @@ export function OnboardingLaunch({ decision }: { decision: OnboardingDecision })
     settled.current = true;
 
     if (decision === "show" && pathname === HOME_PATHNAME) {
-      router.push("/(onboarding)/language");
-      setTimeout(() => SplashScreen.hide(), SPLASH_FALLBACK_MS);
-      return;
+      // The fallback is armed before the push: a push that throws still lets
+      // the launch screen go, and unmounting cancels the timer.
+      const fallback = setTimeout(() => SplashScreen.hide(), SPLASH_FALLBACK_MS);
+      try {
+        router.push("/(onboarding)/language");
+      } catch (error) {
+        clearTimeout(fallback);
+        console.warn("[onboarding] could not open the Language screen", error);
+        SplashScreen.hide();
+        return;
+      }
+      return () => clearTimeout(fallback);
     }
     SplashScreen.hide();
   }, [decision, pathname]);
