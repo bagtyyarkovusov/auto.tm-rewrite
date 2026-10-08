@@ -140,6 +140,47 @@ describe("admin session renewal before request dispatch", () => {
     expect(late.headers.get("location")).toContain("/login?reason=session-expired");
     expect(fetch).toHaveBeenCalledTimes(2);
   });
+  it("a crafted expiry link or TOTP reload cannot erase a current session", async () => {
+    const { proxy } = await import("./proxy");
+    const response = await proxy(new NextRequest("http://admin.auto.tm/login?reason=session-expired&mode=totp", {
+      headers: { cookie: `auto_tm_admin_access=${jwt(Math.floor(Date.now() / 1000) + 900)}; auto_tm_admin_refresh=${refresh}` },
+    }));
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("location")).toBe("http://admin.auto.tm/login?mode=totp");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("an expiry login link renews a refresh-only session instead of clearing it", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ accessToken: jwt(Math.floor(Date.now() / 1000) + 900), refreshToken: rotatedRefresh }));
+    const { proxy } = await import("./proxy");
+    const response = await proxy(new NextRequest("http://admin.auto.tm/login?reason=session-expired", {
+      headers: { cookie: `auto_tm_admin_refresh=${refresh}` },
+    }));
+    expect(response.cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("login expiry link clears only an API-rejected renewal and stays at login", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({}, { status: 401 }));
+    const { proxy } = await import("./proxy");
+    const response = await proxy(new NextRequest("http://admin.auto.tm/login?reason=session-expired", {
+      headers: { cookie: `auto_tm_admin_refresh=${refresh}` },
+    }));
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(response.cookies.get("auto_tm_admin_refresh")).toMatchObject({ value: "", maxAge: 0 });
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("login expiry link preserves refresh cookies during an outage", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({}, { status: 503 }));
+    const { proxy } = await import("./proxy");
+    const response = await proxy(new NextRequest("http://admin.auto.tm/login?reason=session-expired", {
+      headers: { cookie: `auto_tm_admin_refresh=${refresh}` },
+    }));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
   it("does not bypass expired POST renewal on the session-expired login URL", async () => {
     vi.mocked(fetch).mockResolvedValue(Response.json({ code: "INVALID_REFRESH_TOKEN" }, { status: 401 }));
     const { proxy } = await import("./proxy");
