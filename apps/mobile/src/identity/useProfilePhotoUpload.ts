@@ -59,10 +59,10 @@ export function useProfilePhotoUpload() {
         profilePhotoUploadStore.setState({ state: { status: "offline" } });
         return;
       }
-      const credentials = await photo.session.current();
+      await photo.session.current();
       const presign = await apiClient.post("/uploads/presign", {
         kind: "image", contentType: "image/jpeg", sizeBytes: compressed.fileSize, writeProtocol: "conditional-v1",
-      } satisfies UploadsSchemas.PresignRequest, UploadsSchemas.PresignResponseSchema, { accessToken: credentials.accessToken });
+      } satisfies UploadsSchemas.PresignRequest, UploadsSchemas.PresignResponseSchema, { assertSession: () => photo.session.current() });
       await photo.session.current();
       if (!presign.headers || !Object.entries(presign.headers).some(([name, value]) => name.toLowerCase() === "if-match" && value.length > 0)) {
         throw new ApiError("CONTRACT_VIOLATION", 502, "Conditional upload headers are missing");

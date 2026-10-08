@@ -82,7 +82,7 @@ describe("Profile photo uses the shared authentication lifecycle", () => {
     if (trigger === "expired") expect(events[0]).toBe("refresh");
   });
 
-  it("does not send a presign or replace the next User while an old refresh completes", async () => {
+  it.each(["success", "rejected", "malformed"])("ignores an old %s refresh after the next User signs in", async (response) => {
     await expireToken();
     let complete!: (response: Response) => void;
     let started = false;
@@ -98,7 +98,7 @@ describe("Profile photo uses the shared authentication lifecycle", () => {
     await clearAuthSession();
     const next = { accessToken: "merdan", refreshToken: "merdan-refresh", user: { id: "00000000-0000-4000-8000-00000000000b", phone: PHOTO_ME.phone, email: null, displayName: "Merdan", role: "buyer" as const } };
     await storeAuthSession(next);
-    await act(async () => { complete(HttpResponse.json({ accessToken: "old-fresh", refreshToken: "old-refresh" })); });
+    await act(async () => { complete(response === "success" ? HttpResponse.json({ accessToken: "old-fresh", refreshToken: "old-refresh" }) : response === "rejected" ? HttpResponse.json({ code: "UNAUTHORIZED" }, { status: 401 }) : HttpResponse.json({ wrong: true })); });
     await vi.waitFor(() => expect(result.current.state.status).toBe("idle"));
     expect((await loadAuthSession())?.user.id).toBe(next.user.id);
     expect(presigns).toBe(0);

@@ -11,8 +11,8 @@ export function useSetProfilePhoto() {
   return useMutation({
     networkMode: "always",
     mutationFn: async ({ request, session }: { request: IdentitySchemas.SetProfilePhotoRequest; session: ProfilePhotoSession }) => {
-      const credentials = await session.current();
-      return apiClient.put("/me/photo", request, AuthSchemas.MeResponseSchema, { accessToken: credentials.accessToken });
+      await session.current();
+      return apiClient.put("/me/photo", request, AuthSchemas.MeResponseSchema, { assertSession: () => session.current() });
     },
     onSuccess: async (me, { session }) => {
       await session.current();

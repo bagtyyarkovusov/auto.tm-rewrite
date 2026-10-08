@@ -11,8 +11,8 @@ export function useRemoveProfilePhoto() {
   return useMutation({
     networkMode: "always",
     mutationFn: async (session: ProfilePhotoSession) => {
-      const credentials = await session.current();
-      return apiClient.delete("/me/photo", AuthSchemas.MeResponseSchema, { accessToken: credentials.accessToken });
+      await session.current();
+      return apiClient.delete("/me/photo", AuthSchemas.MeResponseSchema, { assertSession: () => session.current() });
     },
     onSuccess: async (me, session) => {
       await session.current();
