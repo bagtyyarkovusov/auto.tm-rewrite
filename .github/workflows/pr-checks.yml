@@ -95,6 +95,10 @@ jobs:
           # to Reaper".
           TESTCONTAINERS_RYUK_DISABLED: "true"
 
+      - name: Build admin and verify real session/runtime paths
+        if: steps.lane.outputs.lane != 'docs'
+        run: pnpm --filter @auto-tm/admin verify:runtime
+
       - name: Show test service logs on failure
         if: ${{ failure() && steps.lane.outputs.lane != 'docs' }}
         shell: bash

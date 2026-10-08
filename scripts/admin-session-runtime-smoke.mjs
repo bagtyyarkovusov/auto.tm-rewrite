@@ -10,6 +10,8 @@ import { setTimeout as delay } from "node:timers/promises";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const entry = resolve(root, "apps/admin/.next/standalone/apps/admin/server.js");
+const routes = JSON.parse(await readFile(resolve(root, "apps/admin/.next/server/app-paths-manifest.json"), "utf8"));
+assert(routes["/page"] && !routes["/(admin)/page"], "only src/app/page.tsx must serve the root");
 const manifest = JSON.parse(await readFile(resolve(root, "apps/admin/.next/server/server-reference-manifest.json"), "utf8"));
 const actionId = Object.entries(manifest.node).find(([, value]) => value.exportedName === "dismissReport")?.[0];
 assert(actionId, "built dismissReport Server Action must exist");
@@ -19,10 +21,11 @@ const sessions = new Map();
 let rotations = 0;
 let mutations = 0;
 const bearerCalls = [];
-function session() {
+let statusUnavailable = false;
+function session(failure) {
   const old = randomBytes(32).toString("hex");
   const pair = { accessToken: jwt(Math.floor(Date.now() / 1000) + 900), refreshToken: randomBytes(32).toString("hex") };
-  sessions.set(old, { pair, used: false });
+  sessions.set(old, { pair, used: false, failure });
   return { old, pair };
 }
 const api = createServer(async (req, res) => {
@@ -34,6 +37,9 @@ const api = createServer(async (req, res) => {
     rotations++;
     await delay(75); // Force overlapping GET/POST requests to share an owner.
     if (!record || record.used) { res.writeHead(401); res.end(JSON.stringify({ code: "TOKEN_ALREADY_USED" })); return; }
+    if (record.failure === "network") { res.destroy(); return; }
+    if (record.failure === "malformed") { res.end("{}"); return; }
+    if (record.failure) { res.writeHead(record.failure); res.end("{}"); return; }
     record.used = true;
     res.end(JSON.stringify(record.pair));
     return;
@@ -42,6 +48,7 @@ const api = createServer(async (req, res) => {
   const authorized = [...sessions.values()].some(({ pair, used }) => used && req.headers.authorization === `Bearer ${pair.accessToken}`);
   if (!authorized) { res.writeHead(401); res.end(JSON.stringify({ code: "UNAUTHORIZED" })); return; }
   if (req.url === "/api/v1/auth/admin/totp/status") {
+    if (statusUnavailable) { res.writeHead(503); res.end("{}"); return; }
     res.end(JSON.stringify({ enrolled: true, elevated: true }));
   } else if (req.url === "/api/v1/admin/reports/r1/dismiss" && req.method === "POST") {
     assert(JSON.parse(body).reason === "Runtime renewal proof", "original action arguments must reach mutation");
@@ -104,13 +111,60 @@ try {
     await delay(100);
   }
   assert(healthy, "standalone must become healthy");
+  const rootSession = session();
+  const rootGet = await fetch(`${origin}/`, { redirect: "manual", headers: { cookie: cookie(rootSession.old) } });
+  assert.equal(rootGet.status, 307, "root must renew then use its reports redirect");
+  assert(rootGet.headers.get("location")?.endsWith("/reports"));
+  rotatedCookies(rootGet, rootSession.pair);
+  console.log("PASS root GET: sole root page redirects after renewal; both cookies persisted");
+
+  for (const failure of [429, 503, "network", "malformed"]) {
+    const temporary = session(failure);
+    for (const action of [false, true]) {
+      const unavailable = await request(temporary.old, action);
+      assert.equal(unavailable.status, 503, "temporary renewal failure must be retryable, never login");
+      assert.equal(unavailable.headers.getSetCookie().length, 0, "temporary failure must preserve both browser cookies");
+      assert.equal(unavailable.headers.get("location"), null);
+      assert((await unavailable.text()).includes("Временно недоступно. Попробуйте ещё раз."));
+      assert.equal(mutations, 0, "unavailable action must never execute");
+    }
+    sessions.get(temporary.old).failure = undefined;
+    const retry = await request(temporary.old);
+    assert.equal(retry.status, 200, "retry with the unchanged old cookie must recover");
+    rotatedCookies(retry, temporary.pair);
+  }
+  console.log("PASS transient GET/action: 429/503/network/malformed return Russian503, preserve cookies and recover on retry");
+
   const first = session();
+  bearerCalls.length = 0;
+  const firstBefore = rotations;
   const get = await request(first.old);
   assert.equal(get.status, 200, "expired GET must renew and render");
   rotatedCookies(get, first.pair);
-  assert.equal(rotations, 1);
+  assert.equal(rotations, firstBefore + 1);
   assert(bearerCalls.length > 0 && bearerCalls.every((value) => value === `Bearer ${first.pair.accessToken}`), "GET rendering must read forwarded rotated access");
   console.log("PASS expired GET: cookies persisted; rendering uses renewed bearer");
+
+  const currentCookie = `__Host-auto_tm_admin_access=${first.pair.accessToken}; __Host-auto_tm_admin_refresh=${first.pair.refreshToken}`;
+  const crafted = await fetch(`${origin}/login?reason=session-expired&mode=totp`, { redirect: "manual", headers: { cookie: currentCookie } });
+  assert.equal(crafted.status, 303);
+  assert(crafted.headers.get("location")?.endsWith("/login?mode=totp"), "healthy TOTP must ignore a crafted expiry flag");
+  assert.equal(crafted.headers.getSetCookie().length, 0);
+  const renewable = session();
+  const expiryLink = await fetch(`${origin}/login?reason=session-expired`, { redirect: "manual", headers: { cookie: cookie(renewable.old) } });
+  assert.equal(expiryLink.status, 303);
+  assert(expiryLink.headers.get("location")?.endsWith("/reports"));
+  rotatedCookies(expiryLink, renewable.pair);
+  console.log("PASS expiry links: current TOTP cookies survive; renewable session rotates before reports");
+
+  statusUnavailable = true;
+  const layoutOutage = await fetch(`${origin}/reports`, { redirect: "manual", headers: { cookie: currentCookie } });
+  assert.equal(layoutOutage.status, 500, "layout API outage must surface an error, never redirect to expired login");
+  assert.equal(layoutOutage.headers.get("location"), null);
+  assert.equal(layoutOutage.headers.getSetCookie().length, 0);
+  await layoutOutage.text();
+  statusUnavailable = false;
+  console.log("PASS layout outage: error response, no expired-login redirect or cookie clearing");
 
   const concurrent = session();
   bearerCalls.length = 0;

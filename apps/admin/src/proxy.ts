@@ -71,9 +71,13 @@ export async function proxy(request: NextRequest) {
   requestHeaders.delete(ADMIN_RETURN_TO_HEADER);
   if (safeReturnTo) requestHeaders.set(ADMIN_RETURN_TO_HEADER, safeReturnTo);
   // A healthy session must not render the expiry form because of a URL flag.
-  const destination = request.nextUrl.searchParams.get("mode") === "totp"
-    ? new URL("/login?mode=totp", process.env["ADMIN_ORIGIN"] || request.url)
-    : new URL(validateReturnTo(request.nextUrl.searchParams.get("returnTo")) || "/reports", process.env["ADMIN_ORIGIN"] || request.url);
+  const requestedReturnTo = validateReturnTo(request.nextUrl.searchParams.get("returnTo"));
+  const destination = new URL(
+    request.nextUrl.searchParams.get("mode") === "totp" ? "/login?mode=totp"
+      : tokens ? requestedReturnTo || "/reports" : "/login",
+    process.env["ADMIN_ORIGIN"] || request.url,
+  );
+  if (destination.pathname === "/login" && requestedReturnTo) destination.searchParams.set("returnTo", requestedReturnTo);
   const response = loginExpiry
     ? NextResponse.redirect(destination, 303)
     : NextResponse.next({ request: { headers: requestHeaders } });
