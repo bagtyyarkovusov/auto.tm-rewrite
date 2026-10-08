@@ -35,7 +35,7 @@ export function PriceDisplay({
       <Text
         className={cn(
           "text-title font-heading",
-          muted ? "text-muted-foreground" : "text-primary",
+          muted ? "text-muted-foreground" : "text-foreground",
         )}
         numberOfLines={1}
       >

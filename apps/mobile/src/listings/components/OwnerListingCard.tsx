@@ -97,7 +97,7 @@ export function OwnerListingCard({
           {title}
         </Text>
         <Text
-          className={cn("text-subhead font-heading", isActive ? "text-primary" : "text-muted-foreground")}
+          className={cn("text-subhead font-heading", isActive ? "text-foreground" : "text-muted-foreground")}
           numberOfLines={1}
         >
           {formatPrice(listing.displayPriceTmt, i18n.language)}
