@@ -24,7 +24,7 @@ export const THEME = {
     mutedForeground: mobileText.secondary.light,
     accent: mobileSurfaces.tonalPressed.light,
     accentForeground: mobileText.primary.light,
-    destructive: "15 85% 55%",
+    destructive: "15 85% 38%",
     destructiveForeground: "0 0% 100%",
     success: "142 76% 36%",
     successForeground: "0 0% 100%",
