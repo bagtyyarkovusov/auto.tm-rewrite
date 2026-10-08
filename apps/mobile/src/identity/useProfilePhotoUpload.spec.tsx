@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { act } from "@testing-library/react-native";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -5,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../test/msw";
 import { setupPhotoHook, signInPhotoUser } from "../../test/profile-photo-api";
 import { choosePhoto, photoDevice, resetPhotoDevice } from "../../test/profile-photo-device";
+
+import { PHOTO_ME } from "../../test/profile-photo-api";
 
 import { profilePhotoUploadStore, resetProfilePhotoUpload, useProfilePhotoUpload } from "./useProfilePhotoUpload";
 
@@ -24,6 +27,7 @@ vi.mock("expo-image-manipulator", async () => (await import("../../test/profile-
 beforeEach(async () => {
   await resetProfilePhotoUpload();
   resetPhotoDevice();
+
   profilePhotoUploadStore.setState({ state: { status: "idle" } });
   await signInPhotoUser();
 });
@@ -31,6 +35,65 @@ beforeEach(async () => {
 afterEach(resetProfilePhotoUpload);
 
 describe("useProfilePhotoUpload", () => {
+  it("rejects an unreadable Android library image without entering the native crop contract", async () => {
+    const previousPlatform = Platform.OS;
+    Platform.OS = "android";
+    choosePhoto({ width: -1, height: -1 });
+    photoDevice.library.mockImplementationOnce(async (options) => {
+      if ((options as { allowsEditing?: boolean }).allowsEditing) throw new Error("CropImageContract returned no URI");
+      return photoDevice.result;
+    });
+    try {
+      const { result } = setupPhotoHook(useProfilePhotoUpload);
+      await act(() => result.current.pick("library"));
+      expect(result.current.state.status).toBe("unsupported");
+      expect(photoDevice.sent).toHaveLength(0);
+    } finally { Platform.OS = previousPlatform; }
+  });
+
+  it("offers another photo when native image reading rejects before returning an asset", async () => {
+    photoDevice.library.mockRejectedValueOnce(Object.assign(new Error("Cannot read selected file"), { code: "ERR_FAILED_TO_READ_FILE" }));
+    const { result } = setupPhotoHook(useProfilePhotoUpload);
+    await act(() => result.current.pick("library"));
+    expect(result.current.state.status).toBe("unsupported");
+  });
+
+  it("releases a rejected native transfer before retrying the retained photo", async () => {
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"' } })),
+      http.put("*/me/photo", () => HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" })));
+    choosePhoto();
+    const { result } = setupPhotoHook(useProfilePhotoUpload);
+    let picking!: Promise<void>;
+    act(() => { picking = result.current.pick("library"); });
+    await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(1));
+    await act(async () => { photoDevice.fail(new Error("Connection reset")); await picking; });
+    expect(result.current.state.status).toBe("failed");
+    expect(photoDevice.cancelUpload).toHaveBeenCalledOnce();
+    let retrying!: Promise<void>;
+    act(() => { retrying = result.current.retry(); });
+    await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(2));
+    await act(async () => { photoDevice.finish(); await retrying; });
+    expect(result.current.state.status).toBe("idle");
+  });
+
+  it("keeps rapid Retry taps in one transfer instead of sharing a selection across competing jobs", async () => {
+    server.use(http.post("*/uploads/presign", () => HttpResponse.json({ uploadUrl: "https://storage.example/photo", key: "pending/new/original.jpg", expiresIn: 600, maxSizeBytes: 5242880, headers: { "if-match": '\"etag\"' } })),
+      http.put("*/me/photo", () => HttpResponse.json({ ...PHOTO_ME, avatarKey: "pending/new/original.jpg" })));
+    choosePhoto();
+    const { result } = setupPhotoHook(useProfilePhotoUpload);
+    let picking!: Promise<void>;
+    act(() => { picking = result.current.pick("library"); });
+    await vi.waitFor(() => expect(photoDevice.sent).toHaveLength(1));
+    await act(async () => { photoDevice.finish(500); await picking; });
+    let retries!: Promise<void[]>;
+    act(() => { retries = Promise.all([result.current.retry(), result.current.retry()]); });
+    await vi.waitFor(() => expect(photoDevice.sent.length).toBeGreaterThanOrEqual(2));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 25)); });
+    expect(photoDevice.sent).toHaveLength(2);
+    await act(async () => { photoDevice.finish(); await retries; });
+    expect(result.current.state.status).toBe("idle");
+  });
+
   it.each(["picker", "upload", "removal"])("forgets the retained %s operation when the fixture resets", async (operation) => {
     let presigns = 0;
     let removals = 0;
