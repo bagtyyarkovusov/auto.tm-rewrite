@@ -28,6 +28,8 @@ Each behavior's failing test was committed and pushed before its production fix.
 - Public-origin red `87fc01cc`: `pnpm --filter @auto-tm/admin exec vitest run proxy.spec.ts` (one failure/15 passes); green `91bbb98a`.
 - Rendered login: `pnpm --filter @auto-tm/admin exec vitest run src/app/login/page.spec.tsx` (three passes). Login is statically prerendered with a client search-parameter boundary, so raw HTTP HTML is not evidence of hydrated error copy. DOM tests carry that proof.
 - Real API bridge: `pnpm --filter @auto-tm/api exec vitest run src/modules/identity/presentation/AdminApiBridge.spec.ts` (five passes, no mocked fetch).
+- Newly merged photo action: red `334d61eb`, `src/app/(admin)/actions.spec.ts` (one failure/27 passes: failed-renewal marker ignored by `removeUserPhoto`); green `9e46329c` (28/28) after applying the existing early guard.
+- Newly merged standalone-assets fixture: `node apps/admin/scripts/verify-standalone-assets.mjs` fails at `9e46329c` with `Built report must use the admin service's runtime media origin, not its build-time value`. Its committed/pushed malformed `fixture-admin-session` cookie is redirected to login by the new expiry check; the asset assertion then sees login HTML. This red is recorded before adapting that test fixture to a current-session JWT expiry hint.
 - Built smoke: `node scripts/admin-session-runtime-smoke.mjs` after admin build. Local loopback API fixture enforces single-use rotation and records bearer/mutation behavior; actual standalone Next handles proxy, rendering, action decoding, cookie propagation and redirects. It is additional to the running real API bridge.
 
 ## Final local gates
