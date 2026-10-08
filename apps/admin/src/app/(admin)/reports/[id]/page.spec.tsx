@@ -70,6 +70,12 @@ async function renderPage(id = "r1") {
   return render(jsx);
 }
 
+function removalReasonInput() {
+  const form = screen.getByRole("button", { name: "Подтвердить удаление" }).closest("form");
+  if (!form) throw new Error("Removal confirmation form missing");
+  return within(form).getByLabelText("Причина действия");
+}
+
 describe("ReportDetailPage profile photo", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -168,7 +174,7 @@ describe("ReportDetailPage profile photo", () => {
     } });
     const view = await renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
-    fireEvent.change(within(screen.getByRole("button", { name: "Подтвердить удаление" }).closest("form")!).getByLabelText("Причина действия"), { target: { value: "Неприемлемое фото" } });
+    fireEvent.change(removalReasonInput(), { target: { value: "Неприемлемое фото" } });
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
     await waitFor(() => expect(mockState.refresh).toHaveBeenCalled());
     mockDetail(userReport({ status: "actioned", target: { ...userReport().target, avatarKey: null } }));
@@ -184,7 +190,7 @@ describe("ReportDetailPage profile photo", () => {
     mockState.removeUserPhoto.mockResolvedValue({ ok: false, code: "INTERNAL_ERROR", error: "Ошибка сервера" });
     await renderPage();
     fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
-    fireEvent.change(within(screen.getByRole("button", { name: "Подтвердить удаление" }).closest("form")!).getByLabelText("Причина действия"), { target: { value: "Неприемлемое фото" } });
+    fireEvent.change(removalReasonInput(), { target: { value: "Неприемлемое фото" } });
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
     expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Ошибка сервера");
     expect(screen.getByText("В ожидании")).toBeDefined();

@@ -183,8 +183,6 @@ export default async function ReportDetailPage({ params }: PageProps) {
               </div>
             )}
             {isUser && report.target.available && report.target.avatarKey && (
-              // Storage serves original photos directly, just like brand logos.
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`${(process.env["NEXT_PUBLIC_MINIO_PUBLIC_URL"] ?? "").replace(/\/$/, "")}/listing-photos/${report.target.avatarKey}`}
                 alt="Фото профиля"
@@ -194,7 +192,6 @@ export default async function ReportDetailPage({ params }: PageProps) {
             {isUser && report.target.available && !report.target.avatarKey &&
               report.status === AdminSchemas.ContentReportStatus.Actioned &&
               report.target.avatarIndex !== undefined && (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`/assigned-avatars/${report.target.avatarIndex % 12}.svg`}
                   alt="Назначенный аватар"
