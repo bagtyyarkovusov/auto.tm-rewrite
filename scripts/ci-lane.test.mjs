@@ -118,11 +118,8 @@ function green(event, overrides = {}) {
   };
 }
 
-// Until implemented, exercise the current public lane decision so red means
-// "full instead of docs", rather than an absent-export/import failure.
 async function select(r, event, readCheckRuns = async () => green(event), options = {}) {
-  const choose = ci.chooseLaneForEvent ?? chooseLane;
-  return choose("HEAD^1", r.cwd, { eventName: "pull_request", event, readCheckRuns, ...options });
+  return ci.chooseLaneForEvent("HEAD^1", r.cwd, { eventName: "pull_request", event, readCheckRuns, ...options });
 }
 
 test("one or several docs commits after a green code head take docs and explain why", async (t) => {
@@ -239,4 +236,88 @@ test("the original whole-PR docs rule still works without event or API input", a
   r.commit({ "docs/a.md": "docs\n" });
   const event = r.finish();
   assert.equal((await select(r, { ...event, action: "opened" }, async () => { throw new Error("must not need API"); })).lane, "docs");
+});
+
+function shallowCheckout(t, r) {
+  r.git("branch", "checkout", "HEAD");
+  const cwd = mkdtempSync(join(tmpdir(), "ci-lane-shallow-"));
+  t.after(() => rmSync(cwd, { recursive: true, force: true }));
+  execFileSync("git", ["clone", "-q", "--depth=2", "--branch=checkout", `file://${r.cwd}`, cwd]);
+  return { ...r, cwd };
+}
+
+test("depth-2 synthetic checkout deepens exact history to prove docs commits", async (t) => {
+  const r = pullRequest(t);
+  r.commit({ "docs/a.md": "docs one\n" });
+  r.commit({ "README.md": "docs two\n" });
+  const event = r.finish();
+  const shallow = shallowCheckout(t, r);
+  assert.equal((await select(shallow, event)).lane, "full");
+  assert.equal((await select(shallow, event, async () => green(event), { fetchHistory: true })).lane, "docs");
+  assert.equal(execFileSync("git", ["rev-parse", "HEAD"], { cwd: shallow.cwd, encoding: "utf8" }).trim(), r.git("rev-parse", "HEAD"));
+});
+
+test("shallow merges deepen to their common base and docs resolutions take docs", async (t) => {
+  const r = pullRequest(t);
+  r.git("switch", "main");
+  for (let i = 0; i < 5; i++) r.commit({ "src/main.ts": `incoming ${i}\n` });
+  r.commit({ "docs/a.md": "main docs\n" });
+  r.git("switch", "-");
+  assert.throws(() => r.git("merge", "--no-ff", "main", "-m", "merge main"));
+  r.commit({ "docs/a.md": "resolved docs\n" });
+  const event = r.finish();
+  const shallow = shallowCheckout(t, r);
+  assert.equal((await select(shallow, event)).lane, "full");
+  const result = await select(shallow, event, async () => green(event), { fetchHistory: true });
+  assert.equal(result.lane, "docs", result.reason);
+});
+
+test("a failed history fetch stays full", async (t) => {
+  const r = pullRequest(t);
+  r.commit({ "docs/a.md": "docs\n" });
+  const event = r.finish();
+  const shallow = shallowCheckout(t, r);
+  execFileSync("git", ["remote", "set-url", "origin", join(shallow.cwd, "missing-repo")], { cwd: shallow.cwd });
+  assert.equal((await select(shallow, event, async () => green(event), { fetchHistory: true })).lane, "full");
+});
+
+test("missing or mismatched event and checkout evidence cannot take the new docs path", async (t) => {
+  const r = pullRequest(t);
+  r.commit({ "docs/a.md": "docs\n" });
+  const event = r.finish();
+  for (const change of [
+    { before: undefined }, { before: "0".repeat(40) }, { before: "--help" },
+    { after: r.base }, { action: "opened" }, { action: "reopened" },
+    { repository: { full_name: "different/repo" } }, { number: 99 },
+    { pull_request: { ...event.pull_request, base: { ...event.pull_request.base, ref: "release" } } },
+    { pull_request: { ...event.pull_request, base: { ...event.pull_request.base, sha: r.before } } },
+    { pull_request: { ...event.pull_request, head: { ...event.pull_request.head, sha: r.before } } },
+  ]) {
+    assert.equal((await select(r, { ...event, ...change })).lane, "full", JSON.stringify(change));
+  }
+  assert.equal((await select(r, undefined)).lane, "full");
+  assert.equal((await select(r, event, async () => green(event), { eventName: "push" })).lane, "full");
+  r.git("reset", "--hard", event.after);
+  r.commit({ "src/app.ts": "different checkout code\n" });
+  assert.equal((await select(r, event)).lane, "full");
+});
+
+test("hand resolving a text code conflict or moving code into docs takes full", async (t) => {
+  const r = pullRequest(t);
+  r.git("switch", "main");
+  r.commit({ "src/app.ts": "main code\n" });
+  r.git("switch", "-");
+  assert.throws(() => r.git("merge", "--no-ff", "main", "-m", "merge main"));
+  r.commit({ "src/app.ts": "resolved code\n", "docs/a.md": "evidence\n" });
+  assert.equal((await select(r, r.finish())).lane, "full");
+  r.git("reset", "--hard", r.before);
+  r.git("mv", "src/app.ts", "docs/app.ts");
+  r.git("commit", "-q", "-m", "move code into docs");
+  assert.equal((await select(r, r.finish())).lane, "full");
+});
+
+test("leading whitespace paths do not disguise hand code edits as docs", async (t) => {
+  const r = pullRequest(t);
+  r.commit({ " docs/hidden-code": "code\n", "docs/a.md": "evidence\n" });
+  assert.equal((await select(r, r.finish())).lane, "full");
 });
