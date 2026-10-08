@@ -83,6 +83,7 @@ export function useProfilePhotoUpload() {
           break;
         } catch (error) {
           if (conflictReason(error) !== IdentitySchemas.ProfilePhotoConflictReason.UploadPreparing) throw error;
+          await photo.session.current();
           profilePhotoUploadStore.setState({ state: { status: "uploading", uri: compressed.uri, percent: 100, preparing: true } });
           // This is still the same adoption, not another upload. The server's
           // claim expires after ten minutes if the original request died.
@@ -96,6 +97,7 @@ export function useProfilePhotoUpload() {
       await discard();
     } catch (error) {
       if (error instanceof PhotoSessionEnded || selected !== photo) {
+        if (!selected || selected === photo) profilePhotoUploadStore.setState({ state: { status: "idle" } });
         photo.session.dispose();
         if (photo.compressed) await FileSystem.deleteAsync(photo.compressed.uri, { idempotent: true }).catch(() => {});
         return;
