@@ -1,3 +1,4 @@
+import { StyleSheet } from "react-native";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -504,3 +505,14 @@ describe("MessageList empty", () => {
     expect(screen.getByText("No messages yet. Start the conversation.")).toBeTruthy();
   });
 });
+
+ it("lets the native inverted list keep its empty label upright", () => {
+   const screen = renderMobile(<MessageList messages={[]} currentUserId={ME} />);
+   const label = screen.getByText("No messages yet. Start the conversation.");
+   // VirtualizedList already counter-inverts ListEmptyComponent. A second
+   // transform overrides its correction and flips the label on the device.
+   let container = label.parent;
+   while (container && !container.props.className?.includes("py-12")) container = container.parent;
+   if (!container) throw new Error("Empty-state container missing");
+   expect(StyleSheet.flatten(container.props.style)?.transform).toBeUndefined();
+ });
