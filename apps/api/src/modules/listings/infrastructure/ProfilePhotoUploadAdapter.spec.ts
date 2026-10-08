@@ -351,7 +351,7 @@ describe("ProfilePhotoUploadAdapter", () => {
 
       await expect(photos.adopt({ userId: "user-1", key: KEY })).rejects.toMatchObject({
         status: 400,
-        response: { code: "UPLOAD_OBJECT_INVALID" },
+        response: { code: "UPLOAD_OBJECT_INVALID", details: { key: KEY } },
       });
 
       expect(generator.calls).toEqual([]);
