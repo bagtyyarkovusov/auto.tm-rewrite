@@ -3,6 +3,7 @@
 import { redirect, unstable_rethrow } from "next/navigation";
 import { AuthSchemas, ErrorCode } from "@auto-tm/contracts";
 
+import { rejectExpiredSession } from "@/lib/action-session";
 import { apiFetch, apiFetchOptional, ApiError } from "@/lib/api-client";
 import {
   clearAuthCookies,
@@ -20,6 +21,7 @@ export async function requestOtp(
   | { ok: false; error: string }
   | { ok: true; resendInSeconds: number; testCode?: string }
 > {
+  await rejectExpiredSession();
   const phone = formData.get("phone");
   const parsed = AuthSchemas.PhoneTm.safeParse(phone);
   if (!parsed.success) {
@@ -64,6 +66,7 @@ export async function verifyOtp(
   _prev: unknown,
   formData: FormData,
 ): Promise<VerifyOtpResult> {
+  await rejectExpiredSession();
   const phone = formData.get("phone");
   const code = formData.get("code");
 
@@ -145,6 +148,7 @@ export type TotpStatusResult =
     };
 
 export async function getTotpStatus(): Promise<TotpStatusResult> {
+  await rejectExpiredSession();
   try {
     const status =
       await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
@@ -170,6 +174,7 @@ export type TotpEnrollResult =
   | { ok: true; qrCodeDataUrl: string };
 
 export async function enrollTotp(): Promise<TotpEnrollResult> {
+  await rejectExpiredSession();
   try {
     const result = await apiFetch<AuthSchemas.AdminTotpEnrollResponse>(
       "/auth/admin/totp/enroll",
@@ -210,6 +215,7 @@ export async function verifyTotp(
   _prev: unknown,
   formData: FormData,
 ): Promise<TotpVerifyResult> {
+  await rejectExpiredSession();
   const code = formData.get("code") as string;
   if (!code || code.length < 1) {
     return { ok: false, error: "Введите код." };
@@ -255,6 +261,7 @@ export async function verifyTotp(
 // ─── Logout ───
 
 export async function logout(): Promise<void> {
+  await rejectExpiredSession();
   const refreshToken = await getRefreshToken();
   if (refreshToken) {
     try {
@@ -271,6 +278,7 @@ export async function logout(): Promise<void> {
 }
 
 export async function logoutAll(): Promise<void> {
+  await rejectExpiredSession();
   try {
     await apiFetch("/auth/logout-all", { method: "POST" });
   } catch {
@@ -285,6 +293,7 @@ export async function logoutAll(): Promise<void> {
 export async function requireAuthWithReturnTo(
   returnTo: string | null | undefined,
 ): Promise<void> {
+  await rejectExpiredSession();
   const status = await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
     "/auth/admin/totp/status",
   );

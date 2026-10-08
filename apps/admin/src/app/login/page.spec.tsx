@@ -11,7 +11,7 @@ vi.mock("next/navigation", async (importOriginal) => ({
   useRouter: () => ({ push: navigation.push }),
   redirect: vi.fn(),
 }));
-vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined, set: vi.fn() }) }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => ({ get: () => undefined, set: vi.fn() }) }));
 
 import LoginPage from "./page";
 

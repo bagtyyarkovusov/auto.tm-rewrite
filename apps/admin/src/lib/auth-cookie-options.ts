@@ -1,3 +1,5 @@
+export const SESSION_EXPIRED_HEADER = "x-admin-session-expired";
+
 export const SESSION_EXPIRED_MESSAGE = "Сессия истекла. Войдите снова.";
 
 export function authCookieSettings() {

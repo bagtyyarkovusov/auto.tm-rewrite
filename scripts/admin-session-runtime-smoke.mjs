@@ -133,12 +133,20 @@ try {
   const loser = await request(concurrent.old, true);
   assert.equal(loser.status, 303);
   assert.equal(mutations, 1, "losing action must never execute or replay");
-  assert(loser.headers.get("location")?.includes("/login?reason=session-expired"), "loser must reach expired-session login");
+  const redirect = loser.headers.get("x-action-redirect");
+  assert(redirect?.startsWith("/login?reason=session-expired") && redirect.endsWith(";push"), "Next action redirect must navigate its JavaScript client to login");
+  assert(!loser.headers.has("location"), "action fetch must not follow a proxy redirect into unexpected HTML");
   assert(loser.headers.getSetCookie().filter((value) => /Max-Age=0/i.test(value)).length === 2, "loser must clear both cookies");
-  const login = await fetch(new URL(loser.headers.get("location"), origin), { redirect: "manual" });
+  const login = await fetch(new URL(redirect.split(";")[0], origin), { redirect: "manual" });
   assert.equal(login.status, 200, "login must not redirect-loop");
   assert((await login.text()).includes("Сессия истекла. Войдите снова."), "login must render Russian expired-session message");
   console.log("PASS cache expiry/loser: 303, both cookies cleared, no mutation, rendered login without loop");
+
+  const ordinaryPost = await fetch(`${origin}/reports`, { method: "POST", redirect: "manual", headers: { cookie: cookie(concurrent.old), origin }, body: "original form" });
+  assert.equal(ordinaryPost.status, 303);
+  assert(ordinaryPost.headers.get("location")?.includes("/login?reason=session-expired"), "ordinary POST must follow with login GET");
+  assert.equal(mutations, 1);
+  console.log("PASS ordinary expired POST: canceled with 303 login GET");
 
   await stop(running.child);
   const restarted = start(listenPort, apiUrl);
@@ -149,6 +157,7 @@ try {
     }
     const restartLoser = await request(first.old, true);
     assert.equal(restartLoser.status, 303, "lost process-local handoff must fail closed after restart");
+    assert(restartLoser.headers.get("x-action-redirect")?.startsWith("/login?reason=session-expired"), "restart loser must preserve native action navigation");
     assert.equal(mutations, 1);
     console.log("PASS restart loser: login; original action never runs");
   } finally { await stop(restarted.child); }
