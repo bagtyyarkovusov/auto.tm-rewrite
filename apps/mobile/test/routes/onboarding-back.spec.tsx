@@ -6,9 +6,8 @@ import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { act, fireEvent, renderMobile } from "../render";
+import { act, renderMobile } from "../render";
 import RootLayout, { unstable_settings } from "../../app/_layout";
-import ValuePropScreen from "../../app/(onboarding)/value-prop";
 
 vi.mock("@react-native-async-storage/async-storage", () => ({
   default: { getItem: vi.fn(async () => "true"), setItem: vi.fn(async () => {}), removeItem: vi.fn(async () => {}) },
@@ -40,29 +39,18 @@ beforeEach(() => {
   vi.mocked(AsyncStorage.getItem).mockImplementation(async (key) => key === "@auto-tm/onboarding-completed" ? "true" : null);
 });
 
-describe("Onboarding Back eligibility", () => {
+describe("Root Back anchor", () => {
   it("uses the tabs as the deep-link Back anchor", () => {
     expect(unstable_settings.initialRouteName).toBe("(tabs)");
   });
-  it("excludes the entire onboarding group for a returning user", async () => {
+  it("mounts navigation without waiting for the onboarding storage read", async () => {
+    vi.mocked(AsyncStorage.getItem).mockImplementation((key) =>
+      key === "@auto-tm/onboarding-completed" ? new Promise(() => {}) : Promise.resolve(null),
+    );
     const screen = renderMobile(<RootLayout />);
     await act(async () => {});
-    expect(screen.queryByTestId("(onboarding)")).toBeNull();
     expect(screen.getByTestId("(tabs)")).toBeTruthy();
-  });
-  it.each(["skip", "complete"])("removes onboarding after the user chooses to %s, before publishing", async (finish) => {
-    vi.mocked(AsyncStorage.getItem).mockImplementation(async (key) => key === "@auto-tm/onboarding-completed" ? null : null);
-    const screen = renderMobile(<RootLayout />);
-    await act(async () => {});
-    expect(screen.getByTestId("(onboarding)")).toBeTruthy();
-    const onboarding = renderMobile(<ValuePropScreen />);
-    if (finish === "complete") {
-      fireEvent.press(onboarding.getByRole("button", { name: "Next" }));
-      fireEvent.press(onboarding.getByRole("button", { name: "Next" }));
-    }
-    await act(async () => { fireEvent.press(onboarding.getByRole("button", { name: finish === "skip" ? "Skip" : "Get started" })); });
-    expect(screen.queryByTestId("(onboarding)")).toBeNull();
-    expect(screen.getByTestId("(tabs)")).toBeTruthy();
+    expect(AsyncStorage.getItem).not.toHaveBeenCalledWith("@auto-tm/onboarding-completed");
   });
 });
 
