@@ -9,6 +9,7 @@ describe("admin runtime configuration", () => {
   it.each([undefined, "", "invalid", "ftp://api.example.test"])(
     "refuses production server initialization with API_BASE_URL %s", (address) => {
       vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("NEXT_RUNTIME", "nodejs");
       vi.stubEnv("NEXT_PHASE", undefined);
       vi.stubEnv("API_BASE_URL", address);
       vi.spyOn(console, "error").mockImplementation(() => {});

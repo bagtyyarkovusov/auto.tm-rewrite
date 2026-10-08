@@ -9,7 +9,7 @@ export function register(): void {
     getApiBaseUrl();
   } catch (error) {
     // Next otherwise keeps its listener alive after instrumentation rejection.
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && process.env["NEXT_RUNTIME"] === "nodejs") {
       console.error("API_BASE_URL must be configured as an http(s) URL.");
       process.exit(1);
     }

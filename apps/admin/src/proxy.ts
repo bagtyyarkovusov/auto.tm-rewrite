@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { authCookieSettings, SESSION_EXPIRED_HEADER } from "./src/lib/auth-cookie-options";
-import { hasCurrentAccessToken, renewSession } from "./src/lib/session-renewal";
-import { ADMIN_RETURN_TO_HEADER, validateOrigin, validateReturnTo } from "./src/lib/validators";
+import { authCookieSettings, SESSION_EXPIRED_HEADER } from "./lib/auth-cookie-options";
+import { hasCurrentAccessToken, renewSession } from "./lib/session-renewal";
+import { ADMIN_RETURN_TO_HEADER, validateOrigin, validateReturnTo } from "./lib/validators";
 
 const PROTECTED_PREFIXES = ["/reports", "/audit", "/listings", "/users", "/catalog"];
 
