@@ -1,7 +1,9 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import type { AdminSchemas, ReportsSchemas } from "@auto-tm/contracts";
 
+import { rejectExpiredSession } from "@/lib/action-session";
 import { apiFetch, ApiError } from "@/lib/api-client";
 
 type ListReportsResponse = AdminSchemas.ListReportsResponse;
@@ -21,6 +23,7 @@ export type ActionResult<T> =
   | { ok: false; error: string; code?: string; details?: unknown };
 
 function handleApiError(err: unknown): ActionResult<never> {
+  unstable_rethrow(err);
   if (err instanceof ApiError) {
     return {
       ok: false,
@@ -40,6 +43,7 @@ export async function listReports(params: {
   page?: number;
   pageSize?: number;
 }): Promise<ActionResult<ListReportsResponse>> {
+  await rejectExpiredSession();
   const searchParams = new URLSearchParams();
   if (params.status) searchParams.set("status", params.status);
   if (params.targetType) searchParams.set("targetType", params.targetType);
@@ -59,6 +63,7 @@ export async function listReports(params: {
 export async function getReportDetail(
   id: string,
 ): Promise<ActionResult<GetReportDetailResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<GetReportDetailResponse>(`/admin/reports/${id}`);
     return { ok: true, data };
@@ -71,6 +76,7 @@ export async function dismissReport(
   id: string,
   reason: string,
 ): Promise<ActionResult<DismissReportResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<DismissReportResponse>(
       `/admin/reports/${id}/dismiss`,
@@ -92,6 +98,7 @@ export async function banListing(
   reason: string,
   reportId?: string,
 ): Promise<ActionResult<BanListingResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<BanListingResponse>(
       `/admin/listings/${id}/ban`,
@@ -110,6 +117,7 @@ export async function unbanListing(
   id: string,
   reason: string,
 ): Promise<ActionResult<UnbanListingResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<UnbanListingResponse>(
       `/admin/listings/${id}/unban`,
@@ -131,6 +139,7 @@ export async function suspendUser(
   reason: string,
   reportId?: string,
 ): Promise<ActionResult<SuspendUserResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<SuspendUserResponse>(
       `/admin/users/${id}/suspend`,
@@ -149,6 +158,7 @@ export async function unsuspendUser(
   id: string,
   reason: string,
 ): Promise<ActionResult<UnsuspendUserResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<UnsuspendUserResponse>(
       `/admin/users/${id}/unsuspend`,
@@ -168,6 +178,7 @@ export async function removeUserPhoto(
   reason: string,
   reportId?: string,
 ): Promise<ActionResult<RemoveUserPhotoResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<RemoveUserPhotoResponse>(
       `/admin/users/${id}/remove-photo`,
@@ -188,6 +199,7 @@ export async function listAuditEntries(params: {
   page?: number;
   pageSize?: number;
 }): Promise<ActionResult<ListAuditEntriesResponse>> {
+  await rejectExpiredSession();
   const searchParams = new URLSearchParams();
   if (params.action) searchParams.set("action", params.action);
   if (params.targetType) searchParams.set("targetType", params.targetType);
@@ -211,6 +223,7 @@ export async function listInspectionInterestStats(params: {
   page?: number;
   pageSize?: number;
 }): Promise<ActionResult<ListInspectionInterestStatsResponse>> {
+  await rejectExpiredSession();
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set("page", String(params.page));
   if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
@@ -228,6 +241,7 @@ export async function listInspectionInterestStats(params: {
 // ─── Config ───
 
 export async function getConfig(): Promise<ActionResult<ConfigResponse>> {
+  await rejectExpiredSession();
   try {
     const data = await apiFetch<ConfigResponse>("/config");
     return { ok: true, data };

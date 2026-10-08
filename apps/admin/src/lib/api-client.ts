@@ -1,16 +1,7 @@
 import { redirect } from "next/navigation";
 
-import {
-  clearAuthCookies,
-  getAccessToken,
-  getRefreshToken,
-  setAuthCookies,
-} from "./cookies";
-
-const API_BASE_URL =
-  process.env["API_BASE_URL"] ||
-  process.env["NEXT_PUBLIC_API_URL"] ||
-  "http://localhost:3006/api/v1";
+import { getAccessToken } from "./cookies";
+import { getApiBaseUrl } from "./api-config";
 
 export class ApiError extends Error {
   constructor(
@@ -28,7 +19,7 @@ async function doFetch(
   path: string,
   options: Omit<RequestInit, "body"> & { body?: unknown } = {},
 ): Promise<Response> {
-  const url = `${API_BASE_URL}${path}`;
+  const url = `${getApiBaseUrl()}${path}`;
   const headers = new Headers(options.headers);
   if (!headers.has("Content-Type") && options.body != null) {
     headers.set("Content-Type", "application/json");
@@ -49,35 +40,11 @@ async function doFetch(
   return fetch(url, fetchInit);
 }
 
-async function tryRefresh(): Promise<boolean> {
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) return false;
-
-  try {
-    const response = await doFetch("/auth/refresh", {
-      method: "POST",
-      body: { refreshToken },
-    });
-
-    if (!response.ok) return false;
-
-    const data = (await response.json()) as {
-      accessToken: string;
-      refreshToken: string;
-    };
-    await setAuthCookies(data.accessToken, data.refreshToken);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Server-side API fetch wrapper.
  * Forwards Authorization: Bearer header from the access cookie.
- * On API 401: attempts refresh once using the refresh cookie,
- * rotates cookies on success, and retries the original request once.
- * On refresh failure: clears cookies and redirects to /login.
+ * Renewal happens in the writable Node proxy before rendering or actions.
+ * An API-rejected session returns to login, where the proxy clears cookies.
  * Never leaks token material in rendered props or error messages.
  */
 export async function apiFetch<T>(
@@ -91,23 +58,9 @@ export async function apiFetch<T>(
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  let response = await doFetch(path, { ...options, headers });
+  const response = await doFetch(path, { ...options, headers });
 
-  // Refresh-on-401: attempt once
-  if (response.status === 401) {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      const newAccessToken = await getAccessToken();
-      const retryHeaders = new Headers(options.headers);
-      if (newAccessToken) {
-        retryHeaders.set("Authorization", `Bearer ${newAccessToken}`);
-      }
-      response = await doFetch(path, { ...options, headers: retryHeaders });
-    } else {
-      await clearAuthCookies();
-      redirect("/login");
-    }
-  }
+  if (response.status === 401) redirect("/login?reason=session-expired");
 
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as {
@@ -140,24 +93,12 @@ export async function apiFetchOptional<T>(
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  let response = await doFetch(path, { ...options, headers });
+  const response = await doFetch(path, { ...options, headers });
 
-  if (response.status === 401) {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      const newAccessToken = await getAccessToken();
-      const retryHeaders = new Headers(options.headers);
-      if (newAccessToken) {
-        retryHeaders.set("Authorization", `Bearer ${newAccessToken}`);
-      }
-      response = await doFetch(path, { ...options, headers: retryHeaders });
-    } else {
-      return null;
-    }
-  }
-
+  if (response.status === 401) return null;
   if (!response.ok) {
-    return null;
+    const body = await response.json().catch(() => ({})) as { code?: string; message?: string };
+    throw new ApiError(response.status, body.code ?? "UNKNOWN", body, body.message ?? `HTTP ${response.status}`);
   }
 
   return response.json() as Promise<T>;

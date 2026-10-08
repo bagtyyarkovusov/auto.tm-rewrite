@@ -1,8 +1,9 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { AuthSchemas, ErrorCode } from "@auto-tm/contracts";
 
+import { rejectExpiredSession } from "@/lib/action-session";
 import { apiFetch, apiFetchOptional, ApiError } from "@/lib/api-client";
 import {
   clearAuthCookies,
@@ -20,6 +21,7 @@ export async function requestOtp(
   | { ok: false; error: string }
   | { ok: true; resendInSeconds: number; testCode?: string }
 > {
+  await rejectExpiredSession();
   const phone = formData.get("phone");
   const parsed = AuthSchemas.PhoneTm.safeParse(phone);
   if (!parsed.success) {
@@ -40,6 +42,7 @@ export async function requestOtp(
     }
     return response;
   } catch (err) {
+    unstable_rethrow(err);
     if (err instanceof ApiError) {
       if (err.code === ErrorCode.RateLimited) {
         return { ok: false, error: "Слишком много попыток. Попробуйте позже." };
@@ -63,6 +66,7 @@ export async function verifyOtp(
   _prev: unknown,
   formData: FormData,
 ): Promise<VerifyOtpResult> {
+  await rejectExpiredSession();
   const phone = formData.get("phone");
   const code = formData.get("code");
 
@@ -112,6 +116,7 @@ export async function verifyOtp(
 
     return { ok: true, next: "totp", totpEnrolled: totpStatus.enrolled };
   } catch (err) {
+    unstable_rethrow(err);
     if (err instanceof ApiError) {
       if (err.code === ErrorCode.RateLimited) {
         return {
@@ -119,7 +124,7 @@ export async function verifyOtp(
           error: "Слишком много попыток. Подождите и попробуйте снова.",
         };
       }
-      if (err.status === 401) {
+      if (err.status === 400 && err.code === "INVALID_OTP") {
         return {
           ok: false,
           error: "Неверный код. Попробуйте ещё раз.",
@@ -143,6 +148,7 @@ export type TotpStatusResult =
     };
 
 export async function getTotpStatus(): Promise<TotpStatusResult> {
+  await rejectExpiredSession();
   try {
     const status =
       await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
@@ -168,6 +174,7 @@ export type TotpEnrollResult =
   | { ok: true; qrCodeDataUrl: string };
 
 export async function enrollTotp(): Promise<TotpEnrollResult> {
+  await rejectExpiredSession();
   try {
     const result = await apiFetch<AuthSchemas.AdminTotpEnrollResponse>(
       "/auth/admin/totp/enroll",
@@ -178,6 +185,7 @@ export async function enrollTotp(): Promise<TotpEnrollResult> {
     const qrCodeDataUrl = await generateTotpQrCodeDataUrl(result.qrCodeUrl);
     return { ok: true, qrCodeDataUrl };
   } catch (err) {
+    unstable_rethrow(err);
     if (err instanceof ApiError) {
       if (
         err.code === ErrorCode.Conflict &&
@@ -207,6 +215,7 @@ export async function verifyTotp(
   _prev: unknown,
   formData: FormData,
 ): Promise<TotpVerifyResult> {
+  await rejectExpiredSession();
   const code = formData.get("code") as string;
   if (!code || code.length < 1) {
     return { ok: false, error: "Введите код." };
@@ -226,6 +235,7 @@ export async function verifyTotp(
     }
     return response;
   } catch (err) {
+    unstable_rethrow(err);
     if (err instanceof ApiError) {
       if (err.code === ErrorCode.RateLimited) {
         return {
@@ -233,7 +243,7 @@ export async function verifyTotp(
           error: "Слишком много попыток. Подождите и попробуйте снова.",
         };
       }
-      if (err.status === 401 || err.status === 403) {
+      if (err.status === 403 || (err.status === 400 && err.code === "INVALID_TOTP")) {
         return {
           ok: false,
           error: "Неверный код. Попробуйте ещё раз.",
@@ -251,6 +261,7 @@ export async function verifyTotp(
 // ─── Logout ───
 
 export async function logout(): Promise<void> {
+  await rejectExpiredSession();
   const refreshToken = await getRefreshToken();
   if (refreshToken) {
     try {
@@ -267,6 +278,7 @@ export async function logout(): Promise<void> {
 }
 
 export async function logoutAll(): Promise<void> {
+  await rejectExpiredSession();
   try {
     await apiFetch("/auth/logout-all", { method: "POST" });
   } catch {
@@ -281,16 +293,16 @@ export async function logoutAll(): Promise<void> {
 export async function requireAuthWithReturnTo(
   returnTo: string | null | undefined,
 ): Promise<void> {
+  await rejectExpiredSession();
   const status = await apiFetchOptional<AuthSchemas.AdminTotpStatusResponse>(
     "/auth/admin/totp/status",
   );
 
   if (!status) {
-    // Note: cannot clearAuthCookies() here because this helper is called
-    // from Server Component layouts where cookies().set() is not allowed.
-    // Stale cookies are harmless — they will be replaced on next login.
+    // Cookie clearing belongs to the writable proxy on the login GET.
     const safeReturnTo = validateReturnTo(returnTo);
     const url = new URL("/login", "http://localhost");
+    url.searchParams.set("reason", "session-expired");
     if (safeReturnTo) url.searchParams.set("returnTo", safeReturnTo);
     redirect(url.pathname + url.search);
   }

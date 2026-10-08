@@ -63,6 +63,16 @@
       "dependsOn": ["^build", "build"],
       "outputs": []
     },
+    "@auto-tm/api#test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/admin/src/lib/**", "$TURBO_ROOT$/apps/admin/package.json"],
+      "outputs": ["coverage/**"]
+    },
+    "@auto-tm/api#test:unit": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/admin/src/lib/**", "$TURBO_ROOT$/apps/admin/package.json"],
+      "outputs": []
+    },
     "clean": {
       "cache": false
     }

@@ -1,5 +1,6 @@
 /* global globalThis */
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
 import { log } from "node:console";
 import { once } from "node:events";
@@ -64,8 +65,14 @@ try {
   assert.equal(avatar.status, 200, "Assigned Avatar must be served by the Dockerfile runtime layout");
   assert.match(avatar.headers.get("content-type") ?? "", /image\/svg\+xml/);
   assert.match(await avatar.text(), /<svg/);
+  // The expiry hint keeps this asset fixture on the authenticated GET path.
+  // Only the fixture API accepts its dummy signature; production verifies it.
+  const access = `e30.${Buffer.from(JSON.stringify({
+    exp: Math.floor(Date.now() / 1000) + 900,
+  })).toString("base64url")}.fixture-signature`;
   const report = await globalThis.fetch(`http://127.0.0.1:${port}/reports/r1`, {
-    headers: { cookie: "__Host-auto_tm_admin_access=fixture-admin-session" },
+    headers: { cookie: `__Host-auto_tm_admin_access=${access}` },
+    redirect: "manual",
   });
   assert.equal(report.status, 200);
   const html = await report.text();
