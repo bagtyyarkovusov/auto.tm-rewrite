@@ -337,6 +337,16 @@ describe("GetReportDetail", () => {
     expect(result.targetModerationState).toBeUndefined();
   });
 
+  it("offers no sender action when a missing Message has an unrelated saved snapshot", async () => {
+    repo.reports = [makeReport("r1", "message", "msg-1", { messageContext: {
+      messageId: "other-message", conversationId: "conv-1", listingId: "l1", buyerId: "buyer-1", sellerId: "sender-1", senderId: "sender-1", createdAt: new Date(), body: null, deletedAt: null, surroundingMessages: [],
+    } })];
+    identity.seed("sender-1", { displayName: "Bob" });
+    const result = await makeUseCase(repo, listings, identity).execute({ reportId: "r1", adminUserId: "admin-1" });
+    expect(result.target.sender).toEqual({ available: false, label: "Пользователь удалён" });
+    expect(result.targetModerationState).toBeUndefined();
+  });
+
   it("keeps a missing Message report readable without returning its saved Conversation window", async () => {
     repo.reports = [makeReport("r1", "message", "msg-1", { messageContext: {
       messageId: "msg-1", conversationId: "conv-1", listingId: "l1", buyerId: "buyer-1", sellerId: "sender-1", senderId: "sender-1", createdAt: new Date(), body: "Old text", deletedAt: null,
