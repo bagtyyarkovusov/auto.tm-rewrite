@@ -143,13 +143,13 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
       <View className="relative">
       <Animated.View style={fieldStyle} className="gap-2">
         <Text className="text-callout font-medium text-foreground">{t(isPhone ? "phoneLabel" : "emailLabel")}</Text>
-        <View className={showError ? "h-control-md flex-row overflow-hidden rounded-lg border-2 border-destructive bg-card" : "h-control-md flex-row overflow-hidden rounded-lg border border-input bg-card"}>
-          <View className={isPhone ? "h-full justify-center border-r border-border px-3.5" : "hidden"}>
+        <View className={showError ? "min-h-control-md flex-row overflow-hidden rounded-lg border-2 border-destructive bg-card" : "min-h-control-md flex-row overflow-hidden rounded-lg border border-input bg-card"}>
+          <View className={isPhone ? "justify-center self-stretch border-r border-border px-3.5" : "hidden"}>
             <Text className="text-body font-mono text-foreground">+993</Text>
           </View>
           <Input
             ref={input}
-            className={isPhone ? "h-full min-w-0 flex-1 rounded-none border-0 bg-transparent font-mono px-3.5" : "h-full min-w-0 flex-1 rounded-none border-0 bg-transparent px-3.5"}
+            className={isPhone ? "min-w-0 flex-1 self-stretch rounded-none border-0 bg-transparent font-mono px-3.5" : "min-w-0 flex-1 self-stretch rounded-none border-0 bg-transparent px-3.5"}
             accessibilityLabel={t(isPhone ? "phoneLabel" : "emailLabel")}
             autoCapitalize="none"
             autoCorrect={false}
@@ -178,8 +178,8 @@ export function SignInEntryScreen({ initialMethod }: { initialMethod: SignInMeth
       <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
         className="absolute inset-0 gap-2 bg-background" style={previousFieldStyle}>
         <Text className="text-callout font-medium text-foreground">{t(previousIsPhone ? "phoneLabel" : "emailLabel")}</Text>
-        <View className={cn("h-control-md flex-row items-center overflow-hidden rounded-lg bg-card", previousError ? "border-2 border-destructive" : "border border-input")}>
-          {previousIsPhone ? <View className="h-full justify-center border-r border-border px-3.5"><Text className="text-body font-mono text-foreground">+993</Text></View> : null}
+        <View className={cn("min-h-control-md flex-row items-center overflow-hidden rounded-lg bg-card", previousError ? "border-2 border-destructive" : "border border-input")}>
+          {previousIsPhone ? <View className="justify-center self-stretch border-r border-border px-3.5"><Text className="text-body font-mono text-foreground">+993</Text></View> : null}
           <Text className={cn("min-w-0 flex-1 px-3.5 text-body", previousIsPhone && "font-mono", previousValue ? "text-foreground" : "text-muted-foreground")} numberOfLines={1}>
             {previousValue || t(previousIsPhone ? "phonePlaceholder" : "emailPlaceholder")}
           </Text>

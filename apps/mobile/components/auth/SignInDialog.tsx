@@ -53,7 +53,7 @@ export function SignInDialog({
         </DialogHeader>
         <View className="gap-3">
           <Button
-            className="h-[52px] rounded-full"
+            className="min-h-[52px] rounded-full"
             size="lg"
             variant="brand"
             onPress={() => continueWith("phone")}
@@ -62,7 +62,7 @@ export function SignInDialog({
             <Text>{t("continueWithPhone")}</Text>
           </Button>
           <Button
-            className="h-[52px] rounded-full"
+            className="min-h-[52px] rounded-full"
             size="lg"
             variant="brand"
             onPress={() => continueWith("email")}

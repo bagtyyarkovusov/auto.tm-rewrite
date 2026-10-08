@@ -150,7 +150,7 @@ export function BrandPicker({ actions, filters, leading, bottomSpace = 0 }: Bran
                   variant="ghost"
                   size="sm"
                   // The heading row is 24 dp tall; the slop makes the target 44 dp.
-                  className="-mr-2 h-6 px-2"
+                  className="-mr-2 min-h-6 px-2 py-0"
                   hitSlop={10}
                   onPress={picker.clearRecent}
                   accessibilityLabel={t("clearRecent")}

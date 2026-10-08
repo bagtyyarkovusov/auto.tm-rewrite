@@ -181,7 +181,7 @@ function PhotoActions({
     <View className="flex-row gap-3">
       <Button
         variant="outline"
-        className="flex-1 h-[52px] rounded-full"
+        className="flex-1 min-h-[52px] rounded-full"
         onPress={onTakePhoto}
         disabled={disabled || maxReached}
         accessibilityLabel={t("camera")}
@@ -191,7 +191,7 @@ function PhotoActions({
       </Button>
       <Button
         variant="outline"
-        className="flex-1 h-[52px] rounded-full"
+        className="flex-1 min-h-[52px] rounded-full"
         onPress={onPickFromLibrary}
         disabled={disabled || maxReached}
         accessibilityLabel={t("library")}

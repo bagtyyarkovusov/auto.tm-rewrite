@@ -9,6 +9,7 @@ import { buildOriginalUrl, buildVariantUrl } from "../detail/buildVariantUrl";
 import { GlassSurface } from "@/components/ui/glass-surface";
 import { Text } from "@/components/ui/text";
 import { tabularFigures } from "@/lib/font";
+import { MEDIA_CHIP_MAX_FONT_SCALE } from "@/lib/font-scale";
 import { cn } from "@/lib/utils";
 
 type ListingMedia = ListingsSchemas.ListingMedia;
@@ -42,11 +43,15 @@ export function GalleryCounter({
   return (
     <GlassSurface
       className={cn(
-        "absolute right-4 h-7 justify-center rounded-full px-3",
+        "absolute right-4 min-h-7 justify-center rounded-full px-3",
         aboveBanner ? "bottom-12" : "bottom-3",
       )}
     >
-      <Text className="text-footnote font-medium text-foreground" style={tabularFigures}>
+      <Text
+        className="text-footnote font-medium text-foreground"
+        style={tabularFigures}
+        maxFontSizeMultiplier={MEDIA_CHIP_MAX_FONT_SCALE}
+      >
         {`${position} / ${total}`}
       </Text>
     </GlassSurface>

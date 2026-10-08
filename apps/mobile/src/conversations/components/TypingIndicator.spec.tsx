@@ -24,7 +24,7 @@ describe("TypingIndicator", () => {
   });
 
   it("keeps a stable row height when not visible", () => {
-    expect(source).toContain('className="h-6 justify-center px-4"');
+    expect(source).toContain('className="min-h-6 justify-center px-4"');
   });
 
   it("styles the label as muted secondary text", () => {

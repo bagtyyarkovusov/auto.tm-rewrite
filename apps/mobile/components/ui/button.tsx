@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 
 import { PressableScale, type PressableScaleProps } from '@/components/ui/pressable-scale';
 import { TextClassContext } from '@/components/ui/text';
+import { CONTROL_MAX_FONT_SCALE, TextScaleContext } from '@/lib/font-scale';
 import { cn } from '@/lib/utils';
 
 /**
@@ -13,6 +14,10 @@ import { cn } from '@/lib/utils';
  *
  * A disabled button keeps its shape on the tonal surface with quiet text; it
  * is never dimmed with opacity, so its label stays readable.
+ *
+ * The heights are minimums. A label grows with the system font size up to
+ * `CONTROL_MAX_FONT_SCALE`, then wraps, and the button grows around it; a
+ * label is never cut to keep the button's height.
  */
 const buttonVariants = cva(
   cn(
@@ -55,10 +60,10 @@ const buttonVariants = cva(
         link: 'disabled:text-muted-foreground',
       },
       size: {
-        default: cn('h-control-md px-5', Platform.select({ web: 'has-[>svg]:px-3' })),
-        sm: cn('h-control-sm gap-1.5 rounded-lg px-4', Platform.select({ web: 'has-[>svg]:px-2.5' })),
-        lg: cn('h-control-lg px-6', Platform.select({ web: 'has-[>svg]:px-4' })),
-        pill: 'h-control-lg rounded-full px-6',
+        default: cn('min-h-control-md px-5 py-1.5', Platform.select({ web: 'has-[>svg]:px-3' })),
+        sm: cn('min-h-control-sm gap-1.5 rounded-lg px-4 py-1.5', Platform.select({ web: 'has-[>svg]:px-2.5' })),
+        lg: cn('min-h-control-lg px-6 py-1.5', Platform.select({ web: 'has-[>svg]:px-4' })),
+        pill: 'min-h-control-lg rounded-full px-6 py-1.5',
         icon: 'h-11 w-11 rounded-full',
       },
     },
@@ -71,7 +76,7 @@ const buttonVariants = cva(
 
 const buttonTextVariants = cva(
   cn(
-    'text-foreground text-body font-medium',
+    'shrink text-center text-foreground text-body font-medium',
     Platform.select({ web: 'pointer-events-none transition-colors' })
   ),
   {
@@ -115,12 +120,14 @@ function Button({ className, variant, size, ...props }: ButtonProps) {
     <TextClassContext.Provider
       value={cn(buttonTextVariants({ variant, size }), props.disabled && 'text-muted-foreground')}
     >
-      <PressableScale
-        className={cn(buttonVariants({ variant, size }), className)}
-        role="button"
-        feedback={variant === 'link' ? 'none' : 'control'}
-        {...props}
-      />
+      <TextScaleContext.Provider value={CONTROL_MAX_FONT_SCALE}>
+        <PressableScale
+          className={cn(buttonVariants({ variant, size }), className)}
+          role="button"
+          feedback={variant === 'link' ? 'none' : 'control'}
+          {...props}
+        />
+      </TextScaleContext.Provider>
     </TextClassContext.Provider>
   );
 }

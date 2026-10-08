@@ -11,7 +11,7 @@ export function TypingIndicator({ visible }: TypingIndicatorProps) {
   const { t } = useTranslation("conversations");
 
   return (
-    <View className="h-6 justify-center px-4">
+    <View className="min-h-6 justify-center px-4">
       {visible && (
         <Text className="text-caption text-muted-foreground" numberOfLines={1}>
           {t("peerTyping")}

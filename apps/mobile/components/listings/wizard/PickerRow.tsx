@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { useLargeText } from "@/lib/font-scale";
 import { cn } from "@/lib/utils";
 
 interface PickerRowProps {
@@ -44,6 +45,9 @@ export function PickerRow({
   const isDisabled = disabled || locked;
   const shownDetail = value ? detail : undefined;
   const accessibilityLabel = `${label}: ${value ?? placeholder}${shownDetail ? `, ${shownDetail}` : ""}`;
+  // At a large font size the label and the value do not fit on one line: the
+  // value goes under the label and may take two lines.
+  const largeText = useLargeText();
 
   if (grouped) {
     return (
@@ -58,20 +62,23 @@ export function PickerRow({
           isDisabled && "opacity-50",
         )}
       >
-        <Text className="shrink-0 text-body text-foreground" numberOfLines={1}>
-          {label}
-          {required ? " *" : ""}
-        </Text>
-        {/* The value takes the room the label leaves and ends at the chevron. */}
-        <Text
-          className={cn(
-            "min-w-0 flex-1 text-right text-body",
-            value ? "font-medium text-foreground" : "text-muted-foreground",
-          )}
-          numberOfLines={1}
-        >
-          {value ?? placeholder}
-        </Text>
+        <View className={cn("min-w-0 flex-1", largeText ? "gap-0.5" : "flex-row items-center gap-3")}>
+          <Text className="shrink-0 text-body text-foreground" numberOfLines={1}>
+            {label}
+            {required ? " *" : ""}
+          </Text>
+          {/* The value takes the room the label leaves and ends at the chevron. */}
+          <Text
+            className={cn(
+              "min-w-0 text-body",
+              largeText ? "" : "flex-1 text-right",
+              value ? "font-medium text-foreground" : "text-muted-foreground",
+            )}
+            numberOfLines={largeText ? 2 : 1}
+          >
+            {value ?? placeholder}
+          </Text>
+        </View>
         <Icon
           as={locked ? Lock : ChevronRight}
           className="size-4 text-muted-foreground"
@@ -92,14 +99,14 @@ export function PickerRow({
         accessibilityRole="button"
         accessibilityState={{ disabled: isDisabled }}
         accessibilityLabel={accessibilityLabel}
-        className={`flex-row items-center justify-between rounded-lg bg-card px-4 h-control-md active:bg-secondary ${isDisabled ? " opacity-50" : ""}`}
+        className={`flex-row items-center justify-between rounded-lg bg-card px-4 py-2 min-h-control-md active:bg-secondary ${isDisabled ? " opacity-50" : ""}`}
       >
         <View className="flex-1 flex-row items-baseline gap-2 pr-2">
           <Text
             className={
               value ? "shrink text-body text-foreground font-medium" : "shrink text-body text-muted-foreground"
             }
-            numberOfLines={1}
+            numberOfLines={largeText ? 2 : 1}
           >
             {value ?? placeholder}
           </Text>

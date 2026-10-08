@@ -112,7 +112,7 @@ export function SearchScreen() {
           {recent.length > 0 ? <>
             <View className="flex-row items-center justify-between px-5 pb-2 pt-3">
               <Text className="font-heading text-subhead font-semibold text-foreground">{t("recentChoices")}</Text>
-              <Button variant="ghost" size="sm" className="-mr-2 h-6 px-2" hitSlop={10} accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
+              <Button variant="ghost" size="sm" className="-mr-2 min-h-6 px-2 py-0" hitSlop={10} accessibilityLabel={t("clearRecent")} onPress={() => void clear()}>
                 <Text className="text-callout font-medium text-foreground">{t("clear")}</Text>
               </Button>
             </View>

@@ -85,7 +85,7 @@ export function HomeHeader() {
         trailing={
           <Button
             variant="ghost"
-            className="h-11 px-3 active:bg-transparent"
+            className="min-h-11 px-3 active:bg-transparent"
             feedback="none"
             style={{ backgroundColor: "transparent", opacity: seeAllPressed ? 0.6 : 1 }}
             onPressIn={() => setSeeAllPressed(true)}

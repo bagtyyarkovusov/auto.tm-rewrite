@@ -18,19 +18,19 @@ const PhoneInput = forwardRef<TextInput, PhoneInputProps>(
     return (
       <View
         className={cn(
-          "h-[52px] flex-row items-center overflow-hidden rounded-lg bg-card",
+          "min-h-[52px] flex-row items-center overflow-hidden rounded-lg bg-card",
           hasError ? "border-2 border-destructive" : "border border-input",
           className,
         )}
       >
-        <View className="h-full justify-center border-r border-border px-3.5">
+        <View className="justify-center self-stretch border-r border-border px-3.5">
           <Text className="text-body text-foreground" style={{ fontFamily: "GeistMono-Medium" }}>
             {prefix}
           </Text>
         </View>
         <TextInput
           ref={ref}
-          className="h-full min-w-0 flex-1 bg-transparent px-3.5 text-body text-foreground placeholder:text-muted-foreground/50"
+          className="min-w-0 flex-1 self-stretch bg-transparent px-3.5 text-body text-foreground placeholder:text-muted-foreground/50"
           style={{ paddingTop: 0, paddingBottom: 0, lineHeight: 20, fontFamily: "GeistMono-Regular" }}
           {...props}
         />

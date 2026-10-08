@@ -48,7 +48,7 @@ export function SignInMethodTabs({ value, onChange }: SignInMethodTabsProps) {
           accessibilityRole="tab"
           accessibilityLabel={t(method)}
           accessibilityState={{ selected: value === method }}
-          className="h-11 flex-1 rounded-full bg-transparent active:bg-transparent"
+          className="min-h-11 flex-1 rounded-full bg-transparent active:bg-transparent"
           size="sm"
           variant="ghost"
           onPress={() => {

@@ -8,6 +8,7 @@ import { FilterLabel, FilterRange } from "./FilterSection";
 
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { FIELD_SUFFIX_MAX_FONT_SCALE } from "@/lib/font-scale";
 
 interface PriceRangeFilterControlProps {
   priceMin?: number;
@@ -47,7 +48,7 @@ export function PriceRangeFilterControl({
             keyboardType="number-pad"
             className={isInvalid ? "border-destructive pr-14" : "pr-14"}
           />
-          <Text pointerEvents="none" className="absolute right-4 text-footnote font-medium text-muted-foreground">TMT</Text>
+          <Text pointerEvents="none" maxFontSizeMultiplier={FIELD_SUFFIX_MAX_FONT_SCALE} className="absolute right-4 text-footnote font-medium text-muted-foreground">TMT</Text>
         </View>
         <View className="min-w-0 flex-1 justify-center">
           <Input
@@ -57,7 +58,7 @@ export function PriceRangeFilterControl({
             keyboardType="number-pad"
             className={isInvalid ? "border-destructive pr-14" : "pr-14"}
           />
-          <Text pointerEvents="none" className="absolute right-4 text-footnote font-medium text-muted-foreground">TMT</Text>
+          <Text pointerEvents="none" maxFontSizeMultiplier={FIELD_SUFFIX_MAX_FONT_SCALE} className="absolute right-4 text-footnote font-medium text-muted-foreground">TMT</Text>
         </View>
       </FilterRange>
       {isInvalid && (

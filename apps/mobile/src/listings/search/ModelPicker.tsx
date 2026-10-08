@@ -181,7 +181,7 @@ export function ModelPicker({
           {actions.moreFilters ? (
             <Button
               variant="ghost"
-              className="h-11 py-0"
+              className="min-h-11 py-0"
               disabled={!ready}
               onPress={() => actions.moreFilters?.(picker.choice())}
             >

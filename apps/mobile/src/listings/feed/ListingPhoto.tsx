@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { Pop } from "@/components/ui/motion";
 import { PressableScale } from "@/components/ui/pressable-scale";
 import { Text } from "@/components/ui/text";
+import { MEDIA_CHIP_MAX_FONT_SCALE } from "@/lib/font-scale";
 import { duration } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -152,7 +153,7 @@ export function PhotoChip({ label, icon, tone = "scrim", className, ...props }: 
   return (
     <View
       className={cn(
-        "absolute h-6 flex-row items-center gap-1 rounded-md px-2",
+        "absolute min-h-6 flex-row items-center gap-1 rounded-md px-2",
         tone === "scrim" && "bg-media-scrim/on-photo",
         tone === "solid" && "bg-foreground",
         tone === "quiet" && "bg-card",
@@ -161,7 +162,11 @@ export function PhotoChip({ label, icon, tone = "scrim", className, ...props }: 
       {...props}
     >
       {icon ? <Icon as={icon} className={cn("size-3", foreground)} strokeWidth={2.2} /> : null}
-      <Text className={cn("text-caption font-medium", foreground)} numberOfLines={1}>
+      <Text
+        className={cn("text-caption font-medium", foreground)}
+        numberOfLines={1}
+        maxFontSizeMultiplier={MEDIA_CHIP_MAX_FONT_SCALE}
+      >
         {label}
       </Text>
     </View>

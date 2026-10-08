@@ -44,7 +44,7 @@ export function FilterChipsRow({ filters, cityName, onOpen, onRemove, floating =
   if (filters.priceMin != null || filters.priceMax != null) chips.push({ group: "price", label: range(filters.priceMin, filters.priceMax, "TMT") });
   if (filters.yearMin != null || filters.yearMax != null) chips.push({ group: "year", label: range(filters.yearMin, filters.yearMax) });
   const filtersChip = <PressableScale onPress={onOpen} accessibilityRole="button" accessibilityLabel={t("resultsFilterCount", { count: chips.length })}
-    className={cn("h-11 flex-row items-center gap-2 rounded-full pl-4", chips.length > 0 ? "pr-2.5" : "pr-5", floating ? "active:opacity-80" : "bg-card active:bg-secondary")}>
+    className={cn("min-h-11 flex-row items-center gap-2 rounded-full py-1 pl-4", chips.length > 0 ? "pr-2.5" : "pr-5", floating ? "active:opacity-80" : "bg-card active:bg-secondary")}>
     <Icon as={SlidersHorizontal} className="size-4 text-foreground" strokeWidth={2.2} /><Text className="text-callout font-semibold text-foreground">{t("filters")}</Text>
     {chips.length > 0 ? <View className="h-6 min-w-6 items-center justify-center rounded-full bg-foreground px-1.5"><Text className="text-caption font-semibold text-background" style={tabularFigures}>{chips.length}</Text></View> : null}
   </PressableScale>;
@@ -54,7 +54,7 @@ export function FilterChipsRow({ filters, cityName, onOpen, onRemove, floating =
     {floating ? <GlassSurface className="rounded-full">{filtersChip}</GlassSurface> : filtersChip}
     {chips.map((chip) => {
       const body = <PressableScale onPress={() => onRemove(chip.group)} accessibilityRole="button" accessibilityLabel={t(`resultsRemove_${chip.group}`)}
-        className={cn("h-11 flex-row items-center gap-1.5 rounded-full pl-4 pr-3", floating ? "active:opacity-80" : "bg-card active:bg-secondary")}>
+        className={cn("min-h-11 flex-row items-center gap-1.5 rounded-full py-1 pl-4 pr-3", floating ? "active:opacity-80" : "bg-card active:bg-secondary")}>
         <Text className="text-callout font-medium text-foreground">{chip.label}</Text><Icon as={X} className="size-4 text-muted-foreground" strokeWidth={2.2} />
       </PressableScale>;
       return <Presence key={chip.group}>

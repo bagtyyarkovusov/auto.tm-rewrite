@@ -6,6 +6,7 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import { GlassSurface, useSystemGlass } from "@/components/ui/glass-surface";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
+import { useLargeText } from "@/lib/font-scale";
 import { cn } from "@/lib/utils";
 
 /**
@@ -153,6 +154,8 @@ export function StackHeader({
   ...props
 }: StackHeaderProps) {
   const inlineTitle = !large && title !== undefined;
+  // A title that fits at the default font size may not at a large one.
+  const largeText = useLargeText();
 
   return (
     <View className={cn("px-4 pb-2 pt-1", className)} {...props}>
@@ -163,7 +166,7 @@ export function StackHeader({
             {inlineTitle ? (
               <Text
                 className="font-heading text-headline font-semibold text-foreground"
-                numberOfLines={1}
+                numberOfLines={largeText ? 2 : 1}
               >
                 {title}
               </Text>

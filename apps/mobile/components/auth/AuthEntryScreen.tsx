@@ -1,9 +1,11 @@
 import * as Linking from "expo-linking";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   View,
 } from "react-native";
 import { useColorScheme } from "nativewind";
@@ -20,6 +22,7 @@ import { SafeScreen } from "@/components/navigation/SafeScreen";
 import { BackButton, StackHeader } from "@/components/navigation/StackHeader";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { useLargeText } from "@/lib/font-scale";
 import { THEME } from "@/lib/theme";
 
 interface AuthEntryScreenProps {
@@ -49,6 +52,15 @@ export function AuthEntryScreen({
   const isDark = colorScheme === "dark";
   const { t, i18n } = useTranslation("auth");
 
+  const largeText = useLargeText();
+  const scroll = useRef<ScrollView>(null);
+  // With large text the field sits low enough for the keyboard to cover it.
+  useEffect(() => {
+    if (!largeText) return;
+    const shown = Keyboard.addListener("keyboardDidShow", () => scroll.current?.scrollToEnd({ animated: true }));
+    return () => shown.remove();
+  }, [largeText]);
+
   function openLegalPage(kind: "terms" | "privacy") {
     void Linking.openURL(legalPageUrl(i18n.language, kind));
   }
@@ -72,9 +84,19 @@ export function AuthEntryScreen({
             trailing={<LocaleSwitcher />}
           />
 
-          <View className="flex-1">
-            <View className="mt-8 gap-8">
-              <BrandLogo />
+          {/* The form scrolls, so at a large font size the field and the
+              button can be brought above the keyboard. At the default size it
+              fits and does not move. */}
+          <ScrollView
+            ref={scroll}
+            className="flex-1"
+            contentContainerClassName="flex-grow"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            <View className={largeText ? "mt-4 gap-5" : "mt-8 gap-8"}>
+              {largeText ? null : <BrandLogo />}
 
               <SignInMethodTabs
                 value={method}
@@ -121,7 +143,7 @@ export function AuthEntryScreen({
               </Text>
               .
             </Text>
-          </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </SafeScreen>
