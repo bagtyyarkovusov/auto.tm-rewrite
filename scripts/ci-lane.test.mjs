@@ -29,7 +29,7 @@ function repo(t) {
   const cwd = mkdtempSync(join(tmpdir(), "ci-lane-"));
   t.after(() => rmSync(cwd, { recursive: true, force: true }));
   const git = (...args) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
-  git("init", "-q");
+  git("init", "-q", "--initial-branch=pr");
   git("config", "user.email", "ci@example.test");
   git("config", "user.name", "CI");
   git("config", "commit.gpgsign", "false");
