@@ -11,6 +11,12 @@ import type { GetReportDetail } from "../application/GetReportDetail";
 import type { Env } from "../../../env.schema";
 import { ContentReport } from "../domain/ContentReport";
 
+function reply() {
+  const headers: Record<string, unknown> = {};
+  const res = { header: (name: string, value: unknown) => { headers[name] = value; } } as unknown as FastifyReply;
+  return { res, headers };
+}
+
 function makeController(opts: {
   reportEntryEnabled?: boolean;
 } = {}) {
@@ -108,9 +114,26 @@ describe("ReportsController", () => {
 
     it("still allows GET /admin/reports/:id", async () => {
       const { controller } = makeController({ reportEntryEnabled: false });
-      const result = await controller.getReportDetail("report-1");
+      const result = await controller.getReportDetail("report-1", { user: { sub: "admin-1" } } as unknown as FastifyRequest, reply().res);
       expect(result.id).toBe("report-1");
     });
+  });
+
+  it("requires the actor identity on report detail and passes it to the audited read", async () => {
+    const { controller, getReportDetailUC } = makeController();
+    await expect(controller.getReportDetail("r1", {} as FastifyRequest, reply().res)).rejects.toThrow(ForbiddenException);
+    await controller.getReportDetail("r1", { user: { sub: "admin-1" } } as unknown as FastifyRequest, reply().res);
+    expect(getReportDetailUC.execute).toHaveBeenLastCalledWith({ reportId: "r1", adminUserId: "admin-1" });
+  });
+
+  it("stores report-detail responses only when the required no-store reply is available", async () => {
+    const { controller, getReportDetailUC } = makeController();
+    const req = { user: { sub: "admin-1" } } as unknown as FastifyRequest;
+    await expect(controller.getReportDetail("r1", req, undefined as unknown as FastifyReply)).rejects.toThrow(TypeError);
+    expect(getReportDetailUC.execute).not.toHaveBeenCalled();
+    const { res, headers } = reply();
+    await controller.getReportDetail("r1", req, res);
+    expect(headers["Cache-Control"]).toBe("no-store");
   });
 
   describe("REPORT_ENTRY_ENABLED=true", () => {

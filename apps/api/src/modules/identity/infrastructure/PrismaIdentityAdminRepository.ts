@@ -29,6 +29,8 @@ export class PrismaIdentityAdminRepository implements IdentityAdminPort {
         suspensionReason: reason,
       },
     });
+    // Use the caller's suspend transaction for Session revocation too.
+    await client.session.deleteMany({ where: { userId } });
     return {
       suspendedAt: row.suspendedAt as Date,
       suspendedById: row.suspendedById as string,

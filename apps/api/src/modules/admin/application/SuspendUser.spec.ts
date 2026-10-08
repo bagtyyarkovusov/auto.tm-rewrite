@@ -11,6 +11,7 @@ import type { ContentReportRepository } from "../domain/ports/ContentReportRepos
 import { ContentReport } from "../domain/ContentReport";
 import type { AuditLogRepository, AuditLogRow } from "../domain/ports/AuditLogRepository";
 import type { IdentityUserSummary, IdentityAdminPort, IdentityReadPort } from "../../identity/identity.public";
+import { FakeMessageModerationReadPort } from "../../conversations/application/testing/FakeMessageModerationReadPort";
 import { AdminSchemas } from "@auto-tm/contracts";
 
 class FakeContentReportRepository implements ContentReportRepository {
@@ -185,7 +186,7 @@ class FakePrismaService {
 
 function makeReport(
   id: string,
-  targetType: "listing" | "user",
+  targetType: "listing" | "user" | "message",
   targetId: string,
   status = "pending",
 ) {
@@ -210,6 +211,7 @@ function makeUseCase(
   identityAdmin?: FakeIdentityAdminPort,
   reportRepo?: FakeContentReportRepository,
   auditRepo?: FakeAuditLogRepository,
+  messages = new FakeMessageModerationReadPort(),
 ) {
   return new SuspendUser(
     (prisma ?? new FakePrismaService()) as unknown as ConstructorParameters<typeof SuspendUser>[0],
@@ -217,6 +219,7 @@ function makeUseCase(
     identityAdmin ?? new FakeIdentityAdminPort(),
     reportRepo ?? new FakeContentReportRepository(),
     auditRepo ?? new FakeAuditLogRepository(),
+    messages,
   );
 }
 
@@ -287,6 +290,45 @@ describe("SuspendUser", () => {
       before: { suspendedAt: null, suspendedById: null, suspensionReason: null, reportStatus: "pending" },
       after: { reportStatus: "actioned" },
     });
+  });
+
+  it("suspends the reported Message sender, resolves only that report and audits both IDs without text", async () => {
+    identityRead.seed("u1", { role: "buyer" });
+    identityAdmin.seed("u1", { suspendedAt: null });
+    const report = makeReport("r1", "message", "m1");
+    reportRepo.reports = [ContentReport.reconstruct({ ...report, messageContext: {
+      messageId: "m1", conversationId: "c1", listingId: "l1", buyerId: "u2", sellerId: "u1", senderId: "u1", createdAt: new Date(), body: "Sensitive text", deletedAt: null, surroundingMessages: [],
+    } }), makeReport("r2", "user", "u1")];
+    const result = await makeUseCase(prisma, identityRead, identityAdmin, reportRepo, auditRepo).execute({ userId: "u1", adminUserId: "admin-1", reason: "Spam", reportId: "r1" });
+    expect(result.reportStatus).toBe("actioned");
+    expect(identityAdmin.states["u1"]?.suspendedAt).toBeInstanceOf(Date);
+    expect(reportRepo.reports.find(r => r.id === "r2")?.status).toBe("pending");
+    expect(auditRepo.rows[0]?.details).toMatchObject({ reportId: "r1", messageId: "m1" });
+    expect(JSON.stringify(auditRepo.rows)).not.toContain("Sensitive text");
+    identityRead.seed("u2", { role: "buyer" });
+    await expect(makeUseCase(prisma, identityRead, identityAdmin, reportRepo, auditRepo).execute({ userId: "u2", adminUserId: "admin-1", reason: "Spam", reportId: "r1" })).rejects.toThrow(BadRequestException);
+  });
+
+  it.each([false, true])("uses the current Message sender with saved snapshot present=%s", async (hasSnapshot) => {
+    identityRead.seed("u1", { role: "buyer" });
+    identityRead.seed("u2", { role: "buyer" });
+    identityAdmin.seed("u1", { suspendedAt: null });
+    const report = makeReport("r1", "message", "m1");
+    reportRepo.reports = [ContentReport.reconstruct({ ...report, messageContext: hasSnapshot ? {
+      messageId: "m1", conversationId: "c1", listingId: "l1", buyerId: "u1", sellerId: "u2", senderId: "u2", createdAt: new Date(), body: null, deletedAt: null, surroundingMessages: [],
+    } : null })];
+    const messages = new FakeMessageModerationReadPort();
+    messages.messages["m1"] = { id: "m1", senderId: "u1", body: null, createdAt: new Date(), deletedAt: null, hasAttachment: false };
+    const uc = makeUseCase(prisma, identityRead, identityAdmin, reportRepo, auditRepo, messages);
+    await expect(uc.execute({ userId: "u2", adminUserId: "admin-1", reason: "Spam", reportId: "r1" })).rejects.toThrow(BadRequestException);
+    expect((await uc.execute({ userId: "u1", adminUserId: "admin-1", reason: "Spam", reportId: "r1" })).reportStatus).toBe("actioned");
+  });
+
+  it("refuses to suspend a deleted sender", async () => {
+    identityRead.seed("u1", { role: "buyer" });
+    identityRead.users["u1"]!.deleted = true;
+    await expect(makeUseCase(prisma, identityRead, identityAdmin, reportRepo, auditRepo).execute({ userId: "u1", adminUserId: "admin-1", reason: "Spam" })).rejects.toThrow(NotFoundException);
+    expect(auditRepo.rows).toHaveLength(0);
   });
 
   it("returns NOT_FOUND for missing user", async () => {

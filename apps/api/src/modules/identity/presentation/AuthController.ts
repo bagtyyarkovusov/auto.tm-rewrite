@@ -9,12 +9,13 @@ import {
   Req,
   Inject,
 } from "@nestjs/common";
-import { AuthSchemas } from "@auto-tm/contracts";
+import { AuthSchemas, AdminSchemas } from "@auto-tm/contracts";
 import type { FastifyRequest } from "fastify";
 import { AllowPendingDeletion } from "../../../common/allow-pending-deletion.decorator";
 import { resolveClientIp } from "../../../common/client-ip";
 import { Public } from "../../../common/public.decorator";
 import { RequestOtp } from "../application/RequestOtp";
+import { UserSuspendedError } from "../domain/UserSuspendedError";
 import { VerifyOtp } from "../application/VerifyOtp";
 import { RefreshSession } from "../application/RefreshSession";
 import { Logout } from "../application/Logout";
@@ -112,6 +113,13 @@ export class AuthController {
 
       return result;
     } catch (err: unknown) {
+      if (err instanceof UserSuspendedError) {
+        throw new ForbiddenException({
+          code: "FORBIDDEN",
+          message: err.message,
+          details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
+        });
+      }
       if (err instanceof Error && err.message === "OTP code has expired") {
         throw new BadRequestException({
           code: "OTP_EXPIRED",
@@ -171,6 +179,13 @@ export class AuthController {
       });
       return result;
     } catch (err: unknown) {
+      if (err instanceof UserSuspendedError) {
+        throw new ForbiddenException({
+          code: "FORBIDDEN",
+          message: err.message,
+          details: { reason: AdminSchemas.AdminErrorReason.UserSuspended },
+        });
+      }
       if (err instanceof Error && err.message === "Invalid refresh token") {
         throw new UnauthorizedException({
           code: "INVALID_REFRESH_TOKEN",

@@ -91,7 +91,7 @@ class FakePrismaService {
 
 function makeReport(
   id: string,
-  targetType: "listing" | "user",
+  targetType: "listing" | "user" | "message",
   targetId: string,
   status = "pending",
 ) {
@@ -131,6 +131,14 @@ describe("DismissReport", () => {
     prisma = new FakePrismaService();
     reportRepo = new FakeContentReportRepository();
     auditRepo = new FakeAuditLogRepository();
+  });
+
+  it("dismisses a Message report and audits its target", async () => {
+    reportRepo.reports = [makeReport("r1", "message", "m1")];
+    const result = await makeUseCase(prisma, reportRepo, auditRepo).execute({ reportId: "r1", adminUserId: "admin-1", reason: "No violation" });
+    expect(result.status).toBe("dismissed");
+    expect(reportRepo.reports[0]?.status).toBe("dismissed");
+    expect(auditRepo.rows[0]).toMatchObject({ action: "CONTENT_REPORT_RESOLVE", targetId: "r1", details: { reportedTargetType: "message", reportedTargetId: "m1" } });
   });
 
   it("dismisses a pending report and writes audit", async () => {

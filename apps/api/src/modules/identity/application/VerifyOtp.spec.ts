@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
+import { UserSuspendedError } from "../domain/UserSuspendedError";
+import { InMemoryIdentityCheck } from "./testing/InMemoryIdentityCheck";
 import { JwtService } from "@nestjs/jwt";
 import type {
   OtpRequest,
@@ -360,6 +362,7 @@ interface MakeUseCaseOpts {
   reviewerBypassConfig?: ReviewerOtpBypassConfig;
   constantTimeComparator?: ConstantTimeComparatorPort;
   random?: RandomSourcePort;
+  identityCheck?: InMemoryIdentityCheck;
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
@@ -378,6 +381,7 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     opts.constantTimeComparator ?? new FakeConstantTimeComparator(),
     new VerifySignInCode(otpRepo, clock),
     opts.random ?? new FixedRandomSource([0.5]),
+    opts.identityCheck ?? new InMemoryIdentityCheck(),
   );
 }
 
@@ -399,6 +403,46 @@ describe("VerifyOtp", () => {
     eventBus = { emit: vi.fn() };
     constantTimeComparator = new FakeConstantTimeComparator();
     delete process.env["SIGNUPS_ENABLED"];
+  });
+
+  it.each(["phone", "email"] as const)("refuses sign-in by %s for a suspended User without issuing a session", async (channel) => {
+    const user = makeUser({ email: "buyer@example.com", emailVerifiedAt: NOW });
+    userRepo.users.push(user);
+    const destination = channel === "phone" ? user.phone! : user.email!;
+    otpRepo.addRecord(makeOtpRequest({ channel, destination }));
+    const identityCheck = new InMemoryIdentityCheck();
+    identityCheck.suspend(user.id);
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, identityCheck });
+    await expect(uc.execute({ [channel]: destination, code: "123456" } as Parameters<VerifyOtp["execute"]>[0])).rejects.toThrow(UserSuspendedError);
+    expect(sessionRepo.sessions).toHaveLength(0);
+    expect(otpRepo.records[0]?.verifiedAt).toBeNull();
+  });
+
+  it("refuses reviewer phone sign-in for a suspended User without issuing a session", async () => {
+    const account = reviewerDemoAccount(1);
+    const user = makeUser({ phone: account.phone, email: account.email, emailVerifiedAt: NOW });
+    userRepo.users.push(user);
+    const identityCheck = new InMemoryIdentityCheck();
+    identityCheck.suspend(user.id);
+    const uc = makeUseCase({ userRepo, sessionRepo, identityCheck, reviewerBypassConfig: { enabled: true, accounts: [account] } });
+    await expect(uc.execute({ phone: account.phone, code: account.code })).rejects.toThrow(UserSuspendedError);
+    expect(sessionRepo.sessions).toHaveLength(0);
+  });
+
+  it.each(["phone", "email"] as const)("keeps a suspended User's %s code usable after unsuspension", async (channel) => {
+    const user = makeUser({ email: "buyer@example.com", emailVerifiedAt: NOW });
+    userRepo.users.push(user);
+    const destination = channel === "phone" ? user.phone! : user.email!;
+    otpRepo.addRecord(makeOtpRequest({ channel, destination }));
+    const identityCheck = new InMemoryIdentityCheck();
+    identityCheck.suspend(user.id);
+    const uc = makeUseCase({ otpRepo, userRepo, sessionRepo, identityCheck });
+    const input = { [channel]: destination, code: "123456" } as Parameters<VerifyOtp["execute"]>[0];
+    await expect(uc.execute(input)).rejects.toThrow("User is suspended");
+    expect(otpRepo.records[0]?.verifiedAt).toBeNull();
+    identityCheck.unsuspend(user.id);
+    expect((await uc.execute(input)).user.id).toBe(user.id);
+    expect(sessionRepo.sessions).toHaveLength(1);
   });
 
   // --- Happy path ---

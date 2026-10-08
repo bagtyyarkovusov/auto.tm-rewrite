@@ -1,13 +1,19 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
 
+import { AdminSchemas } from "@auto-tm/contracts";
+import { MESSAGE_MODERATION_READ_PORT, type MessageModerationReadPort, type ReportedMessage } from "../../conversations/domain/ports/MessageModerationReadPort";
+import { AUDIT_LOG_REPOSITORY, type AuditLogRepository } from "../domain/ports/AuditLogRepository";
+
+import { reportedMessageSenderId } from "../domain/reportedMessageSenderId";
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
 import { CONTENT_REPORT_REPOSITORY } from "../domain/ports/ContentReportRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
 import { LISTINGS_READ_PORT } from "../../listings/domain/ports/ListingsReadPort";
-import { IDENTITY_READ_PORT, type IdentityReadPort } from "../../identity/identity.public";
+import { IDENTITY_READ_PORT, type IdentityReadPort, type IdentityUserSummary } from "../../identity/identity.public";
 
 export interface GetReportDetailInput {
   reportId: string;
+  adminUserId: string;
 }
 
 export interface GetReportDetailResult {
@@ -46,28 +52,14 @@ export interface GetReportDetailResult {
     messageCreatedAt?: Date | undefined;
     messageBody?: string | undefined;
     messageDeletedAt?: Date | null | undefined;
+    messageHasAttachment?: boolean | undefined;
+    sender?: { available: boolean; label: string; userId?: string; role?: string } | undefined;
   };
   targetModerationState?: {
     status?: string | undefined;
     suspendedAt: Date | null;
     suspendedById: string | null;
     suspensionReason: string | null;
-  } | undefined;
-  messageContext?: {
-    conversationId: string;
-    messageId: string;
-    listingId: string;
-    senderId: string;
-    messageCreatedAt: Date;
-    messageBody: string | undefined;
-    messageDeletedAt: Date | null;
-    surroundingMessages: Array<{
-      id: string;
-      senderId: string;
-      createdAt: Date;
-      body: string | null;
-      deletedAt: Date | null;
-    }>;
   } | undefined;
   reportsSubmittedByReporterCount?: number | undefined;
   pendingReportsOnTargetCount: number;
@@ -82,15 +74,38 @@ export class GetReportDetail {
     private readonly listingsRead: ListingsReadPort,
     @Inject(IDENTITY_READ_PORT)
     private readonly identityRead: IdentityReadPort,
+    @Inject(MESSAGE_MODERATION_READ_PORT)
+    private readonly messageRead: MessageModerationReadPort,
+    @Inject(AUDIT_LOG_REPOSITORY)
+    private readonly auditRepo: AuditLogRepository,
   ) {}
 
   async execute(input: GetReportDetailInput): Promise<GetReportDetailResult> {
+    if (!input.adminUserId) {
+      throw new ForbiddenException({ code: "FORBIDDEN", message: "Admin actor is required" });
+    }
     const report = await this.reportRepo.findById(input.reportId);
     if (!report) {
       throw new NotFoundException({
         code: "NOT_FOUND",
         message: "Report not found",
       });
+    }
+
+    let message: ReportedMessage | null = null;
+    let sender: IdentityUserSummary | null = null;
+    if (report.targetType === "message") {
+      // Store staff access before releasing sensitive content. No text in audit.
+      await this.auditRepo.create({
+        actorId: input.adminUserId,
+        action: AdminSchemas.AdminAuditAction.ReportedMessageRead,
+        targetType: "message",
+        targetId: report.targetId,
+        details: { reportId: report.id, messageId: report.targetId },
+      });
+      message = await this.messageRead.getReportedMessage(report.targetId);
+      const senderId = reportedMessageSenderId(report, message);
+      sender = senderId ? await this.identityRead.findUserById(senderId) : null;
     }
 
     const [
@@ -119,8 +134,11 @@ export class GetReportDetail {
         : Promise.resolve(undefined),
     ]);
 
-    const target = this.buildTarget(report, listings[0], users[0]);
+    const target = report.targetType === "message"
+      ? this.buildMessageTarget(report.targetId, message, sender, report.messageContext?.createdAt)
+      : this.buildTarget(report, listings[0], users[0]);
 
+    const moderationUser = report.targetType === "user" ? users[0] : sender?.deleted ? null : sender;
     let targetModerationState: GetReportDetailResult["targetModerationState"];
     if (report.targetType === "listing" && listings[0]) {
       targetModerationState = {
@@ -129,29 +147,15 @@ export class GetReportDetail {
         suspendedById: null,
         suspensionReason: null,
       };
-    } else if (report.targetType === "user" && users[0]) {
+    } else if (moderationUser) {
       targetModerationState = {
-        suspendedAt: users[0].suspendedAt,
-        suspendedById: users[0].suspendedById,
-        suspensionReason: users[0].suspensionReason,
+        suspendedAt: moderationUser.suspendedAt,
+        suspendedById: moderationUser.suspendedById,
+        suspensionReason: moderationUser.suspensionReason,
       };
     } else {
       targetModerationState = undefined;
     }
-
-    const messageContext =
-      report.targetType === "message" && report.messageContext
-        ? {
-            conversationId: report.messageContext.conversationId,
-            messageId: report.messageContext.messageId,
-            listingId: report.messageContext.listingId,
-            senderId: report.messageContext.senderId,
-            messageCreatedAt: report.messageContext.createdAt,
-            messageBody: report.messageContext.body ?? undefined,
-            messageDeletedAt: report.messageContext.deletedAt,
-            surroundingMessages: report.messageContext.surroundingMessages,
-          }
-        : undefined;
 
     return {
       id: report.id,
@@ -170,7 +174,6 @@ export class GetReportDetail {
         : undefined,
       target,
       targetModerationState,
-      messageContext,
       reportsSubmittedByReporterCount,
       pendingReportsOnTargetCount,
     };
@@ -245,38 +248,27 @@ export class GetReportDetail {
     if (report.targetType === "user") {
       return this.buildUserTarget(user, report.targetId);
     }
-    return this.buildMessageTarget(report);
+    throw new Error("Unsupported report target");
   }
 
-  private buildMessageTarget(report: {
-    targetId: string;
-    messageContext: { messageId: string; conversationId: string; listingId: string; buyerId: string; sellerId: string; senderId: string; createdAt: Date; body: string | null; deletedAt: Date | null } | null;
-  }): GetReportDetailResult["target"] {
-    const ctx = report.messageContext;
-    if (!ctx) {
-      return {
-        targetType: "message",
-        available: false,
-        label: "Unavailable target",
-        targetId: report.targetId,
-      };
-    }
-
-    const label = ctx.deletedAt
-      ? `Deleted message in conversation ${ctx.conversationId.slice(0, 8)}`
-      : `Message in conversation ${ctx.conversationId.slice(0, 8)}`;
-
+  private buildMessageTarget(
+    targetId: string,
+    message: ReportedMessage | null,
+    sender: IdentityUserSummary | null,
+    savedCreatedAt?: Date,
+  ): GetReportDetailResult["target"] {
     return {
       targetType: "message",
-      available: true,
-      label,
-      targetId: ctx.messageId,
-      conversationId: ctx.conversationId,
-      listingId: ctx.listingId,
-      senderId: ctx.senderId,
-      messageCreatedAt: ctx.createdAt,
-      messageBody: ctx.body ?? undefined,
-      messageDeletedAt: ctx.deletedAt,
+      available: !!message,
+      label: !message ? "Сообщение удалено или недоступно" : message.deletedAt ? "Сообщение удалено" : "Сообщение",
+      targetId,
+      messageBody: message && !message.deletedAt ? message.body ?? undefined : undefined,
+      messageCreatedAt: message?.createdAt ?? savedCreatedAt,
+      messageDeletedAt: message?.deletedAt,
+      messageHasAttachment: message?.hasAttachment,
+      sender: sender && !sender.deleted
+        ? { available: true, label: sender.displayName ?? `Пользователь ${sender.id.slice(0, 8)}`, userId: sender.id, role: sender.role }
+        : { available: false, label: "Пользователь удалён" },
     };
   }
 }

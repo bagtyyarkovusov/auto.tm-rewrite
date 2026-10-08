@@ -6898,6 +6898,37 @@
                 "type": "string",
                 "nullable": true,
                 "format": "date-time"
+              },
+              "messageHasAttachment": {
+                "type": "boolean"
+              },
+              "sender": {
+                "type": "object",
+                "properties": {
+                  "available": {
+                    "type": "boolean"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "buyer",
+                      "seller",
+                      "moderator",
+                      "admin"
+                    ]
+                  }
+                },
+                "required": [
+                  "available",
+                  "label"
+                ]
               }
             },
             "required": [
@@ -6929,79 +6960,6 @@
               }
             }
           },
-          "messageContext": {
-            "type": "object",
-            "properties": {
-              "conversationId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "messageId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "listingId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "senderId": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "messageCreatedAt": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "messageBody": {
-                "type": "string"
-              },
-              "messageDeletedAt": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "surroundingMessages": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "senderId": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "createdAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "body": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "deletedAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "senderId",
-                    "createdAt"
-                  ]
-                }
-              }
-            },
-            "required": [
-              "conversationId",
-              "messageId",
-              "listingId",
-              "senderId",
-              "messageCreatedAt",
-              "surroundingMessages"
-            ]
-          },
           "reportsSubmittedByReporterCount": {
             "type": "integer",
             "minimum": 0
@@ -7019,79 +6977,6 @@
           "reporter",
           "target",
           "pendingReportsOnTargetCount"
-        ]
-      },
-      "MessageReportContext": {
-        "type": "object",
-        "properties": {
-          "conversationId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "messageId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "listingId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "senderId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "messageCreatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "messageBody": {
-            "type": "string"
-          },
-          "messageDeletedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "surroundingMessages": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "senderId": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "createdAt": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "body": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "deletedAt": {
-                  "type": "string",
-                  "format": "date-time"
-                }
-              },
-              "required": [
-                "id",
-                "senderId",
-                "createdAt"
-              ]
-            }
-          }
-        },
-        "required": [
-          "conversationId",
-          "messageId",
-          "listingId",
-          "senderId",
-          "messageCreatedAt",
-          "surroundingMessages"
         ]
       },
       "DismissReportRequest": {
@@ -7460,6 +7345,7 @@
               "USER_UNSUSPEND",
               "USER_PHOTO_REMOVE",
               "CONTENT_REPORT_RESOLVE",
+              "REPORTED_MESSAGE_READ",
               "REVIEWER_OTP_BYPASS_LOGIN"
             ]
           },
@@ -7526,6 +7412,7 @@
                     "USER_UNSUSPEND",
                     "USER_PHOTO_REMOVE",
                     "CONTENT_REPORT_RESOLVE",
+                    "REPORTED_MESSAGE_READ",
                     "REVIEWER_OTP_BYPASS_LOGIN"
                   ]
                 },
@@ -10771,6 +10658,62 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Suspended User: FORBIDDEN with details.reason USER_SUSPENDED; no code consumption or Session issuance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
           }
         }
       }
@@ -10822,7 +10765,63 @@
             }
           },
           "401": {
-            "description": "Invalid or expired refresh token",
+            "description": "Invalid, expired or revoked refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_FAILED",
+                        "UNAUTHORIZED",
+                        "FORBIDDEN",
+                        "NOT_FOUND",
+                        "USER_NOT_FOUND",
+                        "CONFLICT",
+                        "RATE_LIMITED",
+                        "OTP_EXPIRED",
+                        "OTP_ALREADY_USED",
+                        "INVALID_OTP",
+                        "OTP_LOCKED",
+                        "OTP_NOT_FOUND",
+                        "SIGN_IN_METHOD_TAKEN",
+                        "INVALID_DISPLAY_NAME",
+                        "INTERNAL"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "nullable": true
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "statusCode",
+                    "code",
+                    "message",
+                    "timestamp",
+                    "requestId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Suspended User: FORBIDDEN with details.reason USER_SUSPENDED; no Session rotation",
             "content": {
               "application/json": {
                 "schema": {

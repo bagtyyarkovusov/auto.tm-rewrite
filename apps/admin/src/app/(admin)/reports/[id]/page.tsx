@@ -81,7 +81,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
 
   const report = result.data;
   const isPending = report.status === AdminSchemas.ContentReportStatus.Pending;
-  const moderationEnabled = configResult.ok ? configResult.data.adminModerationActionsEnabled : true;
+  const moderationEnabled = configResult.ok && configResult.data.adminModerationActionsEnabled;
 
   // Dynamic access keeps this server-only value out of Next's build-time public env replacement.
   const runtimeMediaOrigin = Reflect.get(process.env, "NEXT_PUBLIC_MINIO_PUBLIC_URL") as string | undefined;
@@ -97,6 +97,10 @@ export default async function ReportDetailPage({ params }: PageProps) {
   // Determine actionable state
   const isListing = report.target.targetType === "listing";
   const isUser = report.target.targetType === "user";
+  const isMessage = report.target.targetType === "message";
+  const suspensionTarget = isMessage ? report.target.sender?.userId : report.target.targetId;
+  const suspensionRole = isMessage ? report.target.sender?.role : report.target.role;
+  const suspensionAvailable = isMessage ? report.target.sender?.available : report.target.available;
 
   // For listings: ban is available when status is active
   const canBan =
@@ -105,9 +109,9 @@ export default async function ReportDetailPage({ params }: PageProps) {
 
   // For users: suspend is available when not already suspended and not admin
   const canSuspend =
-    isUser &&
+    (isUser || isMessage) && suspensionAvailable && !!suspensionTarget &&
     !report.targetModerationState?.suspendedAt &&
-    report.target.role !== Enums.UserRole.Admin;
+    suspensionRole !== Enums.UserRole.Admin;
 
   return (
     <div className="p-6 md:p-8 max-w-4xl">
@@ -138,7 +142,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           </h2>
           <div className="space-y-2 text-sm">
             <div>
-              <span className="text-neutral-500">Отправитель:</span>{" "}
+              <span className="text-neutral-500">Автор жалобы:</span>{" "}
               {report.reporter.available ? (
                 <span>{report.reporter.label}</span>
               ) : (
@@ -175,7 +179,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
           <div className="space-y-2 text-sm">
             <div>
               <span className="text-neutral-500">Тип:</span>{" "}
-              {isListing ? "Объявление" : "Пользователь"}
+              {isListing ? "Объявление" : isMessage ? "Сообщение" : "Пользователь"}
             </div>
             <div>
               <span className="text-neutral-500">Название:</span>{" "}
@@ -185,6 +189,23 @@ export default async function ReportDetailPage({ params }: PageProps) {
                 <span className="italic text-neutral-400">{report.target.label}</span>
               )}
             </div>
+            {isMessage && (
+              <>
+                {report.target.messageBody !== undefined && (
+                  <div className="rounded-md bg-neutral-50 p-3 whitespace-pre-wrap break-words text-neutral-700">
+                    {report.target.messageBody}
+                  </div>
+                )}
+                {report.target.messageHasAttachment && <p>Есть вложение</p>}
+                {report.target.messageCreatedAt && <div><span className="text-neutral-500">Отправлено:</span>{" "}{formatDate(report.target.messageCreatedAt)}</div>}
+                <div>
+                  <span className="text-neutral-500">Автор сообщения:</span>{" "}
+                  {report.target.sender?.available && report.target.sender.userId ? (
+                    <Link href={`/users/${report.target.sender.userId}`} className="text-brand-600 hover:underline">{report.target.sender.label}</Link>
+                  ) : <span className="italic text-neutral-400">Пользователь удалён</span>}
+                </div>
+              </>
+            )}
             {isListing && report.target.status && (
               <div>
                 <span className="text-neutral-500">Статус объявления:</span>{" "}
@@ -214,14 +235,14 @@ export default async function ReportDetailPage({ params }: PageProps) {
               <span className="text-neutral-500">Жалоб на цель в ожидании:</span>{" "}
               {report.pendingReportsOnTargetCount}
             </div>
-            <div className="pt-2">
+            {!isMessage && <div className="pt-2">
               <Link
                 href={isListing ? `/listings/${report.target.targetId}` : `/users/${report.target.targetId}`}
                 className="text-brand-600 hover:underline text-sm"
               >
                 Перейти к действиям →
               </Link>
-            </div>
+            </div>}
           </div>
         </div>
       </div>
@@ -300,21 +321,21 @@ export default async function ReportDetailPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Suspend (user only) */}
-          {isUser && (
+          {/* Suspend a User or reported Message sender */}
+          {(isUser || isMessage) && (
             <div className="rounded-md border bg-surface p-4">
-              <h3 className="text-sm font-medium mb-2">Заблокировать пользователя</h3>
+              <h3 className="text-sm font-medium mb-2">{isMessage ? "Заблокировать автора сообщения" : "Заблокировать пользователя"}</h3>
               <p className="text-xs text-neutral-500 mb-3">
                 Пользователь не сможет создавать объявления, отправлять сообщения или совершать другие действия.
               </p>
-              {canSuspend ? (
+              {canSuspend && suspensionTarget ? (
                 <ReportActionForm
                   actionType="suspend"
                   reportId={id}
-                  targetType={report.target.targetType}
-                  targetId={report.target.targetId}
+                  targetType="user"
+                  targetId={suspensionTarget}
                 />
-              ) : report.target.role === Enums.UserRole.Admin ? (
+              ) : suspensionRole === Enums.UserRole.Admin ? (
                 <p className="text-sm text-neutral-400 italic">
                   Администраторов нельзя заблокировать через очередь жалоб.
                 </p>

@@ -13,6 +13,7 @@ import type {
   ConversationReportContextPort,
   MessageReportContext,
 } from "../domain/ports/ConversationReportContextPort";
+import type { MessageModerationReadPort, ReportedMessage } from "../domain/ports/MessageModerationReadPort";
 import { toDomainMessage, toRawMetadata } from "./MessageMapper";
 
 @Injectable()
@@ -20,7 +21,8 @@ export class PrismaConversationRepository
   implements
     ConversationRepository,
     ConversationStatePort,
-    ConversationReportContextPort
+    ConversationReportContextPort,
+    MessageModerationReadPort
 {
   constructor(
     @Inject(PrismaService)
@@ -402,6 +404,22 @@ export class PrismaConversationRepository
         AND m."deletedAt" IS NULL
         AND (p."lastReadAt" IS NULL OR m."createdAt" > p."lastReadAt")`;
     return rows[0]?.count ?? 0;
+  }
+
+  async getReportedMessage(messageId: string): Promise<ReportedMessage | null> {
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+      select: { id: true, senderId: true, body: true, kind: true, createdAt: true, deletedAt: true },
+    });
+    if (!message) return null;
+    return {
+      id: message.id,
+      senderId: message.senderId,
+      body: message.deletedAt ? null : message.body,
+      createdAt: message.createdAt,
+      deletedAt: message.deletedAt,
+      hasAttachment: message.kind === "image",
+    };
   }
 
   async getMessageReportContext(input: {

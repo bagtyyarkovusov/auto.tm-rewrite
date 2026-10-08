@@ -8,6 +8,8 @@ Report-entry and moderation-action flags disable writes independently while leav
 
 A reported Profile Photo is handled through the existing User report queue: there is no separate photo report or automated check. `RemoveUserPhoto` (`POST /api/v1/admin/users/:id/remove-photo`) releases the photo through identity's `PROFILE_PHOTO_PORT`, which `ListingsModule` provides, and commits the release, the report's resolution and a `USER_PHOTO_REMOVE` audit entry together. It does not suspend the User, who may set another photo. The admin report-detail page shows the current photo and lets an elevated admin confirm its removal; moderation actions must be enabled.
 
+A Message report detail releases only its reported Message through Conversations' `MESSAGE_MODERATION_READ_PORT`; it never returns the saved surrounding Conversation window or attachment storage keys. Elevated staff access is audited as `REPORTED_MESSAGE_READ` with the report and Message IDs before the read, with no Message text, and fails closed if the audit cannot be stored. Deleted Messages and senders remain explicit. Read and suspension resolve the same current Message sender, using a matching saved snapshot only when the Message is missing. An unavailable sender has no suspension action. Suspension revokes the User's Sessions through Identity, resolves only the supplied pending report, and records both IDs in the same `USER_SUSPEND` transaction.
+
 Audit and report history intentionally survives account deletion with nullable actor/reporter relationships. Reviewer-auth audit records omit credential values. A table without an update restriction does not enforce append-only history by itself; inspect the application write paths.
 
 ## Start here

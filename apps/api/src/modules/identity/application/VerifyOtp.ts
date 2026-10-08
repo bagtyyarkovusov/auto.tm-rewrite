@@ -3,6 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Enums } from "@auto-tm/contracts";
 import type { User } from "../domain/User";
+import { UserSuspendedError } from "../domain/UserSuspendedError";
 import { matchesReviewerCredential } from "../domain/ReviewerSignIn";
 import { SIGN_IN_CODE_CHANNELS, type SignInCodeChannel } from "../domain/types";
 import { signInCodeDestination } from "../domain/SignInCodeDestination";
@@ -23,6 +24,8 @@ import { PrismaUserRepository } from "../infrastructure/PrismaUserRepository";
 import { PrismaSessionRepository } from "../infrastructure/PrismaSessionRepository";
 import { BcryptHasherAdapter } from "../infrastructure/BcryptHasherAdapter";
 import { SystemClockAdapter } from "../infrastructure/SystemClockAdapter";
+import type { IdentityCheckPort } from "../domain/ports/IdentityCheckPort";
+import { IDENTITY_TOKENS } from "../identity.tokens";
 import { VerifySignInCode } from "./VerifySignInCode";
 
 const MAX_SESSIONS = 10;
@@ -72,6 +75,8 @@ export class VerifyOtp {
     private readonly verifySignInCode: VerifySignInCode,
     @Inject(RANDOM_SOURCE_PORT)
     private readonly random: RandomSourcePort,
+    @Inject(IDENTITY_TOKENS.IdentityCheckPort)
+    private readonly identityCheck: IdentityCheckPort,
   ) {}
 
   async execute(input: VerifyOtpInput): Promise<VerifyOtpResult> {
@@ -124,6 +129,10 @@ export class VerifyOtp {
       throw err;
     }
 
+    if (existingUser && await this.identityCheck.isSuspended(existingUser.id)) {
+      throw new UserSuspendedError();
+    }
+
     // Claim the code before any side effect, so two concurrent sign-ins with
     // the same code create one session.
     if (!(await this.otpRequestRepo.consumeIfUnused(otpRequest.id))) {
@@ -144,6 +153,14 @@ export class VerifyOtp {
     // Bind the consumed code to the signed-in User
     await this.otpRequestRepo.markVerified(otpRequest.id, user.id);
 
+    const result = await this.createSessionResult({
+      user,
+      now,
+      deviceLabel: input.deviceLabel,
+      userAgent: input.userAgent,
+      deletionScheduledAt,
+    });
+
     if (isReviewerEmail) {
       this.emitReviewerBypassAuthenticated(user, now);
     }
@@ -157,13 +174,7 @@ export class VerifyOtp {
       });
     }
 
-    return this.createSessionResult({
-      user,
-      now,
-      deviceLabel: input.deviceLabel,
-      userAgent: input.userAgent,
-      deletionScheduledAt,
-    });
+    return result;
   }
 
   private async tryReviewerBypass(input: {
@@ -229,6 +240,9 @@ export class VerifyOtp {
     deletionScheduledAt: Date | null;
   }): Promise<VerifyOtpResult> {
     const { user, now } = input;
+    if (await this.identityCheck.isSuspended(user.id)) {
+      throw new UserSuspendedError();
+    }
 
     const sessionCount = await this.sessionRepo.countByUserId(user.id);
     if (sessionCount > 0) {

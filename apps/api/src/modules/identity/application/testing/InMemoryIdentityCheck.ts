@@ -8,6 +8,10 @@ export class InMemoryIdentityCheck implements IdentityCheckPort {
     this.suspended.add(userId);
   }
 
+  unsuspend(userId: string): void {
+    this.suspended.delete(userId);
+  }
+
   async isAdmin(_userId: string): Promise<boolean> {
     return false;
   }

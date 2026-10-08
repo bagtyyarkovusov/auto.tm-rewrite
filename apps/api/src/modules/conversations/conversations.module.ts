@@ -32,6 +32,7 @@ import { CHAT_ATTACHMENT_CLEANER } from "./domain/ports/ChatAttachmentCleaner";
 import { CONVERSATION_REPOSITORY } from "./domain/ports/ConversationRepository";
 import { MESSAGE_EVENT_PUBLISHER } from "./domain/ports/MessageEventPublisher";
 import { CONVERSATION_STATE_PORT } from "./domain/ports/ConversationStatePort";
+import { MESSAGE_MODERATION_READ_PORT } from "./domain/ports/MessageModerationReadPort";
 import { CONVERSATION_REPORT_CONTEXT_PORT } from "./domain/ports/ConversationReportContextPort";
 
 @Module({
@@ -47,6 +48,7 @@ import { CONVERSATION_REPORT_CONTEXT_PORT } from "./domain/ports/ConversationRep
       provide: CONVERSATION_STATE_PORT,
       useExisting: CONVERSATION_REPOSITORY,
     },
+    { provide: MESSAGE_MODERATION_READ_PORT, useExisting: CONVERSATION_REPOSITORY },
     {
       provide: CONVERSATION_REPORT_CONTEXT_PORT,
       useExisting: CONVERSATION_REPOSITORY,
@@ -79,6 +81,6 @@ import { CONVERSATION_REPORT_CONTEXT_PORT } from "./domain/ports/ConversationRep
     ValidateConversationAccess,
     ConversationGateway,
   ],
-  exports: [CONVERSATION_STATE_PORT, CONVERSATION_REPORT_CONTEXT_PORT],
+  exports: [CONVERSATION_STATE_PORT, CONVERSATION_REPORT_CONTEXT_PORT, MESSAGE_MODERATION_READ_PORT],
 })
 export class ConversationsModule {}

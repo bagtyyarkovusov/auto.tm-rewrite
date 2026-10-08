@@ -6,7 +6,7 @@ import type { AdminSchemas } from "@auto-tm/contracts";
 import { listReports } from "../actions";
 
 const VALID_STATUSES = ["pending", "actioned", "dismissed"];
-const VALID_TARGET_TYPES = ["listing", "user"];
+const VALID_TARGET_TYPES = ["listing", "user", "message"];
 const DEFAULT_STATUS = "pending";
 
 function formatDate(iso: string): string {
@@ -159,6 +159,7 @@ export default async function ReportsPage({
               <option value="">Все</option>
               <option value="listing">Объявление</option>
               <option value="user">Пользователь</option>
+              <option value="message">Сообщение</option>
             </select>
           </div>
           <button
@@ -222,7 +223,7 @@ export default async function ReportsPage({
                     </td>
                     <td className="px-4 py-3">{reasonLabel(item.reason)}</td>
                     <td className="px-4 py-3">
-                      {item.targetType === "listing" ? "Объявление" : "Пользователь"}
+                      {item.targetType === "listing" ? "Объявление" : item.targetType === "message" ? "Сообщение" : "Пользователь"}
                     </td>
                     <td className="px-4 py-3">
                       {item.targetSummary.available ? (

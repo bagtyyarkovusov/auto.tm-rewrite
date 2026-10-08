@@ -143,11 +143,11 @@ For obvious spam waves (one bad actor posting 30 fake listings):
 
 ## Special case: reported chat message
 
-- Not part of S7 unless S6 is explicitly reshaped to ship report-from-thread.
-- User reports a message inside a contact thread (Flow: thread → report)
-- Admin sees the conversation context (the messages around the reported one)
-- Admin can: delete message (soft), block user from app, warn user
-- Same audit trail discipline
+- User reports a Message inside a Conversation. The admin queue labels and filters it as "Сообщение".
+- The elevated admin detail shows only that Message: escaped plain text, an image-attachment marker, sent time, and its sender with a link to the sender's admin User page. Deleted Messages and senders are explicit. It does not show surrounding Messages or the whole Conversation.
+- The read goes through Conversations' port and writes `REPORTED_MESSAGE_READ` with the admin, report and Message IDs before releasing content. Audit failure refuses the read; Message text never enters the audit.
+- Admin can suspend the sender or dismiss the report with the existing required reason form. Suspension resolves the same current sender as the read (using the matching saved snapshot only for a missing Message), revokes that User's Sessions and resolves the supplied pending report in the same transaction, and writes `USER_SUSPEND` naming the report and Message. Sign-in, refresh and messaging refuse the suspended User. A refused sign-in leaves its code unused; unsuspension permits new sign-in without restoring old Sessions. Dismissal writes `CONTENT_REPORT_RESOLVE`.
+- Message deletion, warning, and Conversation browsing remain out of scope for #744.
 
 ## SLAs
 
@@ -185,7 +185,7 @@ Conditions that page admin via Telegram:
 
 | Deferred capability | Future home | Trigger / note |
 |---|---|---|
-| Message reports | [Feature 34 — Conversations](../features/34-conversations.md) + this flow | Shape with rich chat/report-from-thread, including context excerpts and message deletion policy. |
+| Message reports | [Feature 34 — Conversations](../features/34-conversations.md) + this flow | The reported-Message read, sender suspension and dismissal ship under #744; context excerpts, message deletion and warnings remain deferred. |
 | Blog/content reports | [Feature 39 — Bortzhurnal](../features/39-content-blogs.md) + [Feature 40 — Admin](../features/40-admin.md) | Shape only after content ships; likely `targetType = blog_post` with content-owned validation. |
 | Reporter history/status/edit/retract | Future trust/support PRD + this flow | Keep S7 public reporting submit-only until transparency or correction becomes a real operating need. |
 | Appeals/support inbox | Future trust/support PRD + support ops | Do not bolt onto S7 moderation reasons; it needs user-facing policy, copy, and owner/reporter privacy rules. |

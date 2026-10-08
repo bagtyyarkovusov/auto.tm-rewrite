@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
@@ -12,7 +12,9 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import supertest from "supertest";
-import { PrismaService } from "@auto-tm/db";
+import { hash } from "bcryptjs";
+import { AdminSchemas } from "@auto-tm/contracts";
+import { PrismaService, Prisma } from "@auto-tm/db";
 
 import { AdminModule } from "../admin.module";
 import { IdentityModule } from "../../identity/identity.module";
@@ -159,6 +161,76 @@ describe("AdminModerationController e2e smoke", () => {
   }
 
   describe("deterministic smoke: report → TOTP admin action → audit → enforcement", () => {
+    it("reads only a reported Message for elevated staff, suspends its sender, and enforces messaging and sign-in", async () => {
+      const reporterToken = await createUser("reporter-one");
+      const senderToken = await createUser("seller-one");
+      await createUser("admin-one", "admin");
+      const adminToken = await createAdminSession(adminOneId);
+      const oldRefresh = "a".repeat(64);
+      await prisma.session.create({ data: { userId: sellerOneId, refreshTokenHash: await hash(oldRefresh, 4), expiresAt: new Date(Date.now() + 60_000) } });
+      const listing = await createActiveListing(sellerOneId);
+      const conversation = await prisma.conversation.create({ data: {
+        listingId: listing.id, buyerId: reporterOneId, sellerId: sellerOneId,
+        participants: { create: [{ userId: reporterOneId }, { userId: sellerOneId }] },
+      } });
+      const message = await prisma.message.create({ data: {
+        conversationId: conversation.id, senderId: sellerOneId, kind: "text", body: "Reported synthetic text", createdAt: new Date("2026-01-01T12:00:00Z"),
+      } });
+      await prisma.message.create({ data: { conversationId: conversation.id, senderId: reporterOneId, kind: "text", body: "Unreported private neighbour" } });
+      const created = await request.post(`/api/v1/conversations/${conversation.id}/messages/${message.id}/report`)
+        .set("Authorization", `Bearer ${reporterToken}`).send({ reason: "spam" }).expect(201);
+      const reportId = created.body.reportId as string;
+      await request.get(`/api/v1/admin/reports/${reportId}`).expect(401);
+      await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${reporterToken}`).expect(403);
+      await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${mintUserJwt(adminOneId)}`).expect(403);
+      expect(await prisma.auditLog.count({ where: { action: "REPORTED_MESSAGE_READ", targetId: message.id } })).toBe(0);
+      const detail = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);
+      expect(detail.headers["cache-control"]).toBe("no-store");
+      expect(detail.body.target.messageCreatedAt).toBe("2026-01-01T12:00:00.000Z");
+      const parsed = AdminSchemas.GetReportDetailResponseSchema.parse(detail.body);
+      expect(parsed.target).toMatchObject({ messageBody: "Reported synthetic text", messageHasAttachment: false, sender: { available: true, userId: sellerOneId } });
+      expect(detail.body.messageContext).toBeUndefined();
+      expect(JSON.stringify(detail.body)).not.toContain("Unreported private neighbour");
+      const readAudit = await prisma.auditLog.findFirstOrThrow({ where: { action: "REPORTED_MESSAGE_READ", targetId: message.id } });
+      expect(readAudit).toMatchObject({ actorId: adminOneId, details: { reportId, messageId: message.id } });
+      expect(JSON.stringify(readAudit.details)).not.toContain("Reported synthetic text");
+      await prisma.message.update({ where: { id: message.id }, data: { kind: "image", body: null, metadata: { key: "synthetic/image.jpg" } } });
+      const attachment = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);
+      expect(attachment.body.target.messageHasAttachment).toBe(true);
+      expect(attachment.body.target.metadata).toBeUndefined();
+      expect(JSON.stringify(attachment.body)).not.toContain("synthetic/image.jpg");
+      await prisma.message.update({ where: { id: message.id }, data: { kind: "post_ref", metadata: { listingId: listing.id } } });
+      const reference = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);
+      expect(reference.body.target.messageHasAttachment).toBe(false);
+      const savedContext = (await prisma.contentReport.findUniqueOrThrow({ where: { id: reportId } })).messageContext;
+      await prisma.contentReport.update({ where: { id: reportId }, data: { messageContext: Prisma.DbNull } });
+      const suspended = await request.post(`/api/v1/admin/users/${sellerOneId}/suspend`).set("Authorization", `Bearer ${adminToken}`).send({ reason: "Reported spam", reportId }).expect(200);
+      expect(suspended.body.reportStatus).toBe("actioned");
+      expect(await prisma.session.count({ where: { userId: sellerOneId } })).toBe(0);
+      await request.post("/api/v1/auth/refresh").send({ refreshToken: oldRefresh }).expect(401);
+      const actionAudit = await prisma.auditLog.findUniqueOrThrow({ where: { id: suspended.body.auditLogId } });
+      expect(actionAudit).toMatchObject({ action: "USER_SUSPEND", targetId: sellerOneId, details: { reportId, messageId: message.id } });
+      expect((await prisma.contentReport.findUniqueOrThrow({ where: { id: reportId } })).status).toBe("actioned");
+      await request.post(`/api/v1/conversations/${conversation.id}/messages`).set("Authorization", `Bearer ${senderToken}`).send({ text: "Denied send" }).expect(403);
+      await prisma.otpRequest.create({ data: {
+        purpose: "sign_in", channel: "phone", destination: suite.phone("seller-one"),
+        codeHash: createHash("sha256").update("123456").digest("hex"),
+        expiresAt: new Date(Date.now() + 60_000), ip: "127.0.0.1",
+      } });
+      const signIn = await request.post("/api/v1/auth/otp/verify").send({ phone: suite.phone("seller-one"), code: "123456" }).expect(403);
+      expect(signIn.body).toMatchObject({ code: "FORBIDDEN", details: { reason: "USER_SUSPENDED" } });
+      expect((await prisma.otpRequest.findFirstOrThrow({ where: { destination: suite.phone("seller-one") } })).verifiedAt).toBeNull();
+      await request.post(`/api/v1/admin/users/${sellerOneId}/unsuspend`).set("Authorization", `Bearer ${adminToken}`).send({ reason: "Appeal accepted" }).expect(200);
+      await request.post("/api/v1/auth/otp/verify").send({ phone: suite.phone("seller-one"), code: "123456" }).expect(201);
+      await request.post("/api/v1/auth/refresh").send({ refreshToken: oldRefresh }).expect(401);
+      await prisma.contentReport.update({ where: { id: reportId }, data: { messageContext: savedContext as Prisma.InputJsonValue } });
+      await prisma.message.delete({ where: { id: message.id } });
+      await prisma.user.update({ where: { id: sellerOneId }, data: { phone: null, phoneVerifiedAt: null, email: null, emailVerifiedAt: null, displayName: null } });
+      const deleted = await request.get(`/api/v1/admin/reports/${reportId}`).set("Authorization", `Bearer ${adminToken}`).expect(200);
+      expect(deleted.body.target).toMatchObject({ available: false, label: "Сообщение удалено или недоступно", sender: { available: false, label: "Пользователь удалён" } });
+      expect(deleted.body.target.messageBody).toBeUndefined();
+    });
+
     it("report-backed ban flow with audit and public enforcement", async () => {
       // Arrange
       const reporterId = reporterOneId;

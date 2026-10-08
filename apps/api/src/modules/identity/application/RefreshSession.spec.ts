@@ -6,6 +6,8 @@ import type { User } from "../domain/User";
 import type { SessionRepository, SessionLookupResult } from "../domain/ports/SessionRepository";
 import type { PasswordHasherPort } from "../domain/ports/PasswordHasherPort";
 import type { ClockPort } from "../domain/ports/ClockPort";
+import { InMemoryIdentityCheck } from "./testing/InMemoryIdentityCheck";
+import { UserSuspendedError } from "../domain/UserSuspendedError";
 import { RefreshSession } from "./RefreshSession";
 
 const NOW = new Date("2026-05-14T12:00:00Z");
@@ -148,6 +150,7 @@ interface MakeUseCaseOpts {
   sessionRepo?: SessionRepository;
   hasher?: PasswordHasherPort;
   clock?: ClockPort;
+  identityCheck?: InMemoryIdentityCheck;
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
@@ -156,6 +159,7 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     opts.hasher ?? new FakePasswordHasher(),
     opts.clock ?? new FakeClock(),
     jwtService,
+    opts.identityCheck ?? new InMemoryIdentityCheck(),
   );
 }
 
@@ -168,6 +172,16 @@ describe("RefreshSession", () => {
     sessionRepo = new FakeSessionRepository();
     hasher = new FakePasswordHasher();
     clock = new FakeClock();
+  });
+
+  it("refuses a suspended User's refresh without rotating the Session", async () => {
+    const session = makeSession({ refreshTokenHash: "hashed:token-1" });
+    sessionRepo.sessions.push(session);
+    sessionRepo.registerToken("token-1", session);
+    const identityCheck = new InMemoryIdentityCheck();
+    identityCheck.suspend(session.userId);
+    await expect(makeUseCase({ sessionRepo, identityCheck }).execute({ refreshToken: "token-1" })).rejects.toThrow(UserSuspendedError);
+    expect(sessionRepo.sessions[0]?.refreshTokenHash).toBe("hashed:token-1");
   });
 
   // --- Happy path: valid refresh token returns new tokens ---
