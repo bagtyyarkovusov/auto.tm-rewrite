@@ -4,6 +4,7 @@ import { AdminSchemas } from "@auto-tm/contracts";
 import { MESSAGE_MODERATION_READ_PORT, type MessageModerationReadPort, type ReportedMessage } from "../../conversations/domain/ports/MessageModerationReadPort";
 import { AUDIT_LOG_REPOSITORY, type AuditLogRepository } from "../domain/ports/AuditLogRepository";
 
+import { reportedMessageSenderId } from "../domain/reportedMessageSenderId";
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
 import { CONTENT_REPORT_REPOSITORY } from "../domain/ports/ContentReportRepository";
 import type { ListingsReadPort } from "../../listings/domain/ports/ListingsReadPort";
@@ -103,7 +104,7 @@ export class GetReportDetail {
         details: { reportId: report.id, messageId: report.targetId },
       });
       message = await this.messageRead.getReportedMessage(report.targetId);
-      const senderId = message?.senderId ?? report.messageContext?.senderId;
+      const senderId = reportedMessageSenderId(report, message);
       sender = senderId ? await this.identityRead.findUserById(senderId) : null;
     }
 

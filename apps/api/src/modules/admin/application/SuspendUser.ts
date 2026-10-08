@@ -15,6 +15,8 @@ import {
   type IdentityAdminPort,
   type IdentityReadPort,
 } from "../../identity/identity.public";
+import { MESSAGE_MODERATION_READ_PORT, type MessageModerationReadPort } from "../../conversations/domain/ports/MessageModerationReadPort";
+import { reportedMessageSenderId } from "../domain/reportedMessageSenderId";
 import type { ContentReportRepository } from "../domain/ports/ContentReportRepository";
 import { CONTENT_REPORT_REPOSITORY } from "../domain/ports/ContentReportRepository";
 import type { AuditLogRepository } from "../domain/ports/AuditLogRepository";
@@ -52,6 +54,8 @@ export class SuspendUser {
     private readonly reportRepo: ContentReportRepository,
     @Inject(AUDIT_LOG_REPOSITORY)
     private readonly auditRepo: AuditLogRepository,
+    @Inject(MESSAGE_MODERATION_READ_PORT)
+    private readonly messageRead: MessageModerationReadPort,
   ) {}
 
   async execute(input: SuspendUserInput): Promise<SuspendUserResult> {
@@ -99,9 +103,11 @@ export class SuspendUser {
       }
 
       const matchesUser = report.targetType === "user" && report.targetId === input.userId;
+      const message = report.targetType === "message"
+        ? await this.messageRead.getReportedMessage(report.targetId)
+        : null;
       const matchesMessageSender = report.targetType === "message" &&
-        report.messageContext?.messageId === report.targetId &&
-        report.messageContext.senderId === input.userId;
+        reportedMessageSenderId(report, message) === input.userId;
       if (!matchesUser && !matchesMessageSender) {
         throw new BadRequestException({
           code: "VALIDATION_FAILED",
