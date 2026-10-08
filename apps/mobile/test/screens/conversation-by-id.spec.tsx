@@ -1,7 +1,7 @@
 import * as RN from "react-native";
 import { useState, type PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
 import { Modal, Platform, KeyboardAvoidingView } from "react-native";
@@ -11,6 +11,7 @@ import { waitFor } from "@testing-library/react-native";
 
 import { act, fireEvent, renderMobile, routeParams, routerMock, within } from "../render";
 import ConversationDetailScreen from "../../app/conversations/[id]";
+import { queryKeys } from "../../src/api/queryKeys";
 import { seedConversationDetail } from "../../src/api/conversations/useConversation";
 import { ApiError } from "../../src/api/client";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
@@ -28,6 +29,7 @@ const state = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
   readMessages: vi.fn(),
+  cachedMessages: false,
   messages: {
     data: { pages: [{ items: [] as unknown[] }] } as unknown,
     isPending: false,
@@ -53,10 +55,18 @@ vi.mock("../../src/api/client", async (importOriginal) => ({
   ...(await importOriginal<typeof ClientModule>()),
   apiClient: { get: state.get, post: state.post, delete: vi.fn() },
 }));
-vi.mock("../../src/api/conversations/useConversationMessages", () => ({
+vi.mock("../../src/api/conversations/useConversationMessages", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   useConversationMessages: (options: { conversationId: string }) => {
     state.readMessages(options);
-    return state.messages;
+    const cached = useQuery({
+      queryKey: queryKeys.conversations.messages(options.conversationId),
+      queryFn: async () => state.messages.data,
+      enabled: state.cachedMessages,
+      initialData: state.cachedMessages ? state.messages.data : undefined,
+      staleTime: 30_000,
+    });
+    return state.cachedMessages ? { ...state.messages, ...cached } : state.messages;
   },
 }));
 vi.mock("../../src/api/conversations/useSendTextMessage", () => ({ useSendTextMessage: () => state.mutation }));
@@ -80,8 +90,14 @@ vi.mock("../../src/conversations/socket/useConversationSocket", () => ({
     peerPresence: { online: true },
     signalTyping: vi.fn(),
     stopTyping: vi.fn(),
-    sendTextMessage: state.socket.sendTextMessage,
-    sendImageMessage: state.socket.sendImageMessage,
+    sendTextMessage: async (input: { conversationId: string; text: string; clientMessageId: string }) => {
+      const ack = await state.socket.sendTextMessage(input);
+      return ack?.ok ? { ...ack, message: { ...serverMessage(ack.message.id, state.viewerId, new Date().toISOString(), input.text), clientMessageId: input.clientMessageId, ...ack.message } } : ack;
+    },
+    sendImageMessage: async (input: { conversationId: string; metadata: unknown; clientMessageId: string }) => {
+      const ack = await state.socket.sendImageMessage(input);
+      return ack?.ok ? { ...ack, message: { ...serverMessage(ack.message.id, state.viewerId, new Date().toISOString()), kind: "image", text: null, metadata: input.metadata, clientMessageId: input.clientMessageId, ...ack.message } } : ack;
+    },
     markRead: vi.fn(async () => ({ ok: true })),
     deleteMessage: state.socket.deleteMessage,
   }),
@@ -172,6 +188,7 @@ function routeGet(routes: Record<string, () => unknown>) {
 
 beforeEach(() => {
   state.viewerId = BUYER_ID;
+  state.cachedMessages = false;
   state.get.mockReset();
   state.post.mockReset();
   state.mutation.mutate.mockReset();
@@ -771,6 +788,7 @@ describe("Conversation while signed out", () => {
     expect(state.get).not.toHaveBeenCalledWith(`/conversations/${CONVERSATION_ID}`, expect.anything());
     state.viewerLoading = false;
     state.viewerId = BUYER_ID;
+  state.cachedMessages = false;
     screen.rerender(<Seeded><ConversationDetailScreen /></Seeded>);
     expect(await screen.findByText("Merdan")).toBeTruthy();
   });
@@ -789,6 +807,7 @@ describe("Conversation while signed out", () => {
     expect(routerMock.dismissTo).toHaveBeenCalledWith(conversationHref);
 
     state.viewerId = BUYER_ID;
+  state.cachedMessages = false;
     screen.rerender(<ConversationDetailScreen />);
     expect(await screen.findByText("Merdan")).toBeTruthy();
     expect(screen.queryByText("Sign in to view messages")).toBeNull();
@@ -1248,7 +1267,7 @@ describe("Acknowledged Message transport coverage", () => {
   it("keeps an HTTP fallback text Message visible while the refresh is delayed", async () => {
     state.messages.data = { pages: [{ items: [serverMessage("older", SELLER_ID)] }] };
     state.socket.sendTextMessage.mockResolvedValue({ ok: false, code: "NOT_CONNECTED" });
-    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.({ id: "http-message" }));
+    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.(serverMessage("http-message", BUYER_ID, new Date().toISOString(), "HTTP still visible")));
     routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
     const screen = renderMobile(<ConversationDetailScreen />);
     fireEvent.changeText(await screen.findByPlaceholderText("Message"), "HTTP still visible");
@@ -1261,7 +1280,7 @@ describe("Acknowledged Message transport coverage", () => {
   it.each([false, true])("keeps an acknowledged image visible without an echo, HTTP=%s", async (http) => {
     state.mutation.mutateAsync.mockResolvedValue({ uploadUrl: "https://upload", key: "chat-attachments/ack.jpg" });
     state.socket.sendImageMessage.mockResolvedValue(http ? { ok: false, code: "NOT_CONNECTED" } : { ok: true, message: { id: "image-ack" } });
-    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.({ id: "image-ack" }));
+    state.mutation.mutate.mockImplementation((_input, options) => options?.onSuccess?.({ ...serverMessage("image-ack", BUYER_ID, new Date().toISOString()), kind: "image", text: null, metadata: { key: "chat-attachments/ack.jpg" } }));
     routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
     const screen = renderMobile(<ConversationDetailScreen />);
     await screen.findByPlaceholderText("Message");
@@ -1290,5 +1309,35 @@ describe("Acknowledged own Message actions", () => {
     expect(screen.queryByText("Acknowledged and deletable")).toBeNull();
     expect(screen.getByText("Message deleted")).toBeTruthy();
     expect(state.socket.deleteMessage).toHaveBeenCalledWith({ conversationId: CONVERSATION_ID, messageId: "ack-to-delete" });
+  });
+});
+
+describe("Authoritative acknowledgement cache", () => {
+  it.each([false, true])("keeps the server Message across reopening within staleTime and later echo, echoFirst=%s", async (echoFirst) => {
+    state.cachedMessages = true;
+    const older = serverMessage("older-ack", SELLER_ID);
+    state.messages.data = { pages: [{ items: [older], nextCursor: "older-page" }, { items: [], nextCursor: null }], pageParams: [null, "older-page"] };
+    routeGet({ [`/conversations/${CONVERSATION_ID}`]: () => conversation() });
+    let acknowledge: ((value: unknown) => void) | undefined;
+    state.socket.sendTextMessage.mockImplementation(() => new Promise((resolve) => { acknowledge = resolve; }));
+    const screen = renderMobile(<ConversationDetailScreen />);
+    fireEvent.changeText(await screen.findByPlaceholderText("Message"), "Typed before server acknowledgement");
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Send message" })); });
+    const firstSend = state.socket.sendTextMessage.mock.calls[0];
+    if (!firstSend) throw new Error("Send missing");
+    const message = { ...serverMessage("canonical-id", BUYER_ID, "2026-10-08T12:34:56.000Z", "Canonical server text"), clientMessageId: firstSend[0].clientMessageId };
+    if (echoFirst) act(() => screen.queryClient.setQueryData(queryKeys.conversations.messages(CONVERSATION_ID), { pages: [{ items: [message, older], nextCursor: "older-page" }, { items: [], nextCursor: null }], pageParams: [null, "older-page"] }));
+    await act(async () => { acknowledge?.({ ok: true, message }); });
+    const cached = screen.queryClient.getQueryData<{ pages: { items: ConversationsSchemas.MessageSummary[]; nextCursor: string | null }[]; pageParams: unknown[] }>(queryKeys.conversations.messages(CONVERSATION_ID));
+    expect(cached?.pages.flatMap((page) => page.items).filter((row) => row.id === "canonical-id")).toEqual([message]);
+    expect(cached?.pageParams).toEqual([null, "older-page"]);
+    expect(cached?.pages[0]?.nextCursor).toBe("older-page");
+    expect(screen.getAllByText("Canonical server text")).toHaveLength(1);
+    // Same provider/client, but the route and its local outbox are remounted.
+    screen.rerender(<RN.View />);
+    screen.rerender(<ConversationDetailScreen />);
+    expect(await screen.findByText("Canonical server text")).toBeTruthy();
+    act(() => screen.queryClient.setQueryData(queryKeys.conversations.messages(CONVERSATION_ID), cached));
+    expect(screen.getAllByText("Canonical server text")).toHaveLength(1);
   });
 });
