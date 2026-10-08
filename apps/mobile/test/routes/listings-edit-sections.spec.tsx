@@ -187,6 +187,7 @@ describe("the section list of a published Listing (#589)", () => {
     await screen.findByRole("header", { name: "Edit listing" });
     expect(photoRows.length).toBeGreaterThan(0);
     expect(screen.queryByText("Photos: 4")).toBeNull();
+    expect(screen.queryByText("At least 3 photos are required")).toBeNull();
 
     await act(async () => { finishReadingPhotos(); });
     await screen.findByText("Photos: 4");

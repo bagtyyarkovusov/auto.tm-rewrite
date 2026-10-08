@@ -321,9 +321,9 @@ function EditListingSession({ listingId }: { listingId: string }) {
   );
 
   const handleSave = useCallback(async () => {
-    if (!ctx.canPublish || !hasChanges || contactBlocksSave) return;
+    if (!photosReady || !ctx.canPublish || !hasChanges || contactBlocksSave) return;
     await finishSave(saveEdit.save);
-  }, [ctx.canPublish, hasChanges, contactBlocksSave, saveEdit.save, finishSave]);
+  }, [photosReady, ctx.canPublish, hasChanges, contactBlocksSave, saveEdit.save, finishSave]);
 
   const handleRetrySave = useCallback(
     () => finishSave(saveEdit.retry),
@@ -376,7 +376,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
   const uploadStatus = countUploads(uploadQueue.photos);
 
   const disabledReason =
-    ctx.isLastStep && !uploadQueue.publishGate.canPublish
+    ctx.isLastStep && photosReady && !uploadQueue.publishGate.canPublish
       ? uploadStatus.failed > 0
         ? t("photosFailedRetryOrRemove", { count: uploadStatus.failed })
         : uploadStatus.inflight > 0
@@ -426,6 +426,7 @@ function EditListingSession({ listingId }: { listingId: string }) {
           !saveEdit.isPending
         }
         canPublish={
+          photosReady &&
           ctx.canPublish &&
           hasChanges &&
           !contactBlocksSave &&
