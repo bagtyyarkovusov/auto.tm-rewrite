@@ -65,6 +65,8 @@ import { CONSTANT_TIME_COMPARATOR_PORT } from "./domain/ports/ConstantTimeCompar
 import { RANDOM_SOURCE_PORT } from "./domain/ports/RandomSourcePort";
 import { MathRandomSource } from "./infrastructure/MathRandomSource";
 import { REVIEWER_OTP_BYPASS_CONFIG } from "./domain/ports/ReviewerOtpBypassConfig";
+import { RedisReservedPhoneAttemptLedger } from "./infrastructure/RedisReservedPhoneAttemptLedger";
+import { RESERVED_PHONE_ATTEMPT_LEDGER } from "./domain/ports/ReservedPhoneAttemptLedger";
 import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
 
 @Module({
@@ -99,6 +101,8 @@ import { EMAIL_CODE_SENDER_PORT } from "./domain/ports/EmailCodeSenderPort";
     PinoSecurityLoggerAdapter,
     NodeConstantTimeComparator,
     EventEmitterIdentityEventBus,
+    RedisReservedPhoneAttemptLedger,
+    { provide: RESERVED_PHONE_ATTEMPT_LEDGER, useExisting: RedisReservedPhoneAttemptLedger },
     BullMqEmailCodeSenderAdapter,
     {
       provide: EMAIL_CODE_SENDER_PORT,

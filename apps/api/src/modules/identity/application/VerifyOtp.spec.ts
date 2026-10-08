@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { UserSuspendedError } from "../domain/UserSuspendedError";
+import { InMemoryReservedPhoneAttemptLedger } from "./testing/InMemoryReservedPhoneAttemptLedger";
 import { InMemoryIdentityCheck } from "./testing/InMemoryIdentityCheck";
 import { JwtService } from "@nestjs/jwt";
 import type {
@@ -384,6 +385,7 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     new VerifySignInCode(otpRepo, clock),
     opts.random ?? new FixedRandomSource([0.5]),
     opts.identityCheck ?? new InMemoryIdentityCheck(),
+    new InMemoryReservedPhoneAttemptLedger(clock),
   );
 }
 
