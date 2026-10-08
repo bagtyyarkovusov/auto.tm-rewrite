@@ -290,6 +290,13 @@ describe("Contact step", () => {
     expect(onChange).toHaveBeenCalledWith({ allowCalls: false });
   });
 
+  it("draws Another number in the link colour the other text links use", () => {
+    const { screen } = renderStep({ accountPhone: "+99365000000", confirmedPhones: [] });
+    const className = screen.getByText("Another number").props.className as string;
+    expect(className).toContain("text-info-500");
+    expect(className).not.toContain("text-primary");
+  });
+
   it("opens the number screen from Another number", () => {
     const onAnotherNumber = vi.fn();
     const { screen } = renderStep({
