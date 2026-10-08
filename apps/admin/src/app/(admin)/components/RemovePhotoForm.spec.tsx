@@ -25,6 +25,7 @@ function renderForm() {
 describe("RemovePhotoForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.refresh.mockReset();
   });
 
   afterEach(() => {
