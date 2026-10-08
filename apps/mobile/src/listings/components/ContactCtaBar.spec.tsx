@@ -129,6 +129,36 @@ describe("ContactCtaBar", () => {
   });
 });
 
+describe("ContactCtaBar without calls", () => {
+  it.each([
+    ["the seller turned calls off", { allowCalls: false }],
+    ["the Listing has no contact phone", { contactPhone: undefined }],
+  ])("drops Call and gives Message the full width when %s", (_reason, override) => {
+    for (const variant of ["floating", "viewer"] as const) {
+      const screen = renderMobile(<ContactCtaBar {...props} {...override} variant={variant} />);
+      expect(screen.queryByRole("button", { name: "Call" })).toBeNull();
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      const message = screen.getByRole("button", { name: "Message", disabled: false });
+      expect(message.props.className).toContain("flex-1");
+      expect(screen.queryByText("AutoTM verifies sellers' numbers by SMS.")).toBeNull();
+      screen.unmount();
+    }
+  });
+  it("keeps a disabled Call while the Listing is still loading", () => {
+    const screen = renderMobile(<ContactCtaBar {...props} allowCalls={false} allowChat={false} contactPhone={undefined} pending />);
+    expect(screen.getByRole("button", { name: "Call", disabled: true })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Message", disabled: true })).toBeTruthy();
+  });
+  it.each([Enums.ListingStatus.Sold, Enums.ListingStatus.Archived])("keeps a disabled Call on a %s Listing, with or without calls", (status) => {
+    for (const allowCalls of [true, false]) {
+      const screen = renderMobile(<ContactCtaBar {...props} allowCalls={allowCalls} status={status} />);
+      expect(screen.getByRole("button", { name: "Call", disabled: true })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Message", disabled: true })).toBeTruthy();
+      screen.unmount();
+    }
+  });
+});
+
 vi.mock("react-native", async (original) => ({
   ...await original<typeof Native>(),
   Alert: { alert: vi.fn() },
