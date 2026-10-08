@@ -212,6 +212,39 @@ describe("admin session renewal before request dispatch", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it.each(["/reports", "/catalog/brands", "/login"])("checks configured public Origin on cookie-bearing POST %s", async (path) => {
+    vi.stubEnv("ADMIN_ORIGIN", "https://admin.auto.tm");
+    vi.mocked(fetch).mockResolvedValue(Response.json({ accessToken: jwt(Math.floor(Date.now() / 1000) + 900), refreshToken: rotatedRefresh }));
+    const { proxy } = await import("./proxy");
+    for (const origin of [undefined, "https://other.example"]) {
+      const headers = new Headers({ cookie: `auto_tm_admin_refresh=${refresh}` });
+      if (origin) headers.set("origin", origin);
+      const response = await proxy(new NextRequest(`http://localhost:3001${path}`, { method: "POST", headers }));
+      expect(response.status).toBe(403);
+      expect(response.headers.get("set-cookie")).toBeNull();
+      expect(fetch).not.toHaveBeenCalled();
+    }
+    const response = await proxy(new NextRequest(`http://localhost:3001${path}`, {
+      method: "POST", headers: { origin: "https://admin.auto.tm", cookie: `auto_tm_admin_refresh=${refresh}` },
+    }));
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.cookies.get("auto_tm_admin_refresh")?.value).toBe(rotatedRefresh);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("protects catalog GETs and forwards current sessions without renewal", async () => {
+    const { proxy } = await import("./proxy");
+    const anonymous = await proxy(new NextRequest("http://admin.auto.tm/catalog/brands"));
+    expect(anonymous.status).toBe(303);
+    expect(anonymous.headers.get("location")).toContain("/login?reason=session-expired");
+    const current = await proxy(new NextRequest("http://admin.auto.tm/catalog/brands", {
+      headers: { cookie: `auto_tm_admin_access=${jwt(Math.floor(Date.now() / 1000) + 900)}` },
+    }));
+    expect(current.headers.get("x-middleware-next")).toBe("1");
+    expect(current.headers.get("x-middleware-request-x-admin-return-to")).toBe("/catalog/brands");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("never hands one operator's rotated pair to another refresh token", async () => {
     const access = jwt(Math.floor(Date.now() / 1000) + 900);
     const otherRefresh = "c".repeat(64);

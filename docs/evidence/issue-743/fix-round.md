@@ -16,6 +16,9 @@ Founder-authorized FIX1–9 from [the independent review](https://github.com/bag
 
 - FIX6 red: eight failures/eight passes, `pnpm --filter @auto-tm/admin exec vitest run src/lib/api-address.spec.ts`. Green: trim first, build from parsed origin/pathname, reject search/hash/userinfo, including empty delimiters. Configuration errors never echo the supplied address or credentials.
 
+- FIX7: documentation-only correction to unmerged ADR-0090, mirrored in operator docs. API reuse code is unchanged, but the five-second admin handoff accepts old-token replays without reaching it. Explicit accepted cost; forced logout by a healthy-session link no longer remains.
+- FIX8: retained existing behavior, no production behavior change. Four new proxy tests pass: missing/wrong/correct configured Origin across reports, catalog and cookie-bearing login POSTs; catalog anonymous/current GET coverage. ADMIN_ORIGIN now explicitly required in template/runbook, with mismatch 403 at TOTP.
+
 ## Live staging checklist, not performed
 
 Owner: orchestrator with the founder, after deployment. This fix round does not deploy, change Railway variables or touch production.
