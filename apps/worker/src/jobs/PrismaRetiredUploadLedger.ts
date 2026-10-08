@@ -17,28 +17,46 @@ export class PrismaRetiredUploadLedger implements RetiredUploadLedger {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async retireExpiredPreparations(now: Date, limit: number): Promise<number> {
-    // One statement: the preparation is retired and its work recorded together.
-    // The row lock is the same one an API finalization takes, so a preparation
-    // is either adopted first and skipped here, or retired here and refused there.
-    // The work is due from the missed deadline.
-    return this.prisma.$executeRaw`
-      WITH expired AS (
-        UPDATE media_uploads SET "state" = 'RETIRED', "retiredAt" = ${now},
-          "claimToken" = NULL, "claimDeadline" = NULL
-        FROM (
-          SELECT id, "claimDeadline" AS deadline FROM media_uploads
-          WHERE "state" = 'PREPARING' AND "claimDeadline" < ${now}
-          ORDER BY "claimDeadline" LIMIT ${limit}::int FOR UPDATE SKIP LOCKED
-        ) AS stranded
-        WHERE media_uploads.id = stranded.id
+    // Publish reserves a new Listing id; that Listing appears only when it
+    // commits with adoption. Attach reserves an existing Listing, and Profile
+    // Photo uses a profile target. Recovery and finalization take the same lock.
+    const [result] = await this.prisma.$queryRaw<{ recovered: bigint }[]>`
+      WITH stranded AS (
+        SELECT upload.id, upload."claimDeadline" AS deadline,
+          (upload."claimTargetType" = 'listing' AND NOT EXISTS (
+            SELECT 1 FROM listings WHERE id = upload."claimTargetId"
+          )) AS publish
+        FROM media_uploads AS upload
+        WHERE upload."state" = 'PREPARING' AND upload."claimDeadline" < ${now}
+          AND NOT EXISTS (
+            SELECT 1 FROM listing_media WHERE "uploadId" = upload.id
+              OR starts_with("key", regexp_replace(upload."key", '[^/]+$', ''))
+              OR starts_with("posterKey", regexp_replace(upload."key", '[^/]+$', ''))
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM users WHERE "avatarUploadId" = upload.id
+              OR starts_with("avatarKey", regexp_replace(upload."key", '[^/]+$', ''))
+          )
+        ORDER BY upload."claimDeadline", upload.id LIMIT ${limit}::int
+        FOR UPDATE OF upload SKIP LOCKED
+      ), recovered AS (
+        UPDATE media_uploads SET "state" = CASE WHEN stranded.publish THEN 'AVAILABLE' ELSE 'RETIRED' END,
+          "retiredAt" = CASE WHEN stranded.publish THEN media_uploads."retiredAt" ELSE ${now} END,
+          "claimToken" = NULL, "claimDeadline" = NULL,
+          "claimTargetType" = CASE WHEN stranded.publish THEN NULL ELSE media_uploads."claimTargetType" END,
+          "claimTargetId" = CASE WHEN stranded.publish THEN NULL ELSE media_uploads."claimTargetId" END
+        FROM stranded WHERE media_uploads.id = stranded.id
         RETURNING media_uploads.id, media_uploads."key", media_uploads."objectKeys",
-          media_uploads."writeProtocol", stranded.deadline
+          media_uploads."writeProtocol", media_uploads."state", stranded.deadline
+      ), cleanup AS (
+        INSERT INTO media_upload_cleanups ("uploadId", "key", "objectKeys", "writeProtocol", "status", "nextAttemptAt")
+        SELECT id, "key", "objectKeys", "writeProtocol",
+          CASE WHEN "writeProtocol" = 'conditional-v1' THEN 'PENDING' ELSE 'LEGACY_PENDING' END, deadline
+        FROM recovered WHERE "state" = 'RETIRED'
+        ON CONFLICT ("uploadId") DO NOTHING
       )
-      INSERT INTO media_upload_cleanups ("uploadId", "key", "objectKeys", "writeProtocol", "status", "nextAttemptAt")
-      SELECT id, "key", "objectKeys", "writeProtocol",
-        CASE WHEN "writeProtocol" = 'conditional-v1' THEN 'PENDING' ELSE 'LEGACY_PENDING' END, deadline
-      FROM expired
-      ON CONFLICT ("uploadId") DO NOTHING`;
+      SELECT count(*) AS recovered FROM recovered`;
+    return Number(result?.recovered ?? 0);
   }
 
   async lease(now: Date, limit: number): Promise<CleanupWork[]> {

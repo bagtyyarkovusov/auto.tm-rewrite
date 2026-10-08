@@ -9,6 +9,8 @@ extendZodWithOpenApi(z);
 
 import {
   ErrorResponseSchema,
+  UploadObjectInvalidDetailsSchema,
+  UploadObjectInvalidResponseSchema,
   InvalidOtpDetailsSchema,
   RateLimitedDetailsSchema,
 } from "./errors";
@@ -75,6 +77,7 @@ import {
   PublishListingRequestSchema,
   EditListingRequestSchema,
   AttachMediaRequestSchema,
+  AttachMediaResponseSchema,
   ReorderMediaRequestSchema,
   FeedResponseSchema,
   ListingCountQuerySchema,
@@ -185,6 +188,8 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
   const registry = new OpenAPIRegistry();
 
   registry.register("ErrorResponse", ErrorResponseSchema);
+  const uploadDetails = registry.register("UploadObjectInvalidDetails", UploadObjectInvalidDetailsSchema);
+  const uploadError = registry.register("UploadObjectInvalidResponse", UploadObjectInvalidResponseSchema.extend({ details: uploadDetails }));
   registry.register("RateLimitedDetails", RateLimitedDetailsSchema);
   registry.register("InvalidOtpDetails", InvalidOtpDetailsSchema);
 
@@ -716,7 +721,7 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
       400: {
         description:
           "UPLOAD_NOT_AVAILABLE (not this User's unused fenced image upload), UPLOAD_OBJECT_INVALID (stored file missing, empty, over 5 MB or of another type), or VALIDATION_FAILED",
-        content: { "application/json": { schema: S(ErrorResponseSchema) } },
+        content: { "application/json": { schema: S(z.union([uploadError, ErrorResponseSchema])) } },
       },
       401: {
         description: "Authentication required",
@@ -1090,6 +1095,39 @@ export function buildOpenApiRegistry(): OpenAPIRegistry {
         description: "Validation error",
         content: { "application/json": { schema: S(ErrorResponseSchema) } },
       },
+    },
+  });
+
+  const uploadRefusal = {
+    description: "UPLOAD_OBJECT_INVALID identifies details.key; publish also identifies details.photoId. Other validation refusals use ErrorResponse.",
+    content: { "application/json": { schema: S(z.union([uploadError, ErrorResponseSchema])) } },
+  };
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/listings/{id}/media/attach",
+    tags: ["Listings"],
+    request: {
+      params: z.object({ id: z.string().uuid() }),
+      body: { content: { "application/json": { schema: S(AttachMediaRequestSchema) } } },
+    },
+    responses: {
+      201: { description: "The attached media", content: { "application/json": { schema: S(AttachMediaResponseSchema) } } },
+      400: uploadRefusal,
+      409: { description: "UPLOAD_ALREADY_ATTACHED", content: { "application/json": { schema: S(ErrorResponseSchema) } } },
+    },
+  });
+  registry.registerPath({
+    method: "post",
+    path: "/api/v1/listings/drafts/{id}/publish",
+    tags: ["Listings"],
+    request: { params: z.object({ id: z.string().uuid() }) },
+    responses: {
+      201: { description: "The published Listing", content: { "application/json": { schema: S(ListingSummarySchema.pick({
+        id: true, sellerId: true, status: true, brandId: true, modelId: true,
+        priceAmount: true, priceCurrency: true,
+      }).extend({ publishedAt: z.string().datetime() })) } } },
+      400: uploadRefusal,
+      409: { description: "UPLOAD_ALREADY_ATTACHED", content: { "application/json": { schema: S(ErrorResponseSchema) } } },
     },
   });
 

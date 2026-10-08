@@ -1,4 +1,4 @@
-# ADR-0089: Single-process admin session renewal for the first release
+# ADR-0090: Single-process admin session renewal for the first release
 
 - **Status**: Accepted
 - **Date**: 2026-10-08

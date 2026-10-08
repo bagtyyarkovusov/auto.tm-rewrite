@@ -132,6 +132,33 @@ export class InMemoryMediaWorld {
         if (record.state === "PREPARING" && record.token === token) this.retireRecord(id);
       }
     },
+    release: async (token) => {
+      for (const [id, record] of this.claimRecords) {
+        if (record.state === "PREPARING" && record.token === token) {
+          this.claimRecords.set(id, { state: "AVAILABLE" });
+        }
+      }
+    },
+    settle: async (token, retiredUploadId) => {
+      const record = this.claimOf(retiredUploadId);
+      if (record.state !== "PREPARING" || record.token !== token) return false;
+      this.retireRecord(retiredUploadId);
+      for (const [id, held] of this.claimRecords) {
+        if (id !== retiredUploadId && held.state === "PREPARING" && held.token === token) {
+          this.claimRecords.set(id, { state: "AVAILABLE" });
+        }
+      }
+      return true;
+    },
+    retireUnclaimed: async (uploadId, userId, stillInvalid) => {
+      const referenced = () => this.media.some((m) => m.uploadId === uploadId) ||
+        [...this.profilePhotos.values()].some((photo) => photo.uploadId === uploadId);
+      if (this.uploads.find((upload) => upload.id === uploadId)?.userId !== userId ||
+        this.claimOf(uploadId).state !== "AVAILABLE" || referenced() || !(await stillInvalid())) return false;
+      // The fake has no database lock: recheck after the asynchronous storage read.
+      if (this.claimOf(uploadId).state !== "AVAILABLE" || referenced()) return false;
+      return this.retireRecord(uploadId);
+    },
   };
 
   readonly storage: MediaStoragePort = {
