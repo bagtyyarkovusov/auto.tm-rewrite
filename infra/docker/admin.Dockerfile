@@ -51,12 +51,11 @@ FROM base AS runtime
 # /healthz identifies the exact revision even when Railway rebuilds it.
 ARG RAILWAY_GIT_COMMIT_SHA=unknown
 ENV AUTOTM_COMMIT_SHA=${RAILWAY_GIT_COMMIT_SHA}
-# Standalone output excludes .next/static by design — copy it alongside the
-# traced server (Next.js monorepo standalone convention). apps/admin has no
-# public/ directory today (#418 removed the unused boilerplate SVGs); add the
-# COPY back if one is introduced.
+# Standalone output excludes .next/static and public by design. Copy both
+# alongside the traced monorepo server so Assigned Avatars are served.
 COPY --from=build /app/apps/admin/.next/standalone /app
 COPY --from=build /app/apps/admin/.next/static /app/apps/admin/.next/static
+COPY --from=build /app/apps/admin/public /app/apps/admin/public
 RUN groupadd -r auto-tm && useradd -r -g auto-tm -s /bin/false auto-tm && chown -R auto-tm:auto-tm /app
 USER auto-tm
 WORKDIR /app

@@ -1,17 +1,21 @@
 # Reported Profile Photo removal — issue #739
 
-Captured on 2026-10-08 from the admin production build at `7b29dc87`.
+Original UI capture on 2026-10-08 from the admin production build at `7b29dc87`.
 The issue supplies the UI delta; the existing Russian report cards and action
 forms supply the layout and tokens. This is a local browser proof with a fixture
 API and synthetic Profile Photo, not a staging or production moderation run.
 
-The build ran with `API_BASE_URL=http://127.0.0.1:17390/api/v1` and
-`NEXT_PUBLIC_MINIO_PUBLIC_URL=http://127.0.0.1:17390`. Both `next start` and the
-deployment's standalone server (`PORT=17392 HOSTNAME=127.0.0.1
-API_BASE_URL=http://127.0.0.1:17390/api/v1 node
-apps/admin/.next/standalone/apps/admin/server.js`, with static/public assets
-copied beside it) passed the same Playwright 1.58.2 smoke in headless Chrome.
-Screenshots below come from the standalone run at a 1024 × 900 viewport.
+The original standalone smoke copied static/public assets by hand. It proved
+browser behavior but **did not prove the deployed image layout**: the reviewed
+Dockerfile omitted `public`, so Assigned Avatars would return 404. Those original
+screenshots used a 1024 × 900 viewport and a local fixture API/media origin.
+
+The single fix round adds the missing runtime `public` COPY. The reproducible
+check `node apps/admin/scripts/verify-standalone-assets.mjs` materializes only
+that Dockerfile's runtime `COPY --from=build` entries into a fresh `/tmp` layout,
+starts its `apps/admin/server.js`, and fetches `/assigned-avatars/3.svg`. It failed
+with HTTP 404 before the fix and passes with HTTP 200 and SVG content after it.
+No Docker build or additional asset copying is used by this check.
 
 | Issue criterion / state | Captured UI and observed behavior |
 |---|---|
