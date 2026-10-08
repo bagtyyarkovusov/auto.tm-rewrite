@@ -119,7 +119,7 @@ describe("Sell publish toasts", () => {
     fixture.publish.mockResolvedValue({ id: fixture.id });
     const { screen, top } = renderWizard();
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Publish" })); });
-    expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
+    expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${fixture.id}`);
     expect(screen.getByText("Listing published")).toBeTruthy();
     expect(top()).toBe(59 + 64 + 8);
   });

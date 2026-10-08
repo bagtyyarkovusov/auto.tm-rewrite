@@ -227,7 +227,7 @@ describe("Check and publish: publishing (#588)", () => {
 
     expect(savedPayloads().at(-1)).toMatchObject({ photos: fixture.savedPhotos, priceAmount: 100000 });
     expect(publishCalls()).toEqual([[id]]);
-    expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${id}`);
+    expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${id}`);
     expect(fixture.show).toHaveBeenCalledWith({ title: "Listing published", variant: "success" });
     // No success screen and no Share: the wizard is gone and the Sell tab is back.
     expect(screen.queryByRole("header", { name: /Check and publish/ })).toBeNull();
@@ -297,7 +297,7 @@ describe("Check and publish: a publish that fails (#588)", () => {
 
     await act(async () => { finish({ id }); });
 
-    expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${id}`);
+    expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${id}`);
     expect(screen.queryByRole("header", { name: /Check and publish/ })).toBeNull();
   });
 
@@ -351,7 +351,7 @@ describe("Check and publish: a save before publishing that fails (#588)", () => 
     await act(async () => { fireEvent.press(publish(screen)); });
 
     expect(fixture.mutation.mutateAsync.mock.calls).toEqual([[id]]);
-    expect(routerMock.replace).toHaveBeenCalledWith(`/(public)/listings/${id}`);
+    expect(routerMock.push).toHaveBeenCalledWith(`/(public)/listings/${id}`);
   });
 });
 
