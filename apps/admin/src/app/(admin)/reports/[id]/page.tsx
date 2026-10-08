@@ -83,8 +83,9 @@ export default async function ReportDetailPage({ params }: PageProps) {
   const isPending = report.status === AdminSchemas.ContentReportStatus.Pending;
   const moderationEnabled = configResult.ok ? configResult.data.adminModerationActionsEnabled : true;
 
-  // Read per request in this server component; never pass the environment to the browser.
-  const mediaOrigin = (process.env["NEXT_PUBLIC_MINIO_PUBLIC_URL"] ?? "").trim().replace(/\/$/, "");
+  // Dynamic access keeps this server-only value out of Next's build-time public env replacement.
+  const runtimeMediaOrigin = Reflect.get(process.env, "NEXT_PUBLIC_MINIO_PUBLIC_URL") as string | undefined;
+  const mediaOrigin = (runtimeMediaOrigin ?? "").trim().replace(/\/$/, "");
   const photoBaseKey = report.target.avatarKey?.replace(/\/original\.(jpg|webp|jpeg)$/, "");
   const photoUrl = mediaOrigin && photoBaseKey
     ? `${mediaOrigin}/listing-photos/${photoBaseKey}/thumbnail.jpg`
