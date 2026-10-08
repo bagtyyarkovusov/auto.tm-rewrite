@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import { createHash } from "node:crypto";
 import { getQueueToken } from "@nestjs/bullmq";
 import type { Queue } from "bullmq";
 
@@ -29,6 +28,7 @@ import {
   type EmailCodeSenderPort,
 } from "../domain/ports/EmailCodeSenderPort";
 import { toCodePurpose } from "../infrastructure/codePurpose";
+import { reservedPhoneAttemptKey } from "../infrastructure/RedisReservedPhoneAttemptLedger";
 import { bullTestRoot } from "../../../../test/helpers/bullTestRoot";
 import { eventually } from "../../../../test/helpers/eventually";
 
@@ -569,7 +569,7 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
     const queue = app.get<Queue>(getQueueToken(AuthSchemas.EMAIL_CODE_QUEUE));
     const redis = await queue.client;
     for (const account of [account1, otherAccount]) {
-      await redis.del(queue.toKey(`reserved-phone-attempt:${createHash("sha256").update(account.phone).digest("hex")}`));
+      await redis.del(reservedPhoneAttemptKey(account.phone));
     }
     await prisma.auditLog.deleteMany();
     await prisma.session.deleteMany();
@@ -603,7 +603,7 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
     expect(guesses.filter((response) => response.body.code === "OTP_LOCKED")).toHaveLength(16);
     const locked = await request.post("/api/v1/auth/otp/verify")
       .send({ phone: account1.phone, code: account1.code }).expect(400);
-    expect(locked.body).toMatchObject({ code: "OTP_LOCKED", message: "Too many failed attempts. Please request a new code." });
+    expect(locked.body).toMatchObject({ code: "OTP_LOCKED", message: "Too many failed attempts. Wait 15 minutes and try again." });
     expect(await prisma.session.count()).toBe(0);
     expect(await prisma.auditLog.count()).toBe(0);
     expect(await prisma.otpRequest.count()).toBe(0);
@@ -613,7 +613,7 @@ describe.each([true, false])("AuthController e2e fixed-code audit, reviewer flag
     await request.post("/api/v1/auth/otp/verify").send({ phone: otherAccount.phone, code: otherAccount.code }).expect(201);
     const queue = app.get<Queue>(getQueueToken(AuthSchemas.EMAIL_CODE_QUEUE));
     const redis = await queue.client;
-    const key = queue.toKey(`reserved-phone-attempt:${createHash("sha256").update(account1.phone).digest("hex")}`);
+    const key = reservedPhoneAttemptKey(account1.phone);
     expect(await redis.pttl(key)).toBeGreaterThan(890_000);
     expect(await redis.pttl(key)).toBeLessThanOrEqual(900_000);
     // Move near the deadline, then prove blocked reads cannot refresh it.

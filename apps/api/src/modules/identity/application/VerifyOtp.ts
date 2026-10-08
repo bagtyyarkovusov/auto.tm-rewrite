@@ -205,17 +205,25 @@ export class VerifyOtp {
     );
     // Look up a reserved User even for a wrong code: account lookup timing and
     // the threshold response must not confirm a correct code for a missing or
-    // privileged User (PR #764). Every refused credential uses the same budget.
+    // privileged User (PR #764).
     const user = reservedAccount === null ? null : await this.userRepo.findByPhone(input.destination);
+    // Ordinary phones never probe the ledger, so their sign-in keeps no Redis
+    // dependency and no new failure mode.
+    if (reservedAccount === null) return null;
     const allowedCredential = credentialMatches && user !== null &&
       (user.role === "buyer" || user.role === "seller");
-    // All enabled phone sign-ins make the same Redis probe. Only reserved
-    // failures write state; ordinary code limits and consumption stay intact.
-    const { locked } = await this.reservedPhoneAttempts.check({
-      destination: input.destination,
-      failed: reservedAccount !== null && !allowedCredential,
-    });
-    if (reservedAccount === null) return null;
+    // Every refused reserved credential uses the same budget. A success resets
+    // the count. A ledger failure fails closed: refusing beats an unlimited
+    // bypass, so it maps to the same lock refusal.
+    let locked: boolean;
+    try {
+      ({ locked } = await this.reservedPhoneAttempts.recordAttempt({
+        destination: input.destination,
+        failed: !allowedCredential,
+      }));
+    } catch {
+      locked = true;
+    }
     if (locked) throw new Error("Too many attempts");
     if (!allowedCredential || user === null) throw new Error("Invalid OTP code");
 

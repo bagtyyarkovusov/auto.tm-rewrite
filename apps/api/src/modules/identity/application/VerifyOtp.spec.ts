@@ -25,6 +25,7 @@ import type {
 import type {
   ReviewerOtpBypassConfig,
 } from "../domain/ports/ReviewerOtpBypassConfig";
+import type { ReservedPhoneAttemptLedger } from "../domain/ports/ReservedPhoneAttemptLedger";
 import { VerifyOtp } from "./VerifyOtp";
 import { AuthController } from "../presentation/AuthController";
 import type { FastifyRequest } from "fastify";
@@ -366,6 +367,7 @@ interface MakeUseCaseOpts {
   constantTimeComparator?: ConstantTimeComparatorPort;
   random?: RandomSourcePort;
   identityCheck?: InMemoryIdentityCheck;
+  reservedPhoneAttempts?: ReservedPhoneAttemptLedger;
 }
 
 function makeUseCase(opts: MakeUseCaseOpts = {}) {
@@ -385,7 +387,7 @@ function makeUseCase(opts: MakeUseCaseOpts = {}) {
     new VerifySignInCode(otpRepo, clock),
     opts.random ?? new FixedRandomSource([0.5]),
     opts.identityCheck ?? new InMemoryIdentityCheck(),
-    new InMemoryReservedPhoneAttemptLedger(clock),
+    opts.reservedPhoneAttempts ?? new InMemoryReservedPhoneAttemptLedger(clock),
   );
 }
 
@@ -1136,11 +1138,20 @@ describe("VerifyOtp", () => {
           status: 400, response: { code: "INVALID_OTP" },
         });
       }
-      // A correct code before the threshold still succeeds and is reusable.
+      // A correct code succeeds and resets the failure budget, so five fresh
+      // failures are needed to lock.
       await expect(uc.execute({ phone: account.phone, code: account.code }))
         .resolves.toMatchObject({ user: { id: user.id } });
       await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
-        status: 400, response: { code: "OTP_LOCKED", message: "Too many failed attempts. Please request a new code." },
+        status: 400, response: { code: "INVALID_OTP" },
+      });
+      for (let i = 0; i < 3; i++) {
+        await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
+          status: 400, response: { code: "INVALID_OTP" },
+        });
+      }
+      await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
+        status: 400, response: { code: "OTP_LOCKED", message: "Too many failed attempts. Wait 15 minutes and try again." },
       });
       const sessionsBeforeLock = sessionRepo.sessions.length;
       const auditBeforeLock = eventBus.emit.mock.calls.length;
@@ -1159,6 +1170,41 @@ describe("VerifyOtp", () => {
       await expect(controller.otpVerify(wrong, VERIFY_REQUEST)).rejects.toMatchObject({
         response: { code: "INVALID_OTP" },
       });
+    });
+
+    it("refuses reserved phone sign-in when the ledger probe fails, without a Session", async () => {
+      userRepo.users.push(makeUser({ phone: account1.phone, role: "buyer" }));
+      const controller = makeAuthController(makeUseCase({
+        otpRepo, userRepo, sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+        reservedPhoneAttempts: {
+          recordAttempt: async () => {
+            throw new Error("redis connection lost");
+          },
+        },
+      }));
+      await expect(controller.otpVerify({ phone: account1.phone, code: account1.code }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ status: 400, response: { code: "OTP_LOCKED" } });
+      expect(sessionRepo.sessions).toHaveLength(0);
+    });
+
+    it("never probes the reserved-phone ledger for an ordinary phone", async () => {
+      const ledger: ReservedPhoneAttemptLedger = { recordAttempt: vi.fn(async () => ({ locked: false })) };
+      userRepo.users.push(makeUser({ phone: "+99361234567", role: "buyer" }));
+      otpRepo.addRecord(makeOtpRequest({ channel: "phone", destination: "+99361234567" }));
+      const controller = makeAuthController(makeUseCase({
+        otpRepo, userRepo, sessionRepo,
+        reviewerBypassConfig: reviewerConfig,
+        constantTimeComparator,
+        reservedPhoneAttempts: ledger,
+      }));
+      await expect(controller.otpVerify({ phone: "+99361234567", code: "123456" }, VERIFY_REQUEST))
+        .resolves.toBeDefined();
+      otpRepo.addRecord(makeOtpRequest({ channel: "phone", destination: "+99361234567", createdAt: new Date(NOW.getTime() + 1_000) }));
+      await expect(controller.otpVerify({ phone: "+99361234567", code: "000000" }, VERIFY_REQUEST))
+        .rejects.toMatchObject({ status: 400, response: { code: "INVALID_OTP" } });
+      expect(ledger.recordAttempt).not.toHaveBeenCalled();
     });
 
     it("starts the full lock at the fifth failure and forgets older failure windows", async () => {

@@ -93,10 +93,3 @@ export class OtpAttemptLedger {
     return Math.max(0, Math.ceil(backoffTotal - elapsed));
   }
 }
-
-/** Fixed-code verification has a separate budget from code issuance. */
-export const RESERVED_PHONE_FAILURE_POLICY = {
-  maxFailures: 5,
-  failureWindowMs: 15 * 60 * 1000,
-  lockMs: 15 * 60 * 1000,
-} as const;
