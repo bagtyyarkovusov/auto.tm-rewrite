@@ -81,6 +81,11 @@ export const mobileTailwindTheme = {
   opacity: {
     glass: String(mobileGlassOpacity.fallback),
     "glass-tint": String(mobileGlassOpacity.tint),
+    // `bg-glass/glass-frosted`: the tone over a real blur.
+    "glass-frosted": String(mobileGlassOpacity.frosted),
+    // `border-glass-edge/glass-rim`, `dark:border-glass-edge/glass-rim-dark`.
+    "glass-rim": String(mobileGlassOpacity.rimLight),
+    "glass-rim-dark": String(mobileGlassOpacity.rimDark),
     // `bg-media-scrim/on-photo`: the scrim behind a control on a photo.
     "on-photo": String(mobileMediaOpacity["on-photo"]),
   },

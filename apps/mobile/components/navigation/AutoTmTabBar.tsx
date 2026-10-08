@@ -22,6 +22,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { mobileType } from "@auto-tm/ui/tokens";
 import { CommonActions } from "@react-navigation/native";
+import { useColorScheme } from "nativewind";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -47,6 +48,7 @@ import { CrossFade } from "@/components/ui/motion";
 import { Text } from "@/components/ui/text";
 import {
   duration,
+  glassOpacity,
   pressScale,
   spring,
   timing,
@@ -213,7 +215,7 @@ function TabIcon({
           as={icon}
           size={size}
           strokeWidth={1.8}
-          className="text-muted-foreground"
+          className="text-glass-muted"
         />
       }
       on={
@@ -266,7 +268,7 @@ function TabLabel({
     <CrossFade
       active={selected}
       style={width ? { width } : { alignSelf: "stretch" }}
-      off={text("font-medium text-muted-foreground")}
+      off={text("font-medium text-glass-muted")}
       on={text("font-semibold text-foreground")}
     />
   );
@@ -282,7 +284,10 @@ function TabLabel({
  * reaches toward the new tab, then settles into it. `lift` grows it with its
  * tab while that tab is pressed; it grows about its own centre.
  *
- * The fill is opaque, so the overlapping pieces never show a seam.
+ * It is a lighter pane of the bar's own glass (a darker one in light mode),
+ * so the blurred content still shows through it. Each piece is filled solid
+ * and the frame carries the pane's opacity as one layer, so the overlapping
+ * pieces never show a seam.
  */
 function TabCapsule({
   start,
@@ -299,6 +304,8 @@ function TabCapsule({
   lens: SharedValue<number>;
 }) {
   const r = CAPSULE_RADIUS;
+  const { colorScheme } = useColorScheme();
+  const pane = colorScheme === "dark" ? glassOpacity.selectedDark : glassOpacity.selectedLight;
 
   // The edges with the press scale applied about the capsule's centre. Every
   // shared value is read here directly, so the styles below follow each frame.
@@ -313,7 +320,7 @@ function TabCapsule({
   });
 
   const frame = useAnimatedStyle(() => ({
-    opacity: visible.value * (1 - lens.value),
+    opacity: pane * visible.value * (1 - lens.value),
     transform: [{ scaleY: lift.value }],
   }));
   const startCap = useAnimatedStyle(() => {
@@ -337,10 +344,12 @@ function TabCapsule({
   });
 
   // The animated views take plain styles only; the themed fill is a child.
-  const fill = <View className="flex-1 bg-secondary dark:bg-accent" />;
+  const fill = <View className="flex-1 bg-foreground" />;
   return (
     <Animated.View
       pointerEvents="none"
+      // Android otherwise applies the opacity to each piece, and the overlaps would show.
+      needsOffscreenAlphaCompositing
       style={[
         { position: "absolute", left: 0, right: 0, top: TAB_BAR_PADDING, height: CAPSULE_HEIGHT },
         frame,

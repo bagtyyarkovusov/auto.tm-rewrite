@@ -1,10 +1,14 @@
-import type { ReactNode } from "react";
-import type { ViewProps } from "react-native";
+import { BlurTargetView } from "expo-blur";
+import { useRef, type ReactNode } from "react";
+import { Platform, type View, type ViewProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ScrollEdgeFade } from "./ScrollEdgeFade";
+import { ANDROID_BLUR } from "./TabBlurTargets";
 import { useTabBarSpace } from "./tabBarHeight";
 
+import { GlassBackdrop, useSystemGlass } from "@/components/ui/glass-surface";
+import { useReduceTransparency } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 type TabScreenProps = ViewProps & {
@@ -43,6 +47,19 @@ export function TabScreen({
   ...props
 }: TabScreenProps) {
   const space = useTabBarSpace();
+  const reduceTransparency = useReduceTransparency();
+  const systemGlass = useSystemGlass();
+  const backdrop = useRef<View | null>(null);
+  // Where the tab bar blurs what is behind it, the content shows through the
+  // glass, as it should. The fade is for a bar with nothing but its tone
+  // between a label and a line of list text.
+  const barBlurs = systemGlass || (!reduceTransparency && (Platform.OS === "ios" || ANDROID_BLUR));
+  const content = (
+    <>
+      {children}
+      {edgeFade && !barBlurs ? <ScrollEdgeFade height={space} /> : null}
+    </>
+  );
   return (
     <SafeAreaView
       className={cn("flex-1 bg-background", className)}
@@ -50,9 +67,21 @@ export function TabScreen({
       style={[underTabBar ? null : { paddingBottom: space }, style]}
       {...props}
     >
-      {children}
-      {edgeFade ? <ScrollEdgeFade height={space} /> : null}
-      {overlay}
+      {/* Android blurs a named view. The overlay floats outside the content,
+          so its glass can blur the content; `overlay` is null, never
+          undefined, while a screen that floats controls has none showing, so
+          the content is not mounted again when they appear. */}
+      {ANDROID_BLUR && overlay !== undefined ? (
+        <>
+          <BlurTargetView ref={backdrop} className="flex-1">{content}</BlurTargetView>
+          <GlassBackdrop.Provider value={backdrop}>{overlay}</GlassBackdrop.Provider>
+        </>
+      ) : (
+        <>
+          {content}
+          {overlay}
+        </>
+      )}
     </SafeAreaView>
   );
 }

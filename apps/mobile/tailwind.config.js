@@ -71,6 +71,8 @@ module.exports = {
         glass: {
           DEFAULT: themed("glass"),
           edge: themed("glass-edge"),
+          // Quiet text and icons on glass (`text-glass-muted`).
+          muted: themed("glass-muted"),
         },
         // Dimming behind sheets and dialogs.
         scrim: themed("scrim"),

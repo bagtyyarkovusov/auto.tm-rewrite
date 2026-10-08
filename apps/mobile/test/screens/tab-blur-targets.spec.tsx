@@ -3,7 +3,6 @@ import { View } from "react-native";
 import { beforeEach, expect, it, vi } from "vitest";
 
 import { renderMobile } from "../render";
-import { GlassSurface } from "../../components/ui/glass-surface";
 import { Text } from "../../components/ui/text";
 
 vi.mock("expo-blur", async () => {
@@ -18,6 +17,8 @@ it("provides the focused target after its first mount and removes it on unmount"
   const { Platform } = await import("react-native");
   Object.assign(Platform, { OS: "android", Version: 31 });
   const { TabBlurTargets, TabBlurTarget, useTabBlurTarget } = await import("../../components/navigation/TabBlurTargets");
+  // Loaded with the device set above: the surface reads the platform too.
+  const { GlassSurface } = await import("../../components/ui/glass-surface");
   function Bar() {
     return <GlassSurface blurTarget={useTabBlurTarget("search")}><Text>Search</Text></GlassSurface>;
   }
@@ -35,6 +36,8 @@ it("keeps the bar's blur and its children mounted while a lazily mounted tab reg
   const { Platform } = await import("react-native");
   Object.assign(Platform, { OS: "android", Version: 31 });
   const { TabBlurTargets, TabBlurTarget, useTabBlurTarget } = await import("../../components/navigation/TabBlurTargets");
+  // Loaded with the device set above: the surface reads the platform too.
+  const { GlassSurface } = await import("../../components/ui/glass-surface");
   let mounts = 0;
   function Tabs() {
     useEffect(() => { mounts += 1; }, []);
@@ -81,6 +84,8 @@ it.each([30, 29])("keeps Android API%s screen content without a blur target", as
   const { Platform } = await import("react-native");
   Object.assign(Platform, { OS: "android", Version: version });
   const { TabBlurTargets, TabBlurTarget, useTabBlurTarget } = await import("../../components/navigation/TabBlurTargets");
+  // Loaded with the device set above: the surface reads the platform too.
+  const { GlassSurface } = await import("../../components/ui/glass-surface");
   function Bar() {
     return <GlassSurface blurTarget={useTabBlurTarget("search")}><Text>Search</Text></GlassSurface>;
   }

@@ -52,6 +52,7 @@
     --ring: 0 100% 45%;
     --glass: 0 0% 100%;
     --glass-edge: 0 0% 100%;
+    --glass-muted: 0 0% 30%;
     --scrim: 0 0% 0%;
     --media-scrim: 0 0% 0%;
     --media-foreground: 0 0% 100%;
@@ -79,6 +80,7 @@
     --ring: 0 90% 52%;
     --glass: 240 3% 15%;
     --glass-edge: 0 0% 100%;
+    --glass-muted: 240 4% 82%;
     --scrim: 0 0% 0%;
     --media-scrim: 0 0% 0%;
     --media-foreground: 0 0% 100%;

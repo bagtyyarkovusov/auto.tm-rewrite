@@ -5,9 +5,10 @@ import {
   isLiquidGlassAvailable,
 } from "expo-glass-effect";
 import { BlurView } from "expo-blur";
+import { mobileSurfaces } from "@auto-tm/ui/tokens";
 import { cssInterop, useColorScheme } from "nativewind";
-import type { RefObject } from "react";
-import { View, type ViewProps } from "react-native";
+import { createContext, useContext, type RefObject } from "react";
+import { Platform, View, type ViewProps } from "react-native";
 
 import { useReduceTransparency } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -16,8 +17,33 @@ cssInterop(GlassView, { className: "style" });
 cssInterop(GlassContainer, { className: "style" });
 cssInterop(BlurView, { className: "style" });
 
-/** How strongly Android blurs what is behind a surface given a blur target. */
-const ANDROID_BLUR_INTENSITY = 60;
+/**
+ * How the blur behind a surface is drawn, with each platform's thinnest
+ * system material: it frosts what is behind it and adds little tone of its
+ * own, so the glass tone decides the contrast on both platforms.
+ *
+ * Android derives both the blur radius and the material's tone from
+ * `intensity`. A low intensity keeps that tone light, and
+ * `blurReductionFactor` 1 keeps the radius at 20, which frosts a photo.
+ * Android below 12 draws no blur (`dimezisBlurViewSdk31Plus`).
+ */
+const ANDROID_BLUR = { intensity: 20, blurReductionFactor: 1, blurMethod: "dimezisBlurViewSdk31Plus" } as const;
+const IOS_BLUR = { intensity: 70 } as const;
+
+/** The light that falls on the top of a glass surface: the glass edge colour, fading out by the middle. */
+function sheen(alpha: number): string {
+  const [hue, saturation, lightness] = mobileSurfaces.glassEdge.light.split(" ");
+  const tone = (a: number) => `hsla(${hue}, ${saturation}, ${lightness}, ${a})`;
+  return `linear-gradient(to bottom, ${tone(alpha)} 0%, ${tone(0)} 55%)`;
+}
+const SHEEN = { light: sheen(0.5), dark: sheen(0.1) } as const;
+
+/**
+ * Android only: the view a glass surface blurs when it is given no
+ * `blurTarget` of its own. Provide it only around surfaces drawn outside that
+ * view: a blur inside its own target cannot be drawn.
+ */
+const GlassBackdrop = createContext<RefObject<View | null> | undefined>(undefined);
 
 /**
  * Liquid Glass ships with iOS 26. Checked once: it cannot change while the
@@ -48,15 +74,15 @@ function useSystemGlass() {
 type GlassSurfaceProps = ViewProps & {
   className?: string;
   /**
-   * Classes for the material itself, when the fallback tone must differ from
-   * the default (for example a darker glass on the black photo viewer).
+   * Classes for the material's tone, when it must differ from the default
+   * (for example a darker glass on the black photo viewer).
    */
   materialClassName?: string;
   /** Lets the system glass react to touch. Use on a surface that is itself a control. */
   interactive?: boolean;
   /**
-   * Android only: the view to blur behind the surface (see
-   * `TabBlurTargets`). Without it Android draws the tuned surface.
+   * Android only: the view to blur behind the surface (see `TabBlurTargets`
+   * and `GlassBackdrop`). Without one Android draws the tuned surface.
    */
   blurTarget?: RefObject<View | null>;
 };
@@ -64,20 +90,21 @@ type GlassSurfaceProps = ViewProps & {
 /**
  * The one translucent material in the app. It belongs on floating navigation
  * and on controls that sit above scrolling content (the tab bar, sticky action
- * bars, floating chips, controls on a photo), never on content.
+ * bars, floating chips, controls on a photo), never on content. Every surface
+ * is the same glass: one blur, tone, light rim, sheen and shadow.
  *
- * Three renderings, each meant to look intended:
+ * Its renderings, each meant to look intended:
  *  - iOS 26 and later: the system Liquid Glass (`expo-glass-effect`), with
  *    a tone inside it so a label stays readable over whatever scrolls below.
- *  - Android 12 and later, when given a `blurTarget`: a real blur of what is
- *    behind it under the same tone as the system glass.
- *  - Otherwise on Android and iOS below 26: a tuned, nearly opaque surface
- *    with a light edge and the floating shadow. There is no blur pass, so it
- *    costs nothing and text on it never depends on what scrolls below.
+ *  - iOS below 26, and Android 12 and later when there is a blur target: a
+ *    real blur of what is behind it (`expo-blur`) under the `frosted` tone.
+ *  - Otherwise on Android: the same rim, sheen and shadow over a nearly
+ *    opaque tone. There is no blur pass, so it costs nothing and text on it
+ *    never depends on what scrolls below.
  *  - Reduce Transparency: the fully opaque raised surface.
  *
  * `className` takes the layout, size and radius. The radius must be given
- * here, because the material is clipped to it.
+ * here as `rounded-*` classes, because the material is clipped to it.
  *
  * Two rules from the system glass: never fade a glass surface or one of its
  * parents with opacity (the material stops drawing), and keep `interactive`
@@ -93,12 +120,14 @@ function GlassSurface({
 }: GlassSurfaceProps) {
   const reduceTransparency = useReduceTransparency();
   const { colorScheme } = useColorScheme();
+  const backdrop = useContext(GlassBackdrop);
+  const dark = colorScheme === "dark";
 
   if (LIQUID_GLASS && !reduceTransparency) {
     return (
       <GlassView
         glassEffectStyle="regular"
-        colorScheme={colorScheme === "dark" ? "dark" : "light"}
+        colorScheme={dark ? "dark" : "light"}
         isInteractive={interactive}
         className={cn("overflow-hidden", className)}
         {...props}
@@ -109,37 +138,51 @@ function GlassSurface({
     );
   }
 
-  if (blurTarget && !reduceTransparency) {
-    return (
-      <BlurView
-        blurTarget={blurTarget}
-        blurMethod="dimezisBlurViewSdk31Plus"
-        intensity={ANDROID_BLUR_INTENSITY}
-        tint={colorScheme === "dark" ? "dark" : "light"}
-        className={cn(
-          "overflow-hidden border-hairline border-glass-edge/70 dark:border-glass-edge/10",
-          className,
-        )}
-        {...props}
-      >
-        <View pointerEvents="none" className="absolute inset-0 bg-glass/glass-tint" />
-        {children}
-      </BlurView>
-    );
-  }
+  const target = blurTarget ?? backdrop;
+  // iOS blurs whatever is behind the view; Android needs a target to sample.
+  const blurred =
+    !reduceTransparency && (Platform.OS === "ios" || (Platform.OS === "android" && !!target));
+  // The material is its own layer, clipped to the surface's radius, so the
+  // surface itself is never clipped and keeps its shadow.
+  const shape = className
+    ?.split(/\s+/)
+    .filter((name) => name.startsWith("rounded-"))
+    .join(" ");
 
   return (
-    <View
-      className={cn(
-        "border-hairline shadow-floating",
-        reduceTransparency
-          ? "border-border bg-card"
-          : "border-glass-edge/70 bg-glass/glass dark:border-glass-edge/10",
-        materialClassName,
-        className,
-      )}
-      {...props}
-    >
+    <View className={cn("shadow-floating", className)} {...props}>
+      <View pointerEvents="none" className={cn("absolute inset-0 overflow-hidden", shape)}>
+        {blurred ? (
+          <BlurView
+            {...(Platform.OS === "android" ? ANDROID_BLUR : IOS_BLUR)}
+            blurTarget={target}
+            tint={dark ? "systemUltraThinMaterialDark" : "systemUltraThinMaterialLight"}
+            className={cn("absolute inset-0 overflow-hidden", shape)}
+          />
+        ) : null}
+        <View
+          className={cn(
+            "absolute inset-0",
+            reduceTransparency ? "bg-card" : blurred ? "bg-glass/glass-frosted" : "bg-glass/glass",
+            materialClassName,
+          )}
+        />
+        {reduceTransparency ? null : (
+          <View
+            className="absolute inset-0"
+            style={{ experimental_backgroundImage: dark ? SHEEN.dark : SHEEN.light }}
+          />
+        )}
+        <View
+          className={cn(
+            "absolute inset-0 border",
+            shape,
+            reduceTransparency
+              ? "border-border"
+              : "border-glass-edge/glass-rim dark:border-glass-edge/glass-rim-dark",
+          )}
+        />
+      </View>
       {children}
     </View>
   );
@@ -162,5 +205,5 @@ function GlassGroup(props: GlassGroupProps) {
   );
 }
 
-export { GlassGroup, GlassSurface, useSystemGlass };
+export { GlassBackdrop, GlassGroup, GlassSurface, useSystemGlass };
 export type { GlassGroupProps, GlassSurfaceProps };

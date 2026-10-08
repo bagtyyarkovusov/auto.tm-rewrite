@@ -11,7 +11,7 @@ type Node = { props: { className?: string }; parent: Node | null };
 function drawsGlass(screen: ReturnType<typeof renderMobile>) {
   return screen.UNSAFE_root
     .findAll((node: Node) => typeof node.props.className === "string")
-    .some((node: Node) => node.props.className?.split(" ").includes("bg-glass/glass"));
+    .some((node: Node) => node.props.className?.split(" ").some((name) => name.startsWith("bg-glass/")));
 }
 
 describe("Header buttons", () => {

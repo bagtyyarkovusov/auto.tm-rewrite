@@ -44,12 +44,30 @@ export const mobileSurfaces = {
 export const mobileText = {
   primary: { light: "0 0% 9%", dark: "60 10% 98%" },
   secondary: { light: "0 0% 40%", dark: "240 4% 66%" },
+  /**
+   * Quiet text and icons on glass, such as an unselected tab. Stronger than
+   * `secondary`: glass lets a photo through, so on `frosted` glass this keeps
+   * 4.5:1 over a pure white photo in dark mode and a pure black one in light.
+   */
+  onGlassSecondary: { light: "0 0% 30%", dark: "240 4% 82%" },
 } as const;
 
-/** Opacity of each translucent surface where blur is not available. */
+/** Opacity of the glass tone in each rendering of the glass surface. */
 export const mobileGlassOpacity = {
-  /** iOS below 26 and Android: no blur behind it, so it stays nearly opaque. */
+  /** No blur behind it (Android below 12, or no blur target): it stays nearly opaque. */
   fallback: 0.94,
+  /**
+   * The tone over a real blur (iOS below 26, Android 12 and later). A fifth
+   * of the blurred content shows through, and the tone alone keeps the text
+   * levels above at 4.5:1 whatever is behind it.
+   */
+  frosted: 0.8,
+  /** The light rim of a glass surface, in dark and in light mode. */
+  rimDark: 0.16,
+  rimLight: 0.6,
+  /** The selected tab's capsule: a lighter pane on dark glass, a darker one on light glass. */
+  selectedDark: 0.14,
+  selectedLight: 0.07,
   /**
    * The tone laid inside the system Liquid Glass. The glass alone refracts
    * whatever scrolls behind it straight through a label; this keeps text on
