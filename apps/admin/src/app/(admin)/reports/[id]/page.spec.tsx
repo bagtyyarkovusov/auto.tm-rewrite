@@ -93,7 +93,7 @@ describe("ReportDetailPage profile photo", () => {
     await renderPage();
 
     const photo = screen.getByRole("img", { name: "Фото профиля" });
-    expect(photo.getAttribute("src")).toContain(PHOTO_KEY);
+    expect(photo.getAttribute("src")).toBe("https://media.example.test/listing-photos/pending/u1-photo/thumbnail.jpg");
     expect(screen.getByText("Удалить фото профиля")).toBeDefined();
     expect(screen.getByRole("button", { name: "Удалить фото" })).toBeDefined();
   });
@@ -216,6 +216,13 @@ describe("ReportDetailPage profile photo", () => {
     expect(screen.getByText("Фото профиля недоступно.")).toBeDefined();
     expect(screen.queryByRole("img", { name: "Фото профиля" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Удалить фото" })).toBeNull();
+  });
+
+  it.each(["jpg", "webp", "jpeg"])("loads the mobile thumbnail variant for an original %s photo", async (extension) => {
+    mockDetail(userReport({ target: { ...userReport().target, avatarKey: `pending/u1-photo/original.${extension}` } }));
+    await renderPage();
+    expect(screen.getByRole("img", { name: "Фото профиля" }).getAttribute("src"))
+      .toBe("https://media.example.test/listing-photos/pending/u1-photo/thumbnail.jpg");
   });
 
 });
