@@ -21,6 +21,8 @@ export const photoDevice = {
   libraryPermission: vi.fn(),
   cancelUpload: vi.fn(async () => {}),
   saves: [] as unknown[],
+  savedImages: [] as { uri: string; width: number; height: number }[],
+  crops: [] as { originX: number; originY: number; width: number; height: number }[],
   deletes: [] as string[],
 };
 
@@ -33,6 +35,8 @@ export function resetPhotoDevice() {
   photoDevice.renderWait = null;
   photoDevice.sent = [];
   photoDevice.saves = [];
+  photoDevice.savedImages = [];
+  photoDevice.crops = [];
   photoDevice.deletes = [];
   photoDevice.progress = () => {};
   photoDevice.finish = () => {};
@@ -66,20 +70,29 @@ export const fileSystemFake = {
 
 export const imageManipulatorFake = {
   SaveFormat: { JPEG: "jpeg" },
-  ImageManipulator: { manipulate: () => {
-    let dimensions = { ...photoDevice.dimensions };
+  ImageManipulator: { manipulate: (source: string) => {
+    const saved = photoDevice.savedImages.find((image) => image.uri === source);
+    let dimensions = saved ? { width: saved.width, height: saved.height } : { ...photoDevice.dimensions };
     return {
       resize: (size: { width?: number; height?: number }) => {
         const factor = size.width ? size.width / dimensions.width : (size.height ?? dimensions.height) / dimensions.height;
-        dimensions = { width: Math.round(dimensions.width * factor), height: Math.round(dimensions.height * factor) };
+        dimensions = { width: size.width ?? Math.round(dimensions.width * factor), height: size.height ?? Math.round(dimensions.height * factor) };
       },
+      crop: (rect: { originX: number; originY: number; width: number; height: number }) => {
+        if (rect.originX < 0 || rect.originY < 0 || rect.originX + rect.width > dimensions.width || rect.originY + rect.height > dimensions.height) throw new Error("Crop outside image");
+        photoDevice.crops.push(rect);
+        dimensions = { width: rect.width, height: rect.height };
+      },
+      release: () => {},
       renderAsync: async () => {
         photoDevice.renderStarted();
         await photoDevice.renderWait;
         if (!photoDevice.readable) throw new Error("Not a picture");
-        return { ...dimensions, saveAsync: async (options: unknown) => {
+        return { ...dimensions, release: () => {}, saveAsync: async (options: unknown) => {
           photoDevice.saves.push(options);
-          return { uri: "file:///compressed.jpg", ...dimensions };
+          const saved = { uri: `file:///compressed-${photoDevice.saves.length}.jpg`, ...dimensions };
+          photoDevice.savedImages.push(saved);
+          return saved;
         } };
       },
     };

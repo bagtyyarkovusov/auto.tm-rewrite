@@ -86,6 +86,64 @@ beforeEach(async () => {
 afterEach(async () => { await resetProfilePhotoUpload(); await clearAuthSession(); vi.useRealTimers(); });
 
 describe("Profile photo", () => {
+  it.each([
+    ["en", "Uploading photo", "Uploading photo... 25%"],
+    ["ru", "Загрузка фото", "Загрузка фото... 25%"],
+    ["tk", "Surat ýüklenýär", "Surat ýüklenýär... 25%"],
+  ])("uses photo-specific indeterminate text and measured percentages in %s", async (locale, indeterminate, measured) => {
+    const announce = vi.spyOn(AccessibilityInfo, "announceForAccessibility");
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>, { locale });
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: profilePhotoCopy[locale as keyof typeof profilePhotoCopy].changePhoto }));
+    fireEvent.press(view.getByRole("button", { name: profilePhotoCopy[locale as keyof typeof profilePhotoCopy].chooseLib }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    expect(view.getByRole("progressbar").props.children).toBe(indeterminate);
+    expect(announce.mock.calls.map(([message]) => message)).toEqual([indeterminate]);
+    act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
+    expect(view.getByText(measured)).toBeTruthy();
+    expect(announce.mock.calls.map(([message]) => message)).toEqual([indeterminate]);
+    await act(async () => { picker.finish(); });
+  });
+
+  it.each(["no events", "unknown total"])("shows an indeterminate ring when upload byte progress has %s", async (progress) => {
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    if (progress === "unknown total") act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 0 }); });
+    expect(view.getByRole("progressbar").props.accessibilityValue?.now).toBeUndefined();
+    expect(view.UNSAFE_queryAllByType("ActivityIndicator" as never)).toHaveLength(1);
+    expect(view.queryByText("Uploading photo... 0%")).toBeNull();
+    await act(async () => { picker.finish(); });
+    expect(await view.findByText("Photo updated")).toBeTruthy();
+  });
+
+  it.each(["retry", "new photo"])("recovers through %s after a native transfer failure and cancelling the Log out dialog", async (recovery) => {
+    choosePhoto();
+    const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
+    await view.findByText("Aman");
+    fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+    fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
+    fireEvent.press(view.getByRole("button", { name: "Log out" }));
+    fireEvent.press(view.getByText("Cancel"));
+    await act(async () => { picker.fail(new Error("Connection reset")); });
+    await view.findByText("Couldn't upload the photo.");
+    expect(picker.cancelUpload).toHaveBeenCalledOnce();
+    if (recovery === "retry") fireEvent.press(view.getByRole("button", { name: "Retry" }));
+    else {
+      fireEvent.press(view.getByRole("button", { name: "Cancel" }));
+      fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
+      fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
+    }
+    await vi.waitFor(() => expect(picker.sent).toHaveLength(2));
+    await act(async () => { picker.finish(); });
+    expect(await view.findByText("Photo updated")).toBeTruthy();
+  });
+
   it.each(["upload", "remove"])("retries %s with refreshed credentials without reopening the picker", async (operation) => {
     choosePhoto();
     if (operation === "remove") currentMe = { ...me, avatarKey: "pending/old/original.jpg" };
@@ -182,7 +240,7 @@ describe("Profile photo", () => {
     await view.findByText("Aman");
     fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
-    expect(await view.findByText("Uploading photo... 0%")).toBeTruthy();
+    expect(await view.findByText("Uploading photo")).toBeTruthy();
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     expect(presign).toEqual({ kind: "image", writeProtocol: "conditional-v1", contentType: "image/jpeg", sizeBytes: 2048 });
     expect(picker.sent[0]).toMatchObject({ url: "https://storage.example/photo", options: { httpMethod: "PUT", uploadType: 0, headers: { "if-match": '"etag"', "content-type": "image/jpeg" } } });
@@ -267,11 +325,11 @@ describe("Profile photo", () => {
   it.each([
     ["oversize", "This photo is too large. Choose one up to 5 MB."],
     ["unreadable", "This file can't be used. Choose a JPEG, PNG or WebP photo."],
-    ["wrong type", "This file can't be used. Choose a JPEG, PNG or WebP photo."],
+    ["unreadable alternate format", "This file can't be used. Choose a JPEG, PNG or WebP photo."],
   ])("refuses %s before requests and offers another photo or cancel", async (problem, message) => {
-    choosePhoto(problem === "wrong type" ? { mimeType: "image/gif" } : {});
+    choosePhoto(problem === "unreadable alternate format" ? { mimeType: "image/gif" } : {});
     if (problem === "oversize") picker.size = 5242881;
-    if (problem === "unreadable") picker.readable = false;
+    if (problem === "unreadable" || problem === "unreadable alternate format") picker.readable = false;
     const view = renderMobile(<ToastProvider><ProfileScreen /></ToastProvider>);
     await view.findByText("Aman");
     fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
@@ -440,13 +498,13 @@ describe("Profile photo", () => {
     currentMe = { ...me, id: "00000000-0000-4000-8000-00000000000b", displayName: "Merdan", avatarIndex: 2 };
     await act(async () => { await storeAuthSession({ accessToken: "merdan", refreshToken: "refresh-merdan", user: { id: currentMe.id, phone: me.phone, email: null, displayName: "Merdan", role: "buyer" } }); });
     await view.findByText("Merdan");
-    expect(view.queryByText("Uploading photo... 0%")).toBeNull();
+    expect(view.queryByText("Uploading photo")).toBeNull();
     expect(view.UNSAFE_queryAllByType("Image" as never)).toHaveLength(0);
     await act(async () => {
       if (phase === "attachment") complete?.(HttpResponse.json({ ...me, avatarKey: "pending/new1/original.jpg" }));
       else picker.finish();
     });
-    await vi.waitFor(() => expect(view.queryByText("Uploading photo... 0%")).toBeNull());
+    await vi.waitFor(() => expect(view.queryByText("Uploading photo")).toBeNull());
     expect(sentTo).toEqual(phase === "attachment" ? ["Bearer aman"] : []);
     expect(view.getByText("Merdan")).toBeTruthy();
     expect(view.queryByText("Photo updated")).toBeNull();
@@ -610,15 +668,15 @@ describe("Profile photo", () => {
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     for (const bytes of [512, 1024, 1536, 2048]) act(() => { picker.progress({ totalBytesSent: bytes, totalBytesExpectedToSend: 2048 }); });
-    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%"]);
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo"]);
     await act(async () => { picker.finish(ending === "failed" ? 500 : 200); });
     if (ending === "preparing") {
       await vi.waitFor(() => expect(view.getByText("Preparing photo...")).toBeTruthy());
-      expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%", "Preparing photo..."]);
+      expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo", "Preparing photo..."]);
       await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
     }
     await vi.waitFor(() => expect(view.getByText(ending === "failed" ? "Couldn't upload the photo." : "Photo updated")).toBeTruthy());
-    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo... 0%", ...(ending === "preparing" ? ["Preparing photo..."] : []), ending === "failed" ? "Couldn't upload the photo." : "Photo updated"]);
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Uploading photo", ...(ending === "preparing" ? ["Preparing photo..."] : []), ending === "failed" ? "Couldn't upload the photo." : "Photo updated"]);
   });
 
   it("announces removal start and result once on iOS", async () => {
@@ -660,6 +718,9 @@ describe("Profile photo", () => {
     fireEvent.press(view.getByRole("button", { name: "Choose from library" }));
     await vi.waitFor(() => expect(picker.sent).toHaveLength(1));
     act(() => { picker.progress({ totalBytesSent: 1536, totalBytesExpectedToSend: 2048 }); });
+    act(() => { picker.progress({ totalBytesSent: 1536, totalBytesExpectedToSend: 0 }); });
+    expect(view.getByRole("progressbar").props.accessibilityValue?.now).toBe(75);
+    expect(view.getByText("Uploading photo... 75%")).toBeTruthy();
     act(() => { picker.progress({ totalBytesSent: 512, totalBytesExpectedToSend: 2048 }); });
     expect(view.getByRole("progressbar").props.accessibilityValue.now).toBe(75);
     await act(async () => { picker.finish(); });
