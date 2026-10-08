@@ -392,3 +392,11 @@ describe("Russian filter result count", () => {
     expect(screen.getByRole("button", { name: label })).toBeTruthy();
   });
 });
+
+describe("English filter result count", () => {
+  it("uses a singular Listing for one match", () => {
+    state.total = 1;
+    const screen = renderMobile(<SearchParametersForm initial={{}} returnToResults={false} onBack={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Show 1 listing" })).toBeTruthy();
+  });
+});
