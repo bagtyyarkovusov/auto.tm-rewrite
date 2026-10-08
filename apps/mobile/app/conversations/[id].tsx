@@ -857,7 +857,7 @@ export default function ConversationDetailScreen() {
   return (
     <SafeScreen>
       {/* Android needs the whole flex layout to shrink, not the footer's local frame. */}
-      <KeyboardAvoidingView enabled={Platform.OS === "android"} behavior="height" className="flex-1">
+      <KeyboardAvoidingView enabled={Platform.OS === "android"} behavior="padding" className="flex-1">
       <ConversationHeader
         conversation={conversation}
         loading={conversationQuery.isPending && !signedOut && !notFound}
