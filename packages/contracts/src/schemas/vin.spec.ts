@@ -22,3 +22,8 @@ it("normalises a lowercase VIN before validating and returning it", () => {
   expect(StepVehicleSchema.parse({ ...vehicle, vin: "wba1234567890abcd" }).vin)
     .toBe("WBA1234567890ABCD");
 });
+
+
+it("does not normalise a non-ASCII VIN character into a valid ASCII letter", () => {
+  expect(StepVehicleSchema.safeParse({ ...vehicle, vin: "wba1234567890abcſ" }).success).toBe(false);
+});

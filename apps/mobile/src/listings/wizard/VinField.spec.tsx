@@ -99,3 +99,10 @@ it("uppercases a pasted VIN before updating the draft", () => {
   fireEvent.changeText(screen.getByLabelText("VIN"), "wba1234567890abcd");
   expect(onChange).toHaveBeenCalledWith({ vin: "WBA1234567890ABCD" });
 });
+
+
+it("keeps non-ASCII paste invalid while uppercasing ASCII letters", () => {
+  const screen = renderMobile(<ValidatedVin />);
+  fireEvent.changeText(screen.getByLabelText("VIN"), "wba1234567890abcſ");
+  expect(screen.getByText("Enter a 17-character VIN using letters and digits, without I, O or Q.")).toBeTruthy();
+});
