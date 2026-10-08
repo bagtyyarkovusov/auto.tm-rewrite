@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { AccessibilityInfo, Text } from "react-native";
+import { AccessibilityInfo, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fireEvent, renderMobile, within } from "../../../test/render";
@@ -357,5 +357,30 @@ describe("WizardLayout upload chip", () => {
 
     expect(screen.getByText("2 uploading")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "2 uploading, 1 failed" })).toBeNull();
+  });
+});
+
+describe("WizardLayout keyboard", () => {
+  it("keeps the focused field and the action bar above the Android keyboard", () => {
+    const previousOS = Platform.OS;
+    Platform.OS = "android";
+    try {
+      const screen = renderMobile(layout("Price", 4, { children: <TextInput value="85000" onChangeText={() => {}} /> }));
+      const avoidance = screen.UNSAFE_getByType(KeyboardAvoidingView);
+      expect(avoidance.props.enabled).toBe(true);
+      expect(avoidance.props.behavior).toBe("padding");
+      expect(within(avoidance).getByDisplayValue("85000")).toBeTruthy();
+      expect(within(avoidance).getByRole("button", { name: "Continue" })).toBeTruthy();
+      // The step scrolls inside the shrunken region; the action bar does not scroll with it.
+      const scroll = screen.UNSAFE_getByType(ScrollView);
+      expect(scroll.props.keyboardShouldPersistTaps).toBe("handled");
+      expect(within(scroll).getByDisplayValue("85000")).toBeTruthy();
+      expect(within(scroll).queryByRole("button", { name: "Continue" })).toBeNull();
+    } finally { Platform.OS = previousOS; }
+  });
+
+  it("leaves the iOS layout without keyboard avoidance, as before", () => {
+    const screen = renderMobile(layout("Price", 4, { children: <TextInput value="85000" onChangeText={() => {}} /> }));
+    expect(screen.UNSAFE_getByType(KeyboardAvoidingView).props.enabled).toBe(false);
   });
 });

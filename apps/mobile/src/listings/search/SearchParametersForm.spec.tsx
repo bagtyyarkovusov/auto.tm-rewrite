@@ -1,4 +1,5 @@
 import type * as Native from "react-native";
+import { KeyboardAvoidingView, Platform } from "react-native";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -413,5 +414,21 @@ describe("Filter count without Intl.PluralRules", () => {
     } finally {
       if (descriptor) Object.defineProperty(Intl, "PluralRules", descriptor);
     }
+  });
+});
+
+describe("Search parameters: keyboard", () => {
+  it.each(["android", "ios"] as const)("keeps the year and price fields and Show N inside the padding avoidance region on %s", (os) => {
+    const previousOS = Platform.OS;
+    Platform.OS = os;
+    try {
+      const view = open(filled);
+      const avoidance = view.UNSAFE_getByType(KeyboardAvoidingView);
+      expect(avoidance.props.enabled).not.toBe(false);
+      expect(avoidance.props.behavior).toBe("padding");
+      expect(within(avoidance).getByDisplayValue("2018")).toBeTruthy();
+      expect(within(avoidance).getByDisplayValue("70000")).toBeTruthy();
+      expect(within(avoidance).getByRole("button", { name: /^Show \d+ listings?$/ })).toBeTruthy();
+    } finally { Platform.OS = previousOS; }
   });
 });
