@@ -13,8 +13,10 @@ describe("admin runtime configuration", () => {
       vi.stubEnv("NEXT_PHASE", undefined);
       vi.stubEnv("API_BASE_URL", address);
       vi.spyOn(console, "error").mockImplementation(() => {});
-      const exit = vi.spyOn(process, "exit").mockImplementation(() => { throw new Error("API_BASE_URL must be configured as an http(s) URL."); });
-      expect(() => register()).toThrow(/API_BASE_URL.*http/i);
+      const stopped = new Error("mocked process termination");
+      const exit = vi.spyOn(process, "exit").mockImplementation(() => { throw stopped; });
+      expect(() => register()).toThrow(stopped);
+      expect(console.error).toHaveBeenCalledWith(expect.stringMatching(/API_BASE_URL.*http/i));
       expect(exit).toHaveBeenCalledWith(1);
     },
   );

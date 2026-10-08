@@ -19,6 +19,8 @@ Founder-authorized FIX1–9 from [the independent review](https://github.com/bag
 - FIX7: documentation-only correction to unmerged ADR-0090, mirrored in operator docs. API reuse code is unchanged, but the five-second admin handoff accepts old-token replays without reaching it. Explicit accepted cost; forced logout by a healthy-session link no longer remains.
 - FIX8: retained existing behavior, no production behavior change. Four new proxy tests pass: missing/wrong/correct configured Origin across reports, catalog and cookie-bearing login POSTs; catalog anonymous/current GET coverage. ADMIN_ORIGIN now explicitly required in template/runbook, with mismatch 403 at TOTP.
 
+- FIX9 cache-input red: `pnpm exec turbo run test:unit --filter @auto-tm/api --dry=json`, then assert the API task inputs contain `apps/admin/src/lib/api-client.ts`: fails, missing cross-package input. Strengthened instrumentation test uses an unrelated termination sentinel and independently asserts the real console error names API_BASE_URL; the mock no longer supplies that message. Wiring correction follows this pushed checkpoint.
+
 ## Live staging checklist, not performed
 
 Owner: orchestrator with the founder, after deployment. This fix round does not deploy, change Railway variables or touch production.
