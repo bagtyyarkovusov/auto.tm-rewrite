@@ -161,6 +161,17 @@ describe("admin session renewal before request dispatch", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("a current access hint at the expiry URL cannot loop back into a rejecting layout", async () => {
+    const { proxy } = await import("./proxy");
+    const headers = { cookie: `auto_tm_admin_access=${jwt(Math.floor(Date.now() / 1000) + 900)}; auto_tm_admin_refresh=${refresh}` };
+    const response = await proxy(new NextRequest("http://admin.auto.tm/login?reason=session-expired", { headers }));
+    expect(response.headers.get("location")).toBe("http://admin.auto.tm/login");
+    expect(response.headers.get("set-cookie")).toBeNull();
+    const cleanLogin = await proxy(new NextRequest("http://admin.auto.tm/login", { headers }));
+    expect(cleanLogin.headers.get("location")).toBeNull();
+    expect(cleanLogin.headers.get("set-cookie")).toBeNull();
+  });
+
   it("an expiry login link renews a refresh-only session instead of clearing it", async () => {
     vi.mocked(fetch).mockResolvedValue(Response.json({ accessToken: jwt(Math.floor(Date.now() / 1000) + 900), refreshToken: rotatedRefresh }));
     const { proxy } = await import("./proxy");
