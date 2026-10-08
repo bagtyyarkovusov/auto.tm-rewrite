@@ -220,4 +220,25 @@ describe("admin session renewal before request dispatch", () => {
     expect((await pending).status).toBe(303);
   });
 
+  it("delegates a failed JavaScript Server Action to an early native action redirect", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ code: "TOKEN_ALREADY_USED" }, { status: 401 }));
+    const { proxy } = await import("./proxy");
+    const request = expiredRequest("POST");
+    request.headers.set("next-action", "action-id");
+    request.headers.set("x-admin-session-expired", "untrusted");
+    const response = await proxy(request);
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.headers.get("x-middleware-request-x-admin-session-expired")).toBe("1");
+    expect(response.headers.get("x-middleware-request-cookie") ?? "").not.toContain(refresh);
+    expect(response.cookies.get("auto_tm_admin_refresh")).toMatchObject({ value: "", maxAge: 0 });
+  });
+
+  it("does not trust a browser-supplied expired-session marker on a valid request", async () => {
+    const { proxy } = await import("./proxy");
+    const request = new NextRequest("http://admin.auto.tm/login", { headers: { "x-admin-session-expired": "1" } });
+    const response = await proxy(request);
+    expect(response.headers.get("x-middleware-request-x-admin-session-expired")).toBeNull();
+    expect(response.headers.get("x-middleware-override-headers")).not.toContain("x-admin-session-expired");
+  });
+
 });

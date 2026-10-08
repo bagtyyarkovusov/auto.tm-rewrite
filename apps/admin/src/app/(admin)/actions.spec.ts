@@ -2,6 +2,7 @@ import type * as NextNavigation from "next/navigation";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 const mockState = vi.hoisted(() => ({
+  requestHeaders: new Headers(),
   cookieStore: {
     get: vi.fn(),
     set: vi.fn(),
@@ -14,6 +15,7 @@ const mockState = vi.hoisted(() => ({
 }));
 
 vi.mock("next/headers", () => ({
+  headers: async () => mockState.requestHeaders,
   cookies: vi.fn(() => Promise.resolve(mockState.cookieStore)),
 }));
 
@@ -54,6 +56,12 @@ function mockFetchError(status: number, body: unknown) {
 }
 
 describe("moderation server actions", () => {
+  it("cancels a proxy-rejected action before calling the mutation API", async () => {
+    mockState.requestHeaders.set("x-admin-session-expired", "1");
+    mockFetchSuccess({});
+    await expect(dismissReport("r1", "Spam")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it("propagates the session-expired redirect after an API rejection", async () => {
     mockFetchError(401, { code: "UNAUTHORIZED" });
     await expect(dismissReport("r1", "Spam")).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
@@ -61,6 +69,7 @@ describe("moderation server actions", () => {
   });
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.requestHeaders = new Headers();
     mockCookieStore.get.mockReturnValue({ value: "acc_tok" });
   });
 

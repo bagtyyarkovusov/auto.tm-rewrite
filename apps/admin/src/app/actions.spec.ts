@@ -2,6 +2,7 @@ import type * as NextNavigation from "next/navigation";
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 const mockState = vi.hoisted(() => ({
+  requestHeaders: new Headers(),
   cookies: new Map<string, string>(),
   cookieStore: {
     get: vi.fn((name: string) => {
@@ -20,6 +21,7 @@ const mockState = vi.hoisted(() => ({
 }));
 
 vi.mock("next/headers", () => ({
+  headers: async () => mockState.requestHeaders,
   cookies: vi.fn(() => Promise.resolve(mockState.cookieStore)),
 }));
 
@@ -44,8 +46,15 @@ function mockFetchQueue(responses: Array<{ status: number; body: unknown }>) {
 }
 
 describe("admin auth server actions", () => {
+  it("cancels a rejected auth action before validation or API work", async () => {
+    mockState.requestHeaders.set("x-admin-session-expired", "1");
+    mockFetchQueue([]);
+    await expect(verifyOtp(null, new FormData())).rejects.toThrow("NEXT_REDIRECT:/login?reason=session-expired");
+    expect(fetch).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.requestHeaders = new Headers();
     mockState.cookies.clear();
   });
 
