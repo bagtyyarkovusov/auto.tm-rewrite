@@ -25,9 +25,7 @@ const mockSocket = {
   markRead: vi.fn(),
   markConversationRead: vi.fn(),
   deleteMessage: vi.fn(),
-  subscribeStatus: vi.fn().mockImplementation((handler) => {
-    return () => {};
-  }),
+  subscribeStatus: vi.fn().mockReturnValue(() => {}),
   subscribeMessage: vi.fn().mockReturnValue(() => {}),
   subscribeWatermark: vi.fn().mockReturnValue(() => {}),
   subscribeDeletedMessage: vi.fn().mockReturnValue(() => {}),
@@ -56,9 +54,7 @@ describe("useConversationSocket", () => {
     mockSocket.getStatus.mockReturnValue("idle");
     mockSocket.connect.mockResolvedValue(undefined);
     mockSocket.joinConversation.mockResolvedValue({ ok: true, conversationId: CONV_ID, room: `conversation:${CONV_ID}` });
-    mockSocket.subscribeStatus.mockImplementation((handler) => {
-      return () => {};
-    });
+    mockSocket.subscribeStatus.mockReturnValue(() => {});
   });
 
   it("connects and joins the conversation room", async () => {

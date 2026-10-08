@@ -462,7 +462,8 @@ export default function ConversationDetailScreen() {
         { conversationId, text },
         {
           onSuccess: (data) => {
-            markConfirmed(clientMessageId, data);
+            // apiClient already parsed MessageSummarySchema, including defaults.
+            markConfirmed(clientMessageId, data as ConversationsSchemas.MessageSummary);
           },
           onError: (error) => {
             markFailed(clientMessageId);
@@ -486,7 +487,8 @@ export default function ConversationDetailScreen() {
         { conversationId, metadata, clientMessageId },
         {
           onSuccess: (data) => {
-            markConfirmed(clientMessageId, data);
+            // apiClient already parsed MessageSummarySchema, including defaults.
+            markConfirmed(clientMessageId, data as ConversationsSchemas.MessageSummary);
             FileSystem.deleteAsync(localUri, { idempotent: true }).catch(
               () => {},
             );
