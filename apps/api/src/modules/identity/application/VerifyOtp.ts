@@ -216,7 +216,7 @@ export class VerifyOtp {
 
     const user = await this.userRepo.findByPhone(input.destination);
     if (!user || (user.role !== "buyer" && user.role !== "seller")) {
-      return null;
+      throw new Error("Invalid OTP code");
     }
 
     const deletionScheduledAt = user.deletionScheduledAt;
