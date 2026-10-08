@@ -40,58 +40,60 @@ export default function ValuePropScreen() {
     : t("common:next", { defaultValue: "Next" });
 
   return (
-    <SafeScreen className="px-6 py-8">
-      <View className="flex-1 justify-center gap-6">
-        <View className="gap-3">
-          {slideKey === "valueProp3" && (
-            <View className="mb-2 h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-              <Icon as={ShieldCheck} className="size-7 text-primary" />
-            </View>
-          )}
-          <Text className="text-title font-heading text-foreground">{title}</Text>
-          <Text className="text-body leading-relaxed text-muted-foreground">
-            {body}
-          </Text>
-        </View>
-      </View>
-
-      <View className="gap-4">
-        <View className="flex-row justify-center gap-2">
-          {SLIDES.map((key, i) => (
-            <View
-              key={key}
-              className={cn(
-                "h-1.5 rounded-full",
-                i === index
-                  ? "w-6 bg-foreground"
-                  : "w-1.5 bg-muted-foreground/40",
-              )}
-              accessibilityRole="progressbar"
-              accessibilityState={{ selected: i === index }}
-              accessibilityLabel={`${i + 1} of ${SLIDES.length}`}
-            />
-          ))}
+    <SafeScreen>
+      <View className="flex-1 px-6 py-8">
+        <View className="flex-1 justify-center gap-6">
+          <View className="gap-3">
+            {slideKey === "valueProp3" && (
+              <View className="mb-2 h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <Icon as={ShieldCheck} className="size-7 text-primary" />
+              </View>
+            )}
+            <Text className="text-title font-heading text-foreground">{title}</Text>
+            <Text className="text-body leading-relaxed text-muted-foreground">
+              {body}
+            </Text>
+          </View>
         </View>
 
-        <Button
-          variant="brand"
-          size="pill"
-          onPress={isLast ? finishOnboarding : next}
-          accessibilityLabel={buttonLabel}
-        >
-          <Text>{buttonLabel}</Text>
-        </Button>
+        <View className="gap-4">
+          <View className="flex-row justify-center gap-2">
+            {SLIDES.map((key, i) => (
+              <View
+                key={key}
+                className={cn(
+                  "h-1.5 rounded-full",
+                  i === index
+                    ? "w-6 bg-foreground"
+                    : "w-1.5 bg-muted-foreground/40",
+                )}
+                accessibilityRole="progressbar"
+                accessibilityState={{ selected: i === index }}
+                accessibilityLabel={`${i + 1} of ${SLIDES.length}`}
+              />
+            ))}
+          </View>
 
-        <Pressable
-          onPress={finishOnboarding}
-          accessibilityRole="button"
-          accessibilityLabel={t("common:skip", { defaultValue: "Skip" })}
-          className="min-h-12 items-center justify-center active:opacity-70"
-        >
-          <Text className="text-callout text-muted-foreground">
-            {t("common:skip", { defaultValue: "Skip" })}
-          </Text>
-        </Pressable>
+          <Button
+            variant="brand"
+            size="pill"
+            onPress={isLast ? finishOnboarding : next}
+            accessibilityLabel={buttonLabel}
+          >
+            <Text>{buttonLabel}</Text>
+          </Button>
+
+          <Pressable
+            onPress={finishOnboarding}
+            accessibilityRole="button"
+            accessibilityLabel={t("common:skip", { defaultValue: "Skip" })}
+            className="min-h-12 items-center justify-center active:opacity-70"
+          >
+            <Text className="text-callout text-muted-foreground">
+              {t("common:skip", { defaultValue: "Skip" })}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </SafeScreen>
   );

@@ -13,28 +13,30 @@ export default function LanguagePickerScreen() {
   const continueLabel = t("common:continue", { defaultValue: "Continue" });
 
   return (
-    <SafeScreen className="px-6 py-8">
-      <View className="flex-1 justify-center gap-8">
-        <View className="gap-3">
-          <Text className="text-title font-heading text-foreground">
-            {t("chooseLanguage")}
-          </Text>
-          <Text className="text-body text-muted-foreground">
-            {t("languageSubtitle")}
-          </Text>
+    <SafeScreen>
+      <View className="flex-1 px-6 py-8">
+        <View className="flex-1 justify-center gap-8">
+          <View className="gap-3">
+            <Text className="text-title font-heading text-foreground">
+              {t("chooseLanguage")}
+            </Text>
+            <Text className="text-body text-muted-foreground">
+              {t("languageSubtitle")}
+            </Text>
+          </View>
+
+          <LocaleSwitcher />
         </View>
 
-        <LocaleSwitcher />
+        <Button
+          variant="brand"
+          size="pill"
+          onPress={() => router.push("/(onboarding)/value-prop")}
+          accessibilityLabel={continueLabel}
+        >
+          <Text>{continueLabel}</Text>
+        </Button>
       </View>
-
-      <Button
-        variant="brand"
-        size="pill"
-        onPress={() => router.push("/(onboarding)/value-prop")}
-        accessibilityLabel={continueLabel}
-      >
-        <Text>{continueLabel}</Text>
-      </Button>
     </SafeScreen>
   );
 }
