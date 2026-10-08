@@ -16,7 +16,8 @@ vi.mock("next/headers", () => ({
   cookies: vi.fn(() => Promise.resolve(mockState.cookieStore)),
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...await importOriginal<typeof import("next/navigation")>(),
   redirect: mockState.redirect,
 }));
 

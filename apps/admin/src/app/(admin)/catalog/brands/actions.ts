@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { CatalogSchemas } from "@auto-tm/contracts";
 
 import { apiFetch, ApiError } from "@/lib/api-client";
@@ -28,6 +29,7 @@ const REJECTION_MESSAGES: Record<CatalogSchemas.BrandLogoRejectionReason, string
 };
 
 function toError(err: unknown): { ok: false; error: string } {
+  unstable_rethrow(err);
   if (err instanceof ApiError) {
     const reason = (err.responseBody as { details?: { reason?: string } } | undefined)?.details
       ?.reason;
