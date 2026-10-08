@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminSchemas, Enums, ErrorCode } from "@auto-tm/contracts";
 
 import { getReportDetail, getConfig } from "../../actions";
+import { UserReportPhoto } from "../../components/UserReportPhoto";
 import { RemovePhotoForm } from "../../components/RemovePhotoForm";
 import { ReportActionForm } from "../../components/ReportActionForm";
 
@@ -189,22 +190,14 @@ export default async function ReportDetailPage({ params }: PageProps) {
                 {report.target.status}
               </div>
             )}
-            {isUser && report.target.available && report.target.avatarKey && (
-              photoUrl ? (
-                <img src={photoUrl} alt="Фото профиля" className="h-32 w-32 rounded-full object-cover" />
-              ) : (
-                <p className="text-neutral-500">Фото профиля недоступно.</p>
-              )
+            {isUser && report.target.available && (
+              <UserReportPhoto
+                key={id}
+                hasPhoto={Boolean(report.target.avatarKey)}
+                photoUrl={photoUrl}
+                avatarIndex={report.target.avatarIndex}
+              />
             )}
-            {isUser && report.target.available && !report.target.avatarKey &&
-              report.status === AdminSchemas.ContentReportStatus.Actioned &&
-              report.target.avatarIndex !== undefined && (
-                <img
-                  src={`/assigned-avatars/${report.target.avatarIndex % 12}.svg`}
-                  alt="Назначенный аватар"
-                  className="h-32 w-32 rounded-full"
-                />
-              )}
             {isUser && report.target.role && (
               <div>
                 <span className="text-neutral-500">Роль:</span>{" "}
