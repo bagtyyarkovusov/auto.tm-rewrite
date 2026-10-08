@@ -1,6 +1,7 @@
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fireEvent, renderMobile } from "../../../test/render";
+import { fireEvent, renderMobile, within } from "../../../test/render";
 
 import { MessageReportSheet } from "./MessageReportSheet";
 import { ReportSheet } from "./ReportSheet";
@@ -79,4 +80,37 @@ describe.each(["en", "ru", "tk"])("report success in %s", (locale) => {
       expect(onOpenChange).toHaveBeenCalledWith(false);
     },
   );
+});
+
+// Load the real sheet composition. The native dialog/portal boundary has no
+// Node runtime; its hosts keep content and props without emulating layout.
+vi.mock("@/components/ui/sheet", async (importOriginal) => await importOriginal());
+vi.mock("@rn-primitives/dialog", async () => {
+  const { View, Text, Pressable } = await import("react-native");
+  return { Root: View, Portal: View, Overlay: View, Content: View, Trigger: Pressable, Close: Pressable, Title: Text, Description: Text };
+});
+vi.mock("react-native-screens", async () => ({ FullWindowOverlay: (await import("react-native")).View }));
+
+describe.each(["android", "ios"] as const)("report keyboard layout on %s", (os) => {
+  it.each(["user", "message"] as const)("keeps %s details scrollable and Submit in the avoidance region", (targetType) => {
+    const previousOS = Platform.OS;
+    Platform.OS = os;
+    try {
+      const view = renderMobile(targetType === "message" ?
+        <MessageReportSheet conversationId="conversation-1" messageId="message-1" open onOpenChange={vi.fn()} /> :
+        <ReportSheet targetType="user" targetId="target-1" open onOpenChange={vi.fn()} />);
+      fireEvent.press(view.getByRole("radio", { name: "Other" }));
+      fireEvent.changeText(view.getByPlaceholderText("Describe the issue..."), "Report while typing");
+      const avoidance = view.UNSAFE_getByType(KeyboardAvoidingView);
+      expect(avoidance.props.behavior).toBe("padding");
+      expect(within(avoidance).getByDisplayValue("Report while typing")).toBeTruthy();
+      expect(within(avoidance).getByRole("button", { name: "Submit report", disabled: false })).toBeTruthy();
+      const scroll = view.UNSAFE_getByType(ScrollView);
+      expect(scroll.props.keyboardShouldPersistTaps).toBe("handled");
+      expect(within(scroll).getByDisplayValue("Report while typing")).toBeTruthy();
+      expect(within(scroll).queryByRole("button", { name: "Submit report" })).toBeNull();
+      fireEvent.press(view.getByRole("button", { name: "Submit report" }));
+      expect(view.getByText("Thanks, we received your report.")).toBeTruthy();
+    } finally { Platform.OS = previousOS; }
+  });
 });
