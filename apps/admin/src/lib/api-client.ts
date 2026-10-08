@@ -95,8 +95,10 @@ export async function apiFetchOptional<T>(
 
   const response = await doFetch(path, { ...options, headers });
 
+  if (response.status === 401) return null;
   if (!response.ok) {
-    return null;
+    const body = await response.json().catch(() => ({})) as { code?: string; message?: string };
+    throw new ApiError(response.status, body.code ?? "UNKNOWN", body, body.message ?? `HTTP ${response.status}`);
   }
 
   return response.json() as Promise<T>;

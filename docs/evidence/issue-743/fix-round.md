@@ -6,6 +6,8 @@ Founder-authorized FIX1–9 from [the independent review](https://github.com/bag
 
 - FIX1 red: `pnpm --filter @auto-tm/admin exec vitest run src/proxy.spec.ts` fails: capacity, random-token admission, 429/500/503, network/malformed responses and timeout all destroy cookies instead of retaining the session. Red `15bdd333`: eight failures/14 passes, committed and pushed before implementation. Green: 22/22. Only API 400/401 rejects; temporary failures return a Russian 503 page, preserve cookies and allow retry. One pending owner serializes admission; only API-proven successful pairs occupy the bounded handoff cache.
 
+- FIX2 red: optional-auth 403/429/500/503 errors were null; layout 429/500/503 redirected to session-expired login; Russian retry error page absent. `pnpm --filter @auto-tm/admin exec vitest run src/lib/api-client.spec.ts src/app/actions.spec.ts src/app/error.spec.tsx`. Green: only 401 returns null and triggers the reason; other failures surface through the rendered Russian retry boundary without cookie writes.
+
 ## Live staging checklist, not performed
 
 Owner: orchestrator with the founder, after deployment. This fix round does not deploy, change Railway variables or touch production.
