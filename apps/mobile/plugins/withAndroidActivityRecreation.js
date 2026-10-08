@@ -25,6 +25,8 @@
 //    already unregistered them: the photo picker and camera reject every
 //    launch until the app is force-stopped.
 
+// Expo loads config plugins with `require`, so this file is CommonJS like `app.config.js`.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { withAndroidManifest, withMainActivity, AndroidConfig } = require("expo/config-plugins");
 
 const CONFIG_CHANGES = ["density", "fontScale", "locale", "layoutDirection"];
