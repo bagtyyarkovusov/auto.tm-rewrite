@@ -25,7 +25,6 @@ const mockSocket = {
   markConversationRead: vi.fn(),
   deleteMessage: vi.fn(),
   subscribeStatus: vi.fn().mockImplementation((handler) => {
-    handler(mockSocket.getStatus());
     return () => {};
   }),
   subscribeMessage: vi.fn().mockReturnValue(() => {}),
@@ -54,8 +53,9 @@ describe("useConversationSocket", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSocket.getStatus.mockReturnValue("idle");
+    mockSocket.connect.mockResolvedValue(undefined);
+    mockSocket.joinConversation.mockResolvedValue({ ok: true, conversationId: CONV_ID, room: `conversation:${CONV_ID}` });
     mockSocket.subscribeStatus.mockImplementation((handler) => {
-      handler(mockSocket.getStatus());
       return () => {};
     });
   });
@@ -764,5 +764,53 @@ describe("useConversationSocket", () => {
 
     expect(result.current.peerTyping).toBe(false);
     expect(result.current.peerPresence.online).toBe(false);
+  });
+});
+
+describe("Shared connected socket room membership", () => {
+  const secondId = "550e8400-e29b-41d4-a716-446655440010";
+  it.each([false, true])("receives a live Message on a connected mount, after previous leave=%s", async (afterLeave) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const customWrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const rooms = new Set<string>();
+    const statuses = new Set<(status: string) => void>();
+    const messages = new Set<(event: unknown) => void>();
+    let status = afterLeave ? "idle" : "connected";
+    mockSocket.connect.mockResolvedValue(undefined);
+    mockSocket.getStatus.mockImplementation(() => status);
+    // Like ConversationSocket.subscribeStatus: subscribe only, no replay.
+    mockSocket.subscribeStatus.mockImplementation((handler) => { statuses.add(handler); return () => statuses.delete(handler); });
+    mockSocket.subscribeMessage.mockImplementation((handler) => { messages.add(handler); return () => messages.delete(handler); });
+    mockSocket.joinConversation.mockImplementation(async (id) => {
+      rooms.add(id);
+      return { ok: true, conversationId: id, room: `conversation:${id}` };
+    });
+    mockSocket.leaveConversation.mockImplementation(async (id) => { rooms.delete(id); });
+    const broadcast = (id: string) => {
+      // The gateway's server.to(room).emit delivers only to joined sockets.
+      if (rooms.has(id)) messages.forEach((listener) => listener({ message: {
+        id: MSG_ID, conversationId: id, senderId: "peer-user", kind: "text", text: "Live in the current room", createdAt: "2026-10-08T10:00:00.000Z",
+      } }));
+    };
+    client.setQueryData(queryKeys.conversations.messages(secondId), { pages: [{ items: [], nextCursor: null }], pageParams: [null] });
+    if (afterLeave) {
+      const first = renderHook(() => useConversationSocket(CONV_ID, USER_ID), { wrapper: customWrapper });
+      await act(async () => { status = "connected"; statuses.forEach((handler) => handler(status)); });
+      expect(rooms.has(CONV_ID)).toBe(true);
+      first.unmount();
+      expect(rooms.has(CONV_ID)).toBe(false);
+      expect(status).toBe("connected");
+    }
+    const second = renderHook(() => useConversationSocket(secondId, USER_ID), { wrapper: customWrapper });
+    await act(async () => { await Promise.resolve(); });
+    act(() => broadcast(secondId));
+    expect(client.getQueryData<{ pages: { items: { text: string }[] }[] }>(queryKeys.conversations.messages(secondId))?.pages[0]?.items[0]?.text).toBe("Live in the current room");
+    // Rooms are lost on disconnect, so a later connect must join again.
+    await act(async () => { status = "disconnected"; rooms.clear(); statuses.forEach((handler) => handler(status)); });
+    await act(async () => { status = "connected"; statuses.forEach((handler) => handler(status)); });
+    expect(rooms.has(secondId)).toBe(true);
+    second.unmount();
+    expect(rooms.has(secondId)).toBe(false);
+    client.clear();
   });
 });

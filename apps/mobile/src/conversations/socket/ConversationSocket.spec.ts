@@ -586,3 +586,19 @@ describe("ConversationSocket", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 });
+
+describe("Concurrent room joins", () => {
+  it("shares one pending join acknowledgement between reconnect and screen ownership", async () => {
+    const socket = new ConversationSocket({ token: "test-token" });
+    await socket.connect();
+    mockSocket.emit.mockReset();
+    let acknowledge: ((ack: unknown) => void) | undefined;
+    mockSocket.emit.mockImplementation((_event, _payload, callback) => { acknowledge = callback; });
+    const reconnectJoin = socket.joinConversation(CONV_ID);
+    const screenJoin = socket.joinConversation(CONV_ID);
+    expect(mockSocket.emit).toHaveBeenCalledTimes(1);
+    acknowledge?.({ ok: true, conversationId: CONV_ID, room: `conversation:${CONV_ID}` });
+    expect((await reconnectJoin).ok).toBe(true);
+    expect((await screenJoin).ok).toBe(true);
+  });
+});
