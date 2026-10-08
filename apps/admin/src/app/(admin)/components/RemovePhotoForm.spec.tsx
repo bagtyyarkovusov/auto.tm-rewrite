@@ -109,9 +109,9 @@ describe("RemovePhotoForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
 
-    expect(await screen.findByText("Состояние цели изменилось. Страница обновлена.")).toBeDefined();
+    expect(await screen.findByText("Состояние цели изменилось. Обновите страницу.")).toBeDefined();
     expect(screen.queryByText("Фото удалено.")).toBeNull();
-    await waitFor(() => expect(mockState.refresh).toHaveBeenCalled());
+    expect(mockState.refresh).not.toHaveBeenCalled();
   });
 
   it("shows a generic failure without reporting success", async () => {
@@ -120,7 +120,7 @@ describe("RemovePhotoForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
     fireEvent.change(screen.getByLabelText("Причина действия"), { target: { value: "Причина" } });
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
-    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Ошибка сервера");
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Не удалось выполнить действие.");
     expect(screen.queryByText("Фото удалено.")).toBeNull();
   });
 
@@ -141,4 +141,27 @@ describe("RemovePhotoForm", () => {
 
     expect(await screen.findByText("Действие временно недоступно.")).toBeDefined();
   });
+  it.each([
+    ["CONFLICT", "REPORT_ALREADY_RESOLVED", "Жалоба уже обработана другим администратором. Обновите страницу."],
+    ["CONFLICT", "MODERATION_TARGET_STATE_CONFLICT", "Состояние цели изменилось. Обновите страницу."],
+    ["CONFLICT", "REPORT_TARGET_NOT_ACTIONABLE", "Цель больше не доступна для действия. Обновите страницу."],
+    ["CONFLICT", "REPORT_TARGET_MISMATCH", "Не удалось выполнить действие."],
+    ["NOT_FOUND", undefined, "Не удалось выполнить действие."],
+    ["FORBIDDEN", "ADMIN_TARGET_NOT_MODERATABLE", "Фото администраторов нельзя удалять."],
+    ["FORBIDDEN", "SELF_MODERATION_NOT_ALLOWED", "Нельзя применять действия к собственной учётной записи."],
+    ["INTERNAL_ERROR", "FEATURE_DISABLED", "Не удалось выполнить действие."],
+    ["FORBIDDEN", "REPORT_ALREADY_RESOLVED", "Не удалось выполнить действие."],
+  ])("uses Russian error text for %s/%s and keeps it on screen", async (code, reason, message) => {
+    mockState.removeUserPhoto.mockResolvedValue({ ok: false, code, error: "English API error", details: { details: { reason } } });
+    const view = renderForm();
+    // A refresh after a stale report error would unmount the form and lose its alert.
+    mockState.refresh.mockImplementationOnce(() => view.rerender(createElement("p", null, "Обработана")));
+    fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
+    fireEvent.change(screen.getByLabelText("Причина действия"), { target: { value: "Причина" } });
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", message);
+    expect(screen.queryByText("English API error")).toBeNull();
+    expect(mockState.refresh).not.toHaveBeenCalled();
+  });
+
 });

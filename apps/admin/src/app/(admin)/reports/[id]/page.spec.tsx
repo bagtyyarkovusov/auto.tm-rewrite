@@ -194,7 +194,7 @@ describe("ReportDetailPage profile photo", () => {
     fireEvent.click(screen.getByRole("button", { name: "Удалить фото" }));
     fireEvent.change(removalReasonInput(), { target: { value: "Неприемлемое фото" } });
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
-    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Ошибка сервера");
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Не удалось выполнить действие.");
     expect(screen.getByText("В ожидании")).toBeDefined();
     expect(screen.getByRole("img", { name: "Фото профиля" })).toBeDefined();
     expect(screen.queryByText("Фото удалено.")).toBeNull();
