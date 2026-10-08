@@ -100,6 +100,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0088](0088-exclusive-upload-adoption-and-retirement.md) | Exclusive upload adoption and retirement (extends ADR-0079 to Profile Photos) | Proposed | 2026-10-07 |
 | [0089](0089-transient-publish-failure-releases-photos.md) | A transient publish failure releases the draft's photos (supersedes ADR-0088's terminal-failure rule for publish only) | Accepted | 2026-10-08 |
 | [0090](0090-single-process-admin-session-renewal-for-the-first-release.md) | Single-process admin session renewal for the first release | Accepted | 2026-10-08 |
+| [0091](0091-docs-lane-after-a-green-pull-request-head.md) | Docs lane after a green pull request head | Accepted | 2026-10-08 |
 
 ## Per-app ADRs
 

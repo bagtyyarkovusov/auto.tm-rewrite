@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  checks: read
 
 # A new push to a pull request cancels that pull request's older run, so CI
 # never keeps testing a commit that has already been replaced.
@@ -28,8 +29,8 @@ jobs:
       MINIO_PUBLIC_URL: http://127.0.0.1:1
 
     steps:
-      # Depth 2 fetches the pull request merge commit and its base parent, so
-      # the lane step can list exactly the files this pull request changes.
+      # Depth 2 fetches the synthetic merge and both parents. The lane script
+      # deepens exact event SHAs only when it needs the PR head history.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
@@ -45,11 +46,12 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      # "docs" only when every changed file is Markdown or under docs/.
-      # An empty change or unreadable base takes the full lane; a failed
-      # lane step fails the job.
+      # Docs for an all-docs PR, or docs hand changes after its green previous
+      # head. Missing or ambiguous evidence takes full. The job still runs.
       - name: Choose the CI lane
         id: lane
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/ci-lane.mjs HEAD^1
 
       - name: Start disposable test services
