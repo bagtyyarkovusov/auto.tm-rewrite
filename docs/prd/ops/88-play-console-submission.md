@@ -131,7 +131,7 @@ AutoTM работает на русском, туркменском и англ�
 
 ### Turkmen (needs a native speaker's read)
 
-Play Console has no Turkmen store listing language (checked 2026-10-08). Enter this text and the Turkmen screenshots under the **Turkish (tr-TR)** listing, the closest language Play offers that Turkmen readers are likely to be served. English stays the default listing.
+Play Console has no Turkmen store listing language (founder check, 2026-10-08). Do not enter this text under Turkish: a Turkish listing is shown to phones set to Turkish, not to Turkmen-language phones, which get the default English listing. The English description therefore ends with a short Turkmen paragraph, and the full Turkmen text is kept in [`play-console-submission/not-used-on-store/`](play-console-submission/README.md) in case Play adds the language.
 
 - **App name** (24): `AutoTM – awtoulag bazary`
 - **Short description** (72): `Türkmenistanda awtoulag satyň we satyn alyň. Satyjy bilen çat, halanlar.`
