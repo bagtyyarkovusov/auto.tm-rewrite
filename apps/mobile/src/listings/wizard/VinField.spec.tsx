@@ -91,3 +91,11 @@ describe("Sell VIN validation", () => {
     expect(screen.queryByText(message)).toBeNull();
   });
 });
+
+
+it("uppercases a pasted VIN before updating the draft", () => {
+  const onChange = vi.fn();
+  const screen = renderMobile(<VinField payload={{}} onChange={onChange} />);
+  fireEvent.changeText(screen.getByLabelText("VIN"), "wba1234567890abcd");
+  expect(onChange).toHaveBeenCalledWith({ vin: "WBA1234567890ABCD" });
+});

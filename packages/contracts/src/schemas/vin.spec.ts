@@ -16,3 +16,9 @@ it("returns only the established length error for an overlength VIN", () => {
   expect(validateStep("vehicle", { ...vehicle, vin: "A".repeat(18) }).errors)
     .toEqual(["wizardErrors.vinTooLong"]);
 });
+
+
+it("normalises a lowercase VIN before validating and returning it", () => {
+  expect(StepVehicleSchema.parse({ ...vehicle, vin: "wba1234567890abcd" }).vin)
+    .toBe("WBA1234567890ABCD");
+});

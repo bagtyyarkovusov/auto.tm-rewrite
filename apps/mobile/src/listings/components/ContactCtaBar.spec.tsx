@@ -141,6 +141,16 @@ describe("Android dialer", () => {
     await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
     expect(Linking.openURL).toHaveBeenCalledWith("tel:+99361000001");
   });
+  it.each([
+    [" +993 (61) 000-001", "tel:+99361000001"],
+    ["993-61-000-001", "tel:99361000001"],
+    ["+99361#000001;ext=2", "tel:+993610000012"],
+    ["993+61/000001", "tel:99361000001"],
+  ])("strips dial-control and formatting characters from %s", async (phone, uri) => {
+    const view = renderMobile(<ContactCtaBar {...props} contactPhone={phone} />);
+    await act(async () => { fireEvent.press(view.getByRole("button", { name: "Call" })); });
+    expect(Linking.openURL).toHaveBeenCalledWith(uri);
+  });
   it("shows the number when the dialer fails", async () => {
     vi.mocked(Linking.openURL).mockRejectedValueOnce(new Error("No dialer"));
     const view = renderMobile(<ContactCtaBar {...props} />);
