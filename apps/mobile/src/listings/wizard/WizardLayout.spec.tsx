@@ -1,8 +1,8 @@
 import type { ComponentProps } from "react";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Text } from "react-native";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fireEvent, renderMobile } from "../../../test/render";
+import { fireEvent, renderMobile, within } from "../../../test/render";
 
 import { WizardLayout } from "./WizardLayout";
 
@@ -39,7 +39,7 @@ function layout(stepTitle: string, stepNumber: number, overrides: LayoutProps = 
       progressPercent={(stepNumber / 7) * 100}
       {...overrides}
     >
-      {null}
+      {overrides.children ?? null}
     </WizardLayout>
   );
 }
@@ -75,6 +75,94 @@ describe("WizardLayout step header", () => {
     screen.rerender(layout("Car", 1));
 
     expect(announcements).toEqual(["Car, Step 1 of 7"]);
+  });
+});
+
+describe("WizardLayout Back in the header and one action at the bottom", () => {
+  const footerButtons = (screen: ReturnType<typeof renderMobile>) =>
+    within(screen.getByTestId("wizard-footer")).getAllByRole("button");
+
+  it("has no Back on the first step, and Continue alone at the bottom", () => {
+    const onContinue = vi.fn();
+    const screen = renderMobile(layout("Car", 1, { onContinue }));
+
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.queryByText("Back")).toBeNull();
+    expect(footerButtons(screen)).toHaveLength(1);
+    fireEvent.press(within(screen.getByTestId("wizard-footer")).getByRole("button", { name: "Continue" }));
+    expect(onContinue).toHaveBeenCalledOnce();
+  });
+
+  it("puts Back in the header from the second step on, not beside Continue", () => {
+    const onBack = vi.fn();
+    const screen = renderMobile(layout("Details and condition", 2, { onBack }));
+
+    // One Back on the screen, and it is the header's.
+    expect(screen.getAllByRole("button", { name: "Back" })).toHaveLength(1);
+    fireEvent.press(within(screen.getByTestId("wizard-header")).getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalledOnce();
+    expect(footerButtons(screen)).toHaveLength(1);
+    expect(within(screen.getByTestId("wizard-footer")).queryByText("Back")).toBeNull();
+  });
+
+  it.each([
+    ["ru", "Назад"],
+    ["tk", "Yza"],
+  ] as const)("announces the header's Back in %s", (locale, label) => {
+    const screen = renderMobile(layout("Price", 4), { locale });
+
+    expect(screen.getByRole("button", { name: label })).toBeTruthy();
+  });
+
+  it("keeps Continue disabled at the bottom while the step cannot be left", () => {
+    const onContinue = vi.fn();
+    const screen = renderMobile(
+      layout("Price", 4, { canContinue: false, disabledReason: "Enter a price", onContinue }),
+    );
+    const footer = within(screen.getByTestId("wizard-footer"));
+
+    fireEvent.press(footer.getByRole("button", { name: "Continue" }));
+
+    expect(onContinue).not.toHaveBeenCalled();
+    expect(footer.getByText("Enter a price")).toBeTruthy();
+  });
+
+  it("has Publish alone at the bottom of Check and publish", () => {
+    const onPublish = vi.fn();
+    const screen = renderMobile(layout("Check and publish", 7, { isLastStep: true, canPublish: true, onPublish }));
+
+    expect(footerButtons(screen)).toHaveLength(1);
+    fireEvent.press(within(screen.getByTestId("wizard-footer")).getByRole("button", { name: "Publish" }));
+    expect(onPublish).toHaveBeenCalledOnce();
+  });
+
+  it("has Done alone at the bottom of a step opened to change it", () => {
+    const onReturnToReview = vi.fn();
+    const screen = renderMobile(layout("Price", 4, { editDetourActive: true, onReturnToReview }));
+
+    expect(footerButtons(screen)).toHaveLength(1);
+    fireEvent.press(within(screen.getByTestId("wizard-footer")).getByRole("button", { name: "Done" }));
+    expect(onReturnToReview).toHaveBeenCalledOnce();
+  });
+
+  it("has the edit's save action alone at the bottom of its section list", () => {
+    const screen = renderMobile(
+      layout("Edit listing", 7, {
+        mode: "edit", sectionList: true, isLastStep: true, canGoBack: false, canPublish: true,
+        publishLabel: "Save changes",
+      }),
+    );
+
+    expect(footerButtons(screen)).toHaveLength(1);
+    expect(within(screen.getByTestId("wizard-footer")).getByRole("button", { name: "Save changes" })).toBeTruthy();
+  });
+
+  it("reads the action after the step's own content", () => {
+    const screen = renderMobile(layout("Car", 1, { children: <Text>Brand</Text> }));
+    const json = JSON.stringify(screen.toJSON());
+
+    expect(within(screen.getByTestId("wizard-footer")).queryByText("Brand")).toBeNull();
+    expect(json.indexOf('"Continue"')).toBeGreaterThan(json.indexOf('"Brand"'));
   });
 });
 
