@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ScrollEdgeFade } from "./ScrollEdgeFade";
 import { useTabBarSpace } from "./tabBarHeight";
 
+import { useSystemGlass } from "@/components/ui/glass-surface";
 import { cn } from "@/lib/utils";
 
 type TabScreenProps = ViewProps & {
@@ -20,6 +21,10 @@ type TabScreenProps = ViewProps & {
    * Draws the soft edge above the tab bar, where scrolling content fades
    * into the page. Turn it off on a screen that pins its own bar there
    * (`StickyActionBar` brings its own fade, drawn under the bar).
+   *
+   * It is left out by itself where the content runs under a tab bar of system
+   * glass (`underTabBar` on iOS 26 and later): the fade is the page tone,
+   * nearly opaque behind the bar, and glass over it shows only that tone.
    */
   edgeFade?: boolean;
   /**
@@ -43,6 +48,9 @@ export function TabScreen({
   ...props
 }: TabScreenProps) {
   const space = useTabBarSpace();
+  // The floating Filters chips are glass over the list itself. The tab bar is
+  // the same glass, so it must have the list behind it too, not the fade.
+  const glassOverContent = useSystemGlass() && underTabBar;
   return (
     <SafeAreaView
       className={cn("flex-1 bg-background", className)}
@@ -51,7 +59,7 @@ export function TabScreen({
       {...props}
     >
       {children}
-      {edgeFade ? <ScrollEdgeFade height={space} /> : null}
+      {edgeFade && !glassOverContent ? <ScrollEdgeFade height={space} /> : null}
       {overlay}
     </SafeAreaView>
   );
