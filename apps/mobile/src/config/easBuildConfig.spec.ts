@@ -194,7 +194,7 @@ describe("EAS build configuration", () => {
       image: "./assets/images/splash-icon.png",
       imageWidth: 160,
       resizeMode: "contain",
-      backgroundColor: "#FFFFFF",
+      backgroundColor: "#17191D",
     });
 
     const configuredPaths = [
