@@ -16,7 +16,7 @@ describe("About the app", () => {
 
   it.each([
     ["ru", "О приложении", "Версия 9.8.7"],
-    ["tk", "Programma hakda", "Wersiýa 9.8.7"],
+    ["tk", "Programma hakynda", "Wersiýa 9.8.7"],
   ])("reads in %s", (locale, title, version) => {
     const screen = renderMobile(<AboutScreen />, { locale });
 
