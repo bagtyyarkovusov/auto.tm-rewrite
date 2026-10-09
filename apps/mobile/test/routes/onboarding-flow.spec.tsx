@@ -385,7 +385,7 @@ describe("Onboarding in three languages", () => {
     expect(language.getByLabelText(copy.language).props.accessibilityRole).toBe("radiogroup");
     expect(language.getByRole("header", { name: copy.choose })).toBeTruthy();
     expect(language.getByRole("button", { name: copy.continue })).toBeTruthy();
-    expect(language.getByLabelText("AutoTM")).toBeTruthy();
+    expect(language.getByLabelText("Carberk")).toBeTruthy();
   });
 });
 

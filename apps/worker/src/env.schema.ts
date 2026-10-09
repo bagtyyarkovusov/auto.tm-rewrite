@@ -45,7 +45,7 @@ const BaseSchema = z.object({
 
   /** ADR-0055. `mock` delivers nothing and needs no key; `resend` sends for real. */
   EMAIL_DRIVER: z.enum(["mock", "resend"]).default("mock"),
-  /** e.g. `AutoTM <no-reply@autotm.bagtyyar.dev>`. Required for `resend`. */
+  /** e.g. `Carberk <no-reply@autotm.bagtyyar.dev>`. Required for `resend`. */
   EMAIL_FROM: z.string().optional(),
   /** Sends allowed per UTC day, counted in Redis. 80 stays under Resend Free's 100. */
   EMAIL_DAILY_CAP: z.coerce.number().int().positive().default(DEFAULT_EMAIL_DAILY_CAP),

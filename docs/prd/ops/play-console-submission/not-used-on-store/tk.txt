@@ -1,11 +1,11 @@
-APP NAME (24/30)
-AutoTM – awtoulag bazary
+APP NAME (25/30)
+Carberk – awtoulag bazary
 
 SHORT DESCRIPTION (72/80)
 Türkmenistanda awtoulag satyň we satyn alyň. Satyjy bilen çat, halanlar.
 
-FULL DESCRIPTION (1414/4000)
-AutoTM — Türkmenistanda awtoulag satmak we satyn almak üçin bazar. Bildirişleri görüň, satyjylar bilen habarlaşyň we halan maşynlaryňyzy Halanlarym bölümine goşuň.
+FULL DESCRIPTION (1474/4000)
+Carberk — Türkmenistanda awtoulag satmak we satyn almak üçin bazar. Bildirişleri görüň, satyjylar bilen habarlaşyň we halan maşynlaryňyzy Halanlarym bölümine goşuň.
 
 Maşyn tapyň
 • Marka we model boýunça gözläň. Gözleg rus, türkmen we iňlis dilindäki ýazylyşy hem-de öndürilen ýyly düşünýär.
@@ -14,7 +14,7 @@ Maşyn tapyň
 
 Satyjy bilen habarlaşyň
 • Satyja jaň ediň ýa-da programmada hat ýazyň.
-• Çatda surat iberiň. Bildirişlere rugsat berseňiz, AutoTM täze habar gelende size habar berer.
+• Çatda surat iberiň. Bildirişlere rugsat berseňiz, Carberk täze habar gelende size habar berer.
 • Bildiriş, habar ýa-da ulanyjy barada şikaýat ediň we islemeýän adamyňyzy bloklaň.
 
 Maşynyňyzy satyň
@@ -27,4 +27,6 @@ Siziň akkauntyňyz
 • Bildirişleri akkauntsyz hem görüp bilersiňiz.
 • Akkauntyňyzy programmada ýa-da web sahypamyzda pozup bilersiňiz.
 
-AutoTM rus, türkmen we iňlis dillerinde işleýär. AutoTM maşyn satmaýar we töleg kabul etmeýär. Alyjy bilen satyjy söwda barada özleri ylalaşýarlar.
+Carberk rus, türkmen we iňlis dillerinde işleýär. Carberk maşyn satmaýar we töleg kabul etmeýär. Alyjy bilen satyjy söwda barada özleri ylalaşýarlar.
+
+Alpha Motors bilen arzan däl-de, amatly ulag satyn al.

@@ -16,10 +16,10 @@ describe("OtplibTotpVerifier", () => {
     const uri = verifier.generateAuthUri({
       secret,
       userId: "admin-1",
-      issuer: "auto.tm Admin",
+      issuer: "Carberk Admin",
     });
     expect(uri).toMatch(/^otpauth:\/\/totp\//);
-    expect(uri).toContain("auto.tm%20Admin");
+    expect(uri).toContain("Carberk%20Admin");
     expect(uri).toContain(secret);
   });
 

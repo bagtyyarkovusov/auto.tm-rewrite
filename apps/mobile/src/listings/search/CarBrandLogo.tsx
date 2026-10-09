@@ -20,7 +20,7 @@ interface CarBrandLogoProps {
  * own). Logos are single-colour PNGs tinted with the theme foreground. With
  * no uploaded logo, or when it fails to load, the brand's first letter shows
  * in a circle so the row never breaks. Decorative: the name next to it is
- * what screen readers announce. Not the AutoTM app logo (`auth/BrandLogo`).
+ * what screen readers announce. Not the Carberk app logo (`auth/BrandLogo`).
  */
 export function CarBrandLogo({ name, logoUrl, size = 32 }: CarBrandLogoProps) {
   const { colorScheme } = useColorScheme();

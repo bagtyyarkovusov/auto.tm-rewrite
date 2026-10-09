@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "AutoTM Admin",
+  title: "Carberk Admin",
   description: "Internal moderation, user management, push, reports",
 };
 

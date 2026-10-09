@@ -21,13 +21,13 @@ export async function generateMetadata({
   const { locale } = await params;
   const doc = termsOfService[locale as Locale] ?? termsOfService.ru;
   return {
-    title: `${doc.title} — AutoTM`,
+    title: `${doc.title} — Carberk`,
     description:
       locale === "tk"
-        ? "AutoTM ulanyş şertleri"
+        ? "Carberk ulanyş şertleri"
         : locale === "ru"
-          ? "Условия использования AutoTM"
-          : "AutoTM Terms of Service",
+          ? "Условия использования Carberk"
+          : "Carberk Terms of Service",
   };
 }
 

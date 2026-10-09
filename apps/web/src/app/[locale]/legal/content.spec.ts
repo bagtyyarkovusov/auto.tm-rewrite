@@ -60,7 +60,7 @@ const privacyPromises: CopyPromise[] = [
     },
   },
   {
-    name: "AutoTM adds no email tracking",
+    name: "Carberk adds no email tracking",
     phrases: {
       en: "tracked links to the emails we send you",
       ru: "трекинговые пиксели и отслеживаемые ссылки",

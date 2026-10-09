@@ -188,7 +188,7 @@ describe("ListingDetailScreen", () => {
   it("does not open inspection interest after publishing", () => {
     state.viewer = { userId: fixture().sellerId }; routeParams.inspectionInterest = "1";
     const screen = renderMobile(<ListingDetailScreen />);
-    expect(screen.queryByText("An AutoTM mechanic inspection is coming soon. Register your interest to join the pilot.")).toBeNull();
+    expect(screen.queryByText("A Carberk mechanic inspection is coming soon. Register your interest to join the pilot.")).toBeNull();
   });
 });
 
@@ -204,7 +204,7 @@ describe("InspectionInterestCta", () => {
   it("disables the entry and routes anonymous submission to sign-in", () => {
     const onOpenChange = vi.fn();
     const screen = renderMobile(<InspectionInterestCta listingId="listing-1" open={false} disabled onOpenChange={onOpenChange} />);
-    fireEvent.press(screen.getByRole("button", { name: /Request AutoTM inspection/ }));
+    fireEvent.press(screen.getByRole("button", { name: /Request Carberk inspection/ }));
     expect(onOpenChange).not.toHaveBeenCalled();
     state.authenticated = false;
     screen.rerender(<InspectionInterestCta listingId="listing-1" open onOpenChange={onOpenChange} />);

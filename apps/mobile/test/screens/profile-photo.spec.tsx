@@ -213,7 +213,7 @@ describe("Profile photo", () => {
     fireEvent.press(view.getByRole("button", { name: "Change profile photo" }));
     await act(async () => { fireEvent.press(view.getByRole("button", { name: "Take photo" })); });
     expect(view.getByText("Camera access is off")).toBeTruthy();
-    expect(view.getByText("To take a photo, allow camera access for AutoTM in system settings.")).toBeTruthy();
+    expect(view.getByText("To take a photo, allow camera access for Carberk in system settings.")).toBeTruthy();
     expect(picker.camera).not.toHaveBeenCalled();
     await act(async () => { fireEvent.press(view.getByRole("button", { name: "Open settings" })); });
     expect(settings).toHaveBeenCalledOnce();

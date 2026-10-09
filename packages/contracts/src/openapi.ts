@@ -1146,9 +1146,9 @@ export function generateOpenApiDocument(): object {
   return generator.generateDocument({
     openapi: "3.0.3",
     info: {
-      title: "AutoTM API",
+      title: "Carberk API",
       version: "0.1.0",
-      description: "AutoTM Marketplace API — Phase 1",
+      description: "Carberk Marketplace API — Phase 1",
     },
     servers: [{ url: "https://api.auto.tm" }],
   });

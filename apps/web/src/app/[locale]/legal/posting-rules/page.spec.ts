@@ -30,7 +30,7 @@ describe("posting rules page", () => {
 
   it.each(locales)("titles the %s page after the rules", async (locale) => {
     const metadata = await generateMetadata({ params: Promise.resolve({ locale }) });
-    expect(metadata.title).toBe(`${postingRules[locale].title} — AutoTM`);
+    expect(metadata.title).toBe(`${postingRules[locale].title} — Carberk`);
     expect(metadata.description).toBeTruthy();
   });
 

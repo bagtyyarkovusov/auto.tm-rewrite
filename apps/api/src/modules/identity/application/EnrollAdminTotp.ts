@@ -42,7 +42,7 @@ export class EnrollAdminTotp {
       const qrCodeUrl = this.verifier.generateAuthUri({
         secret,
         userId: input.userId,
-        issuer: "auto.tm Admin",
+        issuer: "Carberk Admin",
       });
 
       return { qrCodeUrl, secret };
@@ -65,7 +65,7 @@ export class EnrollAdminTotp {
     const qrCodeUrl = this.verifier.generateAuthUri({
       secret,
       userId: input.userId,
-      issuer: "auto.tm Admin",
+      issuer: "Carberk Admin",
     });
 
     return { qrCodeUrl, secret };

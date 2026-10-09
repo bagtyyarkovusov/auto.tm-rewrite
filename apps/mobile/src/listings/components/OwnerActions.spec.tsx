@@ -64,7 +64,7 @@ it("asks with the shared copy, without the buyer question", () => {
   fireEvent.press(screen.getByRole("button", { name: "Mark as sold" }));
   expect(screen.getByText("Mark as sold?")).toBeTruthy();
   expect(screen.getByText("Buyers will see it as Sold. A sold listing cannot be put back on sale.")).toBeTruthy();
-  expect(screen.queryByText(/buyer from AutoTM/)).toBeNull();
+  expect(screen.queryByText(/buyer from Carberk/)).toBeNull();
 });
 it("names the overflow actions in Russian", () => {
   const screen = renderMobile(

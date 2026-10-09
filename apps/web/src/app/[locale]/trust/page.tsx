@@ -11,9 +11,9 @@ function resolvePageLocale(locale: string): Locale {
 }
 
 const trustMetaDescription: Record<Locale, string> = {
-  tk: "AutoTM howpsuzlyk we ynam baradady",
-  ru: "Как AutoTM защищает покупателей",
-  en: "How AutoTM keeps buyers safe",
+  tk: "Carberk howpsuzlyk we ynam baradady",
+  ru: "Как Carberk защищает покупателей",
+  en: "How Carberk keeps buyers safe",
 };
 
 const trustFooterEmailPrefix: Record<Locale, string> = {
@@ -49,7 +49,7 @@ export async function generateMetadata({
   const doc = trustInfo[pageLocale];
 
   return {
-    title: `${doc.title} — AutoTM`,
+    title: `${doc.title} — Carberk`,
     description: trustMetaDescription[pageLocale],
   };
 }

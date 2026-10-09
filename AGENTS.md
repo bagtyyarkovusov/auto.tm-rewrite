@@ -1,6 +1,6 @@
 # AutoTM agent instructions
 
-AutoTM is a vehicle marketplace monorepo. Use pnpm workspaces; workspace scripts and configuration are the source for commands and installed versions. This policy applies to Codex desktop, Claude Code desktop, and the `claude-kimi` CLI.
+AutoTM is a vehicle marketplace monorepo. Its public product name is Carberk ([ADR-0093](docs/adr/0093-carberk-is-the-public-product-name.md)): user-visible text says Carberk, while packages, identifiers, domains and older documents keep AutoTM. Use pnpm workspaces; workspace scripts and configuration are the source for commands and installed versions. This policy applies to Codex desktop, Claude Code desktop, and the `claude-kimi` CLI.
 
 ## Start with the task
 

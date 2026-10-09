@@ -6,11 +6,11 @@ import { fireEvent, renderMobile, routerMock } from "../render";
 vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "9.8.7" } } }));
 
 describe("About the app", () => {
-  it("shows the AutoTM name and the version the build was made with", () => {
+  it("shows the Carberk name and the version the build was made with", () => {
     const screen = renderMobile(<AboutScreen />);
 
     expect(screen.getByText("About the app")).toBeTruthy();
-    expect(screen.getByLabelText("AutoTM")).toBeTruthy();
+    expect(screen.getByLabelText("Carberk")).toBeTruthy();
     expect(screen.getByText("Version 9.8.7")).toBeTruthy();
   });
 

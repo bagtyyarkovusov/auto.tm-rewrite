@@ -10,7 +10,7 @@
  */
 
 export const palette = {
-  // Brand — AutoTM red
+  // Brand — Carberk red
   red: {
     50:  "#FFEBEB",
     100: "#FFD1D1",

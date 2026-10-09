@@ -27,14 +27,14 @@ describe("HttpOtpSenderAdapter", () => {
   it("builds the sms-gateway body { phone, body, requestId } with the rendered text", () => {
     expect(new HttpOtpSenderAdapter().gatewayRequest(sms)).toEqual({
       phone: "+99365123456",
-      body: "AutoTM 709814: номер покажут в объявлении. Не давайте код без согласия",
+      body: "Carberk 709814: номер будет в объявлении. Не давайте код без согласия",
       requestId: sms.requestId,
     });
   });
 
   it("renders the text in the seller's locale", () => {
     expect(new HttpOtpSenderAdapter().gatewayRequest({ ...sms, locale: "en" }).body).toBe(
-      "AutoTM code 709814 puts this number on a car listing. Share it only if you agree.",
+      "Carberk code 709814 puts this number on a car listing. Share it only if you agree.",
     );
   });
 

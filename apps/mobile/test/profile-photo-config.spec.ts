@@ -6,16 +6,16 @@ const require = createRequire(import.meta.url);
 const { expo } = require("../app.config.js");
 const copy = {
   en: {
-    NSCameraUsageDescription: "AutoTM uses your camera to take photos for vehicle listings and your profile photo.",
-    NSPhotoLibraryUsageDescription: "AutoTM accesses your photos so you can choose images for vehicle listings and your profile photo.",
+    NSCameraUsageDescription: "Carberk uses your camera to take photos for vehicle listings and your profile photo.",
+    NSPhotoLibraryUsageDescription: "Carberk accesses your photos so you can choose images for vehicle listings and your profile photo.",
   },
   ru: {
-    NSCameraUsageDescription: "AutoTM использует камеру для снимков в объявлениях об автомобилях и фото профиля.",
-    NSPhotoLibraryUsageDescription: "AutoTM получает доступ к вашим фото, чтобы вы могли выбирать снимки для объявлений об автомобилях и фото профиля.",
+    NSCameraUsageDescription: "Carberk использует камеру для снимков в объявлениях об автомобилях и фото профиля.",
+    NSPhotoLibraryUsageDescription: "Carberk получает доступ к вашим фото, чтобы вы могли выбирать снимки для объявлений об автомобилях и фото профиля.",
   },
   tk: {
-    NSCameraUsageDescription: "AutoTM ulag bildirişleri üçin we profil suratyňyzy düşürmek üçin kamerany ulanýar.",
-    NSPhotoLibraryUsageDescription: "AutoTM ulag bildirişleri we profil suraty üçin surat saýlamak maksady bilen suratlaryňyza girýär.",
+    NSCameraUsageDescription: "Carberk ulag bildirişleri üçin we profil suratyňyzy düşürmek üçin kamerany ulanýar.",
+    NSPhotoLibraryUsageDescription: "Carberk ulag bildirişleri we profil suraty üçin surat saýlamak maksady bilen suratlaryňyza girýär.",
   },
 };
 

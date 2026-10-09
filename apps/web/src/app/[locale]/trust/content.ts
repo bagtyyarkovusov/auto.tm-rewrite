@@ -13,9 +13,9 @@ export interface TrustDocument {
 
 export const trustInfo: Record<Locale, TrustDocument> = {
   en: {
-    title: "How AutoTM keeps you safe",
+    title: "How Carberk keeps you safe",
     intro:
-      "AutoTM is built to make car buying in Turkmenistan more transparent. Here is what we already do, what is coming soon, and what we do not promise.",
+      "Carberk is built to make car buying in Turkmenistan more transparent. Here is what we already do, what is coming soon, and what we do not promise.",
     sections: [
       {
         title: "Verified phone sellers",
@@ -30,8 +30,8 @@ export const trustInfo: Record<Locale, TrustDocument> = {
         body: "When a seller provides a VIN, we decode what we can and show it clearly. If the VIN is missing or cannot be decoded, we say so instead of hiding it.",
       },
       {
-        title: "AutoTM inspections are coming",
-        body: "We are running a small free pilot where an AutoTM mechanic inspects a car before you buy. Tapping 'Request AutoTM inspection' registers your interest; it does not book an inspection yet.",
+        title: "Carberk inspections are coming",
+        body: "We are running a small free pilot where a Carberk mechanic inspects a car before you buy. Tapping 'Request Carberk inspection' registers your interest; it does not book an inspection yet.",
       },
       {
         title: "What we do not promise",
@@ -40,9 +40,9 @@ export const trustInfo: Record<Locale, TrustDocument> = {
     ],
   },
   ru: {
-    title: "Как AutoTM защищает покупателей",
+    title: "Как Carberk защищает покупателей",
     intro:
-      "AutoTM создан, чтобы сделать покупку автомобиля в Туркменистане более прозрачной. Рассказываем, что уже работает, что скоро появится и чего мы не обещаем.",
+      "Carberk создан, чтобы сделать покупку автомобиля в Туркменистане более прозрачной. Рассказываем, что уже работает, что скоро появится и чего мы не обещаем.",
     sections: [
       {
         title: "Продавцы с подтверждённым телефоном",
@@ -57,8 +57,8 @@ export const trustInfo: Record<Locale, TrustDocument> = {
         body: "Когда продавец указывает VIN, мы расшифровываем, что можем, и показываем прозрачно. Если VIN отсутствует или не удалось расшифровать, мы говорим об этом вместо того, чтобы скрывать.",
       },
       {
-        title: "Проверки AutoTM скоро",
-        body: "Мы запускаем небольшой бесплатный пилот: механик AutoTM осмотрит автомобиль перед покупкой. Нажатие 'Запросить проверку AutoTM' фиксирует ваш интерес, но пока не бронирует осмотр.",
+        title: "Проверки Carberk скоро",
+        body: "Мы запускаем небольшой бесплатный пилот: механик Carberk осмотрит автомобиль перед покупкой. Нажатие 'Запросить проверку Carberk' фиксирует ваш интерес, но пока не бронирует осмотр.",
       },
       {
         title: "Чего мы не обещаем",
@@ -67,9 +67,9 @@ export const trustInfo: Record<Locale, TrustDocument> = {
     ],
   },
   tk: {
-    title: "AutoTM sizi nählet howpsuz saklaýar",
+    title: "Carberk sizi nählet howpsuz saklaýar",
     intro:
-      "AutoTM Türkmenistanda awtomobil satyn almagy has açyk etmek üçin düzüldi. Indi näme edýäris, näme ýakyn wagtda gelýär we näme söz bermeýäris.",
+      "Carberk Türkmenistanda awtomobil satyn almagy has açyk etmek üçin düzüldi. Indi näme edýäris, näme ýakyn wagtda gelýär we näme söz bermeýäris.",
     sections: [
       {
         title: "Tassyklanan telefon satyjylary",
@@ -84,8 +84,8 @@ export const trustInfo: Record<Locale, TrustDocument> = {
         body: "Satyjy VIN görkezende, biz mümkin boldygyça düşündiriýäris we düşnükli görkezýäris. Eger VIN ýok ýa-da düşündirip bolmasa, gizlemezden aýdýarys.",
       },
       {
-        title: "AutoTM barlaglary ýakyn wagtda",
-        body: "Biz kiçi mugt pilot işleýäris: AutoTM mehanigi satyn almazdan ozal maşyny barlaýar. 'AutoTM barlagyny sora' düwmesine basmak siziň islegiňizi bellige alýar, ýöne heniz barlag bronlamaz.",
+        title: "Carberk barlaglary ýakyn wagtda",
+        body: "Biz kiçi mugt pilot işleýäris: Carberk mehanigi satyn almazdan ozal maşyny barlaýar. 'Carberk barlagyny sora' düwmesine basmak siziň islegiňizi bellige alýar, ýöne heniz barlag bronlamaz.",
       },
       {
         title: "Näme söz bermeýäris",

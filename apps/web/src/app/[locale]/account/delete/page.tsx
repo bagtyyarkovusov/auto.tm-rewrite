@@ -26,7 +26,7 @@ export async function generateMetadata({
   const { locale } = await params;
   const copy = accountDeletionCopy[resolvePageLocale(locale)];
   return {
-    title: `${copy.title} — AutoTM`,
+    title: `${copy.title} — Carberk`,
     description: copy.metaDescription,
   };
 }

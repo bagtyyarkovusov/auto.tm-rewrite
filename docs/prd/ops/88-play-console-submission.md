@@ -13,8 +13,8 @@
 
 The founder accepted every recommendation below on 2026-10-06 (recorded on #685). Where a row further down still says **Founder decides**, this list wins.
 
-- **Store title:** `AutoTM – Car Marketplace`. **Category:** Auto & Vehicles.
-- **Developer contact email:** `bagtyyarkowusow.dev@gmail.com` until AutoTM owns a domain (also the privacy and terms contact, PR 689).
+- **Store title:** `Carberk – Car Marketplace`. **Category:** Auto & Vehicles.
+- **Developer contact email:** `bagtyyarkowusow.dev@gmail.com` until Carberk owns a domain (also the privacy and terms contact, PR 689).
 - **Approximate location:** declared: collected, not shared, optional, App functionality (the seller's region and city).
 - **In-app search history:** not collected. Recent searches stay on the device, and the API request log no longer keeps query strings. Subject to the Railway edge log check in checklist step 9.
 - **Device or other IDs (FCM token):** declared: collected, optional, App functionality, conditional on release audit item 4 (if the build fetches a token or installation ID before notification permission, declare it required).
@@ -63,16 +63,16 @@ What the copy is allowed to say, and where the code shows it:
 
 Do not claim: payments or deals in the app, dealers or dealer pages, VIN decoding or vehicle history ([ADR-0053](../../adr/0053-defer-vin-decoding-until-a-real-decoder-exists.md)), inspection reports (the `InspectionInterestCta` component exists but no screen renders it), sharing (no share code exists in `apps/mobile`, [#495](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/495)), saved searches or alerts, a "phone verified" badge (no such string is in the mobile resources), profile photos until [#643](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/643) ships the screen (the API from [#642](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/642) can set `avatarKey`, but no app screen calls it), or support chat.
 
-**Decided (founder, 2026-10-06):** the store title is `AutoTM – Car Marketplace`. The alternative was the brand alone, `AutoTM`. Google forbids keyword stuffing in titles; a short descriptor is allowed.
+**Decided (founder, 2026-10-06):** the store title is `Carberk – Car Marketplace`. The alternative was the brand alone, `Carberk`. Google forbids keyword stuffing in titles; a short descriptor is allowed.
 
 ### English
 
-- **App name** (24): `AutoTM – Car Marketplace`
+- **App name** (24): `Carberk – Car Marketplace`
 - **Short description** (75): `Buy and sell cars in Turkmenistan. Message sellers and save your favorites.`
 - **Full description** (1,307):
 
 ```text
-AutoTM is a marketplace for cars in Turkmenistan. Browse cars for sale, contact sellers, and keep the cars you like in Favorites.
+Carberk is a marketplace for cars in Turkmenistan. Browse cars for sale, contact sellers, and keep the cars you like in Favorites.
 
 Find a car
 • Search by brand and model. Russian, Turkmen and English spellings work, and so does a model year.
@@ -81,7 +81,7 @@ Find a car
 
 Contact the seller
 • Call the seller or send a message in the app.
-• Send photos in a chat. If you allow notifications, AutoTM tells you when a new message arrives.
+• Send photos in a chat. If you allow notifications, Carberk tells you when a new message arrives.
 • Report a listing, a message or a user, and block anyone you don't want to hear from.
 
 Sell your car
@@ -94,17 +94,17 @@ Your account
 • You can browse without an account.
 • You can delete your account in the app or on our website.
 
-AutoTM is in Russian, Turkmen and English. AutoTM does not sell cars and does not take payments. Buyers and sellers agree on the deal themselves.
+Carberk is in Russian, Turkmen and English. Carberk does not sell cars and does not take payments. Buyers and sellers agree on the deal themselves.
 ```
 
 ### Russian (needs a native speaker's read)
 
-- **App name** (18): `AutoTM – авторынок`
+- **App name** (18): `Carberk – авторынок`
 - **Short description** (73): `Покупайте и продавайте авто в Туркменистане. Чат с продавцом и избранное.`
 - **Full description** (1,409):
 
 ```text
-AutoTM — площадка для покупки и продажи автомобилей в Туркменистане. Смотрите объявления, связывайтесь с продавцами и сохраняйте понравившиеся машины в избранное.
+Carberk — площадка для покупки и продажи автомобилей в Туркменистане. Смотрите объявления, связывайтесь с продавцами и сохраняйте понравившиеся машины в избранное.
 
 Найдите машину
 • Ищите по марке и модели. Поиск понимает написание на русском, туркменском и английском, а также год выпуска.
@@ -113,7 +113,7 @@ AutoTM — площадка для покупки и продажи автомо
 
 Свяжитесь с продавцом
 • Позвоните продавцу или напишите ему в приложении.
-• Отправляйте фото в чате. Если вы разрешите уведомления, AutoTM сообщит о новом сообщении.
+• Отправляйте фото в чате. Если вы разрешите уведомления, Carberk сообщит о новом сообщении.
 • Пожалуйтесь на объявление, сообщение или пользователя и заблокируйте того, от кого не хотите получать сообщения.
 
 Продайте свою машину
@@ -126,19 +126,19 @@ AutoTM — площадка для покупки и продажи автомо
 • Смотреть объявления можно без аккаунта.
 • Удалить аккаунт можно в приложении или на нашем сайте.
 
-AutoTM работает на русском, туркменском и английском. AutoTM не продаёт машины и не принимает платежи. О сделке покупатель и продавец договариваются сами.
+Carberk работает на русском, туркменском и английском. Carberk не продаёт машины и не принимает платежи. О сделке покупатель и продавец договариваются сами.
 ```
 
 ### Turkmen (needs a native speaker's read)
 
 Play Console has no Turkmen store listing language (founder check, 2026-10-08). Do not enter this text under Turkish: a Turkish listing is shown to phones set to Turkish, not to Turkmen-language phones, which get the default English listing. The English description therefore ends with a short Turkmen paragraph, and the full Turkmen text is kept in [`play-console-submission/not-used-on-store/`](play-console-submission/README.md) in case Play adds the language.
 
-- **App name** (24): `AutoTM – awtoulag bazary`
+- **App name** (24): `Carberk – awtoulag bazary`
 - **Short description** (72): `Türkmenistanda awtoulag satyň we satyn alyň. Satyjy bilen çat, halanlar.`
 - **Full description** (1,414):
 
 ```text
-AutoTM — Türkmenistanda awtoulag satmak we satyn almak üçin bazar. Bildirişleri görüň, satyjylar bilen habarlaşyň we halan maşynlaryňyzy Halanlarym bölümine goşuň.
+Carberk — Türkmenistanda awtoulag satmak we satyn almak üçin bazar. Bildirişleri görüň, satyjylar bilen habarlaşyň we halan maşynlaryňyzy Halanlarym bölümine goşuň.
 
 Maşyn tapyň
 • Marka we model boýunça gözläň. Gözleg rus, türkmen we iňlis dilindäki ýazylyşy hem-de öndürilen ýyly düşünýär.
@@ -147,7 +147,7 @@ Maşyn tapyň
 
 Satyjy bilen habarlaşyň
 • Satyja jaň ediň ýa-da programmada hat ýazyň.
-• Çatda surat iberiň. Bildirişlere rugsat berseňiz, AutoTM täze habar gelende size habar berer.
+• Çatda surat iberiň. Bildirişlere rugsat berseňiz, Carberk täze habar gelende size habar berer.
 • Bildiriş, habar ýa-da ulanyjy barada şikaýat ediň we islemeýän adamyňyzy bloklaň.
 
 Maşynyňyzy satyň
@@ -160,7 +160,7 @@ Siziň akkauntyňyz
 • Bildirişleri akkauntsyz hem görüp bilersiňiz.
 • Akkauntyňyzy programmada ýa-da web sahypamyzda pozup bilersiňiz.
 
-AutoTM rus, türkmen we iňlis dillerinde işleýär. AutoTM maşyn satmaýar we töleg kabul etmeýär. Alyjy bilen satyjy söwda barada özleri ylalaşýarlar.
+Carberk rus, türkmen we iňlis dillerinde işleýär. Carberk maşyn satmaýar we töleg kabul etmeýär. Alyjy bilen satyjy söwda barada özleri ylalaşýarlar.
 ```
 
 ### Graphics
@@ -174,19 +174,19 @@ AutoTM rus, türkmen we iňlis dillerinde işleýär. AutoTM maşyn satmaýar we
 Google's definitions decide each answer ([Data safety](https://support.google.com/googleplay/android-developer/answer/10787469)):
 
 - **Collected** means the data leaves the device, including data sent by SDKs in the app.
-- **Shared** means a transfer to a third party. Transfers to a **service provider** that processes data on AutoTM's behalf and under its instructions are not sharing. Neither is a transfer the user starts and reasonably expects, such as a Listing or a Message other Users can see.
+- **Shared** means a transfer to a third party. Transfers to a **service provider** that processes data on Carberk's behalf and under its instructions are not sharing. Neither is a transfer the user starts and reasonably expects, such as a Listing or a Message other Users can see.
 - **Optional** means the user can use the app without providing it. Browsing needs no account (auth-on-action, `apps/mobile/src/auth/intentStore.ts`), and every account field depends on a choice the User makes. Account data is therefore optional.
 
 ### Who receives data, and why none of it is "shared"
 
 | Recipient | What it receives | Code | Answer |
 |---|---|---|---|
-| Railway (hosting for api, worker, web, admin, Postgres, Redis, MinIO) | Everything AutoTM stores | [ADR-0039](../../adr/0039-phased-cloud-first-hosting.md) | Service provider. Not shared. |
+| Railway (hosting for api, worker, web, admin, Postgres, Redis, MinIO) | Everything Carberk stores | [ADR-0039](../../adr/0039-phased-cloud-first-hosting.md) | Service provider. Not shared. |
 | Resend (email delivery, US, 30-day records) | The email address and the message containing the Sign-in Code | `apps/worker/src/queues/email-code.processor.ts`; [ADR-0055](../../adr/0055-resend-sends-sign-in-codes-from-the-worker.md) | Service provider. Not shared. ADR-0055 already records "not shared". |
 | Google Firebase Cloud Messaging | The device push token, and a notification whose body carries up to 100 characters of the Message text | `apps/worker/src/queues/notification-fanout.processor.ts`; `apps/api/src/modules/notifications/domain/DirectMessageNotification.ts`, `domain/types.ts` (`DIRECT_MESSAGE_PREVIEW_MAX_LENGTH = 100`) | Service provider. Not shared. |
 | Firebase SDK in the app (through `expo-notifications`) | Firebase installation ID, app version, and Firebase user agent (device metadata, OS and SDK versions), sent by the SDK itself | `apps/mobile/package.json` (`expo-notifications`); `ExpoFirebaseMessagingService` in the `expo-notifications` Android manifest; [Firebase disclosure](https://firebase.google.com/docs/android/play-data-disclosure) | Collected. Service provider. Not shared. |
 | Other Users | Listings, the Listing contact phone, Display Name, Messages in their own Conversations | Listing detail and Conversation screens | The User publishes or sends these. Not shared. |
-| AutoTM moderators | Reported Listings, Messages and Users, through the admin app | `apps/admin/src/app/(admin)/reports`; `apps/api/src/modules/admin/application` | AutoTM itself. Not a third party. |
+| Carberk moderators | Reported Listings, Messages and Users, through the admin app | `apps/admin/src/app/(admin)/reports`; `apps/api/src/modules/admin/application` | Carberk itself. Not a third party. |
 
 No advertising, analytics or crash SDK is a dependency of `apps/mobile/package.json`, `apps/api/package.json`, `apps/worker/package.json` or `apps/web/package.json`. Monitoring comes after the reviewer submission ([#602](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/602), [#608](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/608)). A build that adds one needs a new Data safety review.
 
@@ -208,7 +208,7 @@ Deletion: Users can **request deletion**. In the app it is Cabinet > Profile > D
 | Photos and videos → **Photos** | Yes | Listing photos (`src/listings/wizard/Step2Photos.tsx`, compressed by `src/listings/uploadStaging/compressor.ts`); chat images (`src/conversations/components/MessageComposer.tsx`, `src/conversations/upload/chatImageUpload.ts`). Profile Photos join this row when #643 ships the screen; they use the Listing photo upload route. Stored in MinIO on Railway. | No | Optional | App functionality |
 | Photos and videos → Videos, audio, voice, music | No | `RECORD_AUDIO` is blocked and there is no video upload in the app (`app.config.js`) | — | — | — |
 | Messages → **Other in-app messages** | Yes | `Message.body` and image metadata (`schema.prisma`); copies attached to Message reports (`ContentReport.messageContext`); push preview text | No (FCM is a service provider) | Optional | App functionality. Also tick Fraud prevention, security, and compliance (founder decision, 2026-10-06), because moderators read reported Messages. |
-| Messages → Emails, SMS or MMS | No | The app reads no SMS or email. The Sign-in Code emails AutoTM sends are not user messages the app collects. | — | — | — |
+| Messages → Emails, SMS or MMS | No | The app reads no SMS or email. The Sign-in Code emails Carberk sends are not user messages the app collects. | — | — | — |
 | App activity → **Other user-generated content** | Yes | Listing fields (description, price, mileage, optional VIN, area text), Content Report reason and details (`ContentReport`) | No | Optional | App functionality. Fraud prevention, security, and compliance for reports. |
 | App activity → **Other actions** | Yes | Favorites (`Favorite`), blocks (`BlockedUser`), Conversation read watermarks and mutes (`src/api/conversations/useUpdateWatermark.ts`, `useMuteConversation.ts`) | No | Optional | App functionality |
 | App activity → **In-app search history** | No (founder decision, 2026-10-06) | Recent searches stay on the device ([#344](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/344) decision). No table stores searches. The API's request logger (`apps/api/src/common/requestLogging.ts`) writes each request path without its query string or parsed query, so no search term reaches the API request log; `requestLogging.spec.ts` proves it on the Nest Fastify stack. Railway's own edge HTTP log records a path per request and is outside the app: check one typed search, `GET /api/v1/catalog/search?q=…`, there before submission (founder checklist). | No | Optional | — |
@@ -221,7 +221,7 @@ Deletion: Users can **request deletion**. In the app it is Cabinet > Profile > D
 
 **In-app search history (decided, founder, 2026-10-06: not declared).** Option A is to declare it as collected, optional, for App functionality, because search URLs stay in Railway logs. Option B is to stop logging query strings before submission (a code change on its own issue) and declare nothing. Recommended: B, then not declared. Until B ships, A is the truthful answer. **Decided: B, and B has shipped** (PR 690, completed by PR 692), so nothing is declared, subject to the Railway edge log check above.
 
-**Decided (founder, 2026-10-06): Device or other IDs is optional, conditional on release audit item 4.** AutoTM registers the token only after the User grants notifications. By default, though, Firebase Messaging may fetch a token and installation ID when the app starts, whatever the permission. If the release audit shows a token or installation ID is fetched before the User grants notification permission, the answer must be "required" instead.
+**Decided (founder, 2026-10-06): Device or other IDs is optional, conditional on release audit item 4.** Carberk registers the token only after the User grants notifications. By default, though, Firebase Messaging may fetch a token and installation ID when the app starts, whatever the permission. If the release audit shows a token or installation ID is fetched before the User grants notification permission, the answer must be "required" instead.
 
 Other form questions:
 
@@ -282,7 +282,7 @@ The UI polish PR ([#696](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issu
 The questionnaire asks about the app's content and its interactive features ([rating requirements](https://support.google.com/googleplay/android-developer/answer/9859655)). The exact questions appear in Console. These are the facts to answer them with:
 
 - Category: a reference, utility or other non-game app. Not a game.
-- No violence, sexual content, profanity, drugs, gambling or simulated gambling produced by AutoTM.
+- No violence, sexual content, profanity, drugs, gambling or simulated gambling produced by Carberk.
 - **Users can interact and exchange content: yes.** Users write to each other in Conversations with text and photos, and publish Listings with photos and free text.
 - **Shares the user's location with other users: no** as a device location. A Listing shows the city the seller picked.
 - **Digital purchases: no.**
@@ -291,7 +291,7 @@ The questionnaire asks about the app's content and its interactive features ([ra
 
 ### User-generated content
 
-| UGC requirement ([policy](https://support.google.com/googleplay/android-developer/answer/9876937)) | AutoTM | Evidence |
+| UGC requirement ([policy](https://support.google.com/googleplay/android-developer/answer/9876937)) | Carberk | Evidence |
 |---|---|---|
 | Users accept the terms before creating UGC | Sign-in entry screen: "By continuing, you agree to the Terms and Privacy Policy", with links. Signing in is needed before posting or sending. The Check step links the posting rules before Publish. | `components/auth/AuthEntryScreen.tsx`; `src/listings/wizard/CheckAndPublish.tsx` (line 345); [83-legal consent UX](83-legal.md#consent-ux-in-auth) |
 | Objectionable content defined and prohibited | Terms (prohibited content) and posting rules | `apps/web/src/app/[locale]/legal/terms/page.tsx`, `legal/posting-rules/page.tsx` |
@@ -319,13 +319,13 @@ Hosts come from [83-legal](83-legal.md#where-they-live) and `eas.json` (`product
 | Posting rules (UGC evidence) | `https://autotm.bagtyyar.dev/en/legal/posting-rules` | Must load from an outside network before submission (#496) |
 | Delete account URL (Data safety) | `https://autotm.bagtyyar.dev/en/account/delete` | Must load from an outside network before submission (#496) |
 
-Check the `ru` and `tk` versions of each path the same way. The deletion page must name AutoTM and show the deletion steps prominently ([account deletion](https://support.google.com/googleplay/android-developer/answer/13327111)).
+Check the `ru` and `tk` versions of each path the same way. The deletion page must name Carberk and show the deletion steps prominently ([account deletion](https://support.google.com/googleplay/android-developer/answer/13327111)).
 
-**Decided (founder, 2026-10-06):** the developer contact email on the store listing is `bagtyyarkowusow.dev@gmail.com` until AutoTM owns a domain (also the privacy and terms contact, PR 689). The app's Help screen reads its support contacts from `apps/mobile/src/config/supportContacts.ts`; the store contact should match it or replace it on purpose.
+**Decided (founder, 2026-10-06):** the developer contact email on the store listing is `bagtyyarkowusow.dev@gmail.com` until Carberk owns a domain (also the privacy and terms contact, PR 689). The app's Help screen reads its support contacts from `apps/mobile/src/config/supportContacts.ts`; the store contact should match it or replace it on purpose.
 
 ## 6. Reviewer access instructions template
 
-Google requires sign-in details that work at all times, from any location, in English, and that get past one-time codes ([sign-in details](https://support.google.com/googleplay/android-developer/answer/15748846)). AutoTM's reviewer bypass does this. With `REVIEW_DEMO_ACCOUNT_ENABLED`, `REVIEW_DEMO_ACCOUNTS_JSON` holds three to five reserved accounts. Each has a `+993` phone, an email and a fixed six-digit code (`apps/api/src/env.schema.ts`, lines 226–308). Production has five reserved accounts (2026-10-06). The template lists three roles — buyer, seller and a deletion test — and the remaining reserved accounts are spares that are not listed for reviewers.
+Google requires sign-in details that work at all times, from any location, in English, and that get past one-time codes ([sign-in details](https://support.google.com/googleplay/android-developer/answer/15748846)). Carberk's reviewer bypass does this. With `REVIEW_DEMO_ACCOUNT_ENABLED`, `REVIEW_DEMO_ACCOUNTS_JSON` holds three to five reserved accounts. Each has a `+993` phone, an email and a fixed six-digit code (`apps/api/src/env.schema.ts`, lines 226–308). Production has five reserved accounts (2026-10-06). The template lists three roles — buyer, seller and a deletion test — and the remaining reserved accounts are spares that are not listed for reviewers.
 
 - For a reserved **email**, the API stores a request with the fixed code and sends no email (`RequestOtp.ts`, lines 108–139). The request still counts against the limit of **5 code requests per address per 24 hours** and 10 per IP address per hour, and the email code expires after 10 minutes (`OtpAttemptLedger.ts`, `SignInCodeDestination.ts`). Reserved emails have no exemption ([ADR-0055](../../adr/0055-resend-sends-sign-in-codes-from-the-worker.md)).
 - For a reserved **phone**, the request returns without an issued code row or a daily request limit, and the fixed code signs in outside a temporary verification lock. Five failed attempts within 15 minutes lock that destination for 15 minutes from the fifth failure. Correct codes are also refused during that lock; retrying or tapping Resend does not extend or clear it. The shared Redis budget survives API instance changes. See `RequestOtp.ts`, `VerifyOtp.ts` and [ADR-0092](../../adr/0092-temporary-failure-limits-for-fixed-code-phone-sign-in.md).
@@ -335,7 +335,7 @@ Google requires sign-in details that work at all times, from any location, in En
 Paste into Console > App access, replacing every `<...>` from the operator's secret store. Keep the real values out of git and issues.
 
 ```text
-AutoTM is a car marketplace for Turkmenistan. Browsing needs no account. Selling, messages, favorites and the profile need sign-in. Sign-in uses a one-time code; there is no password. These accounts work from any country.
+Carberk is a car marketplace for Turkmenistan. Browsing needs no account. Selling, messages, favorites and the profile need sign-in. Sign-in uses a one-time code; there is no password. These accounts work from any country.
 
 MAIN SIGN-IN: EMAIL
 1. Open the Cabinet tab and tap Sign in (or tap any action that needs an account).
@@ -394,7 +394,7 @@ Found while checking the answers above against `origin/main`. Each needs its own
 4. **API request logs.** `pinoHttp` with default serializers logs every request's URL (search terms included), remote address and headers to Railway logs. That bears on search history (section 2), and until PR 684 the logged headers also included `Authorization` bearer tokens; PR 684 redacts credential headers. **Resolved**: PR 684 redacts credential headers; the request log now drops query strings (same PR as above), and a sign-in code request's log line carries neither the remote address nor the forwarding headers, so no request IP outlives the 30-day sign-in code records (PR for #694).
 5. **Photo location metadata is unproven.** Listing and chat photos are re-encoded by `expo-image-manipulator` before upload, which should drop EXIF GPS, and the Android photo picker hides location without `ACCESS_MEDIA_LOCATION`. No test proves it. Check an uploaded photo from a GPS-tagged original on the physical device (#345) before answering "Precise location: No" with confidence. **Resolved** on the server: Listing photo originals (PR 687) and chat images ([#688](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/688)) are re-encoded without metadata before another User can load them, each with a test that feeds a GPS-tagged JPEG through the stored path. Chat images are cleaned when the Message is sent, so an image that was uploaded and never sent, or sent before #688 shipped, keeps what the app uploaded; for those the answer still rests on the app's own re-encode, and the device check (#345) stays worth doing.
 6. **The privacy policy says device info is collected "for debugging".** `content.ts` line 36 says device model, OS and app version are collected. The app sends only a fixed device label ("Android app", `app/(auth)/otp.tsx`, line 121) and the HTTP user agent, stored on `Session`. This over-states rather than under-states, so it is not a Play risk, but the policy and the form should agree.
-7. **Profile Photo files after removal.** Shipped: the app side (#643) and the server side (#642, [ADR-0088](../../adr/0088-exclusive-upload-adoption-and-retirement.md)). A Profile Photo is public User content and is moderated through the existing User report: a moderator removes it with `POST /api/v1/admin/users/:id/remove-photo`, which writes a `USER_PHOTO_REMOVE` audit entry, and the admin browser has no button for it yet. Replacement, removal by the User, removal by a moderator and the day-30 purge each stop publishing the key and record deletion work in the same transaction; the worker then deletes the original and its eight variants and retries after a failure, so deletion is not instant and the policy says so. The original and variants are re-encoded without EXIF or GPS, by the same code path as Listing photos (item 5). What stays true and must not be over-claimed: copies cached or saved outside AutoTM's storage are not erased; an upload the User presigned and never set as a photo is not swept; and whether the deployed storage provider honours conditional writes with versioning off is a release check a person runs ([worker overview](../../../apps/worker/CONTEXT.md)).
+7. **Profile Photo files after removal.** Shipped: the app side (#643) and the server side (#642, [ADR-0088](../../adr/0088-exclusive-upload-adoption-and-retirement.md)). A Profile Photo is public User content and is moderated through the existing User report: a moderator removes it with `POST /api/v1/admin/users/:id/remove-photo`, which writes a `USER_PHOTO_REMOVE` audit entry, and the admin browser has no button for it yet. Replacement, removal by the User, removal by a moderator and the day-30 purge each stop publishing the key and record deletion work in the same transaction; the worker then deletes the original and its eight variants and retries after a failure, so deletion is not instant and the policy says so. The original and variants are re-encoded without EXIF or GPS, by the same code path as Listing photos (item 5). What stays true and must not be over-claimed: copies cached or saved outside Carberk's storage are not erased; an upload the User presigned and never set as a photo is not swept; and whether the deployed storage provider honours conditional writes with versioning off is a release check a person runs ([worker overview](../../../apps/worker/CONTEXT.md)).
 
 ## References
 

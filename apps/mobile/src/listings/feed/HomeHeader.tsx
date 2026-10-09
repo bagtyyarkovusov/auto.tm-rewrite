@@ -17,7 +17,7 @@ import { tabularFigures } from "@/lib/font";
 import { localeTag } from "@/src/i18n/resources";
 
 /**
- * Home's header above the New listings grid: the AutoTM wordmark with 🔍
+ * Home's header above the New listings grid: the Carberk wordmark with 🔍
  * (opens Search), the "Brand, model" card with the live Listing count (opens
  * the Brand picker), and the New listings heading with See all (opens Results).
  *
@@ -34,7 +34,7 @@ export function HomeHeader() {
     <View className="gap-5 pb-1">
       <View className="flex-row items-center justify-between px-5 pt-2">
         <View className="h-11 justify-center">
-          <BrandLogo width={136} height={24} />
+          <BrandLogo width={132} height={24} />
         </View>
         <Button
           variant="secondary"

@@ -3,15 +3,15 @@ import type { SignInCodePurpose } from "./OtpRequest";
 type Locale = "ru" | "tk" | "en";
 
 /**
- * Contact-phone texts approved in ADR-0081, each one SMS segment: RU 70 and
- * TK 66 characters in UCS-2, EN 81 in GSM-7. Any wording change is recounted
+ * Contact-phone texts approved in ADR-0081 and renamed in ADR-0093, each one
+ * SMS segment: RU 69 and TK 67 characters in UCS-2, EN 82 in GSM-7. Any wording change is recounted
  * against those limits; none may carry a link.
  */
 const CONTACT_PHONE_TEXT: Record<Locale, (code: string) => string> = {
-  ru: (code) => `AutoTM ${code}: номер покажут в объявлении. Не давайте код без согласия`,
-  tk: (code) => `AutoTM ${code}: belgiňiz bildirişde görüner. Razy bolmasaňyz bermäň`,
+  ru: (code) => `Carberk ${code}: номер будет в объявлении. Не давайте код без согласия`,
+  tk: (code) => `Carberk ${code}: belgiňiz bildirişde görüner. Razy bolmasaňyz bermäň`,
   en: (code) =>
-    `AutoTM code ${code} puts this number on a car listing. Share it only if you agree.`,
+    `Carberk code ${code} puts this number on a car listing. Share it only if you agree.`,
 };
 
 /**

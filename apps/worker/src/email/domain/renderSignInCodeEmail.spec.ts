@@ -4,9 +4,9 @@ import { renderSignInCodeEmail } from "./renderSignInCodeEmail";
 import { EMAIL_LOCALE, SIGN_IN_CODE_PURPOSE, type EmailLocale } from "./types";
 
 const NEVER_ASK: Record<EmailLocale, string> = {
-  en: "AutoTM will never ask you for this code",
-  ru: "AutoTM никогда не попросит у вас этот код",
-  tk: "AutoTM bu kody sizden hiç haçan soramaz",
+  en: "Carberk will never ask you for this code",
+  ru: "Carberk никогда не попросит у вас этот код",
+  tk: "Carberk bu kody sizden hiç haçan soramaz",
 };
 
 describe("renderSignInCodeEmail", () => {
@@ -22,7 +22,7 @@ describe("renderSignInCodeEmail", () => {
 
         expect(email.to).toBe("buyer@example.com");
         expect(email.subject).toContain("123456");
-        expect(email.subject).toContain("AutoTM");
+        expect(email.subject).toContain("Carberk");
         for (const part of [email.text, email.html]) {
           expect(part).toContain("123456");
           expect(part).toContain("10");

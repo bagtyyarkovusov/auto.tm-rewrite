@@ -6,10 +6,10 @@ Assets and text to enter in Play Console for `com.auto_tm.ynamly`. The answers f
 
 | File | Console field | Requirement | State |
 |---|---|---|---|
-| `graphics/app-icon-512.png` | Store listing → App icon | 512 × 512 PNG, up to 1 MB | Ready |
-| `graphics/feature-graphic-1024x500-en.png` (also `-ru`) | Store listing → Feature graphic | 1024 × 500 PNG or JPEG, up to 15 MB | Draft for the founder to approve |
+| `graphics/app-icon-512.png` | Store listing → App icon | 512 × 512 PNG, up to 1 MB | Carberk "c." icon ([brand folder](../brand/README.md)). Ready |
+| `graphics/feature-graphic-1024x500-en.png` (also `-ru`) | Store listing → Feature graphic | 1024 × 500 PNG or JPEG, up to 15 MB | Carberk wordmark with "by Alpha Motors". Awaiting the founder's approval |
 | `text/en.txt` (default, ends with a short Turkmen paragraph), `text/ru.txt` | App name, short and full description | 30 / 80 / 4,000 characters | EN ready; RU needs a native read |
-| `screenshots/phone/en/`, `screenshots/phone/ru/` | Store listing → Phone screenshots | 2 to 8 per language, PNG or JPEG, 9:16, each side 320 to 3,840 px (1080 × 1920 or larger is best) | Six per language, 1080 × 2400, from the release build of `55666324` on staging data (2026-10-09). Awaiting the founder's approval |
+| `screenshots/phone/en/`, `screenshots/phone/ru/` | Store listing → Phone screenshots | 2 to 8 per language, PNG or JPEG, 9:16, each side 320 to 3,840 px (1080 × 1920 or larger is best) | Six per language, 1080 × 2400, from the release build of `55666324` on staging data (2026-10-09). None of the six shows the product name or logo, so they stay valid after the rename to Carberk. Awaiting the founder's approval |
 
 ## Screenshot rules
 

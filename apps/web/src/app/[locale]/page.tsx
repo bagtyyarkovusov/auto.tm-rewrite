@@ -9,10 +9,16 @@ const subtitle: Record<Locale, string> = {
   en: "Turkmenistan's auto marketplace — buy and sell cars",
 };
 
+const parentCompanyLine: Record<Locale, string> = {
+  ru: "от Alpha Motors",
+  tk: "Alpha Motors bilen arzan däl-de, amatly ulag satyn al.",
+  en: "by Alpha Motors",
+};
+
 const trustLinkLabel: Record<Locale, string> = {
-  ru: "Как AutoTM защищает покупателей",
-  tk: "AutoTM sizi nählet howpsuz saklaýar",
-  en: "How AutoTM keeps you safe",
+  ru: "Как Carberk защищает покупателей",
+  tk: "Carberk sizi nählet howpsuz saklaýar",
+  en: "How Carberk keeps you safe",
 };
 
 export default async function LandingPage({
@@ -25,9 +31,12 @@ export default async function LandingPage({
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="text-center max-w-2xl">
-        <h1 className="text-5xl font-bold text-brand-500">AutoTM</h1>
+        <h1 className="text-5xl font-bold text-brand-500">Carberk</h1>
         <p className="mt-4 text-lg text-neutral-600">
           {subtitle[locale as Locale] ?? subtitle.ru}
+        </p>
+        <p className="mt-2 text-sm text-neutral-500">
+          {parentCompanyLine[locale as Locale] ?? parentCompanyLine.ru}
         </p>
         <div className="mt-8">
           <Button variant="primary" size="lg">

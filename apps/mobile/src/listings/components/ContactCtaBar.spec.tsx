@@ -81,7 +81,7 @@ describe("ContactCtaBar", () => {
       fireEvent.press(screen.getByRole("button", { name: "Message" }));
       expect(state.mutate).not.toHaveBeenCalled();
       expect(
-        screen.queryByText("AutoTM verifies sellers' numbers by SMS."),
+        screen.queryByText("Carberk verifies sellers' numbers by SMS."),
       ).toBeNull();
     },
   );
@@ -140,7 +140,7 @@ describe("ContactCtaBar without calls", () => {
       expect(screen.getAllByRole("button")).toHaveLength(1);
       const message = screen.getByRole("button", { name: "Message", disabled: false });
       expect(message.props.className).toContain("flex-1");
-      expect(screen.queryByText("AutoTM verifies sellers' numbers by SMS.")).toBeNull();
+      expect(screen.queryByText("Carberk verifies sellers' numbers by SMS.")).toBeNull();
       screen.unmount();
     }
   });
