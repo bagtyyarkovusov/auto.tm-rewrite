@@ -322,7 +322,7 @@ export function ListingDetailView({
           </View>
           <View className="flex-row gap-2">
             <Text className="text-caption text-muted-foreground">
-              {t("updated")}
+              {t("detailEdited")}
             </Text>
             <Text className="text-caption text-muted-foreground">
               {detailDate(listing.updatedAt, i18n.language)}
