@@ -24,4 +24,4 @@ Tablet and Chromebook screenshots, a promo video and a TV banner are optional an
 
 ## Turkmen
 
-Play Console has no Turkmen store listing language (founder check, 2026-10-08). Turkmen-language phones see the default English listing, so its description ends with a short Turkmen paragraph. The full Turkmen text and graphic are kept in `not-used-on-store/`. Do not enter Turkmen text under Turkish.
+Play Console has no Turkmen store listing language (founder check, 2026-10-08). **Decided (founder, 2026-10-09):** the Turkmen set goes under the Turkish (`tr-TR`) listing, which is the app's default language; English and Russian are translations. Use `text/tk.txt`, `graphics/feature-graphic-1024x500-tk.png` and `screenshots/phone/tk/` for it. The Turkmen screenshots are from the release build of the Carberk rename commit on staging data (2026-10-09), with the same six screens as the other two sets.

@@ -131,7 +131,7 @@ Carberk работает на русском, туркменском и англ
 
 ### Turkmen (needs a native speaker's read)
 
-Play Console has no Turkmen store listing language (founder check, 2026-10-08). Do not enter this text under Turkish: a Turkish listing is shown to phones set to Turkish, not to Turkmen-language phones, which get the default English listing. The English description therefore ends with a short Turkmen paragraph, and the full Turkmen text is kept in [`play-console-submission/not-used-on-store/`](play-console-submission/README.md) in case Play adds the language.
+Play Console has no Turkmen store listing language (founder check, 2026-10-08). **Decided (founder, 2026-10-09):** the Turkmen text, feature graphic and screenshots are entered under the Turkish (`tr-TR`) listing, and that listing is the app's default language; English and Russian are translations. The founder accepts that phones set to Turkish see Turkmen text. This replaces the earlier note that kept the Turkmen text out of the store. The English description still ends with a short Turkmen paragraph. The files are in [`play-console-submission/`](play-console-submission/README.md).
 
 - **App name** (24): `Carberk – awtoulag bazary`
 - **Short description** (72): `Türkmenistanda awtoulag satyň we satyn alyň. Satyjy bilen çat, halanlar.`
