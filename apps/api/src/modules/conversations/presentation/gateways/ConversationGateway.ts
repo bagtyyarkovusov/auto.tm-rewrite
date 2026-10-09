@@ -16,6 +16,7 @@ import {
   conversationRoom,
   CONVERSATION_ROOM_PREFIX,
   REALTIME_NAMESPACE,
+  userRoom,
 } from "../../../realtime/infrastructure/realtime.config";
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
 import { PRESENCE_PORT, type PresencePort } from "../../../realtime/domain/ports/PresencePort";
@@ -484,8 +485,12 @@ export class ConversationGateway implements OnGatewayDisconnect {
 
   @OnEvent("MessageSent")
   handleMessageSent(event: MessageSentEvent): void {
+    // The conversation room reaches sockets that joined it; the recipient's
+    // user room (joined on every authenticated connect) reaches the recipient
+    // wherever they are in the app. Socket.IO dedupes a socket in both rooms.
     this.server
       .to(conversationRoom(event.conversationId))
+      .to(userRoom(event.recipientId))
       .emit("message:new", { message: this.toBroadcastSummary(event) });
   }
 

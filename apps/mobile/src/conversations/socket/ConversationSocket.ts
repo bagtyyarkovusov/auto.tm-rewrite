@@ -60,6 +60,20 @@ export interface ConversationSocketOptions {
   token?: string;
 }
 
+let sharedSocket: ConversationSocket | null = null;
+
+/**
+ * The one app-wide socket, shared by the Conversation screen hook and the
+ * global listener. The server ties the socket to the authenticated User at
+ * the handshake, so every consumer must use the same connection.
+ */
+export function getSharedConversationSocket(): ConversationSocket {
+  if (!sharedSocket) {
+    sharedSocket = new ConversationSocket();
+  }
+  return sharedSocket;
+}
+
 export class ConversationSocket {
   private socket: Socket | null = null;
   private authToken: string | null = null;

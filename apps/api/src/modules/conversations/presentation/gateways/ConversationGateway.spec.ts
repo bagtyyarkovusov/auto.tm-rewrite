@@ -508,6 +508,19 @@ describe("ConversationGateway", () => {
   });
 
   describe("MessageSent broadcast", () => {
+    // server.to(room).to(anotherRoom).emit(...) dedupes a socket that sits in
+    // both rooms, so the mock operator must chain like a BroadcastOperator.
+    function chainableBroadcast() {
+      const emitMock = vi.fn();
+      const operator: { emit: typeof emitMock; to: ReturnType<typeof vi.fn> } = {
+        emit: emitMock,
+        to: vi.fn(),
+      };
+      operator.to.mockReturnValue(operator);
+      const toMock = vi.fn().mockReturnValue(operator);
+      return { emitMock, operator, toMock };
+    }
+
     function messageSentEvent(
       overrides: Partial<MessageSentEvent> = {},
     ): MessageSentEvent {
@@ -529,8 +542,7 @@ describe("ConversationGateway", () => {
 
     it("fans out message:new to the conversation room for a message sent over any transport", () => {
       const { gateway } = buildGateway();
-      const emitMock = vi.fn();
-      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      const { emitMock, toMock } = chainableBroadcast();
       gateway.server = { to: toMock } as unknown as Server;
 
       gateway.handleMessageSent(messageSentEvent());
@@ -553,23 +565,20 @@ describe("ConversationGateway", () => {
 
     it("also fans out message:new to the recipient's user room, so a connected recipient outside the conversation room is reached", () => {
       const { gateway } = buildGateway();
-      const emitMock = vi.fn();
-      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      const { emitMock, operator, toMock } = chainableBroadcast();
       gateway.server = { to: toMock } as unknown as Server;
 
       gateway.handleMessageSent(messageSentEvent());
 
       expect(toMock).toHaveBeenCalledWith(conversationRoom(CONV_1));
-      expect(toMock).toHaveBeenCalledWith(userRoom("seller-1"));
+      expect(operator.to).toHaveBeenCalledWith(userRoom("seller-1"));
       expect(emitMock).toHaveBeenCalledTimes(1);
     });
 
     it("omits clientMessageId when the send carried none", () => {
       const { gateway } = buildGateway();
-      const emitMock = vi.fn();
-      gateway.server = {
-        to: vi.fn().mockReturnValue({ emit: emitMock }),
-      } as unknown as Server;
+      const { emitMock, toMock } = chainableBroadcast();
+      gateway.server = { to: toMock } as unknown as Server;
 
       gateway.handleMessageSent(
         messageSentEvent({
@@ -590,10 +599,8 @@ describe("ConversationGateway", () => {
 
     it("marks a freshly sent post-reference card as available", () => {
       const { gateway } = buildGateway();
-      const emitMock = vi.fn();
-      gateway.server = {
-        to: vi.fn().mockReturnValue({ emit: emitMock }),
-      } as unknown as Server;
+      const { emitMock, toMock } = chainableBroadcast();
+      gateway.server = { to: toMock } as unknown as Server;
       const snapshot = {
         listingId: LISTING_1,
         brandId: "brand-1",
