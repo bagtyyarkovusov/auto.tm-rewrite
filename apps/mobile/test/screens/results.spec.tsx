@@ -183,17 +183,21 @@ describe("Results approved behavior", () => {
 describe("Results floating filters row", () => {
   const scrollTo = (view: ReturnType<typeof renderMobile>, y: number) =>
     fireEvent.scroll(view.getByTestId("results-list"), { nativeEvent: { contentOffset: { y } } });
-  it("adds a second filters row past 180pt of scrolling and removes it when scrolled back", () => {
+  it("shows a second filters row on an upward scroll past 180pt and hides it on a downward scroll (#781)", () => {
     Object.assign(routeParams, { cityId: "ashgabat" });
     const view = renderMobile(<ResultsScreen />);
     const rows = () => view.getAllByLabelText("Filters: 1");
     expect(rows()).toHaveLength(1);
-    scrollTo(view, 180);
-    expect(rows()).toHaveLength(1);
     scrollTo(view, 181);
+    expect(rows()).toHaveLength(1);
+    scrollTo(view, 400);
+    expect(rows()).toHaveLength(1);
+    scrollTo(view, 300);
     expect(rows()).toHaveLength(2);
     expect(view.getAllByLabelText("Remove city filter")).toHaveLength(2);
-    scrollTo(view, 400);
+    scrollTo(view, 320);
+    expect(rows()).toHaveLength(1);
+    scrollTo(view, 310);
     expect(rows()).toHaveLength(2);
     scrollTo(view, 0);
     expect(rows()).toHaveLength(1);
@@ -201,6 +205,7 @@ describe("Results floating filters row", () => {
   it("keeps the floating row working: its chip removes the filter and its Filters button opens the form", () => {
     Object.assign(routeParams, { cityId: "ashgabat" });
     const view = renderMobile(<ResultsScreen />);
+    scrollTo(view, 400);
     scrollTo(view, 300);
     fireEvent.press(matchAt(view.getAllByLabelText("Filters: 1"), 1));
     expect(routerMock.push).toHaveBeenCalledWith({ pathname: "/(tabs)/(search)/parameters", params: expect.objectContaining({ cityId: "ashgabat", returnToResults: "1" }) });

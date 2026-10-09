@@ -76,10 +76,17 @@ export default function ResultsScreen() {
   const floated = useSharedValue(0);
   const floatingStyle = useAnimatedStyle(() => ({ opacity: floated.value, transform: [{ translateY: (1 - floated.value) * 12 }] }));
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    scrollY.current = event.nativeEvent.contentOffset.y;
-    const next = scrollY.current > 180;
-    setFloating((previous) => previous === next ? previous : next);
-    floated.value = withTiming(next ? 1 : 0, timing("fast"));
+    const y = event.nativeEvent.contentOffset.y;
+    const dy = y - scrollY.current;
+    scrollY.current = y;
+    // The pill follows an upward scroll — the way back toward the filters —
+    // and steps aside while the list moves down, so it cannot rest over a
+    // card's Call button (#781). Small jitters change nothing.
+    const next = y <= 180 ? false : dy < -2 ? true : dy > 2 ? false : null;
+    if (next !== null) {
+      setFloating((previous) => previous === next ? previous : next);
+      floated.value = withTiming(next ? 1 : 0, timing("fast"));
+    }
   }, [floated]);
   const reset = () => { filters.replace({ sort }); router.setParams(writeResultsRouteState({ sort })); };
   const remove = (group: ChipGroup) => commit(group === "city" ? { cityId: undefined } : group === "price" ? { priceMin: undefined, priceMax: undefined } : { yearMin: undefined, yearMax: undefined });

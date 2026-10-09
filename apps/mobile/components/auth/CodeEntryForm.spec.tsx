@@ -8,6 +8,7 @@ import { act, fireEvent, renderMobile } from "@/test/render";
 
 // The test host has no Animated; this stand-in keeps the cells' contract: a
 // text input that takes digits and stops taking them while disabled.
+const otpFocusLog = vi.hoisted(() => ({ editableAtFocus: [] as boolean[] }));
 vi.mock("./OtpCells", async () => {
   const { forwardRef, useImperativeHandle } = await import("react");
   const { TextInput } = await import("react-native");
@@ -21,7 +22,10 @@ vi.mock("./OtpCells", async () => {
         }: { value: string; onChange: (v: string) => void; disabled?: boolean },
         ref,
       ) => {
-        useImperativeHandle(ref, () => ({ focus: () => {}, shake: () => {} }));
+        useImperativeHandle(ref, () => ({
+          focus: () => { otpFocusLog.editableAtFocus.push(!disabled); },
+          shake: () => {},
+        }));
         return (
           <TextInput
             accessibilityLabel="Code"
@@ -74,6 +78,7 @@ beforeEach(() => {
   vi.stubGlobal("__DEV__", false);
   vi.stubGlobal("requestAnimationFrame", (callback: () => void) => { callback(); return 0; });
   vi.useFakeTimers();
+  otpFocusLog.editableAtFocus.length = 0;
 });
 
 afterEach(() => {
@@ -291,5 +296,18 @@ describe("CodeEntryForm wrong-code recovery", () => {
     expect(verify).toHaveBeenNthCalledWith(2, "123456");
     expect(screen.queryByText("Wrong code. Try again.")).toBeNull();
     expect(props.resend).not.toHaveBeenCalled();
+  });
+
+  it("refocuses the cells only once they are editable again (#781)", async () => {
+    const verify = vi.fn().mockRejectedValueOnce(new ApiError("INVALID_OTP", 400, "Invalid OTP code"));
+    const { screen } = renderForm({ verify });
+
+    await act(async () => {
+      fireEvent.changeText(screen.getByLabelText("Code"), "000000");
+    });
+
+    expect(screen.getByText("Wrong code. Try again.")).toBeTruthy();
+    expect(otpFocusLog.editableAtFocus.length).toBeGreaterThan(0);
+    expect(otpFocusLog.editableAtFocus.every((editable) => editable)).toBe(true);
   });
 });
