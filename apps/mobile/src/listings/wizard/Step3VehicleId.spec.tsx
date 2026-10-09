@@ -1,11 +1,13 @@
 import { Profiler, useState, type ReactElement } from "react";
 import { FlatList } from "react-native";
 import { WizardSchemas } from "@auto-tm/contracts";
+import { useTranslation } from "react-i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fireEvent, first, renderMobile, within } from "../../../test/render";
 
 import Step3VehicleId from "./Step3VehicleId";
+import { translateWizardFieldErrors } from "./wizardErrors";
 
 const catalog = vi.hoisted(() => ({
   brands: [
@@ -133,6 +135,36 @@ describe("Car step", () => {
       <Step3VehicleId payload={{ vin: "A".repeat(18) }} onChange={() => {}} fieldErrors={fieldErrors} showErrors />,
     );
     expect(screen.getByText("Use 17 characters or fewer")).toBeTruthy();
+  });
+
+  it("shows the VIN error while typing, without waiting for Continue (#780)", () => {
+    function LiveVin() {
+      const [payload, setPayload] = useState<Payload>({});
+      const { t } = useTranslation();
+      const fieldErrors = translateWizardFieldErrors(
+        t,
+        WizardSchemas.validateStep("vehicle", payload).fieldErrors,
+      );
+      return (
+        <Step3VehicleId
+          payload={payload}
+          onChange={(updates) => setPayload((current) => ({ ...current, ...updates }))}
+          fieldErrors={fieldErrors}
+        />
+      );
+    }
+    const message = "Enter a 17-character VIN using letters and digits, without I, O or Q.";
+    const screen = renderMobile(<LiveVin />);
+    expect(screen.queryByText(message)).toBeNull();
+
+    fireEvent.changeText(screen.getByLabelText("VIN"), "Corolla");
+    expect(screen.getByText(message)).toBeTruthy();
+
+    fireEvent.changeText(screen.getByLabelText("VIN"), "WBA1234567890ABCD");
+    expect(screen.queryByText(message)).toBeNull();
+
+    fireEvent.changeText(screen.getByLabelText("VIN"), "");
+    expect(screen.queryByText(message)).toBeNull();
   });
 
   it("locks the VIN with the rest of Car when editing a published Listing", () => {
