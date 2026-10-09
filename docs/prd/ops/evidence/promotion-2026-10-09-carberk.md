@@ -68,7 +68,16 @@ Users (45) and listings (49) were unchanged after the migration.
 - Push delivery.
 - The store build against production; it has not been built yet.
 
+## First production admin (ADR-0045)
+
+On the founder's instruction in the release session, the founder's own phone became the first production admin. The phone number is not recorded here.
+
+- 02:51:35 UTC: break-glass insert of the user record only, role `buyer`, through `psql` inside the Postgres container. User id `9046e7e0-85ce-4f2b-b6f2-1b3180b31302`.
+- `admin:promote --dry-run` inside the api container reported it would promote that user; the real run then promoted it with the reason "First production admin: founder (ADR-0045)".
+- Role counts afterwards: 33 buyers, 12 sellers, 1 admin.
+- 02:53:56 UTC: the founder requested a sign-in code on the admin site. The operator read it from the api's mock SMS log line and gave it to the founder, who signed in and enrolled the authenticator. The operator did not sign in and holds no authenticator secret, backup code or session for this identity.
+
 ## Open
 
-- Create the founder's production admin identity (ADR-0045), then run the sixth smoke check.
+- The sixth smoke check (admin moderation) is still unrun by script, because the authenticator secret stays only with the founder. The founder can do the same check by hand in the admin site.
 - The backup file can be deleted from the volume once the release is stable.
