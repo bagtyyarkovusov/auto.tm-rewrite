@@ -385,6 +385,39 @@ describe("Conversation message broadcast e2e", () => {
     expect(messageSentEvents).toHaveLength(1);
   });
 
+  it("delivers to a connected recipient that never joined the conversation room", async () => {
+    const { buyerToken, sellerToken, conversationId } = await seedConversation();
+    // Connected to the namespace — so it sits in its user room — but it never
+    // opened the Conversation, like an app on another screen.
+    const idleSocket = io(`${baseUrl}${REALTIME_NAMESPACE}`, {
+      auth: { token: sellerToken },
+      transports: ["websocket"],
+      forceNew: true,
+    });
+    sockets.push(idleSocket);
+    const received: MessageNew[] = [];
+    idleSocket.on("message:new", (event: MessageNew) => received.push(event));
+    await new Promise<void>((resolve, reject) => {
+      idleSocket.once("connect", () => resolve());
+      idleSocket.once("connect_error", reject);
+    });
+
+    const res = await request
+      .post(`/api/v1/conversations/${conversationId}/messages`)
+      .set("Authorization", `Bearer ${buyerToken}`)
+      .send({ text: "Hello to an idle app" })
+      .expect(201);
+
+    await waitFor(received, 1);
+
+    expect(received).toHaveLength(1);
+    expect(received[0]?.message).toMatchObject({
+      id: res.body.id,
+      kind: "text",
+      text: "Hello to an idle app",
+    });
+  });
+
   it("broadcasts a socket send exactly once, including across a retry", async () => {
     const { buyerToken, sellerToken, conversationId } = await seedConversation();
     const peer = await joinedSocket(sellerToken, conversationId);

@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Server, Socket } from "socket.io";
 
-import { conversationRoom } from "../../../realtime/infrastructure/realtime.config";
+import {
+  conversationRoom,
+  userRoom,
+} from "../../../realtime/infrastructure/realtime.config";
 import type { AuthenticatedSocketUser } from "../../../realtime/infrastructure/SocketAuthMiddleware";
 import type { PresencePort } from "../../../realtime/domain/ports/PresencePort";
 import { Conversation } from "../../domain/Conversation";
@@ -546,6 +549,19 @@ describe("ConversationGateway", () => {
           clientMessageId: "client-img-1",
         },
       });
+    });
+
+    it("also fans out message:new to the recipient's user room, so a connected recipient outside the conversation room is reached", () => {
+      const { gateway } = buildGateway();
+      const emitMock = vi.fn();
+      const toMock = vi.fn().mockReturnValue({ emit: emitMock });
+      gateway.server = { to: toMock } as unknown as Server;
+
+      gateway.handleMessageSent(messageSentEvent());
+
+      expect(toMock).toHaveBeenCalledWith(conversationRoom(CONV_1));
+      expect(toMock).toHaveBeenCalledWith(userRoom("seller-1"));
+      expect(emitMock).toHaveBeenCalledTimes(1);
     });
 
     it("omits clientMessageId when the send carried none", () => {

@@ -37,6 +37,7 @@ const mockSocket = {
 
 vi.mock("./ConversationSocket", () => ({
   ConversationSocket: vi.fn().mockImplementation(() => mockSocket),
+  getSharedConversationSocket: () => mockSocket,
 }));
 
 import { useConversationSocket } from "./useConversationSocket";
