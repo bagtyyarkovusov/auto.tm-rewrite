@@ -65,6 +65,9 @@ coverage/
 *.tar.gz
 *.tar
 images/
+# EAS Build applies these rules to the project it uploads, even to tracked
+# files, so the app icons and launch image must not match `images/`.
+!apps/mobile/assets/images/
 
 # Prisma generated
 packages/db/node_modules/.prisma/
