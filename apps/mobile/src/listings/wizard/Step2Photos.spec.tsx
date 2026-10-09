@@ -386,6 +386,18 @@ describe("Sell camera permission", () => {
     await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Camera" })); });
     expect(props.onAddPhoto).toHaveBeenCalledWith(expect.stringContaining("picker-temp/"));
   });
+  it("explains when the device has no camera instead of failing silently (#793)", async () => {
+    vi.mocked(ImagePicker.getCameraPermissionsAsync).mockResolvedValue(permission(true, true));
+    vi.mocked(ImagePicker.launchCameraAsync).mockRejectedValue(new Error("No camera available"));
+    const props = defaults();
+    const screen = renderMobile(<Step2Photos {...props} />);
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Camera" })); });
+    expect(screen.getByText("No camera on this device")).toBeTruthy();
+    expect(screen.getByText("You can still add photos from the gallery.")).toBeTruthy();
+    expect(props.onAddPhoto).not.toHaveBeenCalled();
+    await act(async () => { fireEvent.press(screen.getByRole("button", { name: "Done" })); });
+    expect(screen.queryByText("No camera on this device")).toBeNull();
+  });
 });
 
 vi.mock("expo-linking", () => ({ openSettings: vi.fn(async () => {}) }));

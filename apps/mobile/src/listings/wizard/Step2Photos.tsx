@@ -55,6 +55,7 @@ interface Step2PhotosProps {
 
 function usePhotoPicker(onAddPhoto: (uri: string) => Promise<void>) {
   const [cameraDenied, setCameraDenied] = useState(false);
+  const [cameraUnavailable, setCameraUnavailable] = useState(false);
   const ensurePickerTempDir = useCallback(async () => {
     const dir = `${FileSystem.documentDirectory}picker-temp/`;
     const info = await FileSystem.getInfoAsync(dir);
@@ -106,10 +107,18 @@ function usePhotoPicker(onAddPhoto: (uri: string) => Promise<void>) {
       setCameraDenied(!permission.canAskAgain);
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      quality: 1,
-    });
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        quality: 1,
+      });
+    } catch {
+      // A device without a camera can install the app now that the camera is
+      // optional (#793); explain instead of failing without a word.
+      setCameraUnavailable(true);
+      return;
+    }
     if (!result.canceled && result.assets[0]) {
       const uri = await copyToPickerTemp(result.assets[0].uri);
       try {
@@ -120,7 +129,7 @@ function usePhotoPicker(onAddPhoto: (uri: string) => Promise<void>) {
     }
   }, [onAddPhoto, copyToPickerTemp]);
 
-  return { pickFromLibrary, takePhoto, cameraDenied, setCameraDenied };
+  return { pickFromLibrary, takePhoto, cameraDenied, setCameraDenied, cameraUnavailable, setCameraUnavailable };
 }
 
 function usePhotoReorder(
@@ -413,7 +422,7 @@ export default function Step2Photos({
     onRemovePhoto(photoId);
   };
   const { t: tAccount } = useTranslation("account");
-  const { pickFromLibrary, takePhoto, cameraDenied, setCameraDenied } = usePhotoPicker(onAddPhoto);
+  const { pickFromLibrary, takePhoto, cameraDenied, setCameraDenied, cameraUnavailable, setCameraUnavailable } = usePhotoPicker(onAddPhoto);
   const { handleMoveUp, handleMoveDown, handleSetAsCover } = usePhotoReorder(
     photos,
     onReorderPhotos,
@@ -500,6 +509,20 @@ export default function Step2Photos({
             </AlertDialogCancel>
             <AlertDialogAction accessibilityRole="button" onPress={() => { setCameraDenied(false); void Linking.openSettings(); }}>
               <Text>{tAccount("openSettings")}</Text>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cameraUnavailable} onOpenChange={setCameraUnavailable}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("cameraUnavailableTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("cameraUnavailableBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction accessibilityRole="button" onPress={() => setCameraUnavailable(false)}>
+              <Text>{t("done")}</Text>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -70,6 +70,8 @@ const config = {
       // Display size, font size and system language changes no longer recreate
       // the Activity, and a recreation that still happens keeps the photo picker.
       "./plugins/withAndroidActivityRecreation",
+      // The camera stays optional so devices without one can install (#793).
+      "./plugins/withOptionalCamera",
       [
         "expo-image-picker",
         {
