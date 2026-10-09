@@ -12,7 +12,7 @@ it("does not render the deferred inspection entry or extra trust link", () => {
   );
   expect(
     screen.queryByRole("button", {
-      name: /inspection|How AutoTM keeps you safe/i,
+      name: /inspection|How Carberk keeps you safe/i,
     }),
   ).toBeNull();
 });

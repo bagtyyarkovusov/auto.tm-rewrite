@@ -40,7 +40,7 @@ it("shows real seller identity and city/place without contact-phone badges", () 
   );
   expect(screen.getByText("Merdan")).toBeTruthy();
   expect(screen.getByText("Private seller")).toBeTruthy();
-  expect(screen.getByText("On AutoTM since January 2024")).toBeTruthy();
+  expect(screen.getByText("On Carberk since January 2024")).toBeTruthy();
   expect(screen.getByText("Ashgabat · Parahat 7")).toBeTruthy();
   expect(screen.queryByText(/verified|inspection|dealer/i)).toBeNull();
   screen.rerender(
@@ -56,7 +56,7 @@ describe("SellerBlock name", () => {
     const view = renderMobile(<SellerBlock seller={seller()} />);
     expect(position(view, "Merdan")).toBeGreaterThan(-1);
     expect(position(view, "Merdan")).toBeLessThan(position(view, "Private seller"));
-    expect(position(view, "Private seller")).toBeLessThan(position(view, "On AutoTM since January 2024"));
+    expect(position(view, "Private seller")).toBeLessThan(position(view, "On Carberk since January 2024"));
   });
 
   it.each([

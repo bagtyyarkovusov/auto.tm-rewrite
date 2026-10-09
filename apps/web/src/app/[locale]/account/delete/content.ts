@@ -47,10 +47,10 @@ export interface AccountDeletionCopy {
 
 export const accountDeletionCopy: Record<Locale, AccountDeletionCopy> = {
   en: {
-    metaDescription: "Request deletion of your AutoTM account with your phone number or email address",
-    title: "Delete your AutoTM account",
+    metaDescription: "Request deletion of your Carberk account with your phone number or email address",
+    title: "Delete your Carberk account",
     intro:
-      "Enter the phone number or email address you use to sign in to AutoTM. We will send a code to it to confirm the request.",
+      "Enter the phone number or email address you use to sign in to Carberk. We will send a code to it to confirm the request.",
     consequencesTitle: "What happens next",
     consequences: [
       "All your sessions end and your active listings are archived.",
@@ -78,9 +78,9 @@ export const accountDeletionCopy: Record<Locale, AccountDeletionCopy> = {
     changeValue: "Use a different phone number or email",
     doneTitle: "Deletion request received",
     doneBody: (destination) =>
-      `If an AutoTM account uses ${destination}, it is now scheduled for deletion and will be deleted in 30 days.`,
+      `If a Carberk account uses ${destination}, it is now scheduled for deletion and will be deleted in 30 days.`,
     doneRecover:
-      "To keep the account, sign in to the AutoTM app with this phone number or email address within 30 days.",
+      "To keep the account, sign in to the Carberk app with this phone number or email address within 30 days.",
     privacyPrefix: "How we handle your data: ",
     privacyLink: "Privacy Policy",
     backHome: "Back to home",
@@ -94,10 +94,10 @@ export const accountDeletionCopy: Record<Locale, AccountDeletionCopy> = {
     },
   },
   ru: {
-    metaDescription: "Запрос на удаление аккаунта AutoTM по номеру телефона или адресу почты",
-    title: "Удаление аккаунта AutoTM",
+    metaDescription: "Запрос на удаление аккаунта Carberk по номеру телефона или адресу почты",
+    title: "Удаление аккаунта Carberk",
     intro:
-      "Укажите номер телефона или адрес почты, по которому вы входите в AutoTM. Мы отправим на него код, чтобы подтвердить запрос.",
+      "Укажите номер телефона или адрес почты, по которому вы входите в Carberk. Мы отправим на него код, чтобы подтвердить запрос.",
     consequencesTitle: "Что произойдёт",
     consequences: [
       "Все сессии завершатся, активные объявления будут архивированы.",
@@ -125,9 +125,9 @@ export const accountDeletionCopy: Record<Locale, AccountDeletionCopy> = {
     changeValue: "Указать другой номер или почту",
     doneTitle: "Запрос на удаление принят",
     doneBody: (destination) =>
-      `Если аккаунт AutoTM использует ${destination}, он запланирован к удалению и будет удалён через 30 дней.`,
+      `Если аккаунт Carberk использует ${destination}, он запланирован к удалению и будет удалён через 30 дней.`,
     doneRecover:
-      "Чтобы сохранить аккаунт, войдите в приложение AutoTM по этому номеру телефона или адресу почты в течение 30 дней.",
+      "Чтобы сохранить аккаунт, войдите в приложение Carberk по этому номеру телефона или адресу почты в течение 30 дней.",
     privacyPrefix: "Как мы обращаемся с данными: ",
     privacyLink: "Политика конфиденциальности",
     backHome: "Вернуться на главную",
@@ -141,10 +141,10 @@ export const accountDeletionCopy: Record<Locale, AccountDeletionCopy> = {
     },
   },
   tk: {
-    metaDescription: "AutoTM akkauntyny telefon belgisi ýa-da e-poçta salgysy bilen pozmagy soramak",
-    title: "AutoTM akkauntyny pozmak",
+    metaDescription: "Carberk akkauntyny telefon belgisi ýa-da e-poçta salgysy bilen pozmagy soramak",
+    title: "Carberk akkauntyny pozmak",
     intro:
-      "AutoTM-e girýän telefon belgiňizi ýa-da e-poçta salgyňyzy giriziň. Haýyşy tassyklamak üçin oňa kod ibereris.",
+      "Carberk-e girýän telefon belgiňizi ýa-da e-poçta salgyňyzy giriziň. Haýyşy tassyklamak üçin oňa kod ibereris.",
     consequencesTitle: "Soňra näme bolar",
     consequences: [
       "Ähli sessiýalar gutarýar, işjeň bildirişler arhiwlenýär.",
@@ -172,9 +172,9 @@ export const accountDeletionCopy: Record<Locale, AccountDeletionCopy> = {
     changeValue: "Başga belgi ýa-da e-poçta görkez",
     doneTitle: "Pozmak haýyşy kabul edildi",
     doneBody: (destination) =>
-      `Eger ${destination} bir AutoTM akkauntynda ulanylýan bolsa, ol akkaunt pozmak üçin meýilnamalaşdyryldy we 30 günden soň pozular.`,
+      `Eger ${destination} bir Carberk akkauntynda ulanylýan bolsa, ol akkaunt pozmak üçin meýilnamalaşdyryldy we 30 günden soň pozular.`,
     doneRecover:
-      "Akkaunty saklamak üçin 30 günüň dowamynda AutoTM programmasyna şu telefon belgisi ýa-da e-poçta salgysy bilen giriň.",
+      "Akkaunty saklamak üçin 30 günüň dowamynda Carberk programmasyna şu telefon belgisi ýa-da e-poçta salgysy bilen giriň.",
     privacyPrefix: "Maglumatlaryňyzy nähili işleýäris: ",
     privacyLink: "Gizlinlik syýasaty",
     backHome: "Baş sahypa gaýdym",

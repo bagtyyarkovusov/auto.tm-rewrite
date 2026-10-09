@@ -1,11 +1,11 @@
-APP NAME (24/30)
-AutoTM – Car Marketplace
+APP NAME (25/30)
+Carberk – Car Marketplace
 
 SHORT DESCRIPTION (75/80)
 Buy and sell cars in Turkmenistan. Message sellers and save your favorites.
 
-FULL DESCRIPTION (1531/4000)
-AutoTM is a marketplace for cars in Turkmenistan. Browse cars for sale, contact sellers, and keep the cars you like in Favorites.
+FULL DESCRIPTION (1630/4000)
+Carberk is a marketplace for cars in Turkmenistan. Browse cars for sale, contact sellers, and keep the cars you like in Favorites.
 
 Find a car
 • Search by brand and model. Russian, Turkmen and English spellings work, and so does a model year.
@@ -14,7 +14,7 @@ Find a car
 
 Contact the seller
 • Call the seller or send a message in the app.
-• Send photos in a chat. If you allow notifications, AutoTM tells you when a new message arrives.
+• Send photos in a chat. If you allow notifications, Carberk tells you when a new message arrives.
 • Report a listing, a message or a user, and block anyone you don't want to hear from.
 
 Sell your car
@@ -27,7 +27,9 @@ Your account
 • You can browse without an account.
 • You can delete your account in the app or on our website.
 
-AutoTM is in Russian, Turkmen and English. AutoTM does not sell cars and does not take payments. Buyers and sellers agree on the deal themselves.
+Carberk is in Russian, Turkmen and English. Carberk does not sell cars and does not take payments. Buyers and sellers agree on the deal themselves.
+
+Carberk is a project by Alpha Motors.
 
 Türkmençe
-AutoTM — Türkmenistanda awtoulag satmak we satyn almak üçin bazar. Bildirişleri görüň, satyjy bilen jaň ýa-da çat arkaly habarlaşyň, halan maşynlaryňyzy saklaň. Programma türkmen, rus we iňlis dillerinde işleýär.
+Carberk — Türkmenistanda awtoulag satmak we satyn almak üçin bazar. Bildirişleri görüň, satyjy bilen jaň ýa-da çat arkaly habarlaşyň, halan maşynlaryňyzy saklaň. Programma türkmen, rus we iňlis dillerinde işleýär. Alpha Motors bilen arzan däl-de, amatly ulag satyn al.

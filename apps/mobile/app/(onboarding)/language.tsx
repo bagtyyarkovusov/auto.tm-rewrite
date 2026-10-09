@@ -54,7 +54,7 @@ export default function LanguagePickerScreen() {
     <SafeScreen>
       <View className={cn("w-full flex-1 self-center", ONBOARDING_MAX_WIDTH_CLASS)}>
         <View className="h-12 justify-center px-6">
-          <BrandLogo width={127} height={22} />
+          <BrandLogo width={121} height={22} />
         </View>
 
         {!compact && <IllustrationPanel name={`language-${locale}`} enter />}

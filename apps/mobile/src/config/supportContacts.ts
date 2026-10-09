@@ -1,5 +1,5 @@
 /**
- * AutoTM support contacts. This is the only place in the mobile app that holds
+ * Carberk support contacts. This is the only place in the mobile app that holds
  * them; Help reads them from here.
  */
 export const supportContacts = {

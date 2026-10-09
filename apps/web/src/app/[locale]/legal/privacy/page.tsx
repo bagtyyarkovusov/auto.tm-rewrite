@@ -21,13 +21,13 @@ export async function generateMetadata({
   const { locale } = await params;
   const doc = privacyPolicy[locale as Locale] ?? privacyPolicy.ru;
   return {
-    title: `${doc.title} — AutoTM`,
+    title: `${doc.title} — Carberk`,
     description:
       locale === "tk"
-        ? "AutoTM gizlinlik syýasaty"
+        ? "Carberk gizlinlik syýasaty"
         : locale === "ru"
-          ? "Политика конфиденциальности AutoTM"
-          : "AutoTM Privacy Policy",
+          ? "Политика конфиденциальности Carberk"
+          : "Carberk Privacy Policy",
   };
 }
 

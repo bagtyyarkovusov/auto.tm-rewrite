@@ -10,7 +10,7 @@ export async function generateStaticParams() {
 }
 
 export const metadata: Metadata = {
-  title: "AutoTM",
+  title: "Carberk",
   description: "Turkmenistan's auto marketplace — buy and sell cars",
 };
 

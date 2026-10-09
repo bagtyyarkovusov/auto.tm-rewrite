@@ -310,7 +310,7 @@ describe("worker EnvSchema email contract (ADR-0055)", () => {
       ...baseEnv,
       EMAIL_DRIVER: "resend",
       RESEND_API_KEY: "re_test_key",
-      EMAIL_FROM: "AutoTM <no-reply@autotm.bagtyyar.dev>",
+      EMAIL_FROM: "Carberk <no-reply@autotm.bagtyyar.dev>",
     });
     expect(env.EMAIL_DRIVER).toBe("resend");
   });

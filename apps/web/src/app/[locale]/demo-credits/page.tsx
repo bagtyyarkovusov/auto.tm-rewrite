@@ -17,21 +17,21 @@ const copy: Record<Locale, { title: string; intro: string; by: string; licence: 
   ru: {
     title: "Авторы фотографий",
     intro:
-      "Демонстрационные объявления AutoTM показывают фотографии автомобилей из Wikimedia Commons. Ниже указаны автор, лицензия и исходный файл каждой фотографии. Фотографии уменьшены и обрезаны под формат объявления. Изменённые фотографии доступны на условиях той же лицензии, что и исходные.",
+      "Демонстрационные объявления Carberk показывают фотографии автомобилей из Wikimedia Commons. Ниже указаны автор, лицензия и исходный файл каждой фотографии. Фотографии уменьшены и обрезаны под формат объявления. Изменённые фотографии доступны на условиях той же лицензии, что и исходные.",
     by: "Автор",
     licence: "Лицензия",
   },
   tk: {
     title: "Suratlaryň awtorlary",
     intro:
-      "AutoTM-iň synag bildirişlerinde Wikimedia Commons-dan alnan awtoulag suratlary görkezilýär. Aşakda her suratyň awtory, ygtyýarnamasy we asyl faýly görkezilen. Suratlar bildirişiň ölçegine görä kiçeldildi we kesildi. Üýtgedilen suratlar asyl suratlaryň ygtyýarnamasynyň şertlerinde elýeterlidir.",
+      "Carberk-iň synag bildirişlerinde Wikimedia Commons-dan alnan awtoulag suratlary görkezilýär. Aşakda her suratyň awtory, ygtyýarnamasy we asyl faýly görkezilen. Suratlar bildirişiň ölçegine görä kiçeldildi we kesildi. Üýtgedilen suratlar asyl suratlaryň ygtyýarnamasynyň şertlerinde elýeterlidir.",
     by: "Awtor",
     licence: "Ygtyýarnama",
   },
   en: {
     title: "Photo credits",
     intro:
-      "AutoTM's demo listings show car photographs from Wikimedia Commons. Each photo's author, licence and source file is listed below. The photos were resized and cropped to fit a listing. The adapted photos are available under the same licence as their originals.",
+      "Carberk's demo listings show car photographs from Wikimedia Commons. Each photo's author, licence and source file is listed below. The photos were resized and cropped to fit a listing. The adapted photos are available under the same licence as their originals.",
     by: "Author",
     licence: "Licence",
   },
@@ -52,7 +52,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   return {
-    title: `${copy[resolvePageLocale(locale)].title} — AutoTM`,
+    title: `${copy[resolvePageLocale(locale)].title} — Carberk`,
     robots: { index: false, follow: false },
   };
 }

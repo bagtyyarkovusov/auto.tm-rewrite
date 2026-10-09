@@ -46,7 +46,7 @@ describe("Onboarding screen padding", () => {
     const screen = render(<LanguagePickerScreen />);
 
     const content = [
-      screen.getByLabelText("AutoTM"),
+      screen.getByLabelText("Carberk"),
       screen.getByText("Choose language"),
       screen.getByLabelText("Language"),
       screen.getByRole("button", { name: "Continue" }),

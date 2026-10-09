@@ -2,6 +2,7 @@ import { View } from "react-native";
 import Constants from "expo-constants";
 import { useTranslation } from "react-i18next";
 
+import { BrandLogo } from "../src/auth/BrandLogo";
 import { useSafeBack } from "../src/navigation/useSafeBack";
 
 import { SafeScreen } from "@/components/navigation/SafeScreen";
@@ -23,11 +24,12 @@ export default function AboutScreen() {
       />
 
       <View className="items-center px-4 py-16">
-        <Text accessibilityLabel="AutoTM" className="text-title font-bold text-foreground">
-          Auto<Text className="text-title font-bold text-primary">TM</Text>
-        </Text>
+        <View>
+          <BrandLogo width={198} height={36} />
+        </View>
+        <Text className="mt-3 text-center text-muted-foreground">{t("parentCompanyLine")}</Text>
         {version ? (
-          <Text className="mt-2 text-muted-foreground">{t("appVersion", { version })}</Text>
+          <Text className="mt-6 text-muted-foreground">{t("appVersion", { version })}</Text>
         ) : null}
       </View>
     </SafeScreen>

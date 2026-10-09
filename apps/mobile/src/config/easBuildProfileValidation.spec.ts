@@ -36,7 +36,7 @@ describe("validateEasBuildProfile", () => {
     ).toContain("EXPO_PUBLIC_API_URL must use a Railway-generated *.up.railway.app host");
   });
 
-  it("allows production AutoTM-owned HTTPS/WSS hosts", () => {
+  it("allows production Carberk-owned HTTPS/WSS hosts", () => {
     expect(
       validateEasBuildProfile({
         profile: "production",
@@ -47,7 +47,7 @@ describe("validateEasBuildProfile", () => {
     ).toEqual([]);
   });
 
-  it("allows the production hosts under autotm.bagtyyar.dev, the domain AutoTM runs on today", () => {
+  it("allows the production hosts under autotm.bagtyyar.dev, the domain Carberk runs on today", () => {
     expect(
       validateEasBuildProfile({
         profile: "production",
@@ -64,7 +64,7 @@ describe("validateEasBuildProfile", () => {
     "https://autotm.bagtyyar.dev.evil.example/api/v1",
     "https://notautotm.bagtyyar.dev/api/v1",
     "https://api.autotm.bagtyyar.dev.evil.example/api/v1",
-  ])("rejects %s for production: only AutoTM's own domains count", (apiUrl) => {
+  ])("rejects %s for production: only Carberk's own domains count", (apiUrl) => {
     expect(
       validateEasBuildProfile({
         profile: "production",
@@ -72,7 +72,7 @@ describe("validateEasBuildProfile", () => {
         wsUrl: "wss://api.autotm.bagtyyar.dev/ws/chat",
         mediaUrl: "https://media.autotm.bagtyyar.dev",
       }),
-    ).toEqual(["EXPO_PUBLIC_API_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production"]);
+    ).toEqual(["EXPO_PUBLIC_API_URL must use a Carberk domain (autotm.bagtyyar.dev or auto.tm) in production"]);
   });
 
   it("rejects a foreign websocket or media host for production, not only a foreign API host", () => {
@@ -84,8 +84,8 @@ describe("validateEasBuildProfile", () => {
         mediaUrl: "https://media.autotm.bagtyyar.dev.evil.example",
       }),
     ).toEqual([
-      "EXPO_PUBLIC_WS_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production",
-      "EXPO_PUBLIC_MEDIA_URL must use an AutoTM domain (autotm.bagtyyar.dev or auto.tm) in production",
+      "EXPO_PUBLIC_WS_URL must use a Carberk domain (autotm.bagtyyar.dev or auto.tm) in production",
+      "EXPO_PUBLIC_MEDIA_URL must use a Carberk domain (autotm.bagtyyar.dev or auto.tm) in production",
     ]);
   });
 

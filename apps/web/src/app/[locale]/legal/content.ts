@@ -24,7 +24,7 @@ export const privacyPolicy: Record<Locale, LegalDocument> = {
     sections: [
       {
         title: "1. What we collect",
-        body: `We collect the following information when you use AutoTM:
+        body: `We collect the following information when you use Carberk:
 
 - **Phone number** — used to create or sign in to your account with a code sent by SMS.
 - **Email address** — collected when you choose to sign in by email, or when you add or change an email address on your account.
@@ -60,7 +60,7 @@ Future collections (if features ship): video uploads, garage vehicle data, blog 
       },
       {
         title: "5. Sharing with third parties",
-        body: "In the MLP beta, AutoTM runs its own sign-in service on servers rented from Railway, a cloud hosting provider, which stores the app's data for us. Sign-in codes sent by email are delivered by an email delivery provider located in the United States: it receives your email address and the message containing the code, and keeps them for 30 days. Push notifications are delivered through Firebase Cloud Messaging (Google), which receives your device token and the notification content. We do not share data with advertisers, data brokers, or other third parties.",
+        body: "In the MLP beta, Carberk runs its own sign-in service on servers rented from Railway, a cloud hosting provider, which stores the app's data for us. Sign-in codes sent by email are delivered by an email delivery provider located in the United States: it receives your email address and the message containing the code, and keeps them for 30 days. Push notifications are delivered through Firebase Cloud Messaging (Google), which receives your device token and the notification content. We do not share data with advertisers, data brokers, or other third parties.",
       },
       {
         title: "6. Data retention & account deletion",
@@ -84,7 +84,7 @@ When you request account deletion:
       },
       {
         title: "8. Children's privacy",
-        body: "AutoTM is not intended for users under 18 years of age (consistent with vehicle purchase being an adult activity). We do not knowingly collect data from minors.",
+        body: "Carberk is not intended for users under 18 years of age (consistent with vehicle purchase being an adult activity). We do not knowingly collect data from minors.",
       },
       {
         title: "9. Cookies",
@@ -145,7 +145,7 @@ When you request account deletion:
       },
       {
         title: "5. Передача третьим лицам",
-        body: "В MLP-бете AutoTM использует собственную систему входа на серверах облачного провайдера Railway, который хранит данные приложения по нашему поручению. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом, а также хранит их 30 дней. Push-уведомления доставляются через Firebase Cloud Messaging (Google): сервис получает токен устройства и текст уведомления. Мы не передаём данные рекламным сетям или брокерам.",
+        body: "В MLP-бете Carberk использует собственную систему входа на серверах облачного провайдера Railway, который хранит данные приложения по нашему поручению. Письма с кодами входа отправляет сторонний почтовый сервис, расположенный в США: он получает ваш адрес почты и письмо с кодом, а также хранит их 30 дней. Push-уведомления доставляются через Firebase Cloud Messaging (Google): сервис получает токен устройства и текст уведомления. Мы не передаём данные рекламным сетям или брокерам.",
       },
       {
         title: "6. Хранение данных и удаление аккаунта",
@@ -230,7 +230,7 @@ When you request account deletion:
       },
       {
         title: "5. Üçünji taraplara geçirmek",
-        body: "MLP betada AutoTM öz giriş ulgamyny bulut üpjünçisi Railway-iň serwerlerinde işledýär; ol programmanyň maglumatlaryny biziň tabşyrygymyz bilen saklaýar. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar we olary 30 gün saklaýar. Push habarnamalary Firebase Cloud Messaging (Google) arkaly eltilýär: ol enjamyň tokenini we habarnamanyň mazmunyny alýar. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
+        body: "MLP betada Carberk öz giriş ulgamyny bulut üpjünçisi Railway-iň serwerlerinde işledýär; ol programmanyň maglumatlaryny biziň tabşyrygymyz bilen saklaýar. E-poçta arkaly iberilýän giriş kodlaryny ABŞ-da ýerleşýän e-poçta eltiş üpjünçisi eltýär: ol siziň e-poçta salgyňyzy we kod ýazylan haty alýar we olary 30 gün saklaýar. Push habarnamalary Firebase Cloud Messaging (Google) arkaly eltilýär: ol enjamyň tokenini we habarnamanyň mazmunyny alýar. Reklama torlaryna ýa-da brokerlere maglumat geçirmeýäris.",
       },
       {
         title: "6. Maglumatlary saklamak we akkaunty pozmak",
@@ -286,17 +286,17 @@ export const termsOfService: Record<Locale, LegalDocument> = {
     sections: [
       {
         title: "1. Eligibility",
-        body: "You must be at least 18 years old to use AutoTM. By using the app, you agree to abide by these Terms of Service.",
+        body: "You must be at least 18 years old to use Carberk. By using the app, you agree to abide by these Terms of Service.",
       },
       {
         title: "2. Account responsibilities",
-        body: `You sign in with a code sent to your phone number or to your email address; AutoTM does not use passwords. Your account always keeps at least one of these sign-in methods, and you are responsible for maintaining access to them and for keeping your codes to yourself. AutoTM will never ask you to share a code.
+        body: `You sign in with a code sent to your phone number or to your email address; Carberk does not use passwords. Your account always keeps at least one of these sign-in methods, and you are responsible for maintaining access to them and for keeping your codes to yourself. Carberk will never ask you to share a code.
 
-You are responsible for all content you post on AutoTM.`,
+You are responsible for all content you post on Carberk.`,
       },
       {
         title: "3. Acceptable use",
-        body: "Listings must be for real vehicles you own or are authorized to represent. You may not use AutoTM for scams, fraud, harassment, illegal content, or intellectual property infringement.",
+        body: "Listings must be for real vehicles you own or are authorized to represent. You may not use Carberk for scams, fraud, harassment, illegal content, or intellectual property infringement.",
       },
       {
         title: "4. Listing accuracy and contact phone",
@@ -314,11 +314,11 @@ Every listing shows a contact phone that has been verified. Before you publish o
       },
       {
         title: "7. Disclaimer",
-        body: "AutoTM is a marketplace platform. We do not own, inspect, or warrant the vehicles listed (except where Phase 2 inspection reports explicitly apply). All transactions are solely between users.",
+        body: "Carberk is a marketplace platform. We do not own, inspect, or warrant the vehicles listed (except where Phase 2 inspection reports explicitly apply). All transactions are solely between users.",
       },
       {
         title: "8. Inspection reports (Phase 2)",
-        body: "If available, inspection reports represent AutoTM's good-faith assessment. They are not a warranty. Buyers should perform independent verification.",
+        body: "If available, inspection reports represent Carberk's good-faith assessment. They are not a warranty. Buyers should perform independent verification.",
       },
       {
         title: "9. Dealer terms",
@@ -328,11 +328,11 @@ Every listing shows a contact phone that has been verified. Before you publish o
         title: "10. Termination & account deletion",
         body: `You may delete your account at any time in the app (in Cabinet, open your profile and tap Delete account), or by requesting deletion on our website with the phone number or email address on your account. Deletion initiates a 30-day grace period during which you may recover your account by signing in again with either your phone number or your email address. After 30 days, your personal data is removed, but your listings and messages are retained with anonymized attribution.
 
-AutoTM may suspend accounts that violate these terms.`,
+Carberk may suspend accounts that violate these terms.`,
       },
       {
         title: "11. Liability",
-        body: "AutoTM is not liable for disputes, transactions, or content between users, to the extent permitted by law.",
+        body: "Carberk is not liable for disputes, transactions, or content between users, to the extent permitted by law.",
       },
       {
         title: "12. Modifications",
@@ -357,7 +357,7 @@ AutoTM may suspend accounts that violate these terms.`,
       },
       {
         title: "2. Ответственность за аккаунт",
-        body: `Вход выполняется по коду, который приходит на ваш номер телефона или на адрес электронной почты; паролей в AutoTM нет. В аккаунте всегда остаётся хотя бы один такой способ входа: вы отвечаете за доступ к нему и за то, чтобы не передавать коды посторонним. AutoTM никогда не просит сообщить код.
+        body: `Вход выполняется по коду, который приходит на ваш номер телефона или на адрес электронной почты; паролей в Carberk нет. В аккаунте всегда остаётся хотя бы один такой способ входа: вы отвечаете за доступ к нему и за то, чтобы не передавать коды посторонним. Carberk никогда не просит сообщить код.
 
 Вы несёте ответственность за весь контент, который публикуете.`,
       },
@@ -381,7 +381,7 @@ AutoTM may suspend accounts that violate these terms.`,
       },
       {
         title: "7. Ограничение ответственности",
-        body: "AutoTM — площадка. Мы не владеем, не проверяем и не гарантируем автомобили (кроме случаев с отчётами осмотра Фазы 2). Сделки — между пользователями.",
+        body: "Carberk — площадка. Мы не владеем, не проверяем и не гарантируем автомобили (кроме случаев с отчётами осмотра Фазы 2). Сделки — между пользователями.",
       },
       {
         title: "8. Отчёты осмотра (Фаза 2)",
@@ -395,11 +395,11 @@ AutoTM may suspend accounts that violate these terms.`,
         title: "10. Расторжение и удаление аккаунта",
         body: `Вы можете удалить аккаунт в приложении (в «Кабинете» откройте свой профиль и выберите «Удалить аккаунт») или запросить удаление на нашем сайте, указав номер телефона или адрес почты из аккаунта. Удаление запускает 30-дневный льготный период, в течение которого аккаунт можно восстановить, войдя снова по номеру телефона или по адресу почты. Через 30 дней персональные данные удаляются, объявления и переписка сохраняются с анонимной атрибуцией.
 
-AutoTM может приостановить аккаунт за нарушения.`,
+Carberk может приостановить аккаунт за нарушения.`,
       },
       {
         title: "11. Ответственность",
-        body: "AutoTM не несёт ответственности за споры и сделки между пользователями в пределах, допустимых законом.",
+        body: "Carberk не несёт ответственности за споры и сделки между пользователями в пределах, допустимых законом.",
       },
       {
         title: "12. Изменения условий",
@@ -424,7 +424,7 @@ AutoTM может приостановить аккаунт за нарушен�
       },
       {
         title: "2. Akkaunt jogapkärçiligi",
-        body: `Siz parol bilen däl-de, telefon belgiňize ýa-da e-poçta salgyňyza iberilen kod bilen girýärsiňiz. Akkauntyňyzda şeýle giriş usullarynyň iň azyndan biri hemişe galýar: oňa elýeterliligi saklamak we kody başga hiç kime bermezlik siziň jogapkärçiligiňiz. AutoTM hiç haçan kody paýlaşmagy soramaýar.
+        body: `Siz parol bilen däl-de, telefon belgiňize ýa-da e-poçta salgyňyza iberilen kod bilen girýärsiňiz. Akkauntyňyzda şeýle giriş usullarynyň iň azyndan biri hemişe galýar: oňa elýeterliligi saklamak we kody başga hiç kime bermezlik siziň jogapkärçiligiňiz. Carberk hiç haçan kody paýlaşmagy soramaýar.
 
 Ýazan ähli kontentiňize siz jogapkär.`,
       },
@@ -448,7 +448,7 @@ Her bildirişde tassyklanan habarlaşma belgisi görkezilýär. Bildirişi çap 
       },
       {
         title: "7. Jogapkärçiliginiň çäklendirilmesi",
-        body: "AutoTM — bazar meýdany. Maşynlary eýelemeýäris, barlamayarys, kepillendirmeýäris (2-nji tapgyr barlag hasabatlaryndan başga). Söwda — ulanyjylaryň arasynda.",
+        body: "Carberk — bazar meýdany. Maşynlary eýelemeýäris, barlamayarys, kepillendirmeýäris (2-nji tapgyr barlag hasabatlaryndan başga). Söwda — ulanyjylaryň arasynda.",
       },
       {
         title: "8. Barlag hasabatlary (2-nji tapgyr)",
@@ -462,11 +462,11 @@ Her bildirişde tassyklanan habarlaşma belgisi görkezilýär. Bildirişi çap 
         title: "10. Yzyna çykma we akkaunty pozmak",
         body: `Akkaunty programmada pozup bilersiňiz («Kabinet» bölüminde profiliňizi açyň we «Akkaunty poz» düwmesine basyň) ýa-da saýtymyzda akkauntyňyzdaky telefon belgisi ýa-da e-poçta salgysy bilen pozmagy sorap bilersiňiz. Pozmak 30 günlük lýgotly döwür başlaýar; şol döwürde telefon belgiňiz ýa-da e-poçta salgyňyz bilen gaýtadan girip, akkaunty dikeldip bolýar. 30 günden soň şahsy maglumatlar aýrylýar, bildirişler we çat anonim atanama saklanýar.
 
-AutoTM düzgünleri bozýan akkaunty bloklap biler.`,
+Carberk düzgünleri bozýan akkaunty bloklap biler.`,
       },
       {
         title: "11. Jogapkärçilik",
-        body: "Kanuna laýyklykda, ulanyjylar arasyndaky çekişmeler we söwdalar üçin AutoTM jogapkär däl.",
+        body: "Kanuna laýyklykda, ulanyjylar arasyndaky çekişmeler we söwdalar üçin Carberk jogapkär däl.",
       },
       {
         title: "12. Şertleriň üýtgemeleri",

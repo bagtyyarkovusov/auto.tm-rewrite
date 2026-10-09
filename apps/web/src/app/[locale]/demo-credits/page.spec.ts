@@ -80,7 +80,7 @@ describe("demo photo credits page", () => {
   it("falls back to the default locale and stays out of search indexes", async () => {
     expect(await render("de")).toContain("Авторы фотографий");
     const metadata = await generateMetadata({ params: Promise.resolve({ locale: "en" }) });
-    expect(metadata.title).toBe("Photo credits — AutoTM");
+    expect(metadata.title).toBe("Photo credits — Carberk");
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 });

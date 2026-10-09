@@ -176,7 +176,7 @@ describe("issue 373 approved detail content", () => {
       <ListingDetailView listing={fixture()} maps={maps} />,
     );
     expect(screen.getByText("Merdan")).toBeTruthy();
-    expect(screen.getByText(/On AutoTM since.*January 2024/)).toBeTruthy();
+    expect(screen.getByText(/On Carberk since.*January 2024/)).toBeTruthy();
     expect(screen.queryByText("Phone verified")).toBeNull();
     screen.rerender(
       <ListingDetailView
@@ -234,7 +234,7 @@ describe("issue 373 approved detail content", () => {
       <ListingDetailView listing={fixture()} maps={maps} />,
     );
     expect(
-      screen.queryByRole("button", { name: /Request AutoTM inspection/i }),
+      screen.queryByRole("button", { name: /Request Carberk inspection/i }),
     ).toBeNull();
   });
 
@@ -243,7 +243,7 @@ describe("issue 373 approved detail content", () => {
       <ListingDetailView listing={fixture()} maps={maps} />,
     );
     expect(
-      screen.queryByRole("button", { name: "How AutoTM keeps you safe" }),
+      screen.queryByRole("button", { name: "How Carberk keeps you safe" }),
     ).toBeNull();
   });
 
@@ -293,7 +293,7 @@ describe("issue 373 screen controls", () => {
     const screen = renderMobile(<ListingDetailScreen />);
     expect(
       screen.queryByText(
-        "An AutoTM mechanic inspection is coming soon. Register your interest to join the pilot.",
+        "A Carberk mechanic inspection is coming soon. Register your interest to join the pilot.",
       ),
     ).toBeNull();
   });
@@ -456,7 +456,7 @@ describe("issue 373 screen controls", () => {
     expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Favorite" })).toBeNull();
     expect(
-      screen.getByText("AutoTM verifies sellers' numbers by SMS."),
+      screen.getByText("Carberk verifies sellers' numbers by SMS."),
     ).toBeTruthy();
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Call" }));

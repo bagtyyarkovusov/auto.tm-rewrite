@@ -12,26 +12,26 @@ function contactPhone(locale: "ru" | "tk" | "en"): string {
 }
 
 describe("renderCodeSms for a contact phone (ADR-0081)", () => {
-  it("renders the approved Russian text in one UCS-2 segment of 70", () => {
+  it("renders the approved Russian text in one UCS-2 segment, 69 of 70", () => {
     const text = contactPhone("ru");
-    expect(text).toBe("AutoTM 123456: номер покажут в объявлении. Не давайте код без согласия");
-    expect([...text]).toHaveLength(70);
+    expect(text).toBe("Carberk 123456: номер будет в объявлении. Не давайте код без согласия");
+    expect([...text]).toHaveLength(69);
     expect(GSM7.test(text)).toBe(false);
   });
 
   it("renders the approved Turkmen text in one UCS-2 segment", () => {
     const text = contactPhone("tk");
-    expect(text).toBe("AutoTM 123456: belgiňiz bildirişde görüner. Razy bolmasaňyz bermäň");
-    expect([...text]).toHaveLength(66);
+    expect(text).toBe("Carberk 123456: belgiňiz bildirişde görüner. Razy bolmasaňyz bermäň");
+    expect([...text]).toHaveLength(67);
     expect(GSM7.test(text)).toBe(false);
   });
 
   it("renders the English text in one GSM-7 segment", () => {
     const text = contactPhone("en");
     expect(text).toBe(
-      "AutoTM code 123456 puts this number on a car listing. Share it only if you agree.",
+      "Carberk code 123456 puts this number on a car listing. Share it only if you agree.",
     );
-    expect([...text]).toHaveLength(81);
+    expect([...text]).toHaveLength(82);
     expect(GSM7.test(text)).toBe(true);
   });
 

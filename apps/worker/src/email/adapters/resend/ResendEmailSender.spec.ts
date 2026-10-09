@@ -6,7 +6,7 @@ import { classifyResendError } from "./classifyResendError";
 import { ResendEmailSender, type ResendSendFn } from "./ResendEmailSender";
 
 const email = { to: "buyer@example.com", subject: "s", text: "t", html: "<p>h</p>" };
-const FROM = "AutoTM <no-reply@autotm.bagtyyar.dev>";
+const FROM = "Carberk <no-reply@autotm.bagtyyar.dev>";
 
 describe("ResendEmailSender", () => {
   it("sends from EMAIL_FROM with the idempotency key", async () => {
