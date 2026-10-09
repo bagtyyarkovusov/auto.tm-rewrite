@@ -96,6 +96,17 @@ const config = {
           backgroundColor: "#17191D",
         },
       ],
+      // Play flags DEX obfuscation below its threshold: minify and shrink the
+      // release build with R8.
+      [
+        "expo-build-properties",
+        {
+          android: {
+            enableProguardInReleaseBuilds: true,
+            enableShrinkResourcesInReleaseBuilds: true,
+          },
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,

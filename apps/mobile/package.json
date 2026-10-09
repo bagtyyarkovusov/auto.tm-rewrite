@@ -36,6 +36,7 @@
     "clsx": "^2.1.1",
     "expo": "~55.0.31",
     "expo-blur": "~55.0.18",
+    "expo-build-properties": "~55.0.18",
     "expo-camera": "^55.0.23",
     "expo-clipboard": "~55.0.17",
     "expo-constants": "~55.0.17",
