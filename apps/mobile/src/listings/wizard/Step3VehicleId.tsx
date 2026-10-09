@@ -325,9 +325,12 @@ export default function Step3VehicleId({
 
       <VinField
         payload={payload}
-        onChange={onChange}
+        onChange={(updates) => {
+          pickers.markTouched("vin");
+          onChange(updates);
+        }}
         disabled={disabled}
-        error={showErrors ? fieldErrors?.vin : undefined}
+        error={visibleError("vin")}
       />
 
       <CarPickerSheet payload={payload} pickers={pickers} />

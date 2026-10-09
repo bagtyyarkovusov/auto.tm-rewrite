@@ -1,4 +1,4 @@
-export type VehicleField = "brandId" | "modelId" | "year";
+export type VehicleField = "brandId" | "modelId" | "year" | "vin";
 
 interface VehicleFieldErrorVisibilityInput {
   field: VehicleField;

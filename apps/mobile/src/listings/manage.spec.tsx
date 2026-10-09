@@ -139,7 +139,7 @@ describe("My listings tabs", () => {
     expect(ru.getAllByRole("tab").map((node) => node.props.accessibilityLabel)).toEqual(["Активные, 2", "Черновики, 1", "Архив, 2"]);
     ru.unmount();
     const tk = await renderScreen({ locale: "tk" });
-    expect(tk.getAllByRole("tab").map((node) => node.props.accessibilityLabel)).toEqual(["Işjeň, 2", "Garalamalar, 1", "Arhiw, 2"]);
+    expect(tk.getAllByRole("tab").map((node) => node.props.accessibilityLabel)).toEqual(["Aktiw, 2", "Garalamalar, 1", "Arhiw, 2"]);
   });
 
   it("shows no number at zero or when the counts fail", async () => {
@@ -515,7 +515,7 @@ describe("My listings states", () => {
 
   it.each([
     ["ru", ["Нет активных объявлений", "Здесь будут ваши объявления в продаже."], ["Нет черновиков", "Незавершённое объявление сохраняется здесь автоматически."], ["Архив пуст", "Здесь будут проданные и снятые с продажи объявления."]],
-    ["tk", ["Işjeň bildiriş ýok", "Satuwdaky bildirişleriňiz şu ýerde bolar."], ["Garalama ýok", "Tamamlanmadyk bildiriş şu ýerde awtomatik saklanýar."], ["Arhiw boş", "Satylan we satuwdan aýrylan bildirişler şu ýerde bolar."]],
+    ["tk", ["Aktiw bildiriş ýok", "Satuwdaky bildirişleriňiz şu ýerde bolar."], ["Garalama ýok", "Tamamlanmadyk bildiriş şu ýerde awtomatik saklanýar."], ["Arhiw boş", "Satylan we satuwdan aýrylan bildirişler şu ýerde bolar."]],
   ] as const)("shows the empty states in %s", async (locale, active, drafts, archive) => {
     server = { listings: [], drafts: [] };
     for (const [name, [title, body]] of [["active", active], ["drafts", drafts], ["archive", archive]] as const) {

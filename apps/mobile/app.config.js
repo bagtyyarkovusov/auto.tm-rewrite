@@ -26,7 +26,7 @@ const config = {
     slug: "auto-tm",
     owner: "tkmdevelopers",
     scheme: "autotm",
-    version: "2.0.0",
+    version: "2.0.1",
     icon: "./assets/images/icon.png",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
@@ -70,6 +70,8 @@ const config = {
       // Display size, font size and system language changes no longer recreate
       // the Activity, and a recreation that still happens keeps the photo picker.
       "./plugins/withAndroidActivityRecreation",
+      // The camera stays optional so devices without one can install (#793).
+      "./plugins/withOptionalCamera",
       [
         "expo-image-picker",
         {
@@ -91,7 +93,18 @@ const config = {
           image: "./assets/images/splash-icon.png",
           imageWidth: 160,
           resizeMode: "contain",
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "#17191D",
+        },
+      ],
+      // Play flags DEX obfuscation below its threshold: minify and shrink the
+      // release build with R8.
+      [
+        "expo-build-properties",
+        {
+          android: {
+            enableProguardInReleaseBuilds: true,
+            enableShrinkResourcesInReleaseBuilds: true,
+          },
         },
       ],
     ],

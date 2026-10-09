@@ -84,6 +84,17 @@ export function CodeEntryForm({
   const [dailyLimit, setDailyLimit] = useState(false);
   const [hasResent, setHasResent] = useState(false);
   const lastSubmittedCode = useRef<string | null>(null);
+  // A focus call lands only once the cells are editable again; focusing the
+  // disabled input after a wrong code is a silent no-op on Android (#781).
+  const refocusWhenEnabled = useRef(false);
+  const cellsDisabled = isVerifying || isResending || terminalError || dailyLimit;
+
+  useEffect(() => {
+    if (refocusWhenEnabled.current && !cellsDisabled) {
+      refocusWhenEnabled.current = false;
+      otpRef.current?.focus();
+    }
+  }, [cellsDisabled]);
 
   useEffect(() => {
     otpRef.current?.focus();
@@ -137,7 +148,7 @@ export function CodeEntryForm({
       setError(copy.message);
       setTerminalError(copy.terminal);
       if (!copy.terminal) {
-        requestAnimationFrame(() => otpRef.current?.focus());
+        refocusWhenEnabled.current = true;
       }
     } finally {
       setIsVerifying(false);
@@ -159,7 +170,7 @@ export function CodeEntryForm({
       setSecondsRemaining(result.resendInSeconds);
       setHasResent(true);
       setTestCode(__DEV__ ? result.testCode : undefined);
-      requestAnimationFrame(() => otpRef.current?.focus());
+      refocusWhenEnabled.current = true;
     } catch (resendError) {
       const copy = getResendCodeErrorCopy(resendError, t);
       setError(copy.message);
@@ -199,7 +210,7 @@ export function CodeEntryForm({
 
       <OtpCells
         ref={otpRef}
-        disabled={isVerifying || isResending || terminalError || dailyLimit}
+        disabled={cellsDisabled}
         hasError={error !== null}
         length={OTP_LENGTH}
         onChange={handleCodeChange}
