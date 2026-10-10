@@ -63,6 +63,20 @@ describe("Favorites large card", () => {
     expect(view.getByTestId("listing-photo-more")).toBeTruthy();
   });
 
+  it("swipes through the gallery the API sends, as on Results, before the count tile", () => {
+    const galleryKeys = ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg"];
+    const { view } = renderCard({ galleryKeys });
+    expect(view.getAllByTestId("listing-photo")).toHaveLength(6);
+    // Seven photos and six keys: one more behind a "+1" tile.
+    expect(within(view.getByTestId("listing-photo-more")).getByText("+1")).toBeTruthy();
+  });
+
+  it("shows every photo and no count tile when the gallery holds them all", () => {
+    const { view } = renderCard({ galleryKeys: ["1.jpg", "2.jpg", "3.jpg"], photoCount: 3 });
+    expect(view.getAllByTestId("listing-photo")).toHaveLength(3);
+    expect(view.queryByTestId("listing-photo-more")).toBeNull();
+  });
+
   it("puts Call, a square Message and a square ♥ in one row", () => {
     const { view } = renderCard();
     const row = within(view.getByTestId("listing-actions"));

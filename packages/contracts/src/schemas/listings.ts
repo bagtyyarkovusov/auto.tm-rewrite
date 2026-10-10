@@ -108,6 +108,12 @@ export type FeedListingSummary = z.infer<typeof FeedListingSummarySchema>;
 // ── Favorites item (ListingSummary + contact preferences) ──
 
 export const FavoriteListingSummarySchema = ListingSummarySchema.extend({
+  /**
+   * Keys of the first eight photos by `sortOrder` for the card's photo strip,
+   * as on a feed item. Absent from older APIs, so a client falls back to
+   * `photoKeys`.
+   */
+  galleryKeys: z.array(z.string()).max(8).optional(),
   contactPhone: z.string().optional(),
   allowCalls: z.boolean(),
   allowChat: z.boolean(),

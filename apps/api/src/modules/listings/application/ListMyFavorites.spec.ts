@@ -290,6 +290,7 @@ describe("ListMyFavorites", () => {
     seedSummary({
       id: "listing-1",
       photoKeys: ["a", "b"],
+      galleryKeys: ["a", "b", "c", "d"],
       photoCount: 4,
       mileageKm: 90000,
       condition: "used",
@@ -306,6 +307,7 @@ describe("ListMyFavorites", () => {
 
     expect(item).toMatchObject({
       photoKeys: ["a", "b"],
+      galleryKeys: ["a", "b", "c", "d"],
       photoCount: 4,
       mileageKm: 90000,
       condition: "used",

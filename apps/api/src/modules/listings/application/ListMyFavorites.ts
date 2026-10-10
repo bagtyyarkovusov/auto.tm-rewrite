@@ -78,6 +78,7 @@ export class ListMyFavorites {
         displayPriceTmt: item.displayPriceTmt,
         coverMediaKey: item.coverMediaKey,
         photoKeys: item.photoKeys,
+        galleryKeys: item.galleryKeys,
         photoCount: item.photoCount,
         mileageKm: item.mileageKm,
         condition: item.condition,

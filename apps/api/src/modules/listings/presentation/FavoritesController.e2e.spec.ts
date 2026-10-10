@@ -427,6 +427,8 @@ describe("FavoritesController e2e", () => {
       expect(parsed.items[0]).toMatchObject({
         id: listingId,
         photoKeys: [stored[0]?.key, stored[1]?.key],
+        // All three photos for the card's strip, as a feed item has them.
+        galleryKeys: stored.map((m) => m.key),
         photoCount: 3,
         mileageKm: 50000,
         condition: "used",
