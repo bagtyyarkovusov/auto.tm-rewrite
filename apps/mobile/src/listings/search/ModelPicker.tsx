@@ -163,7 +163,8 @@ export function ModelPicker({
             </Text>
           ) : null}
           {picker.countError ? (
-            <View accessibilityRole="alert" className="gap-1">
+            // In a sheet the bar has no edge fade, so the error gets the sheet's own surface behind it.
+            <View accessibilityRole="alert" className={cn("gap-1", barContainer === "screen" && "rounded-2xl bg-popover pb-1 shadow-floating")}>
               <Text className="px-2 pt-1 text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
               <Button variant="ghost" onPress={picker.retry}>
                 <Text>{t("retry")}</Text>

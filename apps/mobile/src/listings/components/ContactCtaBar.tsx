@@ -176,7 +176,8 @@ export function ContactCtaBar({
         </>}
       </View>
       {conversation.error && (
-        <View className={floating ? "pt-2" : "px-4 pb-3"}>
+        // The floating bar has no material, so the tinted error gets a solid card under it.
+        <View className={floating ? "mt-2 overflow-hidden rounded-lg bg-card shadow-floating" : "px-4 pb-3"}>
           <ErrorState
             compact
             error={conversation.error}

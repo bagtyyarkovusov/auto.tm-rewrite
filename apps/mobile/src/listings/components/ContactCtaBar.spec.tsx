@@ -61,6 +61,13 @@ beforeEach(() => {
 });
 
 describe("ContactCtaBar", () => {
+  it("puts a solid card under the floating bar's error, since the bar draws no material", () => {
+    state.error = new Error("boom");
+    const screen = renderMobile(<ContactCtaBar {...props} variant="floating" />);
+    let node = screen.getByText("Something went wrong").parent;
+    while (node && !/\bbg-card\b/.test(String(node.props.className ?? ""))) node = node.parent;
+    expect(node).toBeTruthy();
+  });
   it("opens the seller phone directly for an anonymous buyer", async () => {
     state.authenticated = false;
     const screen = renderMobile(<ContactCtaBar {...props} />);
