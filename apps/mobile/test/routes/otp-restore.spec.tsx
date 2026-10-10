@@ -5,6 +5,8 @@ import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render
 import OtpScreen from "../../app/(auth)/otp";
 import { ApiError } from "../../src/api/client";
 
+import { ToastProvider } from "@/components/ui/toast";
+
 const ONBOARDING_FLAG = "@auto-tm/onboarding-completed";
 
 const pendingSession = {
@@ -100,7 +102,11 @@ async function signInWith(session: typeof pendingSession | (Omit<typeof pendingS
   user: Omit<typeof pendingSession.user, "deletionScheduledAt"> & { deletionScheduledAt: null };
 })) {
   mocks.verify.mockResolvedValue(session);
-  const screen = renderMobile(<OtpScreen />);
+  const screen = renderMobile(
+    <ToastProvider>
+      <OtpScreen />
+    </ToastProvider>,
+  );
   await act(async () => {
     fireEvent.press(screen.getByRole("button", { name: "Submit code" }));
   });
@@ -137,6 +143,7 @@ describe("Sign-in code screen for a User whose deletion is scheduled", () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(ONBOARDING_FLAG, "true");
     expect(mocks.navigation.complete).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("Account restoration")).toBeNull();
+    expect(screen.getByText("Account restored")).toBeTruthy();
   });
 
   it("keeps the prompt open with an error when the restore fails, and can retry", async () => {
@@ -265,7 +272,11 @@ describe("Sign-in code screen for a User with no scheduled deletion", () => {
 
 describe("Sign-in code screen actions", () => {
   it("opens Help from Contact support", () => {
-    const screen = renderMobile(<OtpScreen />);
+    const screen = renderMobile(
+      <ToastProvider>
+        <OtpScreen />
+      </ToastProvider>,
+    );
 
     fireEvent.press(screen.getByRole("button", { name: "Contact support" }));
 
@@ -275,7 +286,11 @@ describe("Sign-in code screen actions", () => {
   it("offers Use phone instead on an email code and returns to the phone entry", () => {
     routeParams.method = "email";
     routeParams.destination = "aman@example.com";
-    const screen = renderMobile(<OtpScreen />);
+    const screen = renderMobile(
+      <ToastProvider>
+        <OtpScreen />
+      </ToastProvider>,
+    );
 
     fireEvent.press(screen.getByRole("button", { name: "Use phone instead" }));
 
@@ -283,7 +298,11 @@ describe("Sign-in code screen actions", () => {
   });
 
   it("does not offer Use phone instead on a phone code", () => {
-    const screen = renderMobile(<OtpScreen />);
+    const screen = renderMobile(
+      <ToastProvider>
+        <OtpScreen />
+      </ToastProvider>,
+    );
 
     expect(screen.queryByRole("button", { name: "Use phone instead" })).toBeNull();
   });

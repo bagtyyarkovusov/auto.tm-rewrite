@@ -7,6 +7,8 @@ import OtpScreen from "../../app/(auth)/otp";
 import { useAuthIntentStore } from "../../src/auth/intentStore";
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 
+import { ToastProvider } from "@/components/ui/toast";
+
 const navigation = vi.hoisted(() => ({ back: () => {} }));
 vi.mock("@react-navigation/native", () => ({
   DefaultTheme: { dark: false, colors: {} }, DarkTheme: { dark: true, colors: {} },
@@ -30,7 +32,11 @@ afterEach(() => vi.unstubAllGlobals());
 
 function openEmailCode() {
   Object.assign(routeParams, { method: "email", destination: "held@example.com", resendInSeconds: "0" });
-  return renderMobile(<OtpScreen />);
+  return renderMobile(
+    <ToastProvider>
+      <OtpScreen />
+    </ToastProvider>,
+  );
 }
 
 it("Use phone instead returns to a mounted email entry in place, retaining its held phone value and pending intent", () => {
