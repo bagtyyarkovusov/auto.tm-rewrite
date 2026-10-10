@@ -126,14 +126,14 @@ export function mapErrorToCopy(
 
     return {
       title: t("somethingWentWrong"),
-      description: t("tryAgain"),
+      description: t("loadFailed"),
       retryable: true,
     };
   }
 
   return {
     title: t("somethingWentWrong"),
-    description: t("tryAgain"),
+    description: t("loadFailed"),
     retryable: true,
   };
 }
