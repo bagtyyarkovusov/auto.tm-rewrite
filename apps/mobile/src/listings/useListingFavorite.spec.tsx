@@ -189,6 +189,30 @@ describe("useListingFavorite", () => {
     expect(result.current.favorited).toBe(false);
   });
 
+  it("queues a tap on a second ♡ of the same Listing behind the first one's request", async () => {
+    // As detail's header ♡ and its photo-viewer ♡, or a Home and a Results card.
+    const header = render(true).result;
+    const viewer = render(true).result;
+
+    act(() => header.current.toggle()); // ♥, sent
+    // The viewer's ♡ reads the header's tap from the cache before it is tapped.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(viewer.current.favorited).toBe(true);
+    act(() => viewer.current.toggle()); // ♡, must wait for the add
+    expect(calls.map((call) => call.kind)).toEqual(["add"]);
+    expect(viewer.current.favorited).toBe(false);
+
+    await answer();
+    expect(calls.map((call) => call.kind)).toEqual(["remove"]);
+    await answer();
+
+    expect(calls).toHaveLength(0);
+    expect(header.current.favorited).toBe(false);
+    expect(viewer.current.favorited).toBe(false);
+    expect(feedFavorited()).toBe(false);
+    expect(detailFavorited()).toBe(false);
+  });
+
   it("shows the cached state once nothing is in flight, so a refetch always corrects it", async () => {
     const { result } = render(true, true);
 
