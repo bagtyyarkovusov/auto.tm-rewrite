@@ -104,6 +104,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0092](0092-temporary-failure-limits-for-fixed-code-phone-sign-in.md) | Temporary failure limits for fixed-code phone sign-in, overrides ADR-0030's never-locked-out guarantee and amends ADR-0086 | Accepted | 2026-10-08 |
 | [0093](0093-carberk-is-the-public-product-name.md) | Carberk is the public product name; internal identifiers and domains keep their AutoTM names | Accepted | 2026-10-09 |
 | [0094](0094-one-orchestrator-implements-batched-pull-requests-trial.md) | One orchestrator session implements batched pull requests (trial), amends ADR-0058, ADR-0064, ADR-0069, ADR-0082, ADR-0084, ADR-0085, ADR-0091's docs push and the AGENTS.md quota rule for run-batch | Accepted | 2026-10-10 |
+| [0095](0095-listing-detail-drops-the-sms-verification-caption.md) | Listing detail drops the SMS verification caption, supersedes one line of ADR-0056 | Accepted | 2026-10-11 |
 
 ## Per-app ADRs
 

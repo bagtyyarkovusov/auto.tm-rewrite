@@ -87,9 +87,6 @@ describe("ContactCtaBar", () => {
       ).toBe(true);
       fireEvent.press(screen.getByRole("button", { name: "Message" }));
       expect(state.mutate).not.toHaveBeenCalled();
-      expect(
-        screen.queryByText("Carberk verifies sellers' numbers by SMS."),
-      ).toBeNull();
     },
   );
   it("disables Message when chat is unavailable or a request is pending", () => {
@@ -147,7 +144,6 @@ describe("ContactCtaBar without calls", () => {
       expect(screen.getAllByRole("button")).toHaveLength(1);
       const message = screen.getByRole("button", { name: "Message", disabled: false });
       expect(message.props.className).toContain("flex-1");
-      expect(screen.queryByText("Carberk verifies sellers' numbers by SMS.")).toBeNull();
       screen.unmount();
     }
   });
