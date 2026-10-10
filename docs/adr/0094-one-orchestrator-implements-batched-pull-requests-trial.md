@@ -4,12 +4,13 @@
 - **Date**: 2026-10-10
 - **Deciders**: AutoTM founder, in a grilling session with the Claude Code desktop orchestrator on 2026-10-10 ([issue #804](https://github.com/bagtyyarkovusov/auto.tm-rewrite/issues/804))
 - **Amends**, for work run through the [`run-batch`](../../.claude/skills/run-batch/SKILL.md) skill during the trial only:
-  - [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) and [ADR-0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md): one `agent/issue-<N>` branch and draft PR per issue, and read-only reviewers.
-  - [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md): the orchestrator never implements, and implementers run in their own worktrees.
+  - [ADR-0058](0058-portable-coding-agent-issue-execution-and-pull-request-gates.md) and [ADR-0064](0064-any-supported-client-may-review-either-axis-and-issues-have-no-concurrency-limit.md): one `agent/issue-<N>` branch and draft PR per issue, and read-only reviewers. With them, the restatements that the per-issue branch is the reservation and recovery record: [EXECUTION-STATE](../../.claude/skills/run-issue/EXECUTION-STATE.md), [resume-issue](../../.claude/skills/resume-issue/SKILL.md) and the [worktree lifecycle](../agents/worktree-lifecycle.md).
+  - [ADR-0069](0069-queue-implementers-run-in-host-created-worktrees.md): the orchestrator never implements, implementers run in their own worktrees, and its Reviewers and Models rules that a reviewer runs as the read-only `queue-reviewer`, does not check the commit out, and never edits, commits or pushes.
+  - [ADR-0082](0082-an-issue-may-carry-up-to-three-ordered-slices.md): an issue owns one `agent/issue-<N>` branch, one draft PR and one writing worktree.
   - [ADR-0084](0084-related-issues-of-one-parent-may-ship-on-one-integration-branch.md): only issues the founder groups under one parent share a pull request.
   - [ADR-0085](0085-one-review-round-one-fix-round-no-re-review.md): separate Standards and Spec reviewers, reviewers do not commit, and one implementer fixes the accepted findings.
   - [ADR-0091](0091-docs-lane-after-a-green-pull-request-head.md)'s workflow rule (in the coding workflow) to push documentation separately after a green code head.
-  - The [AGENTS.md](../../AGENTS.md) rule against querying provider quota, for measurement reads only.
+  - The rule against querying provider quota in [AGENTS.md](../../AGENTS.md) and its copies in run-issue, resume-issue and run-queue, for the measurement and handoff reads below only.
 
   run-queue, run-issue, the small-change path and every other rule stay in force.
 
@@ -33,14 +34,15 @@ ADR-0085 recorded the baseline: seven reviews across [PR #704](https://github.co
 **For three batches, one Claude Code desktop orchestrator session implements several issues itself on one batch branch and pull request. One fresh reviewer reviews each batch on both axes and may commit small fixes. The founder then keeps, changes or ends the rule from measured results.**
 
 - **Scope.** Any issue may join a batch, including features and migrations. Each item still has an issue, except a small change that qualifies for [ADR-0065](0065-small-changes-skip-the-issue-ceremony.md)'s no-issue path, which the batch lists in its PR body.
-- **Implementer.** The orchestrator session writes the code in its own worktree, with test-first evidence ([ADR-0070](0070-test-first-behaviour-and-ui-evidence.md)) and the usual verification gates. Each issue gets its own commits, and each commit message names its issue. A subagent is used only for heavy, isolated exploration or for truly independent parallel work, where a cold start costs less than bloating the session.
-- **Batch branch and PR.** `agent/batch-<n>-<slug>` from `origin/main`, pushed before editing. After the first checkpoint the orchestrator opens one draft PR with a `Closes #<N>` line per issue and one `Execution state` that holds a row per issue. It comments the PR link on each issue so other agents see the owner.
+- **Implementer.** The orchestrator session writes the code in its own worktree, with test-first evidence ([ADR-0070](0070-test-first-behaviour-and-ui-evidence.md)) and the usual verification gates. Each issue gets its own commits, and each commit message names its issue. A subagent is used only for heavy, isolated exploration, where a cold start costs less than bloating the session.
+- **Batch branch and PR.** `agent/batch-<n>-<slug>` from `origin/main`, pushed before editing. After the first checkpoint the orchestrator opens one draft PR with a `Closes #<N>` line per issue and one `Execution state` that holds a row per issue. It comments the PR link on each issue so other agents see the owner. The batch branch is checked out only in the orchestrator's own worktree.
 - **Size and risk.** A batch stays near 800 to 1,000 changed lines, excluding tests. A migration, an authentication or authorization change, or a published API contract change goes in its own PR, so it can be reverted alone. Each batch merges when it is green; nothing waits for a release train.
 - **Review.** One fresh `batch-reviewer` agent, pinned to the final verified commit, reviews Standards and Spec in one context. It may commit a fix for its own finding when the fix is about 50 lines or fewer, stays in scope, and needs no migration, contract change or product decision, with one commit per finding and focused checks before it pushes. It pushes only while the branch head still equals the pinned commit. Larger findings come back to the orchestrator. Its report stays under 400 words and marks each finding `fixed in <sha>` or `left as finding`. No `Delta` review follows.
 - **Merge.** The orchestrator reads the reviewer's fix diff, confirms it stays within the findings, reruns the affected local gates, records each finding in `Execution state`, marks the PR ready and sets auto-merge. The required `pr` check and branch protection are unchanged.
 - **Documentation.** Docs ride in the batch and go up in the same push as code, after local lint, glossary and doc checks. The required `pr` check still runs.
 - **Measurement.** At batch start and at merge the orchestrator records plan usage (5-hour and weekly percentages) and the tokens used by itself and by the reviewer, taken from the session transcripts and de-duplicated by message ID. Both go in the batch's `Execution state`. These reads measure; they never decide whether to start work.
-- **Session lifecycle.** The orchestrator writes a handoff to the PR and hands off when the 5-hour plan limit reaches 95 percent. It suggests `/compact` at a batch boundary, or when earlier context has stopped being useful, and warns before auto-compaction. Long command output goes to files and is read with `tail` or `grep`.
+- **Session lifecycle.** The orchestrator also reads plan usage after each issue's checkpoint. When the 5-hour limit reaches 95 percent, it stops at that checkpoint, writes the handoff into the PR's `Execution state` and hands off. It suggests `/compact` at a batch boundary, or when earlier context has stopped being useful, and warns before auto-compaction. Long command output goes to files and is read with `tail` or `grep`.
+- **Recovery and cleanup.** The batch branch and its draft PR are the recovery record. A stopped batch resumes from them through `run-batch`; an issue whose comments link an open batch PR is resumed through that batch, never with its own `agent/issue-<N>` branch. After the merge, the orchestrator moves its worktree off the merged branch and deletes the local batch branch, because `worktree-gc` collects only `agent/issue-` branches.
 - **Other agents.** While a batch is open, other sessions work only in areas it does not touch.
 - **Evaluation.** After three batches the orchestrator compares tokens per merged issue with the ADR-0085 baseline and lists escaped defects: bugs found after merge in code a batch touched. A later ADR records whether the founder keeps, changes or ends the rule.
 
@@ -63,12 +65,13 @@ ADR-0085 recorded the baseline: seven reviews across [PR #704](https://github.co
 ### Neutral
 
 - run-queue, run-issue, integration branches and the small-change path are unchanged and remain available.
-- Ending the trial means deleting the `run-batch` skill, the `batch-reviewer` agent and their pointers.
+- Ending the trial means deleting the `run-batch` skill, the `batch-reviewer` agent, their pointers and the one batch line in resume-issue.
 
 ## Alternatives considered
 
 - **One pull request per release train.** Rejected: one squash revert would remove everything, review quality falls with size, and backend fixes would wait to reach staging.
 - **Keep cold implementer subagents per issue.** Rejected for this trial: each pays full price to reload context this session already holds.
+- **Several issues in one worktree on one branch**, rejected by ADR-0082 and ADR-0084 because a stopped agent leaves work nobody can attribute to an issue. Adopted for this trial: each commit names its issue, the batch `Execution state` keeps a row per issue, and the batch PR is the one recovery record.
 - **Self-review in the orchestrator session.** Rejected: an author shares its own blind spots, and independent first reads found every code-changing finding under ADR-0085.
 - **ADR-0085's two read-only reviewers.** Not adopted: the founder chose one reviewer that reads the code once and fixes small findings itself.
 - **Merge docs-only changes without the `pr` check.** Rejected: the docs lane already takes under a minute, and skipping it would mean weakening protection on `main`.

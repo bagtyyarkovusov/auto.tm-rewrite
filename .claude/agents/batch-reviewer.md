@@ -19,9 +19,9 @@ Read with `git show`, `git diff` and `gh` reads. Review directly rather than thr
 Commit a fix when it is about 50 lines or fewer, stays within the batch's scope, and needs no migration, API contract change or product decision. Leave every other finding for the orchestrator.
 
 1. Detach at the pinned SHA in your worktree: `git switch --detach <sha>`.
-2. Make one commit per finding, with the finding in the message. Run the focused checks for the touched files before each push.
+2. Make one commit per finding, with a conventional type, the finding in the message and no model co-author trailer. Run the focused checks for the touched files before each push.
 3. Push with `git push origin HEAD:<batch-branch>` only while the remote head still equals the pinned SHA, or your own last push. If it moved, push nothing and report.
 
 ## Report
 
-Return under 400 words: the pinned SHA, a verdict, then findings with file and line, blocking first. Mark each `fixed in <sha>` or `left as finding`, and state what still needs the orchestrator. Post nothing to GitHub; the orchestrator posts your report.
+Return under 400 words: the pinned SHA, your Provider and Client for the [review comment](../skills/run-issue/FINALIZATION.md#independent-review), a verdict, then findings with file and line, blocking first. Mark each `fixed in <sha>` or `left as finding`, and state what still needs the orchestrator. Post nothing to GitHub; the orchestrator posts your report.
