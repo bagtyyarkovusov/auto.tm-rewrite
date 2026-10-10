@@ -68,7 +68,7 @@ describe("Favorites large card", () => {
     const { view } = renderCard({ galleryKeys });
     expect(view.getAllByTestId("listing-photo")).toHaveLength(6);
     // Seven photos and six keys: one more behind a "+1" tile.
-    expect(view.getByTestId("listing-photo-more")).toBeTruthy();
+    expect(within(view.getByTestId("listing-photo-more")).getByText("+1")).toBeTruthy();
   });
 
   it("shows every photo and no count tile when the gallery holds them all", () => {
