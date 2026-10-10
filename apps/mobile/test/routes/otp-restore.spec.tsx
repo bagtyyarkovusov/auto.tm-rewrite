@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, fireEvent, renderMobile, routeParams, routerMock } from "../render";
 import OtpScreen from "../../app/(auth)/otp";
 import { ApiError } from "../../src/api/client";
+
 import { ToastProvider } from "@/components/ui/toast";
 
 const ONBOARDING_FLAG = "@auto-tm/onboarding-completed";
@@ -271,7 +272,11 @@ describe("Sign-in code screen for a User with no scheduled deletion", () => {
 
 describe("Sign-in code screen actions", () => {
   it("opens Help from Contact support", () => {
-    const screen = renderMobile(<OtpScreen />);
+    const screen = renderMobile(
+      <ToastProvider>
+        <OtpScreen />
+      </ToastProvider>,
+    );
 
     fireEvent.press(screen.getByRole("button", { name: "Contact support" }));
 
@@ -281,7 +286,11 @@ describe("Sign-in code screen actions", () => {
   it("offers Use phone instead on an email code and returns to the phone entry", () => {
     routeParams.method = "email";
     routeParams.destination = "aman@example.com";
-    const screen = renderMobile(<OtpScreen />);
+    const screen = renderMobile(
+      <ToastProvider>
+        <OtpScreen />
+      </ToastProvider>,
+    );
 
     fireEvent.press(screen.getByRole("button", { name: "Use phone instead" }));
 
@@ -289,7 +298,11 @@ describe("Sign-in code screen actions", () => {
   });
 
   it("does not offer Use phone instead on a phone code", () => {
-    const screen = renderMobile(<OtpScreen />);
+    const screen = renderMobile(
+      <ToastProvider>
+        <OtpScreen />
+      </ToastProvider>,
+    );
 
     expect(screen.queryByRole("button", { name: "Use phone instead" })).toBeNull();
   });

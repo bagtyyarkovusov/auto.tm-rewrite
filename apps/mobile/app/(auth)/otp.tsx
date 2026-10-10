@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/toast";
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -81,6 +82,7 @@ export default function OtpScreen() {
   const { mutateAsync: verifyOtpMutate } = useVerifyOtp();
   const { mutateAsync: requestOtpMutate } = useRequestOtp();
   const { mutateAsync: restoreAccountMutate } = useRestoreAccount();
+  const toast = useToast();
   const { mutateAsync: revokePendingSessionMutate } = useRevokePendingSession();
 
   const restoreDate = useMemo(
@@ -175,6 +177,7 @@ export default function OtpScreen() {
     setPendingSession(null);
     setIsRestoring(false);
     markOnboardingCompleted();
+    toast.show({ title: tAccount("restoreAccountDone"), variant: "success" });
     authNavigation.complete();
   }
 
