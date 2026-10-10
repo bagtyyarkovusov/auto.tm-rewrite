@@ -179,6 +179,29 @@ describe("useChatPushTokenRegistration", () => {
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
+  it("logs and skips registration when the native token fetch fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockGetPermissionsAsync.mockResolvedValue({
+      status: PermissionStatus.GRANTED,
+      granted: true,
+      expires: "never",
+      canAskAgain: true,
+    });
+    const failure = new Error("FIS_AUTH_ERROR");
+    mockGetDevicePushTokenAsync.mockRejectedValue(failure);
+
+    renderHook(() => useChatPushTokenRegistration(true), { wrapper });
+
+    await waitFor(() =>
+      expect(warn).toHaveBeenCalledWith(
+        "[pushToken] native token fetch failed",
+        failure,
+      ),
+    );
+    expect(mockMutate).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("does nothing when disabled", async () => {
     renderHook(() => useChatPushTokenRegistration(false), { wrapper });
 
