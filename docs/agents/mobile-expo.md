@@ -97,6 +97,51 @@ cd apps/mobile/android
 
   Once the artifact is cached, `expo run:android` succeeds normally. Do not "fix" this by pinning React Native versions or clearing `node_modules`; the artifact coordinates are correct.
 
+## Local release builds
+
+Local release builds fail in ways EAS never sees, because EAS starts from a clean checkout, rebuilds workspace packages in `eas-build-post-install`, and prebuilds native directories fresh. On a developer Mac every one of those artifacts can be stale. Use the guarded helper instead of calling Gradle directly:
+
+```bash
+pnpm --filter @auto-tm/mobile build:android:local
+```
+
+`apps/mobile/scripts/local-android-release.mjs` rebuilds contracts, regenerates `android/` when branding assets changed, forces the JS bundle task to re-run, and verifies the APK embeds a Hermes bundle before it prints the `adb install -r` command. It defaults to the production backend; override `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WS_URL` / `EXPO_PUBLIC_MEDIA_URL` to point at a PR backend. The failure modes it guards, for when you must build by hand:
+
+- **Stale `@auto-tm/contracts` dist crashes the app after sign-in.** Metro resolves the package to its gitignored `dist/` via package exports. If `dist/` is older than a source change, the bundle silently lacks the new exports and the app throws `TypeError: undefined is not a function` at the first caller (logcat's componentStack names the calling screen, not the missing function — a profile row crash can be a contracts miss, not a screen bug). Fix: `pnpm --filter @auto-tm/contracts build`, then re-bundle. EAS is immune; this is local-only and never a store bug.
+
+- **Gradle repackages stale JS bundles.** `createBundleReleaseJsAndAssets` tracks neither workspace `dist/` files nor `EXPO_PUBLIC_*` env as inputs, so an incremental `assembleRelease` can report `UP-TO-DATE` and ship the previous bundle. Deleting `app/build/generated/{assets,res,sourcemaps}/react` (plus `intermediates/assets/release` and `outputs/apk/release`) forces a re-bundle without a full native rebuild.
+
+- **The red "Unable to load script" box means the installed APK has no JS bundle.** `expo run:android` can install a mid-build APK; verify before installing: `unzip -l` lists `assets/index.android.bundle` and its first bytes are the Hermes magic `c6 1f bc 03`. Release bundling needs heap: `NODE_OPTIONS=--max-old-space-size=8192`, otherwise Metro OOMs mid-bundle.
+
+- **`expo prebuild` without `--clean` does not regenerate branding.** Launcher icons, splash, and the app name are baked into `android/` and `ios/` at prebuild time and both directories are gitignored. After changing `assets/images/*` icons, the splash, or the display name, run `npx expo prebuild --clean -p <platform>` or the local build keeps the old branding. Store builds are unaffected (EAS prebuilds fresh); check the AAB contents before suspecting the store.
+
+- **Xcode 27 replaced Simulator.app with Device Hub** (Xcode → Open Developer Tool → Device Hub). `simctl` still works headless: build `Release-iphonesimulator` with `xcodebuild`, then `xcrun simctl install <udid> <App>.app` and `xcrun simctl launch <udid> tm.auto.app`.
+
+- **Local iOS builds need a 16.0 deployment floor.** Xcode 27 rejects pod targets below iOS 15.0, and `expo-router`'s npm tarball ships no prebuilt xcframework, so it compiles from source that uses iOS 16 APIs (`UIAction.subtitle`) despite the podspec declaring 15.1. The ExpoRouter pod, the `Pods-Carberk` aggregate target (it compiles `ExpoModulesProvider.swift`), and the app target must all build at ≥ 16.0, via this `post_install` addition to the generated `ios/Podfile` (re-apply after every `prebuild --clean`; EAS's older Xcode never sees this — do not move it into `app.config.js` without a product decision on dropping iOS 15 devices):
+
+```ruby
+local_deployment_floor = '16.0'
+installer.pods_project.targets.each do |target|
+  target.build_configurations.each do |build_config|
+    if build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < local_deployment_floor.to_f
+      build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = local_deployment_floor
+    end
+  end
+end
+installer.aggregate_targets.each do |aggregate_target|
+  aggregate_target.user_project.native_targets.each do |target|
+    target.build_configurations.each do |build_config|
+      if build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < local_deployment_floor.to_f
+        build_config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = local_deployment_floor
+      end
+    end
+  end
+  aggregate_target.user_project.save
+end
+```
+
+- **Store builds without cloud credits:** `eas build -p android --profile production --local` runs the same EAS pipeline on this Mac, including EAS secrets such as `GOOGLE_SERVICES_JSON`, without spending cloud build credits. It is slower than the cloud and ties up the machine; keep one heavy local build at a time.
+
 ## Android Activity recreation
 
 Android recreates the Activity in place for any configuration change the manifest does not claim, and React Native then mounts the whole React tree again in the same JavaScript runtime. `apps/mobile/plugins/withAndroidActivityRecreation.js` claims `density`, `fontScale`, `locale` and `layoutDirection`, and adds an `onDestroy` override to `MainActivity` so Expo modules register their activity-result launchers again after a recreation the manifest cannot claim (navigation mode or wallpaper colour overlays). Without the override, `expo-image-picker` rejects every launch with `Attempting to launch an unregistered ActivityResultLauncher` until the app is force-stopped. Keep both when changing the plugin list or upgrading Expo, and re-test on a release build:
