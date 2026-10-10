@@ -15,9 +15,10 @@ Git and GitHub state, not the prior chat, own recovery. Preserve the previous at
 
 1. Follow [AGENTS.md](../../../AGENTS.md) and [the coding workflow](../../../docs/agents/coding-workflow.md). Read the issue, its governing references, and the latest durable state. Load affected overviews, source, tests, and relevant vocabulary; load roadmap/sprint/charter decisions only when they govern this task.
 2. If `$issue` is empty, list candidates from local/remote `agent/issue-*` branches, worktrees, blocked execution states, and open PRs; require selection.
-3. Inspect issue/dependencies, local and remote heads, worktree status and diff, commits versus `main`, PR body/comments/checks, review SHAs, and running processes. Treat missing or interrupted results as `unknown`.
-4. Classify the attempt as reservation-only, local changes, pushed checkpoints without PR, open draft/ready PR, or merged PR with bookkeeping drift. Also note whether auto-merge is on (`gh pr view <PR> --json autoMergeRequest`) and whether the PR is stacked (its base is not `main`; see `Stacked on` in its Execution state).
-5. Run non-mutating scoped checks needed to understand state. Never query provider quota.
+3. If the issue's comments link an open `agent/batch-*` PR, the issue belongs to that batch: resume the batch through [run-batch](../run-batch/SKILL.md#resume-a-stopped-batch) and stop here.
+4. Inspect issue/dependencies, local and remote heads, worktree status and diff, commits versus `main`, PR body/comments/checks, review SHAs, and running processes. Treat missing or interrupted results as `unknown`.
+5. Classify the attempt as reservation-only, local changes, pushed checkpoints without PR, open draft/ready PR, or merged PR with bookkeeping drift. Also note whether auto-merge is on (`gh pr view <PR> --json autoMergeRequest`) and whether the PR is stacked (its base is not `main`; see `Stacked on` in its Execution state).
+6. Run non-mutating scoped checks needed to understand state. Never query provider quota.
 
 ## Select the recovery path
 

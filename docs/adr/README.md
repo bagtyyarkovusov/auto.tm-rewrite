@@ -103,6 +103,7 @@ This directory contains architecture decisions for AutoTM. ADRs are **immutable 
 | [0091](0091-docs-lane-after-a-green-pull-request-head.md) | Docs lane after a green pull request head | Accepted | 2026-10-08 |
 | [0092](0092-temporary-failure-limits-for-fixed-code-phone-sign-in.md) | Temporary failure limits for fixed-code phone sign-in, overrides ADR-0030's never-locked-out guarantee and amends ADR-0086 | Accepted | 2026-10-08 |
 | [0093](0093-carberk-is-the-public-product-name.md) | Carberk is the public product name; internal identifiers and domains keep their AutoTM names | Accepted | 2026-10-09 |
+| [0094](0094-one-orchestrator-implements-batched-pull-requests-trial.md) | One orchestrator session implements batched pull requests (trial), amends ADR-0058, ADR-0064, ADR-0069, ADR-0082, ADR-0084, ADR-0085, ADR-0091's docs push and the AGENTS.md quota rule for run-batch | Accepted | 2026-10-10 |
 
 ## Per-app ADRs
 
