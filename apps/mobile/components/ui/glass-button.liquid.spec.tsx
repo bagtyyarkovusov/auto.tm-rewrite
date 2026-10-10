@@ -25,7 +25,8 @@ describe("GlassButton on the system glass", () => {
 
     const [call, message] = screen.getAllByTestId("glass");
     expect(call?.props.isInteractive).toBe(true);
-    expect(call?.props.tintColor).toMatch(/^hsl\(/);
+    // Light brand red, hsl(0 100% 45%).
+    expect(call?.props.tintColor).toBe("#e60000");
     expect(call?.props.className).toMatch(/\brounded-full\b/);
     expect(call?.props.className).toMatch(/\bflex-1\b/);
     expect(message?.props.isInteractive).toBe(true);
