@@ -36,6 +36,7 @@ import { useMyDrafts } from "../src/api/listings/useMyDrafts";
 import { useMyListings } from "../src/api/listings/useMyListings";
 import { useGlobalConversationSocket } from "../src/conversations/socket/useGlobalConversationSocket";
 import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanCleanup";
+import { usePushTokenSync } from "../src/notifications/usePushTokenSync";
 import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
 import { AppNavigationEffects } from "../src/navigation/AppNavigationEffects";
@@ -171,6 +172,24 @@ function GlobalConversationSocketOnBoot() {
   return <GlobalConversationSocket />;
 }
 
+function PushTokenSync() {
+  usePushTokenSync();
+  return null;
+}
+
+// A granted-but-unregistered push token (first attempt failed, token rotated)
+// is retried on launch and on return to the foreground. The hook never
+// prompts; the one-shot prompt stays with the first chat action.
+function PushTokenSyncOnBoot() {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated !== true) {
+    return null;
+  }
+
+  return <PushTokenSync />;
+}
+
 export default function RootLayout() {
   const osColorScheme = useOsColorScheme();
   const { setColorScheme } = useNativeWindColorScheme();
@@ -245,6 +264,7 @@ export default function RootLayout() {
         <ToastProvider>
           <OrphanCleanupOnBoot />
           <GlobalConversationSocketOnBoot />
+          <PushTokenSyncOnBoot />
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <SafeAreaProvider>
             <ErrorBoundary>

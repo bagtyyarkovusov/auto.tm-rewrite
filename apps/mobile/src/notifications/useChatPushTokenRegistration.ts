@@ -55,9 +55,9 @@ export function useChatPushTokenRegistration(enabled: boolean) {
       const state = await getNotificationPermissionState();
 
       if (state === "granted") {
-        const nativeToken = await getNativePushToken();
-        if (nativeToken && !cancelled) {
-          registerPushToken(nativeToken);
+        const result = await getNativePushToken();
+        if (result.status === "ok" && !cancelled) {
+          registerPushToken({ token: result.token, platform: result.platform });
         }
         return;
       }
@@ -76,9 +76,12 @@ export function useChatPushTokenRegistration(enabled: boolean) {
       const result = await requestNotificationPermission();
 
       if (result === "granted" && !cancelled) {
-        const nativeToken = await getNativePushToken();
-        if (nativeToken && !cancelled) {
-          registerPushToken(nativeToken);
+        const tokenResult = await getNativePushToken();
+        if (tokenResult.status === "ok" && !cancelled) {
+          registerPushToken({
+            token: tokenResult.token,
+            platform: tokenResult.platform,
+          });
         }
       }
     }
