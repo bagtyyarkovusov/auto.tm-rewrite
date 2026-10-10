@@ -34,6 +34,7 @@ import { ApiError } from "../src/api/client";
 import { useAuth } from "../src/auth/useAuth";
 import { useMyDrafts } from "../src/api/listings/useMyDrafts";
 import { useMyListings } from "../src/api/listings/useMyListings";
+import { useGlobalConversationSocket } from "../src/conversations/socket/useGlobalConversationSocket";
 import { cleanupOrphanDraftDirs } from "../src/listings/uploadStaging/orphanCleanup";
 import { initI18n } from "../src/i18n";
 import { localeStore } from "../src/locale/localeStore";
@@ -153,6 +154,23 @@ function OrphanCleanupOnBoot() {
   return <AuthenticatedOrphanCleanup />;
 }
 
+function GlobalConversationSocket() {
+  useGlobalConversationSocket();
+  return null;
+}
+
+// The signed-in app listens for new Messages on every screen, so the Messages
+// tab badge and list update live. The shared socket disconnects on sign-out.
+function GlobalConversationSocketOnBoot() {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated !== true) {
+    return null;
+  }
+
+  return <GlobalConversationSocket />;
+}
+
 export default function RootLayout() {
   const osColorScheme = useOsColorScheme();
   const { setColorScheme } = useNativeWindColorScheme();
@@ -226,6 +244,7 @@ export default function RootLayout() {
       <ThemeProvider value={NAV_THEME[scheme]}>
         <ToastProvider>
           <OrphanCleanupOnBoot />
+          <GlobalConversationSocketOnBoot />
           <StatusBar style={scheme === "dark" ? "light" : "dark"} />
           <SafeAreaProvider>
             <ErrorBoundary>

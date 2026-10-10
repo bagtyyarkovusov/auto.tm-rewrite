@@ -5,25 +5,18 @@ import type { ConversationsSchemas } from "@auto-tm/contracts";
 import { queryKeys } from "../../api/queryKeys";
 
 import {
-  ConversationSocket,
+  getSharedConversationSocket,
   type ConversationSocketStatus,
-  type MessageDeletedEvent,
-  type MessageNewEvent,
   type PresenceEvent,
   type SendMessageAck,
   type SocketErrorAck,
   type TypingEvent,
-  type WatermarkEvent,
 } from "./ConversationSocket";
-
-let sharedSocket: ConversationSocket | null = null;
-
-function getSharedSocket(): ConversationSocket {
-  if (!sharedSocket) {
-    sharedSocket = new ConversationSocket();
-  }
-  return sharedSocket;
-}
+import {
+  handleMessageDeleted,
+  handleMessageNew,
+  handleWatermark,
+} from "./conversationCacheSync";
 
 const TYPING_DEBOUNCE_MS = 3000;
 const PEER_TYPING_TIMEOUT_MS = 5000;
@@ -67,7 +60,7 @@ export function useConversationSocket(
   currentUserId?: string,
 ): UseConversationSocketReturn {
   const queryClient = useQueryClient();
-  const socketRef = useRef(getSharedSocket());
+  const socketRef = useRef(getSharedConversationSocket());
   const joinedRef = useRef(false);
   const [status, setStatus] = useState<ConversationSocketStatus>(
     socketRef.current.getStatus(),
@@ -150,10 +143,12 @@ export function useConversationSocket(
         }
       }
       if (
-        previousStatus === "disconnected" &&
+        (previousStatus === "disconnected" || previousStatus === "error") &&
         next === "connected"
       ) {
         // HTTP recovery: reconcile any messages missed while disconnected.
+        // A failed reconnection attempt surfaces as "error" (connect_error),
+        // so recovery can arrive from "error" as well as from "disconnected".
         void queryClient.invalidateQueries({
           queryKey: queryKeys.conversations.messages(conversationId),
         });
@@ -320,108 +315,3 @@ export function useConversationSocket(
   );
 }
 
-function handleMessageNew(
-  queryClient: ReturnType<typeof useQueryClient>,
-  event: MessageNewEvent,
-): void {
-  const { message } = event;
-  const conversationId = message.conversationId;
-
-  queryClient.setQueryData(
-    queryKeys.conversations.messages(conversationId),
-    (old: { pages: Array<{ items: unknown[]; nextCursor: string | null }> } | undefined) => {
-      if (!old) return old;
-
-      const pages = old.pages.map((page, index) => {
-        if (index !== 0) return page;
-        const exists = page.items.some((item) => {
-          const existing = item as { id?: string; clientMessageId?: string };
-          if (existing.id === message.id) return true;
-          if (
-            message.clientMessageId &&
-            existing.clientMessageId === message.clientMessageId
-          ) {
-            return true;
-          }
-          return false;
-        });
-        if (exists) return page;
-        return { ...page, items: [message, ...page.items] };
-      });
-
-      return { ...old, pages };
-    },
-  );
-
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.list(),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.unreadCounts(),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.detail(conversationId),
-  });
-}
-
-function handleWatermark(
-  queryClient: ReturnType<typeof useQueryClient>,
-  event: WatermarkEvent,
-): void {
-  // Another participant updated their watermark; refresh the conversation list
-  // so unread counts and last-seen state reflect the change.
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.list(),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.unreadCounts(),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.detail(event.conversationId),
-  });
-}
-
-function handleMessageDeleted(
-  queryClient: ReturnType<typeof useQueryClient>,
-  event: MessageDeletedEvent,
-): void {
-  const { messageId, conversationId, deletedAt } = event;
-
-  queryClient.setQueryData(
-    queryKeys.conversations.messages(conversationId),
-    (old: { pages: Array<{ items: unknown[]; nextCursor: string | null }> } | undefined) => {
-      if (!old) return old;
-
-      const pages = old.pages.map((page) => ({
-        ...page,
-        items: page.items.map((item) => {
-          const existing = item as {
-            id?: string;
-            deletedAt?: string;
-            text?: string | null;
-            metadata?: unknown;
-          };
-          if (existing.id !== messageId) return item;
-          return {
-            ...(item as Record<string, unknown>),
-            deletedAt,
-            text: null,
-            metadata: undefined,
-          };
-        }),
-      }));
-
-      return { ...old, pages };
-    },
-  );
-
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.list(),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.unreadCounts(),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.conversations.detail(conversationId),
-  });
-}

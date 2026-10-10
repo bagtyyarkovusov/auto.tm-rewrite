@@ -37,6 +37,7 @@ const mockSocket = {
 
 vi.mock("./ConversationSocket", () => ({
   ConversationSocket: vi.fn().mockImplementation(() => mockSocket),
+  getSharedConversationSocket: () => mockSocket,
 }));
 
 import { useConversationSocket } from "./useConversationSocket";
@@ -224,6 +225,42 @@ describe("useConversationSocket", () => {
 
     act(() => {
       statusHandler("disconnected");
+      statusHandler("connected");
+    });
+
+    await waitFor(() => {
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.conversations.messages(CONV_ID),
+      });
+    });
+  });
+
+  it("invalidates messages query when recovery passes through an error status", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const customWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const invalidateQueriesSpy = vi.spyOn(client, "invalidateQueries");
+
+    let statusHandler: (status: string) => void = () => {};
+    mockSocket.subscribeStatus.mockImplementation((handler) => {
+      statusHandler = handler as (status: string) => void;
+      return () => {};
+    });
+    mockSocket.getStatus.mockReturnValue("connected");
+
+    renderHook(() => useConversationSocket(CONV_ID), {
+      wrapper: customWrapper,
+    });
+
+    // A failed reconnection attempt reports "error" (connect_error); the
+    // successful retry after it is still a recovery and must reconcile.
+    act(() => {
+      statusHandler("disconnected");
+      statusHandler("error");
       statusHandler("connected");
     });
 
