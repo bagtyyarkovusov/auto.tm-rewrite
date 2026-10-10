@@ -183,7 +183,7 @@ A tab screen keeps `useTabBarSpace()` clear at its bottom: either its root is pa
 
 ### Sticky action bar (`StickyActionBar`, `useStickyActionBar`)
 
-- The primary action of a screen floats on a glass slab: radius 28, 8 dp padding, 12 dp from the side edges. Buttons inside are 56 dp high with a 20 dp radius, concentric with the slab. A hint, an error or a quiet second action sits in the same slab.
+- The primary action of a screen floats 12 dp from the side edges with no slab behind it (#808): each button is its own `GlassButton` capsule, 56 dp high. On iOS 26 it is interactive Liquid Glass, the primary action tinted brand red with a white label and the rest clear glass with the foreground label; on Android, older iOS and with Reduce Transparency it is a solid capsule (brand red or the card tone) with the `floating` shadow. A hint or a quiet second action sits above the buttons over the soft edge fade; an error line has a solid surface of its own.
 - Content scrolls under the bar. The hook measures the bar and returns the padding the scrolling content must end with, so the last row can always be scrolled clear, also when the bar grows.
 - Position: where the bar's parent reaches the screen's bottom edge (Listing detail, a sheet) it sits at the tab bar's level from the table above. Where the parent already ends above the system inset, the tab bar or the keyboard, it sits 8 dp above the parent's edge. Inside a keyboard-avoiding view it rides up with the keyboard.
 - Used by: Model picker, Search parameters, Search (All filters), Listing detail (contact bar and owner bar), and the Listing preview.
@@ -191,6 +191,6 @@ A tab screen keeps `useTabBarSpace()` clear at its bottom: either its root is pa
 
 ### Glass renderings
 
-iOS 26 draws the tab bar, the sticky bar, the floating filter chips, the glass header circles and the photo position chip with the system Liquid Glass. Android and older iOS draw a 94% opaque surface with a light hairline edge and the `floating` shadow. Reduce Transparency draws the opaque raised surface. The tab bar and sticky bar were checked on the iPhone simulator in light and dark (the fallback by forcing its branch); the header circles and the photo chip were not yet seen on a simulator, and Reduce Transparency and a real Android device were not checked.
+iOS 26 draws the tab bar, the sticky bar's buttons, the floating filter chips, the glass header circles and the photo position chip with the system Liquid Glass. Android and older iOS draw a 94% opaque surface (solid for the sticky bar's buttons, above) with a light hairline edge and the `floating` shadow. Reduce Transparency draws the opaque raised surface. The tab bar and sticky bar were checked on the iPhone simulator in light and dark (the fallback by forcing its branch); the header circles and the photo chip were not yet seen on a simulator, and Reduce Transparency and a real Android device were not checked.
 
 See `docs/prd/ui/hifi/mobile-tabs-_layout.md`.
