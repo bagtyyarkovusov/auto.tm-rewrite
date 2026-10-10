@@ -66,9 +66,10 @@ describe("destructive colour contrast (77 Accessibility: 4.5:1 for normal text)"
     expect(contrast(token(dark, "destructive-foreground"), token(dark, "destructive"))).toBeGreaterThanOrEqual(AA);
   });
 
-  it("keeps lib/theme.ts in step with global.css for the destructive fill", () => {
+  it("keeps lib/theme.ts in step with global.css for the destructive fill and its text", () => {
     expect(THEME.light.destructive).toBe(token(light, "destructive"));
     expect(THEME.light.destructiveForeground).toBe(token(light, "destructive-foreground"));
     expect(THEME.dark.destructive).toBe(token(dark, "destructive"));
+    expect(THEME.dark.destructiveForeground).toBe(token(dark, "destructive-foreground"));
   });
 });

@@ -50,7 +50,7 @@ export const THEME = {
     accent: mobileSurfaces.tonalPressed.dark,
     accentForeground: mobileText.primary.dark,
     destructive: "15 80% 58%",
-    destructiveForeground: "0 0% 100%",
+    destructiveForeground: "0 0% 9%",
     messageOwn: "0 59% 16%",
     success: "142 70% 45%",
     successForeground: "0 0% 100%",

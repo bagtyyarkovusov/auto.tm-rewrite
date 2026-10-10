@@ -23,10 +23,8 @@
  * on its own 10% tint, and carries white text as a fill (6.0:1). Dark text on
  * that fill would fall to 3.0:1, so the two light values change together.
  * test/destructive-contrast.spec.ts computes these from this file.
- * KNOWN DIVERGENCE: dark --destructive-foreground disagrees with
- * lib/theme.ts (0 0% 9% here vs 0 0% 100% there). Unresolved — see the
- * mobile UI stabilization notes before changing either value. White on the
- * dark fill is 3.2:1, so the dark value here must stay dark.
+ * Dark --destructive-foreground stays dark (0 0% 9%): white on the dark
+ * fill is 3.2:1. lib/theme.ts holds the same values (#336).
  * Own Message bubble (#775 F): --message-own is the brand colour mixed into
  * the page, about 10% in light and 22% in dark, kept as an opaque value so a
  * photo and the dimmed pending bubble sit on a known fill. Normal text, the
