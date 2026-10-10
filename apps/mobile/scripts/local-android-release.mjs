@@ -37,21 +37,24 @@ const androidDir = path.join(mobileRoot, "android");
 const apkPath = path.join(androidDir, "app/build/outputs/apk/release/app-release.apk");
 const HERMES_MAGIC = Buffer.from([0xc6, 0x1f, 0xbc, 0x03]);
 
+// Static EXPO_PUBLIC_* defaults come from eas.json (single source for the app
+// version and scheme); the backend URLs are not in eas.json by design
+// (validate-eas-build-env) and default to production here. ANDROID_APPLICATION_ID
+// is deliberately not read: local builds stay tm.auto.app.
+const easJson = JSON.parse(fs.readFileSync(path.join(mobileRoot, "eas.json"), "utf8"));
+const easDefaults = Object.fromEntries(
+  Object.entries({ ...easJson.build.base.env, ...easJson.build.production.env }).filter(
+    ([key]) => key.startsWith("EXPO_PUBLIC_"),
+  ),
+);
+
 const env = {
+  ...easDefaults,
+  EXPO_PUBLIC_API_URL: "https://api.autotm.bagtyyar.dev/api/v1",
+  EXPO_PUBLIC_WS_URL: "wss://api.autotm.bagtyyar.dev/ws/chat",
+  EXPO_PUBLIC_MEDIA_URL: "https://media.autotm.bagtyyar.dev",
+  EXPO_PUBLIC_ENV: "production",
   ...process.env,
-  EXPO_PUBLIC_API_URL:
-    process.env.EXPO_PUBLIC_API_URL ?? "https://api.autotm.bagtyyar.dev/api/v1",
-  EXPO_PUBLIC_WS_URL:
-    process.env.EXPO_PUBLIC_WS_URL ?? "wss://api.autotm.bagtyyar.dev/ws/chat",
-  EXPO_PUBLIC_MEDIA_URL:
-    process.env.EXPO_PUBLIC_MEDIA_URL ?? "https://media.autotm.bagtyyar.dev",
-  EXPO_PUBLIC_APP_VERSION: process.env.EXPO_PUBLIC_APP_VERSION ?? "2.0.3",
-  EXPO_PUBLIC_ENV: process.env.EXPO_PUBLIC_ENV ?? "production",
-  EXPO_PUBLIC_PUSH_TRANSPORT: process.env.EXPO_PUBLIC_PUSH_TRANSPORT ?? "fcm",
-  EXPO_PUBLIC_CUSTOM_SCHEME: process.env.EXPO_PUBLIC_CUSTOM_SCHEME ?? "autotm",
-  EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN:
-    process.env.EXPO_PUBLIC_UNIVERSAL_LINK_DOMAIN ?? "auto.tm",
-  EXPO_PUBLIC_WEB_URL: process.env.EXPO_PUBLIC_WEB_URL ?? "https://autotm.bagtyyar.dev",
   NODE_OPTIONS: `--max-old-space-size=8192 ${process.env.NODE_OPTIONS ?? ""}`.trim(),
   ANDROID_HOME: process.env.ANDROID_HOME ?? path.join(os.homedir(), "Library/Android/sdk"),
 };
@@ -105,11 +108,20 @@ for (const stale of [
 run("assembleRelease (JS bundle forced to re-run)", "./gradlew", ["assembleRelease"], androidDir);
 
 console.log("\n==> Verify the APK embeds a Hermes bundle");
-const bundle = execFileSync("unzip", ["-p", apkPath, "assets/index.android.bundle"]);
-if (bundle.length === 0 || !bundle.subarray(0, 4).equals(HERMES_MAGIC)) {
+let bundle;
+try {
+  // The release bundle is several MB; the default maxBuffer (1 MiB) throws ENOBUFS.
+  bundle = execFileSync("unzip", ["-p", apkPath, "assets/index.android.bundle"], {
+    maxBuffer: 64 * 1024 * 1024,
+  });
+} catch {
+  bundle = null;
+}
+if (!bundle || bundle.length === 0 || !bundle.subarray(0, 4).equals(HERMES_MAGIC)) {
   console.error(
-    `FAIL: ${apkPath} has no valid Hermes bundle (magic ${bundle.subarray(0, 4).toString("hex")}). ` +
-      "Installing it shows the red 'Unable to load script' screen.",
+    `FAIL: ${apkPath} has no valid Hermes bundle. ` +
+      "Installing it shows the red 'Unable to load script' screen. " +
+      "Check the createBundleReleaseJsAndAssets log above for a Metro error.",
   );
   process.exit(1);
 }
