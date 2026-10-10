@@ -123,6 +123,13 @@ describe("Favorites screen", () => {
     expect(useHideSoldStore.getInitialState().hideSold).toBe(true);
   });
 
+  it("keeps a gap between the Hide sold row and the first card", async () => {
+    const view = await renderFavorites();
+    let node = view.getByRole("switch", { name: "Hide sold" }).parent;
+    while (node && !/\bpb-3\b/.test(String(node.props.className ?? ""))) node = node.parent;
+    expect(node).toBeTruthy();
+  });
+
   it("gives the switch a target of at least 44 pt", async () => {
     const view = await renderFavorites();
     expect(view.getByRole("switch", { name: "Hide sold" }).props.className).toMatch(/min-h-11/);

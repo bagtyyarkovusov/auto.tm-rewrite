@@ -228,7 +228,7 @@ Brand red is `#E60000` in light. Dark keeps the slightly lighter `hsl(0 90% 52%)
 
 ### Glass
 
-`components/ui/glass-surface.tsx` is the only translucent material. It goes on floating navigation and on controls that sit above scrolling content: the tab bar, sticky action bars, floating chips, controls on a photo. Content stays on solid surfaces.
+`components/ui/glass-surface.tsx` is the only translucent material, with `components/ui/glass-button.tsx` as its button form for the sticky action bar's capsules. It goes on floating navigation and on controls that sit above scrolling content: the tab bar, sticky action bar buttons, floating chips, controls on a photo. Content stays on solid surfaces.
 
 | Platform | Rendering |
 |---|---|

@@ -49,8 +49,31 @@ describe("Favorites large card", () => {
     expect(heart.props.accessibilityState).toEqual(expect.objectContaining({ selected: true }));
     expect(view.getByText("70,000 TMT")).toBeTruthy();
     expect(view.getByText("Toyota Camry, 2018")).toBeTruthy();
-    expect(view.getAllByTestId("listing-photo")).toHaveLength(2);
     expect(view.getByLabelText("Photos: 7")).toBeTruthy();
+  });
+
+  it("looks like the Results card: full width, 28 dp radius, the swipeable inset photo strip", () => {
+    const { view } = renderCard();
+    const card = view.getByTestId("favorite-card");
+    expect(card.props.className).toMatch(/\brounded-3xl\b/);
+    expect(card.props.className).not.toMatch(/\bmx-4\b/);
+    expect(view.getByTestId("listing-photo-strip")).toBeTruthy();
+    expect(view.getAllByTestId("listing-photo")).toHaveLength(2);
+    // Seven photos and two keys: a "+5" tile ends the strip.
+    expect(view.getByTestId("listing-photo-more")).toBeTruthy();
+  });
+
+  it("puts Call, a square Message and a square ♥ in one row", () => {
+    const { view } = renderCard();
+    const row = within(view.getByTestId("listing-actions"));
+    expect(row.getByRole("button", { name: "Call" }).props.className).toMatch(/\bflex-1\b/);
+    expect(row.getByRole("button", { name: "Message" }).props.className).toMatch(/\baspect-square\b/);
+    expect(row.getByRole("button", { name: "Remove from Favorites" }).props.className).toMatch(/\baspect-square\b/);
+  });
+
+  it("gives Message the full width when there is no Call", () => {
+    const { view } = renderCard({ allowCalls: false });
+    expect(view.getByRole("button", { name: "Message" }).props.className).toMatch(/\bflex-1\b/);
   });
 
   it("gives Call, Message and ♥ targets of at least 44 pt", () => {
@@ -101,7 +124,7 @@ describe("Favorites large card", () => {
     const { view } = renderCard({}, { isOwn: true });
     expect(view.queryByRole("button", { name: "Call" })).toBeNull();
     expect(view.queryByRole("button", { name: "Message" })).toBeNull();
-    expect(view.getByRole("button", { name: "Remove from Favorites" })).toBeTruthy();
+    expect(within(view.getByTestId("listing-meta")).getByRole("button", { name: "Remove from Favorites" })).toBeTruthy();
   });
 
   it.each([
@@ -110,7 +133,7 @@ describe("Favorites large card", () => {
   ] as const)("shows a %s Listing dimmed and labelled, with a muted price and no contact buttons", (status, label) => {
     const { view, onPress, onRemove } = renderCard({ status });
     expect(view.getByText(label)).toBeTruthy();
-    expect(view.getByTestId("listing-photos").props.className).toMatch(/opacity-50/);
+    expect(view.getByTestId("listing-photos-frame").props.className).toMatch(/opacity-50/);
     expect(view.getByText("70,000 TMT").props.className).toMatch(/text-muted-foreground/);
     expect(view.queryByRole("button", { name: "Call" })).toBeNull();
     expect(view.queryByRole("button", { name: "Message" })).toBeNull();
@@ -136,7 +159,7 @@ describe("Favorites large card", () => {
   it("has a skeleton with the shape of the card and its buttons", () => {
     const view = renderMobile(<FavoriteListingCardSkeleton />);
     expect(view.getAllByTestId("listing-photo-skeleton")).toHaveLength(1);
-    expect(within(view.getByTestId("listing-actions-skeleton")).getAllByTestId("skeleton-button")).toHaveLength(2);
+    expect(within(view.getByTestId("listing-actions-skeleton")).getAllByTestId("skeleton-button")).toHaveLength(3);
   });
 });
 

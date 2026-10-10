@@ -14,9 +14,10 @@ import { useOpenListingConversation } from "../../conversations/useOpenListingCo
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
+import { GlassButton } from "@/components/ui/glass-button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { LARGE_TEXT_FONT_SCALE, useLargeText } from "@/lib/font-scale";
+import { useLargeText } from "@/lib/font-scale";
 import { cn } from "@/lib/utils";
 
 interface ContactCtaBarProps {
@@ -28,8 +29,9 @@ interface ContactCtaBarProps {
   /** The full detail has not loaded: both actions stay disabled until it does. */
   pending?: boolean;
   /**
-   * `viewer` sits on the black photo viewer: no SMS caption, light-on-dark buttons.
-   * `floating` sits inside a `StickyActionBar`, which supplies the padding.
+   * `viewer` sits on the black photo viewer: light-on-dark buttons.
+   * `floating` sits inside a `StickyActionBar`: each action is its own glass
+   *  capsule (`GlassButton`), Call tinted brand red and Message clear glass.
    */
   variant?: "bar" | "viewer" | "floating";
   /** Runs before a Message starts, e.g. to close the photo viewer over the screen. */
@@ -103,9 +105,28 @@ export function ContactCtaBar({
     }
   };
 
+  const messageDisabled = !canMessage || conversation.isPending;
+  const floatingActions = (
+    <>
+      {showCall ? (
+        <GlassButton tone={canCall ? "brand" : "neutral"} className={cn(!largeText && "flex-1")}
+          onPress={handleCall} disabled={!canCall} accessibilityLabel={t("call")}>
+          <Icon as={Phone} className="size-5" />
+          <Text>{t("call")}</Text>
+        </GlassButton>
+      ) : null}
+      <GlassButton className={cn(!largeText && "flex-1")} disabled={messageDisabled} onPress={handleMessage}
+        accessibilityLabel={t("message")} accessibilityState={{ disabled: messageDisabled }}>
+        <Icon as={MessageCircle} className="size-5" />
+        <Text>{t("message")}</Text>
+      </GlassButton>
+    </>
+  );
+
   return (
     <View>
       <View className={cn(largeText ? "gap-2" : "flex-row items-center gap-2", floating ? "" : "px-4 py-3")}>
+        {floating ? floatingActions : <>
         {showCall ? (
         <Button
           variant={canCall ? "brand" : "secondary"}
@@ -152,19 +173,11 @@ export function ContactCtaBar({
             {t("message")}
           </Text>
         </Button>
+        </>}
       </View>
-      {canCall && !onDark && (
-        <Text
-          className={cn("text-center text-caption text-muted-foreground", floating ? "px-2 pb-1 pt-2" : "px-4 pb-2")}
-          // The bar floats over the Listing; a note at full size would cover it.
-          maxFontSizeMultiplier={LARGE_TEXT_FONT_SCALE}
-        >
-          {t("contactSmsCaption")}
-        </Text>
-      )}
-
       {conversation.error && (
-        <View className={floating ? "pt-2" : "px-4 pb-3"}>
+        // The floating bar has no material, so the tinted error gets a solid card under it.
+        <View className={floating ? "mt-2 overflow-hidden rounded-lg bg-card shadow-floating" : "px-4 pb-3"}>
           <ErrorState
             compact
             error={conversation.error}

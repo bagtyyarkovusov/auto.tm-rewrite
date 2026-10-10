@@ -13,6 +13,7 @@ import { HeaderTextAction, StackHeader } from "@/components/navigation/StackHead
 import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import type { StickyBarContainer } from "@/components/navigation/tabBarHeight";
 import { Button } from "@/components/ui/button";
+import { GlassButton } from "@/components/ui/glass-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GroupedItem } from "@/components/ui/grouped-list";
 import { GroupedListSkeleton, ListNote } from "@/components/ui/list-states";
@@ -162,22 +163,22 @@ export function ModelPicker({
             </Text>
           ) : null}
           {picker.countError ? (
-            <View accessibilityRole="alert" className="gap-1">
+            // In a sheet the bar has no edge fade, so the error gets the sheet's own surface behind it.
+            <View accessibilityRole="alert" className={cn("gap-1", barContainer === "screen" && "rounded-2xl bg-popover pb-1 shadow-floating")}>
               <Text className="px-2 pt-1 text-center text-callout text-destructive">{t("failedToLoadListingCount")}</Text>
               <Button variant="ghost" onPress={picker.retry}>
                 <Text>{t("retry")}</Text>
               </Button>
             </View>
           ) : null}
-          <Button
-            variant="brand"
-            size="lg"
+          <GlassButton
+            tone="brand"
             disabled={!ready}
             onPress={() => actions.confirm(picker.choice())}
             accessibilityLabel={countLabel}
           >
             <Text numberOfLines={1}>{countLabel}</Text>
-          </Button>
+          </GlassButton>
           {actions.moreFilters ? (
             <Button
               variant="ghost"

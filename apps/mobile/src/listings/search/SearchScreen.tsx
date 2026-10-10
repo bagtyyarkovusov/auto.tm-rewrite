@@ -25,6 +25,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { BackButton, HeaderButton, StackHeader } from "@/components/navigation/StackHeader";
 import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import { Button } from "@/components/ui/button";
+import { GlassButton } from "@/components/ui/glass-button";
 import { GroupedList } from "@/components/ui/grouped-list";
 import { Icon } from "@/components/ui/icon";
 import { GroupedListSkeleton, ListNote } from "@/components/ui/list-states";
@@ -139,9 +140,9 @@ export function SearchScreen() {
           <ListNote>{t("noCatalogMatch", { query: query.trim() })}</ListNote>}
       </ScrollView>
       <StickyActionBar {...bar.barProps} edgeFade>
-        <Button variant="secondary" size="lg" onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
-          <Icon as={SlidersHorizontal} className="size-5 text-foreground" /><Text>{t("allFilters")}</Text>
-        </Button>
+        <GlassButton onPress={() => { Keyboard.dismiss(); router.replace({ pathname: PARAMETERS_PATH }); }}>
+          <Icon as={SlidersHorizontal} className="size-5" /><Text>{t("allFilters")}</Text>
+        </GlassButton>
       </StickyActionBar>
       </View>
     </KeyboardAvoidingView>

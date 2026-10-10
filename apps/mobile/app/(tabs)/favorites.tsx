@@ -87,15 +87,18 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
   };
 
   // Kept through loading and errors after a switch, so the User can switch back.
+  // The gap under the row keeps the first card off its divider.
   const toggle = showSwitch ? (
-    <HideSoldToggle hideSold={hideSold} onChange={setHideSold} hiddenCount={counts.inactive} />
+    <View className="pb-3">
+      <HideSoldToggle hideSold={hideSold} onChange={setHideSold} hiddenCount={counts.inactive} />
+    </View>
   ) : null;
 
   if (state === "loading") {
     return (
       <>
         {toggle}
-        <View accessibilityLabel={t("loading")} className="gap-2">
+        <View accessibilityLabel={t("loading")} className="gap-3">
           {[0, 1, 2].map((id) => <FavoriteListingCardSkeleton key={id} />)}
         </View>
       </>
@@ -138,7 +141,7 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
           onRemoveFavorite={remove}
         />
       )}
-      ItemSeparatorComponent={() => <View className="h-2 bg-background" />}
+      ItemSeparatorComponent={() => <View className="h-3" />}
       ListHeaderComponent={toggle}
       ListEmptyComponent={
         state === "noActive" ? (

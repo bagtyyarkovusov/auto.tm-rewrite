@@ -42,7 +42,7 @@ interface ListingLargeCardProps {
 }
 
 /** The square tonal action beside Call: one glyph, the same height and radius as Call. */
-function SquareAction({ children, ...props }: Omit<ButtonProps, "variant" | "size" | "children"> & { children: ReactNode }) {
+export function SquareAction({ children, ...props }: Omit<ButtonProps, "variant" | "size" | "children"> & { children: ReactNode }) {
   return <Button variant="secondary" className="aspect-square px-0" {...props}>{children}</Button>;
 }
 

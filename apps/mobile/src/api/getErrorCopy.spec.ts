@@ -81,6 +81,7 @@ describe("mapErrorToCopy", () => {
   it("maps unknown errors to retryable fallback copy", () => {
     const copy = mapErrorToCopy(new Error("boom"), t);
     expect(copy.title).toBe("somethingWentWrong");
+    expect(copy.description).toBe("loadFailed");
     expect(copy.retryable).toBe(true);
   });
 });

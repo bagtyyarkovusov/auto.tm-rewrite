@@ -10,6 +10,12 @@ const header = readFileSync(resolve(feedDir, "HomeHeader.tsx"), "utf-8");
 const gridCard = readFileSync(resolve(feedDir, "ListingGridCard.tsx"), "utf-8");
 
 describe("Home (the Search tab's first screen)", () => {
+  it("scrolls the feed smoothly back to the top when the focused Search tab is tapped again", () => {
+    expect(source).toContain('import { useScrollToTop } from "@react-navigation/native";');
+    expect(source).toContain("useScrollToTop(listRef);");
+    expect(source).toContain("ref={listRef}");
+  });
+
   it("opens Search from 🔍 in the header", () => {
     expect(source).toContain("<HomeHeader />");
     expect(header).toContain('router.push("/(tabs)/(search)/search")');

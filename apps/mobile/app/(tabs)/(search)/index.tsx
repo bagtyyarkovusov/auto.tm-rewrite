@@ -1,5 +1,6 @@
+import { useScrollToTop } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -40,6 +41,9 @@ const isSpacer = (cell: GridCell): cell is typeof GRID_SPACER => cell === GRID_S
  */
 export default function HomeScreen() {
   const { t } = useTranslation();
+  // Tapping Search again while Home is showing glides the feed back to the top.
+  const listRef = useRef<FlatList>(null);
+  useScrollToTop(listRef);
   const viewer = useViewer();
   const isAuthenticated = viewer === undefined ? null : viewer !== null;
   useFeedFavoriteReplay(HOME_HREF);
@@ -126,6 +130,7 @@ export default function HomeScreen() {
   return (
     <TabScreen underTabBar>
       <FlatList
+        ref={listRef}
         data={cells}
         keyExtractor={(item) => item.id}
         numColumns={2}

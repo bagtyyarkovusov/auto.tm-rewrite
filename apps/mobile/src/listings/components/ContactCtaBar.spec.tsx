@@ -61,6 +61,13 @@ beforeEach(() => {
 });
 
 describe("ContactCtaBar", () => {
+  it("puts a solid card under the floating bar's error, since the bar draws no material", () => {
+    state.error = new Error("boom");
+    const screen = renderMobile(<ContactCtaBar {...props} variant="floating" />);
+    let node = screen.getByText("Something went wrong").parent;
+    while (node && !/\bbg-card\b/.test(String(node.props.className ?? ""))) node = node.parent;
+    expect(node).toBeTruthy();
+  });
   it("opens the seller phone directly for an anonymous buyer", async () => {
     state.authenticated = false;
     const screen = renderMobile(<ContactCtaBar {...props} />);
@@ -80,9 +87,6 @@ describe("ContactCtaBar", () => {
       ).toBe(true);
       fireEvent.press(screen.getByRole("button", { name: "Message" }));
       expect(state.mutate).not.toHaveBeenCalled();
-      expect(
-        screen.queryByText("Carberk verifies sellers' numbers by SMS."),
-      ).toBeNull();
     },
   );
   it("disables Message when chat is unavailable or a request is pending", () => {
@@ -140,7 +144,6 @@ describe("ContactCtaBar without calls", () => {
       expect(screen.getAllByRole("button")).toHaveLength(1);
       const message = screen.getByRole("button", { name: "Message", disabled: false });
       expect(message.props.className).toContain("flex-1");
-      expect(screen.queryByText("Carberk verifies sellers' numbers by SMS.")).toBeNull();
       screen.unmount();
     }
   });

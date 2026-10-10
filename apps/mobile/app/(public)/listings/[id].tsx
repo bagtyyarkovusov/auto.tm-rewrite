@@ -188,8 +188,7 @@ export default function ListingDetailScreen() {
       )}
 
       {isOwner && (
-        // The owner's row brings its own padding.
-        <StickyActionBar {...bar.barProps} className="p-0">
+        <StickyActionBar {...bar.barProps}>
           <OwnerActions listingId={data.id} status={data.status} mode="bar" />
         </StickyActionBar>
       )}

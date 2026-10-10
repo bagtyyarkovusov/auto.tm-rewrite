@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { GlassButton } from "@/components/ui/glass-button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import {
@@ -141,29 +141,25 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
   return (
     <View className="gap-2">
       {mode === "bar" && (
-        <View className="flex-row gap-2 px-4 py-3">
-          <Button
-            variant="secondary"
-            size="sm"
+        <View className="flex-row gap-2">
+          <GlassButton
             className="flex-1 min-w-[45%]"
             onPress={() => router.push(`/listings/${listingId}/edit`)}
             disabled={isPending || !(isActive || isSold || isArchived)}
           >
-            <Icon as={Pencil} className="size-4 text-foreground" />
+            <Icon as={Pencil} className="size-5" />
             <Text>{t(OWNER_ACTION_LABEL.edit)}</Text>
-          </Button>
+          </GlassButton>
 
           {isActive && (
-            <Button
-              variant="secondary"
-              size="sm"
+            <GlassButton
               className="flex-1 min-w-[45%]"
               onPress={() => setConfirmAction("markSold")}
               disabled={isPending}
             >
-              <Icon as={CheckCircle} className="size-4 text-foreground" />
+              <Icon as={CheckCircle} className="size-5" />
               <Text>{t(OWNER_ACTION_LABEL.markSold)}</Text>
-            </Button>
+            </GlassButton>
           )}
         </View>
       )}
@@ -200,10 +196,13 @@ export function OwnerActions({ listingId, status, mode }: OwnerActionsProps) {
         archive.isError ||
         republish.isError ||
         deleteListing.isError) && (
-        <View className="rounded-md bg-destructive/10 px-3 py-2">
-          <Text className="text-callout text-destructive">
-            {relistPhoneRequired ? t("relistPhoneRequired") : t("actionFailed")}
-          </Text>
+        // In the floating bar nothing is behind the banner, so it gets a solid card under its tint.
+        <View className={mode === "bar" ? "overflow-hidden rounded-md bg-card shadow-floating" : undefined}>
+          <View className="rounded-md bg-destructive/10 px-3 py-2">
+            <Text className="text-callout text-destructive">
+              {relistPhoneRequired ? t("relistPhoneRequired") : t("actionFailed")}
+            </Text>
+          </View>
         </View>
       )}
 
