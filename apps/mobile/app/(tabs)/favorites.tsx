@@ -87,8 +87,11 @@ function FavoritesContent({ view }: { view: ReturnType<typeof useFavoritesView> 
   };
 
   // Kept through loading and errors after a switch, so the User can switch back.
+  // The gap under the row keeps the first card off its divider.
   const toggle = showSwitch ? (
-    <HideSoldToggle hideSold={hideSold} onChange={setHideSold} hiddenCount={counts.inactive} />
+    <View className="pb-3">
+      <HideSoldToggle hideSold={hideSold} onChange={setHideSold} hiddenCount={counts.inactive} />
+    </View>
   ) : null;
 
   if (state === "loading") {

@@ -106,6 +106,7 @@ vi.mock("@/components/ui/checkbox", async () => ({ Checkbox: (await import("./na
 vi.mock("@react-navigation/native", () => ({
   DefaultTheme: { dark: false, colors: {} },
   DarkTheme: { dark: true, colors: {} },
+  useScrollToTop: () => {},
 }));
 vi.mock("@rn-primitives/separator", async () => ({ Root: (await import("react-native")).View }));
 // The installed avatar distribution imports an extensionless path Node cannot
