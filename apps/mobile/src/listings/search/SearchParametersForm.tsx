@@ -27,6 +27,7 @@ import { pickerRouter } from "./useRoutePickerActions";
 
 import { PickerRow } from "@/components/listings/wizard/PickerRow";
 import { Button } from "@/components/ui/button";
+import { GlassButton } from "@/components/ui/glass-button";
 import { GroupedList } from "@/components/ui/grouped-list";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Text } from "@/components/ui/text";
@@ -191,15 +192,14 @@ export function SearchParametersForm({ initial, returnToResults, onBack }: Searc
               </Button>
             </View>
           ) : null}
-          <Button
-            variant="brand"
-            size="lg"
+          <GlassButton
+            tone="brand"
             disabled={!countEnabled}
             onPress={show}
             accessibilityLabel={showLabel}
           >
             <Text numberOfLines={1}>{showLabel}</Text>
-          </Button>
+          </GlassButton>
         </StickyActionBar>
         </View>
       </KeyboardAvoidingView>

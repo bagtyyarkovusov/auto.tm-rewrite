@@ -14,6 +14,7 @@ import { useOpenListingConversation } from "../../conversations/useOpenListingCo
 
 import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
+import { GlassButton } from "@/components/ui/glass-button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
 import { useLargeText } from "@/lib/font-scale";
@@ -29,7 +30,8 @@ interface ContactCtaBarProps {
   pending?: boolean;
   /**
    * `viewer` sits on the black photo viewer: light-on-dark buttons.
-   * `floating` sits inside a `StickyActionBar`, which supplies the padding.
+   * `floating` sits inside a `StickyActionBar`: each action is its own glass
+   *  capsule (`GlassButton`), Call tinted brand red and Message clear glass.
    */
   variant?: "bar" | "viewer" | "floating";
   /** Runs before a Message starts, e.g. to close the photo viewer over the screen. */
@@ -103,9 +105,28 @@ export function ContactCtaBar({
     }
   };
 
+  const messageDisabled = !canMessage || conversation.isPending;
+  const floatingActions = (
+    <>
+      {showCall ? (
+        <GlassButton tone={canCall ? "brand" : "neutral"} className={cn(!largeText && "flex-1")}
+          onPress={handleCall} disabled={!canCall} accessibilityLabel={t("call")}>
+          <Icon as={Phone} className="size-5" />
+          <Text>{t("call")}</Text>
+        </GlassButton>
+      ) : null}
+      <GlassButton className={cn(!largeText && "flex-1")} disabled={messageDisabled} onPress={handleMessage}
+        accessibilityLabel={t("message")} accessibilityState={{ disabled: messageDisabled }}>
+        <Icon as={MessageCircle} className="size-5" />
+        <Text>{t("message")}</Text>
+      </GlassButton>
+    </>
+  );
+
   return (
     <View>
       <View className={cn(largeText ? "gap-2" : "flex-row items-center gap-2", floating ? "" : "px-4 py-3")}>
+        {floating ? floatingActions : <>
         {showCall ? (
         <Button
           variant={canCall ? "brand" : "secondary"}
@@ -152,6 +173,7 @@ export function ContactCtaBar({
             {t("message")}
           </Text>
         </Button>
+        </>}
       </View>
       {conversation.error && (
         <View className={floating ? "pt-2" : "px-4 pb-3"}>

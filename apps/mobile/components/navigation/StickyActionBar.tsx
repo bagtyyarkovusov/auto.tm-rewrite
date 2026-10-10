@@ -10,7 +10,6 @@ import {
   type StickyBarContainer,
 } from "./tabBarHeight";
 
-import { GlassSurface } from "@/components/ui/glass-surface";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,15 +46,17 @@ type StickyActionBarProps = ViewProps & {
 };
 
 /**
- * The primary action of a screen, pinned above its scrolling content: a
- * floating glass slab with a margin on every side. Content scrolls under it.
+ * The primary action of a screen, pinned above its scrolling content with a
+ * margin on every side. Content scrolls under it. The bar draws no material of
+ * its own: its buttons are `GlassButton`s, each its own glass capsule, so a
+ * floating action never sits as a pill inside a pill (#808).
  *
  * It is absolute at the bottom of its parent, so the parent decides what it
  * floats over. Inside a keyboard-avoiding view the parent shrinks with the
  * keyboard and the bar rides up with it; no keyboard code lives here.
  *
- * Put `size="lg"` buttons inside: their 20 dp radius is concentric with the
- * bar's 28 dp radius across its 8 dp padding.
+ * A hint or error line inside the bar reads over the soft `edgeFade`, so a bar
+ * that can show one sets it.
  */
 export function StickyActionBar({
   container = "inset",
@@ -97,9 +98,9 @@ export function StickyActionBar({
       ]}
       {...props}
     >
-      <GlassSurface className={cn("gap-2 rounded-3xl p-2", className)}>
+      <View className={cn("gap-2", className)}>
         {children}
-      </GlassSurface>
+      </View>
       </View>
     </>
   );

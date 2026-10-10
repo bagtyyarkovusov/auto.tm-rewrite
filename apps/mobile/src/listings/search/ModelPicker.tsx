@@ -13,6 +13,7 @@ import { HeaderTextAction, StackHeader } from "@/components/navigation/StackHead
 import { StickyActionBar, useStickyActionBar } from "@/components/navigation/StickyActionBar";
 import type { StickyBarContainer } from "@/components/navigation/tabBarHeight";
 import { Button } from "@/components/ui/button";
+import { GlassButton } from "@/components/ui/glass-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GroupedItem } from "@/components/ui/grouped-list";
 import { GroupedListSkeleton, ListNote } from "@/components/ui/list-states";
@@ -169,15 +170,14 @@ export function ModelPicker({
               </Button>
             </View>
           ) : null}
-          <Button
-            variant="brand"
-            size="lg"
+          <GlassButton
+            tone="brand"
             disabled={!ready}
             onPress={() => actions.confirm(picker.choice())}
             accessibilityLabel={countLabel}
           >
             <Text numberOfLines={1}>{countLabel}</Text>
-          </Button>
+          </GlassButton>
           {actions.moreFilters ? (
             <Button
               variant="ghost"
