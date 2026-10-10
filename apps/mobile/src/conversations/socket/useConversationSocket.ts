@@ -143,10 +143,12 @@ export function useConversationSocket(
         }
       }
       if (
-        previousStatus === "disconnected" &&
+        (previousStatus === "disconnected" || previousStatus === "error") &&
         next === "connected"
       ) {
         // HTTP recovery: reconcile any messages missed while disconnected.
+        // A failed reconnection attempt surfaces as "error" (connect_error),
+        // so recovery can arrive from "error" as well as from "disconnected".
         void queryClient.invalidateQueries({
           queryKey: queryKeys.conversations.messages(conversationId),
         });

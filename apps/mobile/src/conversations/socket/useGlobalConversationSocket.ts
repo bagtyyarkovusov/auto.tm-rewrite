@@ -29,7 +29,14 @@ export function useGlobalConversationSocket(): void {
 
     let previousStatus = socket.getStatus();
     const unsubscribeStatus = socket.subscribeStatus((next) => {
-      if (previousStatus === "disconnected" && next === "connected") {
+      // A failed reconnection attempt surfaces as "error" (connect_error), so
+      // recovery can arrive as error → connected as well as disconnected →
+      // connected. The first connect (idle/connecting → connected) is not a
+      // recovery: nothing could have been missed yet.
+      if (
+        (previousStatus === "disconnected" || previousStatus === "error") &&
+        next === "connected"
+      ) {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.conversations.list(),
         });

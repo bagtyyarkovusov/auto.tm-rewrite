@@ -158,4 +158,39 @@ describe("useGlobalConversationSocket", () => {
       });
     });
   });
+
+  it("reconciles when recovery passes through an error status", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidateQueriesSpy = vi.spyOn(client, "invalidateQueries");
+
+    let statusHandler: (status: string) => void = () => {};
+    mockSocket.subscribeStatus.mockImplementation((handler) => {
+      statusHandler = handler as (status: string) => void;
+      return () => {};
+    });
+    mockSocket.getStatus.mockReturnValue("connected");
+
+    renderHook(() => useGlobalConversationSocket(), {
+      wrapper: wrapperFor(client),
+    });
+
+    // A failed reconnection attempt reports "error" (connect_error); the
+    // successful retry after it is still a recovery and must reconcile.
+    act(() => {
+      statusHandler("disconnected");
+      statusHandler("error");
+      statusHandler("connected");
+    });
+
+    await waitFor(() => {
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.conversations.list(),
+      });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.conversations.unreadCounts(),
+      });
+    });
+  });
 });
