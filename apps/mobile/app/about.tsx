@@ -32,6 +32,8 @@ export default function AboutScreen() {
           <Text className="mt-6 text-muted-foreground">{t("appVersion", { version })}</Text>
         ) : null}
       </View>
+      {/* The brand logos are shown only to identify vehicles (#350). */}
+      <Text className="px-6 text-center text-caption text-muted-foreground">{t("common:brandLogosNotice")}</Text>
     </SafeScreen>
   );
 }

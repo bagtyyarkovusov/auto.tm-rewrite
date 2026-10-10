@@ -16,7 +16,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/text";
-import { LARGE_TEXT_FONT_SCALE, useLargeText } from "@/lib/font-scale";
+import { useLargeText } from "@/lib/font-scale";
 import { cn } from "@/lib/utils";
 
 interface ContactCtaBarProps {
@@ -28,7 +28,7 @@ interface ContactCtaBarProps {
   /** The full detail has not loaded: both actions stay disabled until it does. */
   pending?: boolean;
   /**
-   * `viewer` sits on the black photo viewer: no SMS caption, light-on-dark buttons.
+   * `viewer` sits on the black photo viewer: light-on-dark buttons.
    * `floating` sits inside a `StickyActionBar`, which supplies the padding.
    */
   variant?: "bar" | "viewer" | "floating";
@@ -153,16 +153,6 @@ export function ContactCtaBar({
           </Text>
         </Button>
       </View>
-      {canCall && !onDark && (
-        <Text
-          className={cn("text-center text-caption text-muted-foreground", floating ? "px-2 pb-1 pt-2" : "px-4 pb-2")}
-          // The bar floats over the Listing; a note at full size would cover it.
-          maxFontSizeMultiplier={LARGE_TEXT_FONT_SCALE}
-        >
-          {t("contactSmsCaption")}
-        </Text>
-      )}
-
       {conversation.error && (
         <View className={floating ? "pt-2" : "px-4 pb-3"}>
           <ErrorState

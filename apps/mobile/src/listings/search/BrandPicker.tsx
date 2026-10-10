@@ -173,11 +173,6 @@ export function BrandPicker({ actions, filters, leading, bottomSpace = 0 }: Bran
             )}
           </GroupedItem>
         )}
-        ListFooterComponent={
-          <Text className="px-5 pt-5 text-caption text-muted-foreground">
-            {t("brandLogosNotice")}
-          </Text>
-        }
       />
     );
   }

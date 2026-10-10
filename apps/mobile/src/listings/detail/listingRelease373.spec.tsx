@@ -435,7 +435,7 @@ describe("issue 373 screen controls", () => {
     expect(routerMock.back).toHaveBeenCalled();
   });
 
-  it("keeps only Call and Message in the contact bar and the SMS verification caption by Call", async () => {
+  it("keeps only Call and Message in the contact bar, with no caption under them", async () => {
     state.authenticated = false;
     const screen = renderMobile(
       <ContactCtaBar
@@ -455,9 +455,7 @@ describe("issue 373 screen controls", () => {
     ).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Favorite" })).toBeNull();
-    expect(
-      screen.getByText("Carberk verifies sellers' numbers by SMS."),
-    ).toBeTruthy();
+    expect(screen.queryByText(/by SMS/)).toBeNull();
     await act(async () => {
       fireEvent.press(screen.getByRole("button", { name: "Call" }));
     });

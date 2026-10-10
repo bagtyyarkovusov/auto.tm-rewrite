@@ -24,6 +24,12 @@ describe("About the app", () => {
     expect(screen.getByText(version)).toBeTruthy();
   });
 
+  it("says that brand names and logos belong to their owners", () => {
+    const screen = renderMobile(<AboutScreen />);
+
+    expect(screen.getByText(/Brand names and logos belong to their owners/)).toBeTruthy();
+  });
+
   it("goes back to Cabinet", () => {
     const screen = renderMobile(<AboutScreen />);
 
