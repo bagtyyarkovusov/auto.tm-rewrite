@@ -3,11 +3,6 @@ import * as Notifications from "expo-notifications";
 import type { PushPlatform } from "./types";
 import { getPlatform } from "./getPlatform";
 
-export interface NativePushToken {
-  token: string;
-  platform: PushPlatform;
-}
-
 export type NativePushTokenResult =
   | { status: "ok"; token: string; platform: PushPlatform }
   | { status: "unsupported-platform" }

@@ -233,6 +233,38 @@ describe("usePushTokenSync", () => {
     );
   });
 
+  it("retries on foreground when the registration POST fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    grantPermission();
+    mockGetDevicePushTokenAsync.mockResolvedValue({
+      data: "fcm-token-1",
+      type: "android",
+    });
+    mockApiGet.mockResolvedValue({ items: [] });
+    mockRegisterAsync.mockRejectedValueOnce(new Error("network down"));
+
+    renderHook(() => usePushTokenSync(), { wrapper });
+
+    await waitFor(() =>
+      expect(warn).toHaveBeenCalledWith(
+        "[pushTokenSync] registration sync failed",
+        expect.any(Error),
+      ),
+    );
+    expect(mockRegisterAsync).toHaveBeenCalledTimes(1);
+
+    mockRegisterAsync.mockResolvedValue({ registered: true });
+    await act(async () => {
+      appState.listeners.forEach((listener) => listener("active"));
+    });
+
+    await waitFor(() => expect(mockRegisterAsync).toHaveBeenCalledTimes(2));
+    expect(mockRegisterAsync).toHaveBeenLastCalledWith({
+      token: "fcm-token-1",
+      platform: "android",
+    });
+  });
+
   it("does nothing when permission is denied and never prompts", async () => {
     denyPermission();
 

@@ -14,9 +14,12 @@ import { getNotificationPermissionState } from "./requestNotificationPermission"
  * registration attempt can fail offline or with FCM unreachable and the
  * native token can rotate. It never prompts: only an already-granted
  * permission proceeds. A run fetches the server-registered tokens and POSTs
- * only when the current native token is missing, so a steady state costs one
- * cached read. Every failure is logged and retried on the next launch or
- * foreground, so chat stays usable while push is degraded.
+ * only when the current native token is missing. The comparison goes through
+ * the shared query cache: within the app's 30s staleTime a run reuses the
+ * cached list, and once stale it refetches, so a token that rotated or was
+ * revoked elsewhere is re-registered on a later foreground. Every failure is
+ * logged and retried on the next launch or foreground, so chat stays usable
+ * while push is degraded.
  */
 export function usePushTokenSync(): void {
   const queryClient = useQueryClient();
