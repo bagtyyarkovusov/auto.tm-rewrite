@@ -8,6 +8,7 @@ Choose the route for the task, then read its linked skill. [AGENTS.md](../../AGE
 | Create sprint issues after the shaping PR merges | [create-sprint-issues](../../.claude/skills/create-sprint-issues/SKILL.md), [issue-tracker](issue-tracker.md), and [sprint-transitions](sprint-transitions.md) |
 | Execute one ready issue | [run-issue](../../.claude/skills/run-issue/SKILL.md); use [resume-issue](../../.claude/skills/resume-issue/SKILL.md) when its branch, worktree, or PR exists |
 | Execute a founder-ordered queue or explicitly delegated outcome | [run-queue](../../.claude/skills/run-queue/SKILL.md); each item follows run-issue |
+| Implement several issues in this cache-warm session (trial) | [run-batch](../../.claude/skills/run-batch/SKILL.md), under [ADR-0094](../adr/0094-one-orchestrator-implements-batched-pull-requests-trial.md) |
 | Make a small fix or resolve a PR finding | [Small changes](#small-changes-adr-0065) |
 | Check progress or close a sprint | [sprint-status](../../.claude/skills/sprint-status/SKILL.md) or [close-sprint](../../.claude/skills/close-sprint/SKILL.md) |
 
@@ -26,7 +27,7 @@ For UI work, read [UI-MODE.md](../../.claude/skills/run-issue/UI-MODE.md) after 
 
 ## Push documentation separately
 
-Push documentation, evidence and Execution-state commits separately from code, after the code head's required `pr` check is green. Wait for each docs run to finish successfully before pushing the next docs commit. A cancelled previous run makes the next run take the full lane. The next synchronize run takes the short docs lane when it can prove that only documentation changed by hand since that green head. A merge from `main` may also take that lane when its only hand changes and conflict resolutions are documentation. Missing or ambiguous checks or history take the full lane. [ADR-0091](../adr/0091-docs-lane-after-a-green-pull-request-head.md) records the decision and its accepted cost.
+Push documentation, evidence and Execution-state commits separately from code, after the code head's required `pr` check is green. Wait for each docs run to finish successfully before pushing the next docs commit. A cancelled previous run makes the next run take the full lane. The next synchronize run takes the short docs lane when it can prove that only documentation changed by hand since that green head. A merge from `main` may also take that lane when its only hand changes and conflict resolutions are documentation. Missing or ambiguous checks or history take the full lane. [ADR-0091](../adr/0091-docs-lane-after-a-green-pull-request-head.md) records the decision and its accepted cost. A `run-batch` batch pushes its docs with its code instead ([ADR-0094](../adr/0094-one-orchestrator-implements-batched-pull-requests-trial.md)).
 
 ## Sliced issues (ADR-0082)
 
