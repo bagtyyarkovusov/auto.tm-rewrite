@@ -215,16 +215,19 @@ describe("FeedListingSummarySchema for the Results card", () => {
     ).toMatchObject({ allowCalls: false, allowChat: true });
   });
 
-  it("keeps the card fields off favorites and My listings items", () => {
+  it("keeps the seller off favorites and My listings items, and the gallery off My listings", () => {
     const favorite = FavoriteListingSummarySchema.parse(cardSummary);
     const own = MyListingsResponseSchema.parse({ items: [cardSummary], nextCursor: null }).items[0];
 
-    for (const parsed of [favorite, own]) {
-      expect(parsed).not.toHaveProperty("galleryKeys");
-      expect(parsed).not.toHaveProperty("seller");
-    }
+    for (const parsed of [favorite, own]) expect(parsed).not.toHaveProperty("seller");
+    expect(own).not.toHaveProperty("galleryKeys");
     expect(own).not.toHaveProperty("allowCalls");
     expect(own).not.toHaveProperty("allowChat");
+  });
+
+  it("sends the gallery on favorites items for the Favorites card's strip, and tolerates an older API without it", () => {
+    expect(FavoriteListingSummarySchema.parse(cardSummary).galleryKeys).toEqual(cardSummary.galleryKeys);
+    expect(FavoriteListingSummarySchema.parse({ ...olderSummary, allowCalls: true, allowChat: false })).not.toHaveProperty("galleryKeys");
   });
 
   it("sends the card fields through the feed response", () => {

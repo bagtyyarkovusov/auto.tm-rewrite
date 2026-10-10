@@ -13,8 +13,8 @@ export function feedCardFields(listing: ListingsSchemas.FeedListingSummary): Fee
   return { galleryKeys, allowCalls, allowChat, seller };
 }
 
-/** The photos the Results strip shows: the gallery when the API sent one, else the two list photos, else the cover. */
-export function feedCardPhotoKeys(listing: ListingsSchemas.FeedListingSummary): string[] {
+/** The photos a card's strip shows (Results and Favorites): the gallery when the API sent one, else the two list photos, else the cover. */
+export function feedCardPhotoKeys(listing: Pick<ListingsSchemas.FeedListingSummary, "galleryKeys" | "photoKeys" | "coverMediaKey">): string[] {
   const gallery = listing.galleryKeys;
   if (gallery?.length) return gallery;
   if (listing.photoKeys.length) return listing.photoKeys;
