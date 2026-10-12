@@ -74,6 +74,7 @@ class FakeVariantGenerator implements ImageVariantGenerator {
         detail: `${originalKey}/detail.webp`,
         fullscreen: `${originalKey}/fullscreen.webp`,
       },
+      thumbHash: "1fsDBYCIiIiHiIdweIeHh4d4cIgH",
     };
   }
 }
@@ -160,6 +161,13 @@ describe("AttachMedia", () => {
       expect(world.stateOfKey(key)).toBe("ADOPTED");
     });
 
+    it("keeps the photo's server-computed ThumbHash on the attached media", async () => {
+      const result = await uc.execute(input);
+
+      expect(result.media.thumbHash).toBe("1fsDBYCIiIiHiIdweIeHh4d4cIgH");
+      expect((await world.mediaRepo.findByListingId("listing-1"))[0]?.thumbHash).toBe("1fsDBYCIiIiHiIdweIeHh4d4cIgH");
+    });
+
     it("generates nothing for an upload a Profile Photo is already preparing", async () => {
       await world.claims.reserve({
         userId: "user-1", uploadIds: [`upload-${key}`], target: { type: "profile", id: "user-1" },
@@ -207,6 +215,7 @@ describe("AttachMedia", () => {
               detail: `${originalKey}/detail.webp`,
               fullscreen: `${originalKey}/fullscreen.webp`,
             },
+            thumbHash: "1fsDBYCIiIiHiIdweIeHh4d4cIgH",
           };
         }
         joinerInside();

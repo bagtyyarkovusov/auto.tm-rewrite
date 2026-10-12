@@ -80,7 +80,7 @@ interface LocalMessage {
   kind: "text" | "image" | "post_ref";
   text: string;
   metadata?:
-    | { key: string; width?: number; height?: number }
+    | { key: string; width?: number; height?: number; thumbHash?: string }
     | ConversationsSchemas.PostRefMessageMetadata;
   localImageUri?: string;
   imageFileSize?: number;
@@ -318,6 +318,7 @@ export default function ConversationDetailScreen() {
                 key: m.metadata.key,
                 width: m.metadata.width,
                 height: m.metadata.height,
+                ...(m.metadata.thumbHash ? { thumbHash: m.metadata.thumbHash } : {}),
               };
             } else if (
               kind === "post_ref" &&
@@ -332,6 +333,7 @@ export default function ConversationDetailScreen() {
                 displayPriceTmt: m.metadata.displayPriceTmt,
                 priceCurrency: m.metadata.priceCurrency,
                 coverMediaKey: m.metadata.coverMediaKey,
+                ...(m.metadata.coverThumbHash ? { coverThumbHash: m.metadata.coverThumbHash } : {}),
                 status: m.metadata.status,
                 available: m.metadata.available ?? true,
               };
