@@ -1,3 +1,5 @@
+import { UploadsSchemas } from "@auto-tm/contracts";
+
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 
 import type { ListingsSchemas } from "@auto-tm/contracts";
@@ -172,9 +174,9 @@ function buildVariants(
 
   const base = key.replace(/\/original\.(jpg|webp|jpeg)$/, "");
   return {
-    thumbnail: resolveUrl(`${base}/thumbnail.jpg`),
-    list: resolveUrl(`${base}/list.jpg`),
-    detail: resolveUrl(`${base}/detail.jpg`),
-    fullscreen: resolveUrl(`${base}/fullscreen.jpg`),
+    thumbnail: `${resolveUrl(`${base}/thumbnail.webp`)}?v=${UploadsSchemas.PHOTO_VARIANT_CACHE_VERSION}`,
+    list: `${resolveUrl(`${base}/list.webp`)}?v=${UploadsSchemas.PHOTO_VARIANT_CACHE_VERSION}`,
+    detail: `${resolveUrl(`${base}/detail.webp`)}?v=${UploadsSchemas.PHOTO_VARIANT_CACHE_VERSION}`,
+    fullscreen: `${resolveUrl(`${base}/fullscreen.webp`)}?v=${UploadsSchemas.PHOTO_VARIANT_CACHE_VERSION}`,
   };
 }

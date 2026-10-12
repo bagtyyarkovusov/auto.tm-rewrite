@@ -16,6 +16,17 @@ function viewer(screen: ReturnType<typeof renderMobile>) {
 }
 
 describe("Photo gallery and viewer", () => {
+  it.each([[900, 1600], [1920, 1080]])("shows the complete %sx%s vehicle photo inside the existing fixed gallery frame", (width, height) => {
+    const media = mediaFixture(1).map((photo) => ({ ...photo, width, height }));
+    const screen = renderMobile(<PhotoGallery media={media} />);
+    const image = first(screen.UNSAFE_getAllByType(Image));
+    expect(image.props.contentFit).toBe("contain");
+    expect(image.props.placeholderContentFit).toBe("contain");
+    const frame = screen.UNSAFE_getAllByType(RN.View).find((view) => view.props.className === "bg-muted");
+    expect(frame?.props.style).toEqual({ width: 390, height: 253.5 });
+    expect(image.props.source.uri).toBe("https://media.test/0/detail.webp?v=webp-natural-1");
+  });
+
   it("opens the viewer at the photo that was tapped", () => {
     const screen = renderMobile(<PhotoGallery media={mediaFixture(3)} />);
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
@@ -77,20 +88,20 @@ describe("Photo gallery and viewer", () => {
     const screen = renderMobile(<PhotoGallery media={mediaFixture(20)} />);
     const sources = () => screen.UNSAFE_getAllByType(Image).map((image) => image.props.source.uri);
     // Nothing shares the first photo's bandwidth until it has loaded.
-    expect(sources()).toEqual(["https://media.test/0/detail.jpg"]);
+    expect(sources()).toEqual(["https://media.test/0/detail.webp?v=webp-natural-1"]);
 
     fireEvent(first(screen.UNSAFE_getAllByType(Image)), "load", {
-      source: { url: "https://media.test/0/detail.jpg", width: 1200, height: 800 },
+      source: { url: "https://media.test/0/detail.webp?v=webp-natural-1", width: 1200, height: 800 },
     });
 
     const photos = screen.UNSAFE_getAllByType(Image).map((image) => image.props);
     expect(photos.map((photo) => photo.source.uri)).toEqual([
-      "https://media.test/0/detail.jpg",
-      "https://media.test/1/detail.jpg",
+      "https://media.test/0/detail.webp?v=webp-natural-1",
+      "https://media.test/1/detail.webp?v=webp-natural-1",
     ]);
     expect(photos[0]).toEqual(expect.objectContaining({
-      placeholder: { uri: "https://media.test/0/list.jpg" },
-      placeholderContentFit: "cover",
+      placeholder: { uri: "https://media.test/0/list.webp?v=webp-natural-1" },
+      placeholderContentFit: "contain",
       priority: "high",
     }));
     expect(photos[1]).toEqual(expect.objectContaining({ placeholder: undefined, priority: "low" }));
