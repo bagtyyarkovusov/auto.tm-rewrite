@@ -40,3 +40,10 @@ export * as ReportsSchemas from "./schemas/reports";
 export * as AdminSchemas from "./schemas/admin";
 
 export { generateOpenApiDocument } from "./openapi";
+
+export * as StaffSchemas from "./schemas/staff";
+export * as BusinessSchemas from "./schemas/business";
+export * as MeasurementSchemas from "./schemas/measurement";
+export * as AdminContextSchemas from "./schemas/adminContext";
+export * as ServiceMessagingSchemas from "./schemas/serviceMessaging";
+export * as DiagnosticSchemas from "./schemas/diagnostics";

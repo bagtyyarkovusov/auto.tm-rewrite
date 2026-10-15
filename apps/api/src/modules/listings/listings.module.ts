@@ -1,3 +1,10 @@
+import { BusinessInventoryController } from "./presentation/BusinessInventoryController";
+import { PrismaBusinessInventoryRepository } from "./infrastructure/PrismaBusinessInventoryRepository";
+import { BUSINESS_INVENTORY_REPOSITORY } from "./domain/ports/BusinessInventoryRepository";
+import { PrismaBusinessContactPhoneRepository } from "./infrastructure/PrismaBusinessContactPhoneRepository";
+import { BUSINESS_CONTACT_PHONE_REPOSITORY, type BusinessContactPhoneRepository } from "./domain/ports/BusinessContactPhoneRepository";
+import { ListingOwnership } from "./application/ListingOwnership";
+import { MeasurementModule } from "../measurement/measurement.module";
 import { Module } from "@nestjs/common";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 
@@ -5,6 +12,7 @@ import { PrismaModule } from "../../common/prisma.module";
 import { IdentityModule } from "../identity/identity.module";
 import { IDENTITY_CHECK_PORT, PROFILE_PHOTO_PORT } from "../identity/identity.public";
 
+import { ListingViewsController } from "./presentation/ListingViewsController";
 import { ListingsController } from "./presentation/listings.controller";
 import { DraftsController } from "./presentation/DraftsController";
 import { UploadsController } from "./presentation/UploadsController";
@@ -12,6 +20,9 @@ import { MyListingsController } from "./presentation/MyListingsController";
 import { ExchangeRatesController } from "./presentation/ExchangeRatesController";
 import { FavoritesController } from "./presentation/FavoritesController";
 import { ContactPhonesController } from "./presentation/ContactPhonesController";
+import { VideoUploadController } from "./presentation/VideoUploadController";
+import { VideoUploadSessionService } from "./application/VideoUploadSession";
+import { PrismaVideoUploadSessionRepository } from "./infrastructure/PrismaVideoUploadSessionRepository";
 import { NullVinDecoder } from "./infrastructure/NullVinDecoder";
 import { NullContentClassifier } from "./infrastructure/NullContentClassifier";
 import { SortedFeedRankingAdapter } from "./infrastructure/SortedFeedRankingAdapter";
@@ -90,10 +101,17 @@ import {
 } from "./domain/ports/VerifiedContactPhoneRepository";
 import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/AccountPhonePort";
 
+import { RecordListingView } from "./application/RecordListingView";
+import { PrismaListingViews } from "./infrastructure/PrismaListingViews";
+import { LISTING_VIEWS_PORT } from "./domain/ports/ListingViewsPort";
+
 @Module({
-  imports: [PrismaModule, EventEmitterModule, IdentityModule],
-  controllers: [ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController, FavoritesController, ContactPhonesController],
+  imports: [PrismaModule, EventEmitterModule, IdentityModule, MeasurementModule],
+  controllers: [BusinessInventoryController,ListingViewsController, ListingsController, DraftsController, UploadsController, MyListingsController, ExchangeRatesController, FavoritesController, ContactPhonesController, VideoUploadController],
   providers: [
+    { provide: BUSINESS_INVENTORY_REPOSITORY, useClass: PrismaBusinessInventoryRepository },
+    { provide: BUSINESS_CONTACT_PHONE_REPOSITORY, useClass: PrismaBusinessContactPhoneRepository },
+    ListingOwnership,
     // Infrastructure adapters
     NullVinDecoder,
     NullContentClassifier,
@@ -214,8 +232,9 @@ import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/Accoun
       useFactory: (
         accountPhones: AccountPhonePort,
         confirmations: VerifiedContactPhoneRepository,
-      ) => new ContactPhonePolicy(accountPhones, confirmations),
-      inject: [ACCOUNT_PHONE_PORT, VERIFIED_CONTACT_PHONE_REPOSITORY],
+        businessPhones: BusinessContactPhoneRepository,
+      ) => new ContactPhonePolicy(accountPhones, confirmations, businessPhones),
+      inject: [ACCOUNT_PHONE_PORT, VERIFIED_CONTACT_PHONE_REPOSITORY, BUSINESS_CONTACT_PHONE_REPOSITORY],
     },
 
     // Application use-cases
@@ -240,6 +259,8 @@ import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/Accoun
     RemoveMedia,
     ReorderMedia,
     GetListingDetail,
+    RecordListingView,
+    { provide: LISTING_VIEWS_PORT, useClass: PrismaListingViews },
     ListFeed,
     ListMyListings,
     CountMyListings,
@@ -250,6 +271,8 @@ import { ACCOUNT_PHONE_PORT, type AccountPhonePort } from "./domain/ports/Accoun
     RequestContactPhoneCode,
     ConfirmContactPhone,
     ListMyContactPhones,
+    VideoUploadSessionService,
+    PrismaVideoUploadSessionRepository,
   ],
   exports: [
     VIN_DECODER_PORT,

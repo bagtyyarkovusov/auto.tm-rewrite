@@ -18,6 +18,10 @@ import {
 import { RetiredUploadCleanupScheduler } from "./queues/retired-upload-cleanup.scheduler";
 import { PushModule } from "./push/push.module";
 import { EmailModule } from "./email/email.module";
+import { MeasurementRetentionModule } from "./measurement-retention.module";
+import { ServiceLifecycleModule } from "./service-lifecycle.module";
+import { MeasurementOutboxModule } from "./jobs/measurement-outbox.module";
+import { ServicePushModule } from "./service-push.module";
 import { VideoTranscodeProcessor } from "./queues/video-transcode.processor";
 import { NotificationFanoutProcessor } from "./queues/notification-fanout.processor";
 import { EmailCodeProcessor } from "./queues/email-code.processor";
@@ -25,6 +29,10 @@ import { OrphanCleanupProcessor } from "./queues/orphan-cleanup.processor";
 import { AccountPurgeProcessor } from "./queues/account-purge.processor";
 import { AccountPurgeScheduler } from "./queues/account-purge.scheduler";
 import { PurgeExpiredAccounts } from "./jobs/PurgeExpiredAccounts";
+import { ExpireListingViewFingerprints } from "./jobs/ExpireListingViewFingerprints";
+import { PrismaListingViewRetentionLedger } from "./jobs/PrismaListingViewRetentionLedger";
+import { ListingViewRetentionProcessor } from "./queues/listing-view-retention.processor";
+import { LISTING_VIEW_RETENTION_QUEUE, ListingViewRetentionScheduler } from "./queues/listing-view-retention.scheduler";
 
 @Module({
   imports: [
@@ -51,10 +59,20 @@ import { PurgeExpiredAccounts } from "./jobs/PurgeExpiredAccounts";
       { name: "orphan-cleanup" },
       { name: "account-purge" },
       { name: RETIRED_UPLOAD_CLEANUP_QUEUE },
+      { name: LISTING_VIEW_RETENTION_QUEUE },
       { name: AuthSchemas.EMAIL_CODE_QUEUE },
     ),
+    MeasurementRetentionModule,
+    ServiceLifecycleModule,
+    MeasurementOutboxModule,
+    ServicePushModule,
   ],
   providers: [
+    PrismaListingViewRetentionLedger,
+    { provide: ExpireListingViewFingerprints, inject: [PrismaListingViewRetentionLedger],
+      useFactory: (ledger: PrismaListingViewRetentionLedger) => new ExpireListingViewFingerprints(ledger) },
+    ListingViewRetentionProcessor,
+    ListingViewRetentionScheduler,
     CleanRetiredUploads,
     RetiredUploadCleanupProcessor,
     RetiredUploadCleanupScheduler,

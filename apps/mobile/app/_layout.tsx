@@ -46,6 +46,8 @@ import {
   type OnboardingDecision,
 } from "../src/onboarding/onboardingGate";
 import { LaunchEntrance } from "../src/launch/LaunchEntrance";
+import { listingViewInstallId, listingViewsEnabled } from "../src/listings/detail/listingViewIdentity";
+import { startNativeMeasurement } from "../src/measurement/nativeMeasurement";
 import { themeStore } from "../src/theme/themeStore";
 
 import { ToastProvider } from "@/components/ui/toast";
@@ -192,6 +194,7 @@ function PushTokenSyncOnBoot() {
 }
 
 export default function RootLayout() {
+  useEffect(startNativeMeasurement, []);
   const osColorScheme = useOsColorScheme();
   const { colorScheme: appliedScheme, setColorScheme } = useNativeWindColorScheme();
   const theme = themeStore((state) => state.theme);
@@ -224,7 +227,13 @@ export default function RootLayout() {
   useEffect(() => {
     // Started first: the gate reads storage before anything in this launch
     // can write to it. It answers within a second.
-    void resolveOnboardingGate().then(setOnboarding);
+    void resolveOnboardingGate().then((decision) => {
+      setOnboarding(decision);
+      // Preserve the fresh-install storage check before creating this identifier.
+      if (listingViewsEnabled()) {
+        void listingViewInstallId().catch(() => { /* Counting must never block launch. */ });
+      }
+    });
     void localeStore.getState().hydrate()
       .catch((error) => console.warn("[launch] locale storage unavailable", error))
       .then(() => initI18n())
